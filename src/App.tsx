@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom"
 import { PublicLayout, ProtectedLayout } from "@/components/layout/AppLayout";
 import LandingPage from "@/pages/LandingPage";
 import LogoShowcase from "@/pages/LogoShowcase";
+import NotFoundPage from "@/pages/NotFoundPage";
 
 // Placeholder components
 const Dashboard = () => <div className="text-2xl font-bold">Dashboard Overview</div>;
@@ -25,6 +26,10 @@ const router = createBrowserRouter([
       { path: "overview", element: <Dashboard /> },
       // Add more dashboard routes here later
     ],
+  },
+  {
+    path: "*",
+    element: <NotFoundPage />,
   },
 ]);
 

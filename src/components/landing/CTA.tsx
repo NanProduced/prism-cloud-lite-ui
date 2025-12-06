@@ -49,8 +49,11 @@ export const CTA = () => {
 
   return (
     <section className="relative w-full py-24 overflow-hidden bg-black">
-      {/* 背景渐变 */}
-      <div className="absolute inset-0 bg-gradient-to-b from-blue-950/10 via-transparent to-black" />
+      {/* 深色背景 */}
+      <div className="absolute inset-0 bg-black" />
+
+      {/* 蓝紫色径向光晕 - 加强版，更明显 */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.4)_0%,rgba(79,70,229,0.25)_20%,rgba(30,58,138,0.15)_50%,transparent_100%)]" />
 
       {/* 内容区域 */}
       <motion.div
