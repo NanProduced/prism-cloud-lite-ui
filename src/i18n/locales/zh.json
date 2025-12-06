@@ -1,0 +1,76 @@
+{
+  "nav": {
+    "features": "功能特性",
+    "solutions": "使用场景",
+    "pricing": "定价",
+    "docs": "文档",
+    "login": "登录",
+    "getStarted": "立即开始"
+  },
+  "hero": {
+    "badge": "新",
+    "badgeText": "Prism Cloud 2.0 已发布",
+    "title": "内容之光",
+    "titleHighlight": "转瞬即达",
+    "subtitle": "您的数字内容指挥中心。以终端般的速度向数千个屏幕推送更新。",
+    "primaryBtn": "立即开始",
+    "secondaryBtn": "演示",
+    "keyboardHint": "搜索"
+  },
+  "features": {
+    "title": "为速度而生",
+    "titleHighlight": "为规模而设",
+    "subtitle": "体验下一代内容管理系统",
+    "instantSync": "即时同步",
+    "instantSyncDesc": "变更在全球节点间以 <100ms 的速度同步。",
+    "edgeSecurity": "边缘安全",
+    "edgeSecurityDesc": "内置零信任架构。",
+    "globalMesh": "全球网格",
+    "globalMeshDesc": "智能路由自动优化内容传输路径。",
+    "apiFirst": "API 优先",
+    "apiFirstDesc": "通过强大的 SDK 完全可编程。"
+  },
+  "useCases": {
+    "title": "赋能各行各业",
+    "industries": "行业",
+    "retail": "零售商务",
+    "retailDesc": "为现代零售环境提供动态定价和促销展示。",
+    "transportation": "交通运输",
+    "transportationDesc": "机场、车站和枢纽的实时时刻表更新。",
+    "corporate": "企业办公",
+    "corporateDesc": "办公室内部沟通和仪表板展示。",
+    "education": "教育机构",
+    "educationDesc": "校园范围内的通知和数字导航。",
+    "publicServices": "公共服务",
+    "publicServicesDesc": "政府和社区中心的信息传播。",
+    "hospitality": "酒店餐饮",
+    "hospitalityDesc": "酒店和餐厅的数字菜单和礼宾服务。"
+  },
+  "cta": {
+    "title": "准备好点亮您的业务了吗？",
+    "subtitle": "加入数千家前瞻性公司，使用 Prism Cloud 管理数字内容。",
+    "button": "开始免费试用"
+  },
+  "footer": {
+    "product": "产品",
+    "features": "功能特性",
+    "solutions": "解决方案",
+    "integration": "集成",
+    "enterprise": "企业版",
+    "company": "公司",
+    "aboutUs": "关于我们",
+    "careers": "招聘",
+    "blog": "博客",
+    "contact": "联系方式",
+    "resources": "资源",
+    "documentation": "文档",
+    "helpCenter": "帮助中心",
+    "community": "社区",
+    "partners": "合作伙伴",
+    "legal": "法律",
+    "privacyPolicy": "隐私政策",
+    "termsOfService": "服务条款",
+    "cookiePolicy": "Cookie 政策",
+    "copyright": "保留所有权利。"
+  }
+}

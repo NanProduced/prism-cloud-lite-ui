@@ -1,0 +1,76 @@
+{
+  "nav": {
+    "features": "Features",
+    "solutions": "Solutions",
+    "pricing": "Pricing",
+    "docs": "Docs",
+    "login": "Log in",
+    "getStarted": "Get Started"
+  },
+  "hero": {
+    "badge": "New",
+    "badgeText": "Prism Cloud 2.0 is live",
+    "title": "Your content.",
+    "titleHighlight": "Everywhere.",
+    "subtitle": "The command center for your digital presence. Push updates to thousands of screens with the speed of a terminal command.",
+    "primaryBtn": "Get Started",
+    "secondaryBtn": "Demo",
+    "keyboardHint": "to search"
+  },
+  "features": {
+    "title": "Built for speed.",
+    "titleHighlight": "Designed for scale.",
+    "subtitle": "Experience the next generation of content management.",
+    "instantSync": "Instant Sync",
+    "instantSyncDesc": "Changes reflect in sub-100ms across global nodes.",
+    "edgeSecurity": "Edge Security",
+    "edgeSecurityDesc": "Zero-trust architecture built-in.",
+    "globalMesh": "Global Mesh",
+    "globalMeshDesc": "Smart routing optimizes content delivery paths automatically.",
+    "apiFirst": "API First",
+    "apiFirstDesc": "Fully programmable via our robust SDK."
+  },
+  "useCases": {
+    "title": "Transforming spaces across sectors",
+    "industries": "Industries",
+    "retail": "Retail & Commerce",
+    "retailDesc": "Dynamic pricing and promotional displays for modern retail environments.",
+    "transportation": "Transportation",
+    "transportationDesc": "Real-time schedule updates for airports, stations, and hubs.",
+    "corporate": "Corporate",
+    "corporateDesc": "Internal communications and dashboard displays for offices.",
+    "education": "Education",
+    "educationDesc": "Campus-wide announcements and digital wayfinding.",
+    "publicServices": "Public Services",
+    "publicServicesDesc": "Information dissemination for government and community centers.",
+    "hospitality": "Hospitality",
+    "hospitalityDesc": "Digital menus and concierge services for hotels and restaurants."
+  },
+  "cta": {
+    "title": "Ready to illuminate your business?",
+    "subtitle": "Join thousands of forward-thinking companies using Prism Cloud to manage their digital presence.",
+    "button": "Start your free trial"
+  },
+  "footer": {
+    "product": "Product",
+    "features": "Features",
+    "solutions": "Solutions",
+    "integration": "Integration",
+    "enterprise": "Enterprise",
+    "company": "Company",
+    "aboutUs": "About Us",
+    "careers": "Careers",
+    "blog": "Blog",
+    "contact": "Contact",
+    "resources": "Resources",
+    "documentation": "Documentation",
+    "helpCenter": "Help Center",
+    "community": "Community",
+    "partners": "Partners",
+    "legal": "Legal",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service",
+    "cookiePolicy": "Cookie Policy",
+    "copyright": "All rights reserved."
+  }
+}
