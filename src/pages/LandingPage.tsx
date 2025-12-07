@@ -3,7 +3,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { DesignerCardSplash } from '@/components/landing/DesignerCardSplash';
 import { Navbar } from '@/components/landing/Navbar';
 import { Hero } from '@/components/landing/Hero';
-import { Features } from '@/components/landing/Features';
+import { FeatureSection } from '@/components/landing/FeatureSection';
+import { StatsSection } from '@/components/landing/StatsSection';
+import { AppFeatures } from '@/components/landing/AppFeatures';
+import { Testimonials } from '@/components/landing/Testimonials';
+import { Integrations } from '@/components/landing/Integrations';
+import { BlogSection } from '@/components/landing/BlogSection';
 import { UseCases } from '@/components/landing/UseCases';
 import { CTA } from '@/components/landing/CTA';
 import { Footer } from '@/components/landing/Footer';
@@ -32,7 +37,12 @@ export default function LandingPage() {
           <Navbar />
           <main>
             <Hero />
-            <Features />
+            <FeatureSection />
+            <StatsSection />
+            <AppFeatures />
+            <Testimonials />
+            <Integrations />
+            <BlogSection />
             <UseCases />
             <CTA />
           </main>

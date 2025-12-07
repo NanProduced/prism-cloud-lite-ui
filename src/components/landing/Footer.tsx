@@ -1,79 +1,78 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import { Container } from "./Container";
 
 export const Footer = () => {
-  const { t } = useTranslation();
-
-  const footerSections = [
-    {
-      titleKey: "footer.product",
-      links: [
-        { labelKey: "footer.features", href: "#" },
-        { labelKey: "footer.solutions", href: "#" },
-        { labelKey: "footer.integration", href: "#" },
-        { labelKey: "footer.enterprise", href: "#" }
-      ]
-    },
-    {
-      titleKey: "footer.company",
-      links: [
-        { labelKey: "footer.aboutUs", href: "#" },
-        { labelKey: "footer.careers", href: "#" },
-        { labelKey: "footer.blog", href: "#" },
-        { labelKey: "footer.contact", href: "#" }
-      ]
-    },
-    {
-      titleKey: "footer.resources",
-      links: [
-        { labelKey: "footer.documentation", href: "#" },
-        { labelKey: "footer.helpCenter", href: "#" },
-        { labelKey: "footer.community", href: "#" },
-        { labelKey: "footer.partners", href: "#" }
-      ]
-    },
-    {
-      titleKey: "footer.legal",
-      links: [
-        { labelKey: "footer.privacyPolicy", href: "#" },
-        { labelKey: "footer.termsOfService", href: "#" },
-        { labelKey: "footer.cookiePolicy", href: "#" }
-      ]
-    }
-  ];
-
   return (
-    <footer className="bg-black border-t border-white/5 py-12 text-sm">
-      <Container>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
-          {footerSections.map((section, index) => (
-            <div key={index}>
-              <h3 className="font-semibold text-white mb-4">{t(section.titleKey)}</h3>
-              <ul className="space-y-2 text-gray-400">
-                {section.links.map((link, linkIndex) => (
-                  <li key={linkIndex}>
-                    <a href={link.href} className="hover:text-indigo-400 transition-colors">
-                      {t(link.labelKey)}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+    <footer className="border-t border-[#1a1a1a] bg-[#050505] pt-20 pb-10">
+      <div className="container mx-auto px-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-10 mb-20">
+          <div className="col-span-2 lg:col-span-2">
+            <div className="mb-6">
+              <h4 className="text-2xl text-[#dddddd] font-medium mb-2">
+                Subscribe to Newsletter
+              </h4>
+              <p className="text-[#8a8a8a] text-sm max-w-xs">
+                Get monthly insights from cloud experts. No spam - promise.
+              </p>
             </div>
-          ))}
+            <div className="relative max-w-xs">
+              <input
+                type="email"
+                placeholder="Enter your email"
+                className="w-full bg-white/5 border border-white/10 rounded-full px-4 py-3 text-sm text-white outline-none focus:border-[#5552ff]"
+              />
+              <button className="absolute right-1.5 top-1.5 bg-[#5552ff] text-white px-4 py-1.5 rounded-full text-xs font-medium hover:bg-[#4542cc] transition-colors">
+                Subscribe
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <h5 className="text-white font-medium mb-6">Company</h5>
+            <ul className="space-y-3 text-[#8a8a8a] text-sm">
+              <li><a href="#" className="hover:text-white transition-colors">Roadmap</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">About</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Benefits</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h5 className="text-white font-medium mb-6">Product</h5>
+            <ul className="space-y-3 text-[#8a8a8a] text-sm">
+              <li><a href="#" className="hover:text-white transition-colors">Features</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">API</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Documentation</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h5 className="text-white font-medium mb-6">Resources</h5>
+            <ul className="space-y-3 text-[#8a8a8a] text-sm">
+              <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Community</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
+            </ul>
+          </div>
         </div>
-        <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-white/5">
-          <div className="flex items-center gap-2 mb-4 md:mb-0">
+
+        <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
             <div className="h-6 w-6 rounded bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white">
               P
             </div>
-            <span className="text-gray-300 font-semibold">Prism Cloud</span>
+            <span className="text-white font-bold text-lg">Prism Cloud</span>
           </div>
-          <p className="text-gray-500">
-            © {new Date().getFullYear()} Prism Cloud. {t("footer.copyright")}
+
+          <p className="text-[#8a8a8a] text-sm">
+            © {new Date().getFullYear()} Prism Cloud. All rights reserved
           </p>
+
+          <div className="flex items-center gap-4 text-[#8a8a8a] text-sm">
+            <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+            <span className="w-1 h-1 bg-[#666] rounded-full"></span>
+            <a href="#" className="hover:text-white transition-colors">Terms & Conditions</a>
+          </div>
         </div>
-      </Container>
+      </div>
     </footer>
   );
 };
