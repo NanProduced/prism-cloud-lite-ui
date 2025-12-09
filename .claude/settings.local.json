@@ -40,7 +40,8 @@
       "mcp__serena__search_for_pattern",
       "Bash(cat:*)",
       "Bash(wc:*)",
-      "mcp__playwright__browser_close"
+      "mcp__playwright__browser_close",
+      "Bash(lsof:*)"
     ],
     "deny": [],
     "ask": []

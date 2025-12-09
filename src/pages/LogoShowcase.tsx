@@ -1,4 +1,4 @@
-import { PrismIcon, PrismWordmark, PrismLogo } from '@/components/shared/logo';
+import { PrismIcon, PrismLogo } from '@/components/shared/logo';
 
 const ShowcaseSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <section className="mb-20">

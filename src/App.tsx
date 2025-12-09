@@ -2,11 +2,11 @@ import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom"
 import { PublicLayout, ProtectedLayout } from "@/components/layout/AppLayout";
 import LandingPage from "@/pages/LandingPage";
 import LogoShowcase from "@/pages/LogoShowcase";
+import AuthPage from "@/pages/AuthPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 
 // Placeholder components
 const Dashboard = () => <div className="text-2xl font-bold">Dashboard Overview</div>;
-const Login = () => <div className="flex items-center justify-center h-screen">Redirecting to Auth...</div>;
 
 const router = createBrowserRouter([
   {
@@ -14,7 +14,9 @@ const router = createBrowserRouter([
     element: <PublicLayout />,
     children: [
       { index: true, element: <LandingPage /> },
-      { path: "login", element: <Login /> },
+      { path: "auth-form", element: <AuthPage /> },
+      { path: "login", element: <Navigate to="/auth-form" replace /> },
+      { path: "register", element: <Navigate to="/auth-form" replace /> },
       { path: "logo", element: <LogoShowcase /> },
     ],
   },
