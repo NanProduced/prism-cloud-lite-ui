@@ -11,9 +11,7 @@ import { PrismIcon } from "../../components/shared/logo";
 // Logo Component
 function Logo() {
   return (
-    <div className="absolute left-[48px] top-[48px] z-10">
-      <PrismIcon size={32} variant="gradient" />
-    </div>
+    <PrismIcon size={32} variant="gradient" />
   );
 }
 
@@ -345,3 +343,4 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
     </div>
   );
 }
+
