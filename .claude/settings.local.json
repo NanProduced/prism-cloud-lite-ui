@@ -41,7 +41,21 @@
       "Bash(cat:*)",
       "Bash(wc:*)",
       "mcp__playwright__browser_close",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "Bash(dir:*)",
+      "mcp__shadcn__get_project_registries",
+      "mcp__shadcn__search_items_in_registries",
+      "mcp__shadcn__view_items_in_registries",
+      "mcp__shadcn__get_add_command_for_items",
+      "Bash(npx shadcn@latest add:*)",
+      "mcp__shadcn__get_item_examples_from_registries",
+      "WebFetch(domain:21st.dev)",
+      "Bash(pkill:*)",
+      "Bash(npx shadcn-ui@latest add:*)",
+      "mcp__serena__find_symbol",
+      "mcp__serena__insert_before_symbol",
+      "Bash(curl:*)",
+      "mcp__playwright__browser_type"
     ],
     "deny": [],
     "ask": []

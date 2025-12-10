@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { PrismWordmark } from "../../components/shared/logo";
+import { PrismWordmark, PrismIcon, GoogleLogo, AppleLogo, WechatLogo } from "../../components/shared/logo";
 import { LanguageSwitcher } from "../../components/shared/LanguageSwitcher";
 import { login, requestEmailOtp, getErrorMessage, getErrorCode } from "../../services/authApi";
 import type { AuthType } from "../../types/auth";
 import { AuthErrorCode } from "../../types/auth";
-import { PrismIcon } from "../../components/shared/logo";
 
 // Logo Component
 function Logo() {
@@ -304,28 +303,30 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
         {/* Social Buttons */}
         <div className="mt-6 flex gap-4 w-full">
           {/* Google */}
-          <button className="flex-1 h-[48px] bg-[#1a1d21] hover:bg-[#23262a] rounded-[12px] flex items-center justify-center gap-3 transition-colors border border-transparent hover:border-[#363a3d]">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M19.6 10.2c0-.7-.1-1.3-.2-1.9h-8.9v3.6h5.1c-.2 1.2-.9 2.2-1.9 2.8v2.4h3.1c1.8-1.6 2.8-4 2.8-6.9z" fill="#4285F4" />
-              <path d="M10.5 19.8c2.5 0 4.6-.8 6.2-2.2l-3.1-2.4c-.8.6-1.9.9-3.1.9-2.4 0-4.5-1.6-5.2-3.9H2.1v2.4c1.7 3.4 5.3 5.7 9.4 5.7z" fill="#34A853" />
-              <path d="M5.3 12c-.2-.6-.3-1.2-.3-1.8s.1-1.2.3-1.8V6c-2.4 1.8-4 4.6-4 7.8s1.6 6 4 7.8l3-2.3c-1.2-1-2-2.4-2.3-4z" fill="#FBBC05" />
-              <path d="M10.5 4.1c1.4 0 2.6.5 3.6 1.4l2.7-2.7C15.1.8 13 0 10.5 0 6.4 0 2.8 2.3 1.2 5.8l3.1 2.4c.7-2.3 2.8-3.9 5.2-3.9z" fill="#EA4335" />
-            </svg>
+          <button
+            type="button"
+            aria-label="Continue with Google"
+            className="flex-1 h-[48px] bg-[#1a1d21] hover:bg-[#23262a] rounded-[12px] flex items-center justify-center gap-3 transition-colors border border-transparent hover:border-[#363a3d]"
+          >
+            <GoogleLogo width={20} height={20} />
           </button>
 
           {/* Apple */}
-          <button className="flex-1 h-[48px] bg-[#1a1d21] hover:bg-[#23262a] rounded-[12px] flex items-center justify-center gap-3 transition-colors border border-transparent hover:border-[#363a3d]">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-              <path d="M17.05 13.5c-.91 0-1.82.55-2.64 1.64.93.64 1.93.99 3.03.99 2.14 0 3.85-1.75 3.85-3.99 0-1.5-.72-2.83-1.93-3.56-.35 1.24-.96 2.39-1.8 3.29-.52.55-1.19.99-1.96 1.27-.24.09-.47.15-.71.15zm-5.45-3.15c.99 0 1.89-.41 2.63-1.15.63-.64 1.07-1.47 1.22-2.41-1.23-.33-2.36-.51-3.4-.51-2.14 0-4.05 1.75-4.05 4 0 1.22.56 2.31 1.45 3.06.6-.8 1.47-1.46 2.46-1.85.34-.12.69-.19 1.04-.19-.19-.53-.3-1.1-.3-1.7 0-.24.02-.48.05-.72z" />
-            </svg>
+          <button
+            type="button"
+            aria-label="Continue with Apple"
+            className="flex-1 h-[48px] bg-[#1a1d21] hover:bg-[#23262a] rounded-[12px] flex items-center justify-center gap-3 transition-colors border border-transparent hover:border-[#363a3d]"
+          >
+            <AppleLogo className="text-white" width={24} height={24} />
           </button>
 
           {/* WeChat */}
-          <button className="flex-1 h-[48px] bg-[#1a1d21] hover:bg-[#23262a] rounded-[12px] flex items-center justify-center gap-3 transition-colors border border-transparent hover:border-[#363a3d] group">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-[#686b6e] group-hover:text-[#07C160]">
-              <path d="M7 11C7 8.79086 9.23858 7 12 7C14.7614 7 17 8.79086 17 11C17 13.2091 14.7614 15 12 15C11.5363 15 11.0921 14.9496 10.6724 14.8551L8.5 16L9.04343 14.195C7.81734 13.4357 7 12.2854 7 11Z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M15 12C15 10.3431 16.567 9 18.5 9C20.433 9 22 10.3431 22 12C22 13.6569 20.433 15 18.5 15C18.176 15 17.8654 14.9649 17.5714 14.8988L16 15.5L16.4385 14.453C15.5539 13.886 15 13.0076 15 12Z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+          <button
+            type="button"
+            aria-label="Continue with WeChat"
+            className="flex-1 h-[48px] bg-[#1a1d21] hover:bg-[#23262a] rounded-[12px] flex items-center justify-center gap-3 transition-colors border border-transparent hover:border-[#363a3d] group"
+          >
+            <WechatLogo className="text-[#686b6e] group-hover:text-[#07C160] transition-colors" width={24} height={24} />
           </button>
         </div>
 

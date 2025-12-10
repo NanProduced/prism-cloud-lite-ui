@@ -1,4 +1,5 @@
 import axios, { AxiosError } from 'axios';
+import type { AxiosResponse } from 'axios';
 import type {
   BffResponse,
   LoginRequest,
@@ -44,19 +45,21 @@ authApiClient.interceptors.response.use(
 export async function requestEmailOtp(
   request: RequestEmailOtpRequest
 ): Promise<BffResponse<void>> {
-  const response = await authApiClient.post<BffResponse<void>>(
-    '/login/request-email-otp',
-    request
+  return handleBffRequest<void>(
+    authApiClient.post<BffResponse<void>>(
+      '/login/request-email-otp',
+      request
+    )
   );
-  return response.data;
 }
 
 /**
  * Login API - Submit login
  */
 export async function login(request: LoginRequest): Promise<BffResponse<LoginResponse>> {
-  const response = await authApiClient.post<BffResponse<LoginResponse>>('/login', request);
-  return response.data;
+  return handleBffRequest<LoginResponse>(
+    authApiClient.post<BffResponse<LoginResponse>>('/login', request)
+  );
 }
 
 /**
@@ -65,11 +68,12 @@ export async function login(request: LoginRequest): Promise<BffResponse<LoginRes
 export async function registerRequestOtp(
   request: RegisterRequestOtpRequest
 ): Promise<BffResponse<void>> {
-  const response = await authApiClient.post<BffResponse<void>>(
-    '/register/request-otp',
-    request
+  return handleBffRequest<void>(
+    authApiClient.post<BffResponse<void>>(
+      '/register/request-otp',
+      request
+    )
   );
-  return response.data;
 }
 
 /**
@@ -78,11 +82,12 @@ export async function registerRequestOtp(
 export async function registerVerifyOtp(
   request: RegisterVerifyOtpRequest
 ): Promise<BffResponse<RegisterVerifyOtpResponse>> {
-  const response = await authApiClient.post<BffResponse<RegisterVerifyOtpResponse>>(
-    '/register/verify-otp',
-    request
+  return handleBffRequest<RegisterVerifyOtpResponse>(
+    authApiClient.post<BffResponse<RegisterVerifyOtpResponse>>(
+      '/register/verify-otp',
+      request
+    )
   );
-  return response.data;
 }
 
 /**
@@ -91,11 +96,27 @@ export async function registerVerifyOtp(
 export async function registerComplete(
   request: RegisterCompleteRequest
 ): Promise<BffResponse<void>> {
-  const response = await authApiClient.post<BffResponse<void>>(
-    '/register/complete',
-    request
+  return handleBffRequest<void>(
+    authApiClient.post<BffResponse<void>>(
+      '/register/complete',
+      request
+    )
   );
-  return response.data;
+}
+
+async function handleBffRequest<T>(
+  requestPromise: Promise<AxiosResponse<BffResponse<T>>>
+): Promise<BffResponse<T>> {
+  try {
+    const response = await requestPromise;
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<BffResponse<T>>;
+    if (axiosError.response?.data) {
+      return axiosError.response.data;
+    }
+    throw error;
+  }
 }
 
 /**
@@ -118,3 +139,4 @@ export function getErrorCode(response: BffResponse): string | undefined {
 export function isRetryable(response: BffResponse): boolean {
   return response.error?.retryable || false;
 }
+

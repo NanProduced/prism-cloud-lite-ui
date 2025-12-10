@@ -1,4 +1,6 @@
 import { Outlet, Navigate } from "react-router-dom";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { Toaster } from "sonner";
 
 export const PublicLayout = () => {
   return (
@@ -17,15 +19,11 @@ export const ProtectedLayout = () => {
     }
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-200 flex">
-            {/* Sidebar Placeholder */}
-            <aside className="w-64 border-r border-white/5 bg-slate-900/50 hidden md:block">
-                <div className="p-6">Protected Area</div>
-            </aside>
-            
-            <main className="flex-1 p-8">
+        <>
+            <DashboardShell>
                 <Outlet />
-            </main>
-        </div>
+            </DashboardShell>
+            <Toaster position="top-right" richColors />
+        </>
     );
 };

@@ -4,9 +4,19 @@ import LandingPage from "@/pages/LandingPage";
 import LogoShowcase from "@/pages/LogoShowcase";
 import AuthPage from "@/pages/AuthPage";
 import NotFoundPage from "@/pages/NotFoundPage";
-
-// Placeholder components
-const Dashboard = () => <div className="text-2xl font-bold">Dashboard Overview</div>;
+import OverviewPage from "@/pages/dashboard/OverviewPage";
+import {
+  AnalyticsPage,
+  DevicesPage,
+  MapPage,
+  MediaPage,
+  MonitoringPage,
+  ProgramsPage,
+  SettingsPage,
+  LogsPage,
+  SchedulePage,
+  MessagesPage,
+} from "@/pages/dashboard/PlaceholderPages";
 
 const router = createBrowserRouter([
   {
@@ -25,8 +35,17 @@ const router = createBrowserRouter([
     element: <ProtectedLayout />,
     children: [
       { index: true, element: <Navigate to="overview" replace /> },
-      { path: "overview", element: <Dashboard /> },
-      // Add more dashboard routes here later
+      { path: "overview", element: <OverviewPage /> },
+      { path: "media", element: <MediaPage /> },
+      { path: "programs", element: <ProgramsPage /> },
+      { path: "devices", element: <DevicesPage /> },
+      { path: "schedule", element: <SchedulePage /> },
+      { path: "map", element: <MapPage /> },
+      { path: "analytics", element: <AnalyticsPage /> },
+      { path: "monitoring", element: <MonitoringPage /> },
+      { path: "messages", element: <MessagesPage /> },
+      { path: "logs", element: <LogsPage /> },
+      { path: "settings", element: <SettingsPage /> },
     ],
   },
   {

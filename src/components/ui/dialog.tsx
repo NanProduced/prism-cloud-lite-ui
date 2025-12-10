@@ -47,9 +47,9 @@ export function DialogContent({ children, className = "" }: { children: ReactNod
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/50" onClick={() => context.setOpen(false)} />
-      <div className={`fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-lg shadow-lg ${className}`}>
-        <div className="relative bg-slate-900 p-6 rounded-lg">{children}</div>
+      <div className="fixed inset-0 z-40 bg-black/40" onClick={() => context.setOpen(false)} />
+      <div className={`fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-lg border border-border bg-background shadow-lg ${className}`}>
+        {children}
       </div>
     </>
   );
