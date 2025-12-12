@@ -5,9 +5,9 @@ import LogoShowcase from "@/pages/LogoShowcase";
 import AuthPage from "@/pages/AuthPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import OverviewPage from "@/pages/dashboard/OverviewPage";
+import DevicesPage from "@/pages/dashboard/devices/DevicesPage";
 import {
   AnalyticsPage,
-  DevicesPage,
   MapPage,
   MediaPage,
   MonitoringPage,

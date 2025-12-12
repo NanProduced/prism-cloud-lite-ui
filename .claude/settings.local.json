@@ -55,7 +55,13 @@
       "mcp__serena__find_symbol",
       "mcp__serena__insert_before_symbol",
       "Bash(curl:*)",
-      "mcp__playwright__browser_type"
+      "mcp__playwright__browser_type",
+      "mcp__serena__think_about_collected_information",
+      "WebFetch(domain:www.1771technologies.com)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(powershell:*)",
+      "mcp__context7__resolve-library-id"
     ],
     "deny": [],
     "ask": []

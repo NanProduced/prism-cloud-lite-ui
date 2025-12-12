@@ -216,15 +216,17 @@ export function DashboardOverview() {
             <CardTitle className="text-base">Device Uptime</CardTitle>
             <CardDescription>Weekly online/offline trend</CardDescription>
           </CardHeader>
-          <CardContent className="h-[260px]">
+          <CardContent className="w-full">
             {isMounted && (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={onlineTrendData}>
-                  <RechartsTooltip cursor={{ stroke: "#94a3b8", strokeDasharray: 4 }} />
-                  <Area type="monotone" dataKey="online" stroke="#34d399" fill="#d1fae5" strokeWidth={2} />
-                  <Area type="monotone" dataKey="offline" stroke="#f87171" fill="#fee2e2" strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
+              <div className="w-full h-[260px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={onlineTrendData}>
+                    <RechartsTooltip cursor={{ stroke: "#94a3b8", strokeDasharray: 4 }} />
+                    <Area type="monotone" dataKey="online" stroke="#34d399" fill="#d1fae5" strokeWidth={2} />
+                    <Area type="monotone" dataKey="offline" stroke="#f87171" fill="#fee2e2" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -235,7 +237,7 @@ export function DashboardOverview() {
             <CardDescription>Usage across resources</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="h-48">
+            <div className="w-full h-48">
               {isMounted && (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>

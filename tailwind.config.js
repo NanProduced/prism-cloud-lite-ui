@@ -7,6 +7,23 @@ export default {
   ],
   theme: {
   	extend: {
+  		fontFamily: {
+  			sans: [
+  				'"Geist Sans"',
+  				'ui-sans-serif',
+  				'system-ui',
+  				'-apple-system',
+  				'BlinkMacSystemFont',
+  				'"Segoe UI"',
+  				'Roboto',
+  				'Helvetica',
+  				'Arial',
+  				'"Noto Sans SC"',
+  				'"PingFang SC"',
+  				'"Microsoft YaHei"',
+  				'sans-serif'
+  			]
+  		},
   		colors: {
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',

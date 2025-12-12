@@ -1,5 +1,5 @@
 import { type ComponentType, type PropsWithChildren, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Activity,
   BarChart3,
@@ -130,6 +130,8 @@ const notifications = [
 
 export function DashboardShell({ children }: PropsWithChildren) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const toggleExpanded = (label: string) => {
     const newSet = new Set(expandedItems);
@@ -139,6 +141,10 @@ export function DashboardShell({ children }: PropsWithChildren) {
       newSet.add(label);
     }
     setExpandedItems(newSet);
+  };
+
+  const isNavActive = (href: string): boolean => {
+    return location.pathname === href;
   };
 
   return (
@@ -151,7 +157,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
                 className="h-auto flex-col items-start gap-3 rounded-lg border bg-sidebar-accent/50 px-4 py-4 text-left hover:bg-sidebar-accent transition-colors cursor-pointer"
                 tooltip="Workspace"
                 onClick={() => {
-                  // 占位：后续支持自定义 workspace
+                  // TODO: Support custom workspace configuration in the future
                   console.log("Workspace settings clicked");
                 }}
               >
@@ -183,46 +189,39 @@ export function DashboardShell({ children }: PropsWithChildren) {
                       {group.items.map((item) => (
                         <div key={item.href}>
                           <SidebarMenuItem>
-                            <NavLink to={item.href}>
-                              {({ isActive }) => (
-                                <SidebarMenuButton
-                                  asChild
-                                  isActive={isActive}
-                                  tooltip={item.label}
-                                  className="rounded-lg text-sm"
-                                >
-                                  <div
-                                    className="flex w-full items-center justify-between"
-                                    onClick={(e) => {
-                                      if (item.children && item.children.length > 0) {
-                                        e.preventDefault();
-                                        toggleExpanded(item.label);
-                                      }
-                                    }}
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      <item.icon className="h-4 w-4" />
-                                      <span>{item.label}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      {item.badge && (
-                                        <SidebarMenuBadge>
-                                          {item.badge}
-                                        </SidebarMenuBadge>
-                                      )}
-                                      {item.children && item.children.length > 0 && (
-                                        <ChevronDown
-                                          className={cn(
-                                            "h-4 w-4 transition-transform",
-                                            expandedItems.has(item.label) && "rotate-180"
-                                          )}
-                                        />
-                                      )}
-                                    </div>
-                                  </div>
-                                </SidebarMenuButton>
-                              )}
-                            </NavLink>
+                            <SidebarMenuButton
+                              isActive={isNavActive(item.href)}
+                              tooltip={item.label}
+                              className="rounded-lg text-sm"
+                              onClick={(e) => {
+                                if (item.children && item.children.length > 0) {
+                                  e.preventDefault();
+                                  toggleExpanded(item.label);
+                                } else {
+                                  navigate(item.href);
+                                }
+                              }}
+                            >
+                              <div className="flex items-center gap-3">
+                                <item.icon className="h-4 w-4" />
+                                <span>{item.label}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {item.badge && (
+                                  <SidebarMenuBadge>
+                                    {item.badge}
+                                  </SidebarMenuBadge>
+                                )}
+                                {item.children && item.children.length > 0 && (
+                                  <ChevronDown
+                                    className={cn(
+                                      "h-4 w-4 transition-transform",
+                                      expandedItems.has(item.label) && "rotate-180"
+                                    )}
+                                  />
+                                )}
+                              </div>
+                            </SidebarMenuButton>
                           </SidebarMenuItem>
 
                           {/* Collapsible Children */}
@@ -230,13 +229,12 @@ export function DashboardShell({ children }: PropsWithChildren) {
                             <SidebarMenuSub>
                               {item.children.map((child) => (
                                 <SidebarMenuSubItem key={child.href}>
-                                  <NavLink to={child.href}>
-                                    {({ isActive }) => (
-                                      <SidebarMenuSubButton isActive={isActive}>
-                                        {child.label}
-                                      </SidebarMenuSubButton>
-                                    )}
-                                  </NavLink>
+                                  <SidebarMenuSubButton
+                                    isActive={isNavActive(child.href)}
+                                    onClick={() => navigate(child.href)}
+                                  >
+                                    {child.label}
+                                  </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
                               ))}
                             </SidebarMenuSub>
@@ -308,7 +306,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
 }
 
 function StoragePanel() {
-  // Mock 数据 - 未来可从 API 获取
+  // Mock data - will fetch from API in the future
   const usedSpace = 1.2; // GB
   const totalSpace = 2;  // GB
   const percentage = (usedSpace / totalSpace) * 100;
@@ -316,28 +314,28 @@ function StoragePanel() {
 
   return (
     <div className="rounded-lg border bg-muted/50 p-4">
-      {/* 标题 + 订阅等级 */}
+      {/* Title + Subscription Level */}
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-semibold">存储空间</h4>
+        <h4 className="text-sm font-semibold">Storage Space</h4>
         <Badge variant="outline" className="text-xs">Lite</Badge>
       </div>
 
-      {/* 进度条 */}
+      {/* Progress Bar */}
       <Progress value={percentage} className="h-2 mb-2" />
 
-      {/* 数据显示 */}
+      {/* Data Display */}
       <p
         className={cn(
           "text-xs mb-3",
           isWarning ? "text-amber-600 font-medium" : "text-muted-foreground"
         )}
       >
-        {usedSpace.toFixed(1)}GB / {totalSpace}GB 已用 ({percentage.toFixed(0)}%)
+        {usedSpace.toFixed(1)}GB / {totalSpace}GB used ({percentage.toFixed(0)}%)
       </p>
 
-      {/* 升级按钮 */}
+      {/* Upgrade Button */}
       <Button className="w-full h-9 text-xs rounded-lg">
-        升级获得更多空间
+        Upgrade for More Space
       </Button>
     </div>
   );

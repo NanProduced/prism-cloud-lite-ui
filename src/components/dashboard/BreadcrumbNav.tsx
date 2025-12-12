@@ -1,4 +1,6 @@
-import { useLocation, Link } from "react-router-dom";
+import React from "react";
+import { useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -8,7 +10,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
-// 路由到面包屑的映射
+// Route to breadcrumb label mapping
 const routeMap: Record<string, string> = {
   "/": "Home",
   "/dashboard": "Dashboard",
@@ -27,9 +29,10 @@ const routeMap: Record<string, string> = {
 
 export function BreadcrumbNav() {
   const location = useLocation();
+  const navigate = useNavigate();
   const pathname = location.pathname;
 
-  // 生成面包屑路径
+  // Generate breadcrumb paths
   const generateBreadcrumbs = () => {
     const paths = pathname.split("/").filter(Boolean);
     const breadcrumbs: Array<{
@@ -55,7 +58,7 @@ export function BreadcrumbNav() {
 
   const breadcrumbs = generateBreadcrumbs();
 
-  // 仅显示最后 3 个面包屑，以避免过长
+  // Only display the last 3 breadcrumbs to avoid too long paths
   const displayBreadcrumbs = breadcrumbs.length > 3
     ? breadcrumbs.slice(-3)
     : breadcrumbs;
@@ -64,22 +67,23 @@ export function BreadcrumbNav() {
     <Breadcrumb>
       <BreadcrumbList>
         {displayBreadcrumbs.map((breadcrumb, index) => (
-          <BreadcrumbItem key={breadcrumb.href}>
-            {breadcrumb.isCurrent ? (
-              <BreadcrumbPage className="truncate max-w-[200px]">
-                {breadcrumb.label}
-              </BreadcrumbPage>
-            ) : (
-              <>
-                <BreadcrumbLink asChild>
-                  <Link to={breadcrumb.href} className="truncate max-w-[200px]">
-                    {breadcrumb.label}
-                  </Link>
+          <React.Fragment key={breadcrumb.href}>
+            <BreadcrumbItem>
+              {breadcrumb.isCurrent ? (
+                <BreadcrumbPage className="truncate max-w-[200px]">
+                  {breadcrumb.label}
+                </BreadcrumbPage>
+              ) : (
+                <BreadcrumbLink
+                  onClick={() => navigate(breadcrumb.href)}
+                  className="truncate max-w-[200px] cursor-pointer"
+                >
+                  {breadcrumb.label}
                 </BreadcrumbLink>
-                {index < displayBreadcrumbs.length - 1 && <BreadcrumbSeparator />}
-              </>
-            )}
-          </BreadcrumbItem>
+              )}
+            </BreadcrumbItem>
+            {index < displayBreadcrumbs.length - 1 && <BreadcrumbSeparator />}
+          </React.Fragment>
         ))}
       </BreadcrumbList>
     </Breadcrumb>

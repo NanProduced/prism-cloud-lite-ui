@@ -1,0 +1,318 @@
+import type {
+  AggModelFn,
+  Column,
+  HeaderCellRendererParams,
+  SortModelItem,
+} from '@1771technologies/lytenyte-core/types';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  EyeOff,
+  MoreHorizontal,
+  Pin,
+  PinOff,
+  Sigma,
+  Spline,
+  Text,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+function sortKindForColumn<T>(column: Column<T>): SortModelItem<T>['sort'] {
+  switch (column.type) {
+    case 'number':
+      return { kind: 'number' };
+    case 'date':
+    case 'datetime':
+      return { kind: 'date' };
+    default:
+      return { kind: 'string' };
+  }
+}
+
+function aggLabel(fn: AggModelFn<unknown>): string {
+  if (typeof fn === 'string') return fn;
+  return 'custom';
+}
+
+export function PrismHeaderRenderer<T>({ grid, column }: HeaderCellRendererParams<T>) {
+  const sortModel = grid.state.sortModel.useValue();
+  const rowGroupModel = grid.state.rowGroupModel.useValue();
+  const columns = grid.state.columns.useValue();
+  const aggModel = grid.state.aggModel.useValue();
+
+  const isSortable = column.uiHints?.sortable !== false;
+  const isMenuEnabled = column.id !== 'actions' && column.id !== '__globalSearch';
+
+  const sortIndex = sortModel.findIndex((s) => s.columnId === column.id);
+  const sortEntry = sortIndex >= 0 ? sortModel[sortIndex] : undefined;
+  const sortDir: 'asc' | 'desc' | 'none' =
+    !sortEntry ? 'none' : sortEntry.isDescending ? 'desc' : 'asc';
+
+  const currentColumn = columns.find((c) => c.id === column.id) ?? column;
+  const pin = currentColumn.pin ?? null;
+  const hide = Boolean(currentColumn.hide);
+
+  const isGrouped = rowGroupModel.some((g) =>
+    typeof g === 'string' ? g === column.id : g.id === column.id
+  );
+
+  const allowedAggs = currentColumn.uiHints?.aggsAllowed ?? [];
+  const currentAgg = aggModel[column.id]?.fn;
+
+  const SortIcon =
+    sortDir === 'asc' ? ArrowUp :
+    sortDir === 'desc' ? ArrowDown :
+    ArrowUpDown;
+
+  const toggleSort = () => {
+    if (!isSortable) return;
+    const next =
+      sortDir === 'none' ? 'asc' :
+      sortDir === 'asc' ? 'desc' :
+      'none';
+    applySort(next);
+  };
+
+  const applySort = (dir: 'asc' | 'desc' | 'none') => {
+    if (!isSortable) return;
+    grid.state.sortModel.set((prev) => {
+      const without = prev.filter((s) => s.columnId !== column.id);
+      if (dir === 'none') return without;
+      const nextItem: SortModelItem<T> = {
+        columnId: column.id,
+        isDescending: dir === 'desc' ? true : undefined,
+        sort: sortKindForColumn(column),
+      };
+      return [nextItem, ...without];
+    });
+  };
+
+  const setPin = (nextPin: 'start' | 'end' | null) => {
+    grid.state.columns.set((prev) =>
+      prev.map((c) => (c.id === column.id ? { ...c, pin: nextPin } : c))
+    );
+  };
+
+  const setHidden = (nextHide: boolean) => {
+    grid.state.columns.set((prev) =>
+      prev.map((c) => (c.id === column.id ? { ...c, hide: nextHide } : c))
+    );
+  };
+
+  const autosizeColumn = (includeHeader: boolean) => {
+    grid.api.columnAutosize({ columns: [column.id], includeHeader });
+  };
+
+  const autosizeAll = (includeHeader: boolean) => {
+    grid.api.columnAutosize({ includeHeader });
+  };
+
+  const toggleGroupBy = () => {
+    grid.state.rowGroupModel.set((prev) => {
+      const ids = prev.map((g) => (typeof g === 'string' ? g : g.id));
+      if (ids.includes(column.id)) {
+        return prev.filter((g) => (typeof g === 'string' ? g !== column.id : g.id !== column.id));
+      }
+      return [...prev, column.id];
+    });
+  };
+
+  const setAgg = (fn?: AggModelFn<T>) => {
+    grid.state.aggModel.set((prev) => {
+      const next = { ...prev };
+      if (!fn) delete next[column.id];
+      else next[column.id] = { fn };
+      return next;
+    });
+  };
+
+  return (
+    <div className="flex w-full items-center gap-2 min-w-0">
+      <div className="flex items-center gap-1 min-w-0">
+        <span className="truncate font-medium">{column.name ?? column.id}</span>
+        {rowGroupModel.length > 0 && currentAgg && (
+          <span className="text-xs font-semibold text-sky-600 dark:text-sky-400">
+            ({aggLabel(currentAgg as AggModelFn<unknown>)})
+          </span>
+        )}
+      </div>
+
+      <div className="ml-auto flex items-center gap-1">
+        {isSortable && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn(
+              'h-7 w-7 opacity-0 group-hover:opacity-80 focus-visible:opacity-100',
+              sortDir !== 'none' && 'opacity-100'
+            )}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleSort();
+            }}
+            aria-label="Toggle sort"
+          >
+            <SortIcon className="h-4 w-4" />
+          </Button>
+        )}
+
+        {isMenuEnabled && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 opacity-0 group-hover:opacity-80 focus-visible:opacity-100 data-[state=open]:opacity-100"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                aria-label="Column menu"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
+              <DropdownMenuItem
+                disabled={!isSortable}
+                onSelect={() => applySort('asc')}
+              >
+                <ArrowUp className="h-4 w-4" />
+                Sort Ascending
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={!isSortable}
+                onSelect={() => applySort('desc')}
+              >
+                <ArrowDown className="h-4 w-4" />
+                Sort Descending
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={!isSortable || sortDir === 'none'}
+                onSelect={() => applySort('none')}
+              >
+                <ArrowUpDown className="h-4 w-4" />
+                Clear Sort
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Pin className="h-4 w-4" />
+                  Column Pin
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuRadioGroup
+                    value={pin ?? 'center'}
+                    onValueChange={(v) => setPin(v === 'center' ? null : (v as 'start' | 'end'))}
+                  >
+                    <DropdownMenuRadioItem value="center">
+                      <PinOff className="h-4 w-4" />
+                      Unpinned
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="start">
+                      <Pin className="h-4 w-4" />
+                      Pin Left
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="end">
+                      <Pin className="h-4 w-4" />
+                      Pin Right
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Spline className="h-4 w-4" />
+                  Autosize
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem onSelect={() => autosizeColumn(false)}>
+                    Autosize Column
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => autosizeColumn(true)}>
+                    Autosize Column (Include Header)
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={() => autosizeAll(false)}>
+                    Autosize All Columns
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => autosizeAll(true)}>
+                    Autosize All (Include Headers)
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                disabled={hide}
+                onSelect={() => setHidden(true)}
+              >
+                <EyeOff className="h-4 w-4" />
+                Hide Column
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                disabled={column.uiHints?.rowGroupable === false}
+                onSelect={toggleGroupBy}
+              >
+                <Text className="h-4 w-4" />
+                {isGrouped ? 'Ungroup' : 'Group By'} {column.name ?? column.id}
+              </DropdownMenuItem>
+
+              {allowedAggs.length > 0 && (
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Sigma className="h-4 w-4" />
+                    Aggregate
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup
+                      value={currentAgg ? aggLabel(currentAgg as AggModelFn<unknown>) : 'none'}
+                      onValueChange={(v) => {
+                        if (v === 'none') {
+                          setAgg(undefined);
+                        } else {
+                          setAgg(v as unknown as AggModelFn<T>);
+                        }
+                      }}
+                    >
+                      <DropdownMenuRadioItem value="none">
+                        None
+                      </DropdownMenuRadioItem>
+                      {allowedAggs.map((fn) => (
+                        <DropdownMenuRadioItem key={fn} value={String(fn)}>
+                          {String(fn)}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+    </div>
+  );
+}
