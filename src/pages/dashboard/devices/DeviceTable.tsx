@@ -9,6 +9,7 @@ import type { Device } from '@/types/device';
 import { DeviceStatusBadge } from '@/components/devices/DeviceStatusBadge';
 import { DeviceScreenshot } from '@/components/devices/DeviceScreenshot';
 import { Badge } from '@/components/ui/badge';
+import { TagChip } from '@/components/devices/TagChip';
 import { DeviceGridToolbar } from './DeviceGridToolbar';
 import { DeviceGridFloatingFilterCell } from './DeviceGridFloatingFilterCell';
 import { PrismHeaderRenderer } from '@/components/lytenyte/PrismHeaderRenderer';
@@ -377,17 +378,7 @@ export function DeviceTable({ devices }: DeviceTableProps) {
         return (
           <div className="flex flex-wrap gap-1">
             {tags.slice(0, 3).map((tag) => (
-              <Badge
-                key={tag.id}
-                variant="outline"
-                className="text-xs"
-                style={{
-                  borderColor: tag.color,
-                  color: tag.color,
-                }}
-              >
-                {tag.name}
-              </Badge>
+              <TagChip key={tag.id} tag={tag} />
             ))}
             {tags.length > 3 && (
               <Badge variant="outline" className="text-xs">

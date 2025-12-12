@@ -1,26 +1,30 @@
 import type { Device } from '@/types/device';
 import { DeviceScreenshot } from '@/components/devices/DeviceScreenshot';
-import { DeviceStatusBadge } from '@/components/devices/DeviceStatusBadge';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import type { Tag } from '@/types/device';
+import { TagChip } from '@/components/devices/TagChip';
+import { TagPicker } from '@/components/devices/TagPicker';
 import {
-  Power,
-  RotateCcw,
-  Camera,
   AlertTriangle,
-  SignalHigh,
-  SignalMedium,
-  SignalLow,
-  SignalZero,
+  Clock,
+  Wifi,
+  RadioTower,
+  EthernetPort,
+  Sun,
+  Play,
+  Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface DeviceCardViewProps {
   devices: Device[];
+  tags: Tag[];
+  onToggleDeviceTag: (deviceId: string, tag: Tag) => void;
+  onCreateTag: (draft: { name: string; color: string; icon?: string }) => Tag;
 }
 
-export function DeviceCardView({ devices }: DeviceCardViewProps) {
+export function DeviceCardView({ devices, tags, onToggleDeviceTag, onCreateTag }: DeviceCardViewProps) {
   if (devices.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 border rounded-lg bg-muted/20">
@@ -30,195 +34,188 @@ export function DeviceCardView({ devices }: DeviceCardViewProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
       {devices.map((device) => (
-        <DeviceCard key={device.id} device={device} />
+        <DeviceCard
+          key={device.id}
+          device={device}
+          tags={tags}
+          onToggleDeviceTag={onToggleDeviceTag}
+          onCreateTag={onCreateTag}
+        />
       ))}
     </div>
   );
 }
 
-function DeviceCard({ device }: { device: Device }) {
+function DeviceCard({
+  device,
+  tags,
+  onToggleDeviceTag,
+  onCreateTag,
+}: {
+  device: Device;
+  tags: Tag[];
+  onToggleDeviceTag: (deviceId: string, tag: Tag) => void;
+  onCreateTag: (draft: { name: string; color: string; icon?: string }) => Tag;
+}) {
   const lastReport = new Date(device.lastReportTime);
   const now = new Date();
   const diffMinutes = (now.getTime() - lastReport.getTime()) / (1000 * 60);
   const isOutdated = diffMinutes > 60;
 
-  const usedGB = device.storageUsed / (1024 ** 3);
-  const totalGB = device.storageTotal / (1024 ** 3);
-  const storagePercent = Math.min(100, (device.storageUsed / device.storageTotal) * 100);
+  const NetworkIcon =
+    device.networkType === 'WiFi' ? Wifi :
+    device.networkType === '4G' ? RadioTower :
+    EthernetPort;
 
-  const strength = device.signalStrength ?? 0;
-  let signalColor = 'text-red-600';
-  if (strength >= 70) signalColor = 'text-green-600';
-  else if (strength >= 40) signalColor = 'text-amber-600';
+  const lastReportLabel = formatRelativeTime(diffMinutes);
+  const showOutdatedWarn = device.status === 'online' && isOutdated;
 
-  const SignalIcon =
-    strength >= 70 ? SignalHigh :
-    strength >= 40 ? SignalMedium :
-    strength > 0 ? SignalLow :
-    SignalZero;
-
-  let brightnessBarColor = 'bg-blue-500';
-  let brightnessLabelColor = 'text-gray-600';
-  if (device.brightness < 20) {
-    brightnessBarColor = 'bg-amber-500';
-    brightnessLabelColor = 'text-amber-600 font-semibold';
-  } else if (device.brightness > 80) {
-    brightnessBarColor = 'bg-green-500';
-    brightnessLabelColor = 'text-green-600';
-  }
-
-  const customFieldEntries = device.customFields
-    ? Object.entries(device.customFields).slice(0, 2)
-    : [];
+  const displayedTags = device.tags.slice(0, 2);
+  const remainingTagCount = Math.max(0, device.tags.length - displayedTags.length);
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="p-0">
+    <Card className="group overflow-hidden">
+      <div className="relative">
         <DeviceScreenshot
           src={device.latestScreenshot?.url}
           timestamp={device.latestScreenshot?.timestamp}
           deviceName={device.deviceName}
-          className="w-full h-36 rounded-none"
+          className="w-full h-24 rounded-none"
         />
-      </CardHeader>
-
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h3 className="font-semibold truncate">{device.deviceName}</h3>
-            {device.alias && (
-              <p className="text-xs text-muted-foreground truncate">{device.alias}</p>
-            )}
-          </div>
-          <DeviceStatusBadge status={device.status} offlineDuration={device.offlineDuration} />
+        <div className="absolute top-2 left-2">
+          <StatusPill status={device.status} offlineDuration={device.offlineDuration} />
         </div>
+      </div>
 
-        {device.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {device.tags.slice(0, 4).map((tag) => (
-              <Badge
-                key={tag.id}
-                variant="outline"
-                className="text-xs"
-                style={{ borderColor: tag.color, color: tag.color }}
-              >
-                {tag.name}
-              </Badge>
-            ))}
-            {device.tags.length > 4 && (
-              <Badge variant="outline" className="text-xs">
-                +{device.tags.length - 4}
-              </Badge>
-            )}
+      <CardContent className="p-3 space-y-2">
+        <div className="min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-semibold text-sm truncate">{device.deviceName}</h3>
+            <Badge variant="secondary" className="text-xs font-medium">
+              {device.model}
+            </Badge>
           </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div className="space-y-0.5">
-            <div className="text-xs text-muted-foreground">Last Report</div>
-            <div className={cn('text-sm flex items-center gap-1.5', isOutdated && 'text-amber-600 font-semibold')}>
-              {isOutdated && <AlertTriangle className="h-3.5 w-3.5" />}
-              <span>
-                {lastReport.toLocaleString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </span>
-            </div>
-          </div>
-
-          <div className="space-y-0.5">
-            <div className="text-xs text-muted-foreground">Network</div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">{device.networkType}</span>
-              {device.signalStrength !== undefined && (
-                <span className={cn('text-xs font-semibold flex items-center gap-1', signalColor)}>
-                  <SignalIcon className="h-3 w-3" />
-                  {device.signalStrength}%
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-0.5">
-            <div className="text-xs text-muted-foreground">Brightness</div>
-            <div className="flex items-center gap-2">
-              <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className={cn('h-full', brightnessBarColor)}
-                  style={{ width: `${device.brightness}%` }}
-                />
-              </div>
-              <span className={cn('text-sm font-medium', brightnessLabelColor)}>
-                {device.brightness}%
-              </span>
-            </div>
-          </div>
-
-          <div className="space-y-0.5">
-            <div className="text-xs text-muted-foreground">Storage</div>
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-xs">
-                <span>
-                  {usedGB.toFixed(1)}/{totalGB.toFixed(0)} GB
-                </span>
-                <span>{storagePercent.toFixed(0)}%</span>
-              </div>
-              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-blue-500"
-                  style={{ width: `${storagePercent}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between text-sm">
-          <div className="space-y-0.5">
-            <div className="text-xs text-muted-foreground">Resolution</div>
-            <div>
-              {device.resolution.width}×{device.resolution.height}
-            </div>
-          </div>
-
-          {device.currentProgram && (
-            <div className="space-y-0.5 text-right min-w-0">
-              <div className="text-xs text-muted-foreground">Program</div>
-              <div className="truncate">{device.currentProgram.name}</div>
-              <div className="text-xs text-muted-foreground">
-                {device.currentProgram.version}
-              </div>
-            </div>
+          {device.alias && (
+            <p className="text-xs text-muted-foreground truncate">{device.alias}</p>
           )}
         </div>
 
-        {customFieldEntries.length > 0 && (
-          <div className="text-xs text-muted-foreground">
-            {customFieldEntries.map(([key, value]) => (
-              <div key={key} className="truncate">
-                {key}: {String(value)}
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
+        <div className="flex items-center gap-2 text-sm min-w-0">
+          <Play className="h-4 w-4 text-muted-foreground shrink-0" />
+          {device.currentProgram ? (
+            <div className="min-w-0 flex items-center gap-2">
+              <span className="truncate">{device.currentProgram.name}</span>
+              <span className="text-xs text-muted-foreground shrink-0">
+                {device.currentProgram.version}
+              </span>
+            </div>
+          ) : (
+            <span className="text-muted-foreground">No program</span>
+          )}
+        </div>
 
-      <CardFooter className="p-3 pt-0 flex items-center justify-end gap-1">
-        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Wake or sleep">
-          <Power className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Reboot">
-          <RotateCcw className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Take screenshot">
-          <Camera className="h-4 w-4" />
-        </Button>
-      </CardFooter>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+          <div className="flex items-center gap-1">
+            <NetworkIcon className="h-3.5 w-3.5" />
+            <span className="font-medium text-foreground/80">{device.networkType}</span>
+            {device.signalStrength !== undefined && (
+              <span className="text-muted-foreground">{device.signalStrength}%</span>
+            )}
+          </div>
+
+          <div className={cn('flex items-center gap-1', showOutdatedWarn && 'text-amber-600')}>
+            <Clock className="h-3.5 w-3.5" />
+            <span className={cn(showOutdatedWarn && 'font-semibold')}>
+              {lastReportLabel}
+            </span>
+            {showOutdatedWarn && <AlertTriangle className="h-3.5 w-3.5" />}
+          </div>
+
+          <div className="flex items-center gap-1">
+            <Sun className="h-3.5 w-3.5" />
+            <span>{device.brightness}%</span>
+          </div>
+        </div>
+
+        <TagPicker
+          allTags={tags}
+          selectedTagIds={device.tags.map((t) => t.id)}
+          onToggleTag={(tag) => onToggleDeviceTag(device.id, tag)}
+          onCreateTag={onCreateTag}
+        >
+          <button
+            type="button"
+            className={cn(
+              'w-full flex items-center gap-1.5 rounded-md border bg-muted/10 px-2 py-1.5 text-left transition-colors hover:bg-muted/20',
+              device.tags.length === 0 && 'text-muted-foreground',
+            )}
+            aria-label="Edit tags"
+          >
+            <div className="flex flex-wrap gap-1 min-w-0 flex-1">
+              {displayedTags.length > 0 ? (
+                <>
+                  {displayedTags.map((tag) => (
+                    <TagChip key={tag.id} tag={tag} className="max-w-[120px]" />
+                  ))}
+                  {remainingTagCount > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{remainingTagCount}
+                    </Badge>
+                  )}
+                </>
+              ) : (
+                <span className="text-xs">Add tags</span>
+              )}
+            </div>
+            <Plus className="h-4 w-4 text-muted-foreground shrink-0" />
+          </button>
+        </TagPicker>
+      </CardContent>
     </Card>
   );
+}
+
+function StatusPill({
+  status,
+  offlineDuration,
+}: {
+  status: Device['status'];
+  offlineDuration?: number;
+}) {
+  const { label, className } = (() => {
+    if (status === 'online') {
+      return { label: 'Online', className: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-200 border-emerald-500/30' };
+    }
+    if (status === 'offline') {
+      const duration = offlineDuration ? formatDuration(offlineDuration) : undefined;
+      return { label: duration ? `Offline · ${duration}` : 'Offline', className: 'bg-muted/50 text-muted-foreground border-border' };
+    }
+    return { label: 'Pending', className: 'bg-amber-500/15 text-amber-700 dark:text-amber-200 border-amber-500/30' };
+  })();
+
+  return (
+    <Badge variant="outline" className={cn('text-xs font-medium border', className)}>
+      {label}
+    </Badge>
+  );
+}
+
+function formatRelativeTime(diffMinutes: number): string {
+  if (diffMinutes < 1) return 'just now';
+  if (diffMinutes < 60) return `${Math.floor(diffMinutes)}m ago`;
+  const hours = diffMinutes / 60;
+  if (hours < 24) return `${Math.floor(hours)}h ago`;
+  const days = hours / 24;
+  return `${Math.floor(days)}d ago`;
+}
+
+function formatDuration(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
 }

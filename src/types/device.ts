@@ -7,9 +7,14 @@ export interface Tag {
   id: string;
   name: string;
   slug: string;
+  // Either a hex color like "#3b82f6" or a preset key like "slate"/"sky".
   color: string;
+  // Optional lucide icon name (e.g. "MapPin", "Store"). Not all tags need an icon.
+  icon?: string;
   description?: string;
-  isSystem: boolean; // System auto-tags vs user-defined tags
+  // Reserved for future: system auto-tags vs user-defined tags.
+  // Lite UI currently treats all tags as user-defined.
+  isSystem: boolean;
 }
 
 export interface Resolution {

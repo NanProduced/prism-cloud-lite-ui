@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DeviceTable } from './DeviceTable';
 import { DeviceCardView } from './DeviceCardView';
-import { mockDevices } from '@/lib/mock/devices';
-import type { Device } from '@/types/device';
+import { mockDevices, mockTags } from '@/lib/mock/devices';
+import type { Device, Tag } from '@/types/device';
 import { DeviceFilters, type DeviceFilterState } from '@/components/devices/DeviceFilters';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,8 @@ import { Search, Grid3x3, LayoutGrid, Download, Loader2 } from 'lucide-react';
 type ViewMode = 'grid' | 'card';
 
 export default function DevicesPage() {
+  const [tags, setTags] = useState<Tag[]>(() => mockTags);
+  const [devices, setDevices] = useState<Device[]>(() => mockDevices);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const stored = window.localStorage.getItem('devices.viewMode') as ViewMode | null;
     return stored ?? 'card';
@@ -30,8 +32,49 @@ export default function DevicesPage() {
     window.localStorage.setItem('devices.viewMode', viewMode);
   }, [viewMode]);
 
+  useEffect(() => {
+    if (fullDevices.length > 0) setFullDevices(devices);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [devices]);
+
+  const createTag = (draft: { name: string; color: string; icon?: string }): Tag => {
+    const rawName = draft.name.trim();
+    const randomPart =
+      globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const id = `tag-${randomPart}`;
+
+    const baseSlug = slugify(rawName) || `tag-${randomPart.slice(-6)}`;
+    let slug = baseSlug;
+    let i = 2;
+    while (tags.some((t) => t.slug === slug)) {
+      slug = `${baseSlug}-${i++}`;
+    }
+
+    const newTag: Tag = {
+      id,
+      name: rawName,
+      slug,
+      color: draft.color,
+      icon: draft.icon,
+      isSystem: false,
+    };
+    setTags((prev) => [newTag, ...prev]);
+    return newTag;
+  };
+
+  const toggleDeviceTag = (deviceId: string, tag: Tag) => {
+    setDevices((prev) =>
+      prev.map((d) => {
+        if (d.id !== deviceId) return d;
+        const has = d.tags.some((t) => t.id === tag.id);
+        const nextTags = has ? d.tags.filter((t) => t.id !== tag.id) : [tag, ...d.tags];
+        return { ...d, tags: nextTags };
+      }),
+    );
+  };
+
   const filteredDevices = useMemo(() => {
-    let filtered = mockDevices;
+    let filtered = devices;
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -39,7 +82,8 @@ export default function DevicesPage() {
         device.deviceName.toLowerCase().includes(query) ||
         device.alias?.toLowerCase().includes(query) ||
         device.model.toLowerCase().includes(query) ||
-        device.serialNumber?.toLowerCase().includes(query)
+        device.serialNumber?.toLowerCase().includes(query) ||
+        device.tags.some((t) => t.name.toLowerCase().includes(query))
       ));
     }
 
@@ -62,7 +106,7 @@ export default function DevicesPage() {
     }
 
     return filtered;
-  }, [searchQuery, filters]);
+  }, [devices, searchQuery, filters]);
 
   const hasAdvancedFilters = Boolean(
     (filters.status && filters.status.length > 0) ||
@@ -91,7 +135,7 @@ export default function DevicesPage() {
     // Lite/mock: full dataset is already available locally.
     // Future: replace with backend full-load request.
     await new Promise((r) => setTimeout(r, 400));
-    setFullDevices(mockDevices);
+    setFullDevices(devices);
     setGridLoading(false);
     setViewMode('grid');
   };
@@ -148,24 +192,24 @@ export default function DevicesPage() {
       <div className="flex items-center gap-6 text-sm">
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Total:</span>
-          <span className="font-medium">{mockDevices.length}</span>
+          <span className="font-medium">{devices.length}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Online:</span>
           <span className="font-medium text-emerald-600">
-            {mockDevices.filter((d) => d.status === 'online').length}
+            {devices.filter((d) => d.status === 'online').length}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Offline:</span>
           <span className="font-medium text-gray-600">
-            {mockDevices.filter((d) => d.status === 'offline').length}
+            {devices.filter((d) => d.status === 'offline').length}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Pending:</span>
           <span className="font-medium text-amber-600">
-            {mockDevices.filter((d) => d.status === 'pending').length}
+            {devices.filter((d) => d.status === 'pending').length}
           </span>
         </div>
         {viewMode === 'card' && (searchQuery || hasAdvancedFilters) && (
@@ -189,7 +233,12 @@ export default function DevicesPage() {
           <DeviceTable devices={fullDevices.length > 0 ? fullDevices : mockDevices} />
         )
       ) : (
-        <DeviceCardView devices={filteredDevices} />
+        <DeviceCardView
+          devices={filteredDevices}
+          tags={tags}
+          onCreateTag={createTag}
+          onToggleDeviceTag={toggleDeviceTag}
+        />
       )}
 
       <Dialog open={showGridDialog} onOpenChange={setShowGridDialog}>
@@ -226,4 +275,12 @@ export default function DevicesPage() {
       </Dialog>
     </div>
   );
+}
+
+function slugify(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
 }

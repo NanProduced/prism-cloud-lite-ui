@@ -12,14 +12,12 @@ const RESOLUTIONS = [
 
 // Pre-defined tags
 const MOCK_TAGS: Tag[] = [
-  { id: 'tag-1', name: 'Lobby', slug: 'lobby', color: '#3b82f6', isSystem: false },
-  { id: 'tag-2', name: 'Retail', slug: 'retail', color: '#10b981', isSystem: false },
-  { id: 'tag-3', name: 'Office', slug: 'office', color: '#f59e0b', isSystem: false },
-  { id: 'tag-4', name: 'Outdoor', slug: 'outdoor', color: '#8b5cf6', isSystem: false },
-  { id: 'tag-5', name: 'High Priority', slug: 'high-priority', color: '#ef4444', isSystem: false },
-  { id: 'tag-6', name: 'Test Device', slug: 'test-device', color: '#6b7280', isSystem: false },
-  { id: 'sys-1', name: 'Never Online', slug: 'never-online', color: '#dc2626', isSystem: true },
-  { id: 'sys-2', name: 'Needs Firmware Update', slug: 'needs-update', color: '#ea580c', isSystem: true },
+  { id: 'tag-1', name: 'Lobby', slug: 'lobby', color: 'sky', icon: 'Building2', isSystem: false },
+  { id: 'tag-2', name: 'Retail', slug: 'retail', color: 'amber', icon: 'Store', isSystem: false },
+  { id: 'tag-3', name: 'Office', slug: 'office', color: 'slate', icon: 'Briefcase', isSystem: false },
+  { id: 'tag-4', name: 'Outdoor', slug: 'outdoor', color: 'emerald', icon: 'Trees', isSystem: false },
+  { id: 'tag-5', name: 'High Priority', slug: 'high-priority', color: 'rose', icon: 'AlertTriangle', isSystem: false },
+  { id: 'tag-6', name: 'Test Device', slug: 'test-device', color: 'stone', icon: 'FlaskConical', isSystem: false },
 ];
 
 // Status distribution: 15 online, 3 offline, 2 pending
