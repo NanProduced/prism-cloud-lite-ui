@@ -3,6 +3,8 @@ import { DeviceTable } from './DeviceTable';
 import { DeviceCardView } from './DeviceCardView';
 import { mockDevices, mockTags } from '@/lib/mock/devices';
 import type { Device, Tag } from '@/types/device';
+import { mockDeviceCustomFieldDefs } from '@/lib/mock/device-custom-fields';
+import type { DeviceCustomFieldDef, DeviceCustomFieldValue } from '@/types/device-custom-field';
 import { DeviceFilters, type DeviceFilterState } from '@/components/devices/DeviceFilters';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -14,6 +16,12 @@ type ViewMode = 'grid' | 'card';
 export default function DevicesPage() {
   const [tags, setTags] = useState<Tag[]>(() => mockTags);
   const [devices, setDevices] = useState<Device[]>(() => mockDevices);
+  const [customFieldDefs, setCustomFieldDefs] = useState<DeviceCustomFieldDef[]>(() => mockDeviceCustomFieldDefs);
+  const [isProActive, setIsProActive] = useState(() => {
+    const stored = window.localStorage.getItem('devices.planProActive');
+    if (stored == null) return false;
+    return stored === 'true';
+  });
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const stored = window.localStorage.getItem('devices.viewMode') as ViewMode | null;
     return stored ?? 'card';
@@ -31,6 +39,10 @@ export default function DevicesPage() {
   useEffect(() => {
     window.localStorage.setItem('devices.viewMode', viewMode);
   }, [viewMode]);
+
+  useEffect(() => {
+    window.localStorage.setItem('devices.planProActive', String(isProActive));
+  }, [isProActive]);
 
   useEffect(() => {
     if (fullDevices.length > 0) setFullDevices(devices);
@@ -69,6 +81,48 @@ export default function DevicesPage() {
         const has = d.tags.some((t) => t.id === tag.id);
         const nextTags = has ? d.tags.filter((t) => t.id !== tag.id) : [tag, ...d.tags];
         return { ...d, tags: nextTags };
+      }),
+    );
+  };
+
+  const updateDeviceCustomFieldValue = (deviceId: string, fieldId: number, value: DeviceCustomFieldValue) => {
+    setDevices((prev) =>
+      prev.map((d) => {
+        if (d.id !== deviceId) return d;
+        const current = d.customFieldValues ?? {};
+        return {
+          ...d,
+          customFieldValues: {
+            ...current,
+            [String(fieldId)]: value,
+          },
+        };
+      }),
+    );
+  };
+
+  const addCustomFieldDef = (def: DeviceCustomFieldDef) => {
+    setCustomFieldDefs((prev) => [...prev, def].sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0)));
+    setDevices((prev) =>
+      prev.map((d) => ({
+        ...d,
+        customFieldValues: {
+          ...(d.customFieldValues ?? {}),
+          [String(def.fieldId)]: null,
+        },
+      })),
+    );
+  };
+
+  const deleteCustomFieldDef = (fieldId: number) => {
+    setCustomFieldDefs((prev) => prev.filter((d) => d.fieldId !== fieldId));
+    setDevices((prev) =>
+      prev.map((d) => {
+        const current = d.customFieldValues;
+        if (!current) return d;
+        const next = { ...current };
+        delete next[String(fieldId)];
+        return { ...d, customFieldValues: next };
       }),
     );
   };
@@ -230,7 +284,16 @@ export default function DevicesPage() {
             </div>
           </div>
         ) : (
-          <DeviceTable devices={fullDevices.length > 0 ? fullDevices : mockDevices} />
+          <DeviceTable
+            devices={fullDevices.length > 0 ? fullDevices : devices}
+            customFieldDefs={customFieldDefs}
+            isProActive={isProActive}
+            onProActiveChange={setIsProActive}
+            onCustomFieldDefsChange={setCustomFieldDefs}
+            onCustomFieldCreate={addCustomFieldDef}
+            onCustomFieldDelete={deleteCustomFieldDef}
+            onCustomFieldValueChange={updateDeviceCustomFieldValue}
+          />
         )
       ) : (
         <DeviceCardView

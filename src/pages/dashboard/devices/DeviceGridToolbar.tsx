@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { GROUP_COLUMN_PREFIX } from '@1771technologies/lytenyte-core';
 import type { AggModelFn, Column, Grid, RowLeaf } from '@1771technologies/lytenyte-core/types';
 import type { Device } from '@/types/device';
+import type { DeviceCustomFieldDef } from '@/types/device-custom-field';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -18,15 +19,31 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Search, Plus, X, SlidersHorizontal, Layers, Sigma, RotateCcw, Check, Download, Maximize2, Zap, Camera, Power } from 'lucide-react';
 import { PrismSortManagerDialog } from '@/components/lytenyte/PrismSortManagerDialog';
+import { DeviceCustomFieldsSheet } from './DeviceCustomFieldsSheet';
 
 interface DeviceGridToolbarProps {
   grid: Grid<Device>;
   defaultColumns: Column<Device>[];
+  customFieldDefs: DeviceCustomFieldDef[];
+  isProActive: boolean;
+  onProActiveChange?: (next: boolean) => void;
+  onCustomFieldDefsChange: (next: DeviceCustomFieldDef[]) => void;
+  onCustomFieldCreate: (def: DeviceCustomFieldDef) => void;
+  onCustomFieldDelete: (fieldId: number) => void;
 }
 
 const GLOBAL_SEARCH_COLUMN_ID = '__globalSearch';
 
-export function DeviceGridToolbar({ grid, defaultColumns }: DeviceGridToolbarProps) {
+export function DeviceGridToolbar({
+  grid,
+  defaultColumns,
+  customFieldDefs,
+  isProActive,
+  onProActiveChange,
+  onCustomFieldDefsChange,
+  onCustomFieldCreate,
+  onCustomFieldDelete,
+}: DeviceGridToolbarProps) {
   const [quickSearch, setQuickSearch] = useState('');
 
   const columns = grid.state.columns.useValue();
@@ -218,6 +235,14 @@ export function DeviceGridToolbar({ grid, defaultColumns }: DeviceGridToolbarPro
             </Badge>
           )}
           <ColumnsPopover columns={baseColumns} onToggle={handleToggleColumn} />
+          <DeviceCustomFieldsSheet
+            customFieldDefs={customFieldDefs}
+            isProActive={isProActive}
+            onProActiveChange={onProActiveChange}
+            onCustomFieldDefsChange={onCustomFieldDefsChange}
+            onCustomFieldCreate={onCustomFieldCreate}
+            onCustomFieldDelete={onCustomFieldDelete}
+          />
           <GroupsPopover
             groupableColumns={groupableColumns}
             rowGroupModel={rowGroupIds}

@@ -1,5 +1,7 @@
 // Device Type Definitions for Prism Cloud Lite
 
+import type { DeviceCustomFieldValues } from './device-custom-field';
+
 export type DeviceStatus = 'pending' | 'online' | 'offline';
 export type NetworkType = 'WiFi' | '4G' | 'Ethernet';
 
@@ -72,8 +74,8 @@ export interface Device {
   // Tags
   tags: Tag[];
 
-  // Custom Fields (for future extensibility)
-  customFields?: Record<string, any>;
+  // Custom Fields (user-defined columns)
+  customFieldValues?: DeviceCustomFieldValues;
 
   // Screenshot
   latestScreenshot?: Screenshot;

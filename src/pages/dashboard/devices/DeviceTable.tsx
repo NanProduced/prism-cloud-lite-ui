@@ -1,4 +1,4 @@
-import { useMemo, useId } from 'react';
+import { useEffect, useMemo, useId } from 'react';
 import { useLyteNyte, useClientRowDataSource } from '@lytenyte/hooks/use-lytenyte-core';
 import { LyteNyte } from '@lytenyte/components/lytenyte-core';
 import type {
@@ -6,25 +6,290 @@ import type {
   Column,
 } from '@1771technologies/lytenyte-core/types';
 import type { Device } from '@/types/device';
+import type { DeviceCustomFieldDef, DeviceCustomFieldValue } from '@/types/device-custom-field';
 import { DeviceStatusBadge } from '@/components/devices/DeviceStatusBadge';
 import { DeviceScreenshot } from '@/components/devices/DeviceScreenshot';
 import { Badge } from '@/components/ui/badge';
 import { TagChip } from '@/components/devices/TagChip';
+import { getTagPresetClassName, hexToRgba, isHexColor } from '@/components/devices/tagging';
 import { DeviceGridToolbar } from './DeviceGridToolbar';
 import { DeviceGridFloatingFilterCell } from './DeviceGridFloatingFilterCell';
+import { DeviceCustomFieldEditRenderer, DeviceCustomFieldFloatingFilterCell } from './DeviceCustomFieldCells';
+import { customFieldColumnId } from './customFieldColumnId';
 import { PrismHeaderRenderer } from '@/components/lytenyte/PrismHeaderRenderer';
 import {
   PrismRowSelectionMarkerCellRenderer,
   PrismRowSelectionMarkerHeaderRenderer,
 } from '@/components/lytenyte/PrismRowSelectionMarker';
 import { PrismRowGroupCell } from '@/components/lytenyte/PrismRowGroupCell';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface DeviceTableProps {
   devices: Device[];
+  customFieldDefs: DeviceCustomFieldDef[];
+  isProActive: boolean;
+  onProActiveChange?: (next: boolean) => void;
+  onCustomFieldDefsChange: (next: DeviceCustomFieldDef[]) => void;
+  onCustomFieldCreate: (def: DeviceCustomFieldDef) => void;
+  onCustomFieldDelete: (fieldId: number) => void;
+  onCustomFieldValueChange: (deviceId: string, fieldId: number, value: DeviceCustomFieldValue) => void;
 }
 
-export function DeviceTable({ devices }: DeviceTableProps) {
+function CustomFieldOptionChip({
+  label,
+  color,
+  inactive,
+  className,
+}: {
+  label: string;
+  color?: string;
+  inactive?: boolean;
+  className?: string;
+}) {
+  const presetClassName = color ? getTagPresetClassName(color) : null;
+  const isCustomHex = Boolean(color && isHexColor(color));
+
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        'gap-1 border px-2 py-0.5 text-xs font-medium',
+        presetClassName ?? 'border-border bg-transparent',
+        inactive && 'border-dashed opacity-70',
+        className,
+      )}
+      style={
+        isCustomHex && color
+          ? {
+              borderColor: color,
+              color: color,
+              backgroundColor: hexToRgba(color, 0.12),
+            }
+          : undefined
+      }
+    >
+      <span className="truncate">{label}</span>
+    </Badge>
+  );
+}
+
+export function DeviceTable({
+  devices,
+  customFieldDefs,
+  isProActive,
+  onProActiveChange,
+  onCustomFieldDefsChange,
+  onCustomFieldCreate,
+  onCustomFieldDelete,
+  onCustomFieldValueChange,
+}: DeviceTableProps) {
   const gridId = useId();
+
+  const customColumns = useMemo<Column<Device>[]>(() => {
+    const sorted = customFieldDefs.slice().sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
+    return sorted.map((def) => {
+      const id = customFieldColumnId(def.fieldId);
+      const locked = Boolean(def.planTierRequired && !isProActive);
+      const type: Column<Device>['type'] =
+        def.fieldType === 'NUMBER' ? 'number' :
+        def.fieldType === 'DATETIME' ? 'datetime' :
+        'string';
+
+      const column = {
+        id,
+        name: def.displayName,
+        type,
+        width: 180,
+        field: ({ data }) => {
+          if (data.kind !== 'leaf' || !data.data) return type === 'number' ? 0 : '';
+          const raw = data.data.customFieldValues?.[String(def.fieldId)];
+          if (raw == null) return '';
+          if (def.fieldType === 'NUMBER') return typeof raw === 'number' ? raw : Number(raw);
+          if (def.fieldType === 'BOOLEAN') return raw === true ? 'true' : raw === false ? 'false' : '';
+          if (def.fieldType === 'SELECT') {
+            if (typeof raw !== 'string') return '';
+            const hit = def.options?.find((o) => o.optionKey === raw);
+            return hit?.displayName ?? raw;
+          }
+          if (def.fieldType === 'MULTI_SELECT') {
+            if (!Array.isArray(raw)) return '';
+            const options = def.options ?? [];
+            return raw.map((k) => {
+              const hit = options.find((o) => o.optionKey === k);
+              return hit?.displayName ?? k;
+            }).join(', ');
+          }
+          if (typeof raw === 'string') return raw;
+          return String(raw);
+        },
+        cellRenderer: ({ row, grid }: CellRendererParams<Device>) => {
+          if (grid.api.rowIsGroup(row) || !row.data) return null;
+          const raw = row.data.customFieldValues?.[String(def.fieldId)];
+          if (raw == null) return <span className="text-muted-foreground">-</span>;
+
+          if (def.fieldType === 'NUMBER') {
+            const num = typeof raw === 'number' ? raw : Number(raw);
+            if (Number.isNaN(num)) return <span className="text-muted-foreground">-</span>;
+            return (
+              <span className={num < 0 ? 'text-red-600' : ''}>
+                {num.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </span>
+            );
+          }
+
+          if (def.fieldType === 'DATETIME' && typeof raw === 'string') {
+            const d = new Date(raw);
+            if (Number.isNaN(d.getTime())) return <span className="text-muted-foreground">-</span>;
+            return <span className="text-sm">{d.toLocaleString()}</span>;
+          }
+
+          if (def.fieldType === 'BOOLEAN') {
+            const v = raw === true ? 'True' : raw === false ? 'False' : undefined;
+            if (!v) return <span className="text-muted-foreground">-</span>;
+            return (
+              <Badge
+                variant={raw === true ? 'default' : 'secondary'}
+                className="text-xs font-medium"
+              >
+                {v}
+              </Badge>
+            );
+          }
+
+          if (def.fieldType === 'SELECT' && typeof raw === 'string') {
+            const hit = def.options?.find((o) => o.optionKey === raw);
+            const label = hit?.displayName ?? raw;
+            const inactive = hit?.active === false;
+            return <CustomFieldOptionChip label={label} color={hit?.color} inactive={inactive} />;
+          }
+
+          if (def.fieldType === 'MULTI_SELECT' && Array.isArray(raw)) {
+            if (raw.length === 0) return <span className="text-muted-foreground">-</span>;
+            const labels = raw.map((k) => {
+              const hit = def.options?.find((o) => o.optionKey === k);
+              return { key: k, label: hit?.displayName ?? k, inactive: hit?.active === false, color: hit?.color };
+            });
+            const shown = labels.slice(0, 2);
+            const more = labels.length - shown.length;
+            return (
+              <div className="flex flex-wrap gap-1">
+                {shown.map((o) => (
+                  <CustomFieldOptionChip
+                    key={o.key}
+                    label={o.label}
+                    color={o.color}
+                    inactive={o.inactive}
+                  />
+                ))}
+                {more > 0 && (
+                  <Badge variant="outline" className="text-xs">
+                    +{more}
+                  </Badge>
+                )}
+              </div>
+            );
+          }
+
+          if (def.fieldType === 'URL' && typeof raw === 'string') {
+            return (
+              <a
+                href={raw}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sky-600 hover:underline truncate block"
+              >
+                {raw}
+              </a>
+            );
+          }
+
+          if (def.fieldType === 'EMAIL' && typeof raw === 'string') {
+            return (
+              <a
+                href={`mailto:${raw}`}
+                className="text-sky-600 hover:underline truncate block"
+              >
+                {raw}
+              </a>
+            );
+          }
+
+          if (def.fieldType === 'PHONE' && typeof raw === 'string') {
+            return (
+              <a
+                href={`tel:${raw}`}
+                className="text-sky-600 hover:underline truncate block"
+              >
+                {raw}
+              </a>
+            );
+          }
+
+          return <span className="truncate block">{String(raw)}</span>;
+        },
+        floatingCellRenderer: (params) => (
+          <DeviceCustomFieldFloatingFilterCell {...params} fieldDef={def} />
+        ),
+        uiHints: {
+          sortable: true,
+          rowGroupable: def.fieldType !== 'MULTI_SELECT',
+          resizable: true,
+          movable: true,
+          ...(def.fieldType === 'NUMBER'
+            ? { aggDefault: 'avg', aggsAllowed: ['sum', 'avg', 'min', 'max', 'count'] }
+            : { aggDefault: 'count', aggsAllowed: ['count'] }),
+        },
+        editable: ({ row }) => row.kind === 'leaf',
+        editRenderer: (params) => (
+          <DeviceCustomFieldEditRenderer {...params} fieldDef={def} />
+        ),
+        editSetter: ({ data, value }) => {
+          const next = structuredClone(data) as Device;
+          const current = next.customFieldValues ?? {};
+          const nextValues = { ...current };
+
+          const normalized: DeviceCustomFieldValue = (() => {
+            if (value == null) return null;
+            if (def.fieldType === 'NUMBER') {
+              const num = typeof value === 'number' ? value : Number(value);
+              return Number.isNaN(num) ? null : num;
+            }
+            if (def.fieldType === 'DATETIME') {
+              if (typeof value !== 'string') return null;
+              return value.trim() ? value : null;
+            }
+            if (def.fieldType === 'BOOLEAN') {
+              if (typeof value === 'boolean') return value;
+              if (value === 'true') return true;
+              if (value === 'false') return false;
+              return null;
+            }
+            if (def.fieldType === 'MULTI_SELECT') {
+              if (!Array.isArray(value)) return null;
+              return value as string[];
+            }
+            if (typeof value === 'string') return value.trim() ? value : null;
+            return String(value);
+          })();
+
+          nextValues[String(def.fieldId)] = normalized;
+          next.customFieldValues = nextValues;
+          return next;
+        },
+        prismMeta: {
+          kind: 'customField',
+          fieldId: def.fieldId,
+          fieldType: def.fieldType,
+          icon: def.icon,
+          planTierRequired: def.planTierRequired,
+          locked,
+        },
+      } satisfies Column<Device> & { prismMeta: Record<string, unknown> };
+
+      return column;
+    });
+  }, [customFieldDefs, isProActive]);
 
   const columns = useMemo<Column<Device>[]>(() => [
     {
@@ -389,6 +654,7 @@ export function DeviceTable({ devices }: DeviceTableProps) {
         );
       },
     },
+    ...customColumns,
     {
       id: '__globalSearch',
       hide: true,
@@ -400,14 +666,16 @@ export function DeviceTable({ devices }: DeviceTableProps) {
         movable: false,
       },
     },
-  ], []);
+  ], [customColumns]);
 
-  const dataSource = useClientRowDataSource({ data: devices });
+  const dataSource = useClientRowDataSource({ data: devices, reflectData: true });
 
   const grid = useLyteNyte({
     gridId,
     columns,
     rowDataSource: dataSource,
+    editCellMode: 'cell',
+    editClickActivator: 'double-click',
     columnBase: {
       headerRenderer: PrismHeaderRenderer,
     },
@@ -447,9 +715,128 @@ export function DeviceTable({ devices }: DeviceTableProps) {
     rowSelectChildren: true,
   });
 
+  useEffect(() => {
+    const merge = (prev: Column<Device>[], next: Column<Device>[]) => {
+      const nextById = new Map(next.map((c) => [c.id, c]));
+      const prevById = new Map(prev.map((c) => [c.id, c]));
+
+      const mergeOne = (fresh: Column<Device>, existing?: Column<Device>): Column<Device> => {
+        if (!existing) return fresh;
+        const override: Record<string, unknown> = {};
+        for (const key of ['hide', 'width', 'widthMin', 'widthMax', 'widthFlex', 'pin', 'groupVisibility'] as const) {
+          const v = existing[key];
+          if (v !== undefined) override[key] = v;
+        }
+        return { ...fresh, ...(override as Partial<Column<Device>>) };
+      };
+
+      const isCustomFieldColumn = (id: string) => id.startsWith('cf:');
+      const freshCustomColumns = next.filter((c) => isCustomFieldColumn(c.id));
+
+      const ordered: Column<Device>[] = [];
+      const seen = new Set<string>();
+      let insertedCustom = false;
+
+      for (const existing of prev) {
+        const fresh = nextById.get(existing.id);
+        if (!fresh) continue;
+
+        if (isCustomFieldColumn(existing.id)) {
+          if (insertedCustom) continue;
+          for (const custom of freshCustomColumns) {
+            ordered.push(mergeOne(custom, prevById.get(custom.id)));
+            seen.add(custom.id);
+          }
+          insertedCustom = true;
+          continue;
+        }
+
+        ordered.push(mergeOne(fresh, existing));
+        seen.add(existing.id);
+      }
+
+      if (!insertedCustom) {
+        for (const custom of freshCustomColumns) {
+          ordered.push(mergeOne(custom, prevById.get(custom.id)));
+          seen.add(custom.id);
+        }
+      }
+
+      for (const fresh of next) {
+        if (seen.has(fresh.id)) continue;
+        ordered.push(mergeOne(fresh, prevById.get(fresh.id)));
+        seen.add(fresh.id);
+      }
+
+      const globalIdx = ordered.findIndex((c) => c.id === '__globalSearch');
+      if (globalIdx >= 0) {
+        const [global] = ordered.splice(globalIdx, 1);
+        if (global) ordered.push(global);
+      }
+
+      return ordered;
+    };
+
+    grid.state.columns.set((prev) => merge(prev, columns));
+  }, [columns, grid]);
+
+  useEffect(() => {
+    const getCustomFieldMeta = (column: Column<Device>) => {
+      const raw = (column as unknown as { prismMeta?: unknown }).prismMeta;
+      if (!raw || typeof raw !== 'object') return null;
+      const meta = raw as { kind?: unknown; fieldId?: unknown; locked?: unknown };
+      if (meta.kind !== 'customField') return null;
+      if (typeof meta.fieldId !== 'number') return null;
+      return { fieldId: meta.fieldId, locked: Boolean(meta.locked) };
+    };
+
+    const removeEditBegin = grid.api.eventAddListener('editBegin', ({ column, preventDefault }) => {
+      const meta = getCustomFieldMeta(column);
+      if (!meta) return;
+      if (!meta.locked) return;
+      preventDefault();
+      toast('Read-only custom field', {
+        description: 'This field requires an active Pro subscription to edit.',
+      });
+    });
+
+    const removeEditEnd = grid.api.eventAddListener('editEnd', ({ column, data }) => {
+      const meta = getCustomFieldMeta(column);
+      if (!meta) return;
+      const fieldId = meta.fieldId;
+      const device = data as Device;
+      const value = device.customFieldValues?.[String(fieldId)] ?? null;
+      onCustomFieldValueChange(device.id, fieldId, value);
+    });
+
+    const removeEditError = grid.api.eventAddListener('editError', ({ column, validation, error }) => {
+      const meta = getCustomFieldMeta(column);
+      if (!meta) return;
+      toast('Edit failed', {
+        description:
+          error instanceof Error ? error.message : validation ? 'Validation failed.' : 'Unknown error.',
+      });
+    });
+
+    return () => {
+      removeEditBegin();
+      removeEditEnd();
+      removeEditError();
+    };
+  }, [grid, onCustomFieldValueChange]);
+
   return (
     <div className="w-full flex flex-col gap-4">
-      <DeviceGridToolbar grid={grid} defaultColumns={columns} />
+      <DeviceGridToolbar
+        grid={grid}
+        defaultColumns={columns}
+        customFieldDefs={customFieldDefs}
+        isProActive={isProActive}
+        onProActiveChange={onProActiveChange}
+        onCustomFieldDefsChange={onCustomFieldDefsChange}
+        onCustomFieldCreate={onCustomFieldCreate}
+        onCustomFieldDelete={onCustomFieldDelete}
+      />
       <div className="w-full h-[calc(100vh-20rem)]">
         <LyteNyte grid={grid} />
       </div>

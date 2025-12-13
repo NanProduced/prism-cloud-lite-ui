@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker';
 import type { Device, Tag, DeviceStatus, NetworkType } from '@/types/device';
+import { generateMockDeviceCustomFieldValues } from './device-custom-fields';
 
 // Pre-defined constants
 const DEVICE_MODELS = ['DS-2000X', 'DS-3000Pro', 'DS-4000Ultra', 'DS-5000Max', 'PS-1000Lite'];
@@ -128,6 +129,9 @@ function generateMockDevice(index: number): Device {
 
     // Tags
     tags,
+
+    // Custom Fields
+    customFieldValues: generateMockDeviceCustomFieldValues(index),
 
     // Screenshot
     latestScreenshot,

@@ -21,15 +21,26 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Calendar,
   EyeOff,
+  Flag,
+  Hash,
+  Link2,
+  List,
+  ListChecks,
+  Lock,
+  Mail,
   MoreHorizontal,
   Pin,
   PinOff,
+  Phone,
   Sigma,
   Spline,
   Text,
+  ToggleRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { resolveTagIcon } from '@/components/devices/tagging';
 
 function sortKindForColumn<T>(column: Column<T>): SortModelItem<T>['sort'] {
   switch (column.type) {
@@ -46,6 +57,33 @@ function sortKindForColumn<T>(column: Column<T>): SortModelItem<T>['sort'] {
 function aggLabel(fn: AggModelFn<unknown>): string {
   if (typeof fn === 'string') return fn;
   return 'custom';
+}
+
+function iconForCustomFieldType(type?: unknown) {
+  switch (type) {
+    case 'TEXT':
+      return Text;
+    case 'NUMBER':
+      return Hash;
+    case 'DATETIME':
+      return Calendar;
+    case 'BOOLEAN':
+      return ToggleRight;
+    case 'SELECT':
+      return List;
+    case 'MULTI_SELECT':
+      return ListChecks;
+    case 'URL':
+      return Link2;
+    case 'EMAIL':
+      return Mail;
+    case 'PHONE':
+      return Phone;
+    case 'COUNTRY':
+      return Flag;
+    default:
+      return null;
+  }
 }
 
 export function PrismHeaderRenderer<T>({ grid, column }: HeaderCellRendererParams<T>) {
@@ -65,6 +103,21 @@ export function PrismHeaderRenderer<T>({ grid, column }: HeaderCellRendererParam
   const currentColumn = columns.find((c) => c.id === column.id) ?? column;
   const pin = currentColumn.pin ?? null;
   const hide = Boolean(currentColumn.hide);
+
+  const customFieldMeta = (() => {
+    const raw = (currentColumn as unknown as { prismMeta?: unknown }).prismMeta;
+    if (!raw || typeof raw !== 'object') return null;
+    const meta = raw as { kind?: unknown; fieldType?: unknown; locked?: unknown; icon?: unknown };
+    if (meta.kind !== 'customField') return null;
+    return {
+      fieldType: meta.fieldType,
+      locked: Boolean(meta.locked),
+      icon: typeof meta.icon === 'string' ? meta.icon : undefined,
+    };
+  })();
+  const TypeIcon = iconForCustomFieldType(customFieldMeta?.fieldType);
+  const UserIcon = resolveTagIcon(customFieldMeta?.icon);
+  const isLocked = Boolean(customFieldMeta?.locked);
 
   const isGrouped = rowGroupModel.some((g) =>
     typeof g === 'string' ? g === column.id : g.id === column.id
@@ -143,7 +196,10 @@ export function PrismHeaderRenderer<T>({ grid, column }: HeaderCellRendererParam
   return (
     <div className="flex w-full items-center gap-2 min-w-0">
       <div className="flex items-center gap-1 min-w-0">
+        {UserIcon && <UserIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
         <span className="truncate font-medium">{column.name ?? column.id}</span>
+        {TypeIcon && <TypeIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+        {isLocked && <Lock className="h-3.5 w-3.5 text-amber-600 shrink-0" />}
         {rowGroupModel.length > 0 && currentAgg && (
           <span className="text-xs font-semibold text-sky-600 dark:text-sky-400">
             ({aggLabel(currentAgg as AggModelFn<unknown>)})

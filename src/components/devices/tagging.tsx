@@ -2,15 +2,22 @@ import type { LucideIcon } from 'lucide-react';
 import {
   AlertTriangle,
   Building2,
+  Calendar,
   CircleCheck,
+  CreditCard,
+  DollarSign,
   FlaskConical,
+  Globe,
   Home,
   Info,
   MapPin,
   Megaphone,
+  ShieldCheck,
   ShieldAlert,
   Store,
   Utensils,
+  User,
+  Users,
   Wrench,
   Briefcase,
   Trees,
@@ -86,11 +93,18 @@ export type TagIconKey =
   | 'Store'
   | 'Building2'
   | 'Home'
+  | 'User'
+  | 'Users'
+  | 'DollarSign'
+  | 'CreditCard'
+  | 'Calendar'
+  | 'Globe'
   | 'Megaphone'
   | 'Utensils'
   | 'Info'
   | 'AlertTriangle'
   | 'CircleCheck'
+  | 'ShieldCheck'
   | 'ShieldAlert'
   | 'FlaskConical'
   | 'Wrench'
@@ -106,6 +120,12 @@ export const TAG_ICON_OPTIONS: Array<{
   { key: 'Store', label: 'Store', Icon: Store },
   { key: 'Building2', label: 'Building', Icon: Building2 },
   { key: 'Home', label: 'Home', Icon: Home },
+  { key: 'User', label: 'Person', Icon: User },
+  { key: 'Users', label: 'Users', Icon: Users },
+  { key: 'DollarSign', label: 'Price', Icon: DollarSign },
+  { key: 'CreditCard', label: 'Billing', Icon: CreditCard },
+  { key: 'Calendar', label: 'Calendar', Icon: Calendar },
+  { key: 'Globe', label: 'Globe', Icon: Globe },
   { key: 'Briefcase', label: 'Work', Icon: Briefcase },
   { key: 'Trees', label: 'Outdoor', Icon: Trees },
   { key: 'Megaphone', label: 'Ad', Icon: Megaphone },
@@ -113,6 +133,7 @@ export const TAG_ICON_OPTIONS: Array<{
   { key: 'Info', label: 'Info', Icon: Info },
   { key: 'AlertTriangle', label: 'Alert', Icon: AlertTriangle },
   { key: 'CircleCheck', label: 'Check', Icon: CircleCheck },
+  { key: 'ShieldCheck', label: 'Verified', Icon: ShieldCheck },
   { key: 'ShieldAlert', label: 'Shield', Icon: ShieldAlert },
   { key: 'FlaskConical', label: 'Test', Icon: FlaskConical },
   { key: 'Wrench', label: 'Tool', Icon: Wrench },
@@ -151,4 +172,3 @@ export function getTagPresetClassName(color: string): string | null {
   const preset = TAG_COLOR_PRESETS.find((p) => p.key === color);
   return preset?.className ?? null;
 }
-
