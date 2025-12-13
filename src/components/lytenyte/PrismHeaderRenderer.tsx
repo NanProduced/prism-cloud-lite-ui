@@ -166,12 +166,23 @@ export function PrismHeaderRenderer<T>({ grid, column }: HeaderCellRendererParam
     );
   };
 
+  const autosizeExpandOnly = (params: { includeHeader: boolean; columns?: (string | number | Column<T>)[] }) => {
+    const result = grid.api.columnAutosize({ ...params, dryRun: true });
+    const updates: Record<string, { width: number }> = {};
+    for (const [id, width] of Object.entries(result)) {
+      const currentWidth = columns.find((c) => String(c.id) === String(id))?.width;
+      if (typeof currentWidth === 'number' && currentWidth >= width) continue;
+      updates[id] = { width };
+    }
+    if (Object.keys(updates).length > 0) grid.api.columnUpdate(updates);
+  };
+
   const autosizeColumn = (includeHeader: boolean) => {
-    grid.api.columnAutosize({ columns: [column.id], includeHeader });
+    autosizeExpandOnly({ columns: [column.id], includeHeader });
   };
 
   const autosizeAll = (includeHeader: boolean) => {
-    grid.api.columnAutosize({ includeHeader });
+    autosizeExpandOnly({ includeHeader });
   };
 
   const toggleGroupBy = () => {
@@ -195,19 +206,23 @@ export function PrismHeaderRenderer<T>({ grid, column }: HeaderCellRendererParam
 
   return (
     <div className="flex w-full items-center gap-2 min-w-0">
-      <div className="flex items-center gap-1 min-w-0">
-        {UserIcon && <UserIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-        <span className="truncate font-medium">{column.name ?? column.id}</span>
-        {TypeIcon && <TypeIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-        {isLocked && <Lock className="h-3.5 w-3.5 text-amber-600 shrink-0" />}
-        {rowGroupModel.length > 0 && currentAgg && (
-          <span className="text-xs font-semibold text-sky-600 dark:text-sky-400">
-            ({aggLabel(currentAgg as AggModelFn<unknown>)})
-          </span>
-        )}
+      <div className="flex items-center min-w-0 flex-1 gap-2">
+        <div className="flex items-center gap-1 min-w-0">
+          {UserIcon && <UserIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+          <span className="truncate font-medium">{column.name ?? column.id}</span>
+          {rowGroupModel.length > 0 && currentAgg && (
+            <span className="text-xs font-semibold text-sky-600 dark:text-sky-400">
+              ({aggLabel(currentAgg as AggModelFn<unknown>)})
+            </span>
+          )}
+        </div>
+        <div className="ml-auto flex items-center gap-1 shrink-0">
+          {TypeIcon && <TypeIcon className="h-3.5 w-3.5 text-muted-foreground" />}
+          {isLocked && <Lock className="h-3.5 w-3.5 text-amber-600" />}
+        </div>
       </div>
 
-      <div className="ml-auto flex items-center gap-1">
+      <div className="flex items-center gap-1 shrink-0">
         {isSortable && (
           <Button
             type="button"

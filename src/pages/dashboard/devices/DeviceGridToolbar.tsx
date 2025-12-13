@@ -136,7 +136,14 @@ export function DeviceGridToolbar({
   };
 
   const handleAutosizeAll = (includeHeader: boolean) => {
-    grid.api.columnAutosize({ includeHeader });
+    const result = grid.api.columnAutosize({ includeHeader, dryRun: true });
+    const updates: Record<string, { width: number }> = {};
+    for (const [id, width] of Object.entries(result)) {
+      const currentWidth = columns.find((c) => String(c.id) === String(id))?.width;
+      if (typeof currentWidth === 'number' && currentWidth >= width) continue;
+      updates[id] = { width };
+    }
+    if (Object.keys(updates).length > 0) grid.api.columnUpdate(updates);
   };
 
   const downloadBlob = (blob: Blob, fileName: string) => {
@@ -361,6 +368,16 @@ function ColumnsPopover({
   onToggle: (id: string) => void;
 }) {
   const visibleCount = columns.filter((c) => !c.hide).length;
+  const ordered = useMemo(() => {
+    const indexed = columns.map((c, i) => ({ c, i }));
+    indexed.sort((a, b) => {
+      const ah = Number(Boolean(a.c.hide));
+      const bh = Number(Boolean(b.c.hide));
+      if (ah !== bh) return ah - bh; // visible first
+      return a.i - b.i;
+    });
+    return indexed.map((x) => x.c);
+  }, [columns]);
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -375,7 +392,7 @@ function ColumnsPopover({
       <PopoverContent align="end" className="w-72 p-2">
         <ScrollArea className="h-64 pr-2">
           <div className="flex flex-col gap-1">
-            {columns.map((c) => (
+            {ordered.map((c) => (
               <button
                 key={c.id}
                 type="button"

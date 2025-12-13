@@ -20,8 +20,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { CountryPicker } from '@/components/ui/country-picker';
 import { cn } from '@/lib/utils';
 import { Check, ChevronDown } from 'lucide-react';
+import { COUNTRIES, countryLabel } from '@/lib/countries';
 
 function optionSort(a: DeviceCustomFieldOption, b: DeviceCustomFieldOption): number {
   return (a.sequence ?? 0) - (b.sequence ?? 0);
@@ -178,15 +180,10 @@ function EnumFilterPopover({
   );
 }
 
-const COUNTRY_OPTIONS: EnumOption[] = [
-  { value: 'US', label: 'US' },
-  { value: 'CN', label: 'CN' },
-  { value: 'JP', label: 'JP' },
-  { value: 'DE', label: 'DE' },
-  { value: 'GB', label: 'GB' },
-  { value: 'SG', label: 'SG' },
-  { value: 'AU', label: 'AU' },
-];
+const COUNTRY_OPTIONS: EnumOption[] = COUNTRIES.map((c) => ({
+  value: c.code,
+  label: countryLabel(c.code),
+}));
 
 export function DeviceCustomFieldFloatingFilterCell({
   grid,
@@ -388,6 +385,7 @@ export function DeviceCustomFieldEditRenderer({
   fieldDef,
 }: EditRendererFnParams<Device> & { fieldDef: DeviceCustomFieldDef }) {
   const [multiOpen, setMultiOpen] = useState(true);
+  const gridViewport = grid.state.viewport.useValue();
 
   const type = fieldDef.fieldType;
   const options = useMemo(() => (fieldDef.options ?? []).slice().sort(optionSort), [fieldDef.options]);
@@ -439,6 +437,20 @@ export function DeviceCustomFieldEditRenderer({
           </option>
         ))}
       </select>
+    );
+  }
+
+  if (type === 'COUNTRY') {
+    const value = typeof cellValue === 'string' ? cellValue : '';
+    return (
+      <CountryPicker
+        value={value || null}
+        gridViewport={gridViewport}
+        onValueChange={(next) => {
+          onChange(next);
+          grid.api.editEnd();
+        }}
+      />
     );
   }
 

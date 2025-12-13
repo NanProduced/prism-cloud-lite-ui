@@ -5,6 +5,7 @@ import type {
   CellRendererParams,
   Column,
 } from '@1771technologies/lytenyte-core/types';
+import { measureText } from '@1771technologies/lytenyte-shared';
 import type { Device } from '@/types/device';
 import type { DeviceCustomFieldDef, DeviceCustomFieldValue } from '@/types/device-custom-field';
 import { DeviceStatusBadge } from '@/components/devices/DeviceStatusBadge';
@@ -24,6 +25,7 @@ import {
 import { PrismRowGroupCell } from '@/components/lytenyte/PrismRowGroupCell';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { CountryFlag } from '@/components/ui/country-flag';
 
 interface DeviceTableProps {
   devices: Device[];
@@ -191,6 +193,17 @@ export function DeviceTable({
             );
           }
 
+          if (def.fieldType === 'COUNTRY' && typeof raw === 'string') {
+            const code = raw.trim().toUpperCase();
+            if (!code) return <span className="text-muted-foreground">-</span>;
+            return (
+              <span className="truncate flex items-center gap-2">
+                <CountryFlag code={code} />
+                <span>{code}</span>
+              </span>
+            );
+          }
+
           if (def.fieldType === 'URL' && typeof raw === 'string') {
             return (
               <a
@@ -308,6 +321,14 @@ export function DeviceTable({
         aggDefault: 'count',
         aggsAllowed: ['count'],
       },
+      autosizeCellFn: ({ grid, row }) => {
+        if (row.kind !== 'leaf' || !row.data) return null;
+        const device = row.data;
+        const vp = grid.state.viewport.get() ?? undefined;
+        const w1 = measureText(device.deviceName ?? '', vp).width;
+        const w2 = measureText(device.alias ?? '', vp).width;
+        return Math.max(w1, w2) + 24;
+      },
       cellRenderer: ({ row }: CellRendererParams<Device>) => {
         if (row.kind === 'branch') {
           const value = row.data['deviceName'];
@@ -342,12 +363,15 @@ export function DeviceTable({
         if (data.kind !== 'leaf' || !data.data) return '';
         return data.data.latestScreenshot?.url ?? '';
       },
+      floatingCellRenderer: () => null,
       uiHints: {
         sortable: false,
         rowGroupable: false,
         resizable: true,
         movable: true,
       },
+      autosizeCellFn: () => 120,
+      autosizeHeaderFn: () => 120,
       cellRenderer: ({ row, grid }: CellRendererParams<Device>) => {
         if (grid.api.rowIsGroup(row) || !row.data) return null;
         const device = row.data;
@@ -609,6 +633,15 @@ export function DeviceTable({
         resizable: true,
         movable: true,
       },
+      autosizeCellFn: ({ grid, row }) => {
+        if (row.kind !== 'leaf' || !row.data) return null;
+        const program = row.data.currentProgram;
+        if (!program) return null;
+        const vp = grid.state.viewport.get() ?? undefined;
+        const w1 = measureText(program.name ?? '', vp).width;
+        const w2 = measureText(program.version ?? '', vp).width;
+        return Math.max(w1, w2) + 24;
+      },
       cellRenderer: ({ row, grid }: CellRendererParams<Device>) => {
         if (grid.api.rowIsGroup(row) || !row.data) return null;
         const program = row.data.currentProgram;
@@ -678,6 +711,39 @@ export function DeviceTable({
     editClickActivator: 'double-click',
     columnBase: {
       headerRenderer: PrismHeaderRenderer,
+      autosizeHeaderFn: ({ grid, column }) => {
+        const vp = grid.state.viewport.get() ?? undefined;
+        const text = String(column.name ?? column.id ?? '');
+        const textWidth = measureText(text, vp).width;
+
+        const isSortable = column.uiHints?.sortable !== false;
+        const isMenuEnabled = column.id !== 'actions' && column.id !== '__globalSearch';
+
+        const rawMeta = (column as unknown as { prismMeta?: unknown }).prismMeta;
+        const meta =
+          rawMeta && typeof rawMeta === 'object'
+            ? (rawMeta as { kind?: unknown; fieldType?: unknown; locked?: unknown; icon?: unknown })
+            : null;
+
+        const isCustomField = meta?.kind === 'customField';
+        const hasUserIcon = isCustomField && typeof meta?.icon === 'string' && meta.icon.trim().length > 0;
+        const hasTypeIcon = isCustomField && typeof meta?.fieldType === 'string' && meta.fieldType.trim().length > 0;
+        const hasLock = Boolean(isCustomField && meta?.locked);
+
+        // PrismHeaderRenderer layout reserves space for:
+        // - left (optional) user icon
+        // - right (optional) type/lock icons
+        // - right-side sort and menu buttons
+        // plus padding/gaps.
+        const basePadding = 22;
+        const leftIcons = hasUserIcon ? 18 : 0;
+        const rightIcons = (hasTypeIcon ? 18 : 0) + (hasLock ? 18 : 0);
+        const sortButton = isSortable ? 30 : 0;
+        const menuButton = isMenuEnabled ? 34 : 0;
+        const gaps = 16;
+
+        return Math.ceil(textWidth + basePadding + leftIcons + rightIcons + sortButton + menuButton + gaps);
+      },
     },
     columnMarkerEnabled: true,
     columnMarker: {
