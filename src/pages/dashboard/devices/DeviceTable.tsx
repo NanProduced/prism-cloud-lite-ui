@@ -26,6 +26,7 @@ import { PrismRowGroupCell } from '@/components/lytenyte/PrismRowGroupCell';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { CountryFlag } from '@/components/ui/country-flag';
+import { UrlGlimpseLink } from './UrlGlimpseLink';
 
 interface DeviceTableProps {
   devices: Device[];
@@ -205,16 +206,7 @@ export function DeviceTable({
           }
 
           if (def.fieldType === 'URL' && typeof raw === 'string') {
-            return (
-              <a
-                href={raw}
-                target="_blank"
-                rel="noreferrer"
-                className="text-sky-600 hover:underline truncate block"
-              >
-                {raw}
-              </a>
-            );
+            return <UrlGlimpseLink value={raw} />;
           }
 
           if (def.fieldType === 'EMAIL' && typeof raw === 'string') {
@@ -246,12 +238,21 @@ export function DeviceTable({
         ),
         uiHints: {
           sortable: true,
-          rowGroupable: def.fieldType !== 'MULTI_SELECT',
+          rowGroupable:
+            def.fieldType === 'SELECT' ||
+            def.fieldType === 'BOOLEAN' ||
+            def.fieldType === 'COUNTRY',
           resizable: true,
           movable: true,
           ...(def.fieldType === 'NUMBER'
-            ? { aggDefault: 'avg', aggsAllowed: ['sum', 'avg', 'min', 'max', 'count'] }
-            : { aggDefault: 'count', aggsAllowed: ['count'] }),
+            ? { aggsAllowed: ['sum', 'avg', 'min', 'max', 'count', 'first', 'last'] }
+            : def.fieldType === 'DATETIME'
+              ? { aggsAllowed: ['min', 'max', 'count', 'first', 'last'] }
+              : def.fieldType === 'SELECT' ||
+                  def.fieldType === 'BOOLEAN' ||
+                  def.fieldType === 'COUNTRY'
+                ? { aggsAllowed: ['count'] }
+                : {}),
         },
         editable: ({ row }) => row.kind === 'leaf',
         editRenderer: (params) => (
@@ -315,7 +316,7 @@ export function DeviceTable({
       floatingCellRenderer: DeviceGridFloatingFilterCell,
       uiHints: {
         sortable: true,
-        rowGroupable: true,
+        rowGroupable: false,
         resizable: true,
         movable: true,
         aggDefault: 'count',
@@ -397,6 +398,7 @@ export function DeviceTable({
         rowGroupable: true,
         resizable: true,
         movable: true,
+        aggsAllowed: ['count'],
       },
       cellRenderer: ({ row, grid }: CellRendererParams<Device>) => {
         if (grid.api.rowIsGroup(row) || !row.data) return null;
@@ -421,6 +423,7 @@ export function DeviceTable({
         rowGroupable: true,
         resizable: true,
         movable: true,
+        aggsAllowed: ['count'],
       },
     },
     {
@@ -432,8 +435,10 @@ export function DeviceTable({
       floatingCellRenderer: DeviceGridFloatingFilterCell,
       uiHints: {
         sortable: true,
+        rowGroupable: true,
         resizable: true,
         movable: true,
+        aggsAllowed: ['count'],
       },
     },
     {
@@ -448,6 +453,7 @@ export function DeviceTable({
         rowGroupable: true,
         resizable: true,
         movable: true,
+        aggsAllowed: ['count'],
       },
       cellRenderer: ({ row, grid }: CellRendererParams<Device>) => {
         if (grid.api.rowIsGroup(row) || !row.data) return null;
@@ -474,6 +480,7 @@ export function DeviceTable({
       floatingCellRenderer: DeviceGridFloatingFilterCell,
       uiHints: {
         sortable: true,
+        rowGroupable: false,
         resizable: true,
         movable: true,
       },
@@ -509,8 +516,10 @@ export function DeviceTable({
       floatingCellRenderer: DeviceGridFloatingFilterCell,
       uiHints: {
         sortable: true,
+        rowGroupable: true,
         resizable: true,
         movable: true,
+        aggsAllowed: ['count'],
       },
     },
     {
@@ -522,6 +531,7 @@ export function DeviceTable({
       floatingCellRenderer: DeviceGridFloatingFilterCell,
       uiHints: {
         sortable: true,
+        rowGroupable: false,
         resizable: true,
         movable: true,
         aggDefault: 'avg',
@@ -569,6 +579,7 @@ export function DeviceTable({
       floatingCellRenderer: DeviceGridFloatingFilterCell,
       uiHints: {
         sortable: true,
+        rowGroupable: false,
         resizable: true,
         movable: true,
         aggDefault: 'avg',
@@ -630,6 +641,7 @@ export function DeviceTable({
       floatingCellRenderer: DeviceGridFloatingFilterCell,
       uiHints: {
         sortable: true,
+        rowGroupable: false,
         resizable: true,
         movable: true,
       },
@@ -666,6 +678,7 @@ export function DeviceTable({
       floatingCellRenderer: DeviceGridFloatingFilterCell,
       uiHints: {
         sortable: false,
+        rowGroupable: false,
         resizable: true,
         movable: true,
       },

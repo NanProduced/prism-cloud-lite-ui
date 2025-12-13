@@ -418,8 +418,8 @@ export function DeviceCustomFieldsSheet({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-3xl p-0 overflow-hidden max-h-[85vh]">
-        <div className="flex flex-col max-h-[85vh]">
+      <DialogContent className="!w-[min(92vw,64rem)] !max-w-none p-0 overflow-hidden max-h-[78vh]">
+        <div className="flex flex-col max-h-[78vh]">
           <div className="p-6 pb-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -546,9 +546,9 @@ export function DeviceCustomFieldsSheet({
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               {FieldIcon && (
-                                <FieldIcon className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                                <FieldIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                               )}
-                              <div className="font-semibold whitespace-normal break-words">
+                              <div className="font-semibold truncate" title={def.displayName}>
                                 {def.displayName}
                               </div>
                               {def.planTierRequired && (

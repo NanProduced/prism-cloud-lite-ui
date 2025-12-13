@@ -6,8 +6,6 @@ import type { DeviceCustomFieldDef } from '@/types/device-custom-field';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -17,9 +15,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, Plus, X, SlidersHorizontal, Layers, Sigma, RotateCcw, Check, Download, Maximize2, Zap, Camera, Power } from 'lucide-react';
+import { Search, X, Layers, RotateCcw, Download, Zap, Camera, Power } from 'lucide-react';
 import { PrismSortManagerDialog } from '@/components/lytenyte/PrismSortManagerDialog';
 import { DeviceCustomFieldsSheet } from './DeviceCustomFieldsSheet';
+import { DeviceGridDialog } from './DeviceGridDialog';
 
 interface DeviceGridToolbarProps {
   grid: Grid<Device>;
@@ -75,7 +74,7 @@ export function DeviceGridToolbar({
   const aggModel = grid.state.aggModel.useValue();
 
   const groupableColumns = baseColumns.filter((c) => c.uiHints?.rowGroupable);
-  const numericAggColumns = baseColumns.filter((c) => c.uiHints?.aggsAllowed?.length);
+  const aggColumns = baseColumns.filter((c) => c.uiHints?.aggsAllowed?.length);
 
   useEffect(() => {
     if (rowGroupIds.length === 0) return;
@@ -94,10 +93,44 @@ export function DeviceGridToolbar({
     });
   }, [baseColumns, grid, rowGroupIds.length]);
 
+  useEffect(() => {
+    if (rowGroupIds.length > 0) return;
+    grid.state.aggModel.set((prev) => (Object.keys(prev).length === 0 ? prev : {}));
+  }, [grid, rowGroupIds.length]);
+
   const handleToggleColumn = (colId: string) => {
     grid.state.columns.set((prev) =>
       prev.map((c) => (c.id === colId ? { ...c, hide: !c.hide } : c))
     );
+  };
+
+  const handleSetPin = (colId: string, pin: 'start' | 'end' | null) => {
+    grid.state.columns.set((prev) => prev.map((c) => (c.id === colId ? { ...c, pin } : c)));
+  };
+
+  const handleReorderColumns = (fromId: string, toId: string) => {
+    if (fromId === toId) return;
+    grid.state.columns.set((prev) => {
+      const isBase = (c: Column<Device>) =>
+        !String(c.id).startsWith(GROUP_COLUMN_PREFIX) && String(c.id) !== GLOBAL_SEARCH_COLUMN_ID;
+
+      const baseIds = prev.filter(isBase).map((c) => String(c.id));
+      const fromIdx = baseIds.indexOf(fromId);
+      const toIdx = baseIds.indexOf(toId);
+      if (fromIdx < 0 || toIdx < 0) return prev;
+
+      const nextBaseIds = baseIds.slice();
+      const [moved] = nextBaseIds.splice(fromIdx, 1);
+      nextBaseIds.splice(toIdx, 0, moved!);
+
+      const baseById = new Map(prev.filter(isBase).map((c) => [String(c.id), c]));
+      let i = 0;
+      return prev.map((c) => {
+        if (!isBase(c)) return c;
+        const id = nextBaseIds[i++]!;
+        return baseById.get(id) ?? c;
+      });
+    });
   };
 
   const handleAddGroup = (colId: string) => {
@@ -115,6 +148,7 @@ export function DeviceGridToolbar({
   };
 
   const handleSetAgg = (colId: string, fn?: AggModelFn<Device>) => {
+    if (rowGroupIds.length === 0) return;
     grid.state.aggModel.set((prev) => {
       const next = { ...prev };
       if (!fn) {
@@ -133,17 +167,6 @@ export function DeviceGridToolbar({
     grid.state.rowGroupModel.set([]);
     grid.state.aggModel.set({});
     grid.api.rowSelectAll({ deselect: true });
-  };
-
-  const handleAutosizeAll = (includeHeader: boolean) => {
-    const result = grid.api.columnAutosize({ includeHeader, dryRun: true });
-    const updates: Record<string, { width: number }> = {};
-    for (const [id, width] of Object.entries(result)) {
-      const currentWidth = columns.find((c) => String(c.id) === String(id))?.width;
-      if (typeof currentWidth === 'number' && currentWidth >= width) continue;
-      updates[id] = { width };
-    }
-    if (Object.keys(updates).length > 0) grid.api.columnUpdate(updates);
   };
 
   const downloadBlob = (blob: Blob, fileName: string) => {
@@ -241,7 +264,19 @@ export function DeviceGridToolbar({
               </button>
             </Badge>
           )}
-          <ColumnsPopover columns={baseColumns} onToggle={handleToggleColumn} />
+          <DeviceGridDialog
+            columns={baseColumns}
+            groupableColumns={groupableColumns}
+            aggColumns={aggColumns}
+            rowGroupIds={rowGroupIds}
+            aggModel={aggModel}
+            onToggleColumn={handleToggleColumn}
+            onSetPin={handleSetPin}
+            onReorderColumn={handleReorderColumns}
+            onAddGroup={handleAddGroup}
+            onRemoveGroup={handleRemoveGroup}
+            onSetAgg={handleSetAgg}
+          />
           <DeviceCustomFieldsSheet
             customFieldDefs={customFieldDefs}
             isProActive={isProActive}
@@ -249,17 +284,6 @@ export function DeviceGridToolbar({
             onCustomFieldDefsChange={onCustomFieldDefsChange}
             onCustomFieldCreate={onCustomFieldCreate}
             onCustomFieldDelete={onCustomFieldDelete}
-          />
-          <GroupsPopover
-            groupableColumns={groupableColumns}
-            rowGroupModel={rowGroupIds}
-            onAdd={handleAddGroup}
-            onRemove={handleRemoveGroup}
-          />
-          <AggsPopover
-            columns={numericAggColumns}
-            aggModel={aggModel}
-            onSetAgg={handleSetAgg}
           />
 
           <PrismSortManagerDialog grid={grid} columns={baseColumns} />
@@ -283,23 +307,6 @@ export function DeviceGridToolbar({
               <DropdownMenuItem disabled={selectedCount === 0} onSelect={() => runBulkAction('screenshot')}>
                 <Camera className="h-4 w-4" />
                 Screenshot
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Maximize2 className="h-4 w-4" />
-                Autosize
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => handleAutosizeAll(false)}>
-                Autosize All Columns
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => handleAutosizeAll(true)}>
-                Autosize All (Include Headers)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -357,195 +364,5 @@ export function DeviceGridToolbar({
         </div>
       )}
     </div>
-  );
-}
-
-function ColumnsPopover({
-  columns,
-  onToggle,
-}: {
-  columns: Column<Device>[];
-  onToggle: (id: string) => void;
-}) {
-  const visibleCount = columns.filter((c) => !c.hide).length;
-  const ordered = useMemo(() => {
-    const indexed = columns.map((c, i) => ({ c, i }));
-    indexed.sort((a, b) => {
-      const ah = Number(Boolean(a.c.hide));
-      const bh = Number(Boolean(b.c.hide));
-      if (ah !== bh) return ah - bh; // visible first
-      return a.i - b.i;
-    });
-    return indexed.map((x) => x.c);
-  }, [columns]);
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <SlidersHorizontal className="h-4 w-4" />
-          Columns
-          <Badge variant="secondary" className="ml-1">
-            {visibleCount}/{columns.length}
-          </Badge>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-72 p-2">
-        <ScrollArea className="h-64 pr-2">
-          <div className="flex flex-col gap-1">
-            {ordered.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                className="flex items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-accent"
-                onClick={() => onToggle(c.id)}
-              >
-                <span className="truncate">{c.name ?? c.id}</span>
-                {!c.hide && <Check className="h-4 w-4 text-emerald-600" />}
-              </button>
-            ))}
-          </div>
-        </ScrollArea>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function GroupsPopover({
-  groupableColumns,
-  rowGroupModel,
-  onAdd,
-  onRemove,
-}: {
-  groupableColumns: Column<Device>[];
-  rowGroupModel: string[];
-  onAdd: (id: string) => void;
-  onRemove: (id: string) => void;
-}) {
-  const available = groupableColumns.filter((c) => !rowGroupModel.includes(c.id));
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Layers className="h-4 w-4" />
-          Row Groups
-          {rowGroupModel.length > 0 && (
-            <Badge variant="secondary" className="ml-1">
-              {rowGroupModel.length}
-            </Badge>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-64 p-2">
-        <div className="flex flex-col gap-2">
-          {rowGroupModel.length === 0 ? (
-            <div className="text-xs text-muted-foreground px-1">
-              No grouping applied
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1">
-              {rowGroupModel.map((g) => {
-                const col = groupableColumns.find((c) => c.id === g);
-                return (
-                  <div
-                    key={g}
-                    className="flex items-center justify-between rounded px-2 py-1 text-sm bg-muted/40"
-                  >
-                    <span className="truncate">{col?.name ?? g}</span>
-                    <X className="h-4 w-4 cursor-pointer" onClick={() => onRemove(g)} />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          <div className="border-t pt-2">
-            {available.length === 0 ? (
-              <div className="text-xs text-muted-foreground px-1">
-                No more groupable columns
-              </div>
-            ) : (
-              <div className="flex flex-col gap-1">
-                {available.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className="flex items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-accent"
-                    onClick={() => onAdd(c.id)}
-                  >
-                    <span className="truncate">{c.name ?? c.id}</span>
-                    <Plus className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function AggsPopover({
-  columns,
-  aggModel,
-  onSetAgg,
-}: {
-  columns: Column<Device>[];
-  aggModel: Record<string, { fn: AggModelFn<Device> }>;
-  onSetAgg: (colId: string, fn?: AggModelFn<Device>) => void;
-}) {
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Sigma className="h-4 w-4" />
-          Aggregations
-          {Object.keys(aggModel).length > 0 && (
-            <Badge variant="secondary" className="ml-1">
-              {Object.keys(aggModel).length}
-            </Badge>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-72 p-2">
-        <div className="flex flex-col gap-2">
-          {columns.length === 0 && (
-            <div className="text-xs text-muted-foreground px-1">
-              No aggregatable columns
-            </div>
-          )}
-          {columns.map((c) => {
-            const allowed = c.uiHints?.aggsAllowed ?? [];
-            const current = aggModel[c.id]?.fn;
-            return (
-              <div key={c.id} className="flex items-center justify-between gap-2 px-1">
-                <div className="text-sm truncate">{c.name ?? c.id}</div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
-                      {typeof current === 'string'
-                        ? current
-                        : current === undefined
-                        ? 'none'
-                        : 'custom'}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onSetAgg(c.id, undefined)}>
-                      None
-                    </DropdownMenuItem>
-                    {allowed.map((fn) => (
-                      <DropdownMenuItem key={fn} onClick={() => onSetAgg(c.id, fn)}>
-                        {fn}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            );
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
   );
 }

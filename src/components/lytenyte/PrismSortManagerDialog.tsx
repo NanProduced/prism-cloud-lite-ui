@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type {
   Column,
   Grid,
@@ -9,8 +9,16 @@ import type {
 } from "@1771technologies/lytenyte-core/types";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { ArrowDown, ArrowUp, ArrowUpDown, Plus, Trash2 } from "lucide-react";
+import { ArrowUpDown, ChevronDown, Plus, Trash2 } from "lucide-react";
 
 type SortOrder = "asc" | "desc";
 type SortOn =
@@ -28,6 +36,48 @@ type DraftSort = {
   order: SortOrder;
   sortOn: SortOn;
 };
+
+function SelectMenu({
+  valueLabel,
+  placeholder,
+  disabled,
+  contentClassName,
+  children,
+}: {
+  valueLabel?: string;
+  placeholder: string;
+  disabled?: boolean;
+  contentClassName?: string;
+  children: ReactNode;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-9 w-full justify-between px-3 font-normal"
+          disabled={disabled}
+        >
+          <span className={cn("truncate", !valueLabel && "text-muted-foreground")}>
+            {valueLabel || placeholder}
+          </span>
+          <ChevronDown className="h-4 w-4 opacity-70" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        className={cn(
+          "w-[var(--radix-popper-anchor-width)] max-w-[28rem]",
+          contentClassName
+        )}
+      >
+        {children}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 function sortKindForColumn<T>(
   column: Column<T>
@@ -177,42 +227,50 @@ export function PrismSortManagerDialog<T>({
 
   useEffect(() => {
     if (!open) return;
+    const mapped = sortModel.map((s) => {
+      const col = s.columnId ? columnLookup.get(s.columnId) : undefined;
+      return {
+        id: makeId(),
+        columnId: s.columnId ?? "",
+        order: (s.isDescending ? "desc" : "asc") as SortOrder,
+        sortOn: sortOnFromModelItem(s, col),
+      };
+    });
     setDraft(
-      sortModel.map((s) => {
-        const col = s.columnId ? columnLookup.get(s.columnId) : undefined;
-        return {
-          id: makeId(),
-          columnId: s.columnId ?? "",
-          order: s.isDescending ? "desc" : "asc",
-          sortOn: sortOnFromModelItem(s, col),
-        };
-      })
+      mapped.length > 0
+        ? mapped
+        : [{ id: makeId(), columnId: "", order: "asc" as SortOrder, sortOn: "default" }]
     );
   }, [columnLookup, open, sortModel]);
 
   const addSort = () => {
-    const first = sortableColumns[0];
+    const selected = new Set(draft.map((d) => d.columnId).filter(Boolean));
+    const nextCol = sortableColumns.find((c) => !selected.has(String(c.id)));
     setDraft((prev) => [
       ...prev,
       {
         id: makeId(),
-        columnId: first?.id ?? "",
-        order: "asc",
-        sortOn: first ? defaultSortOnForColumn(first) : "default",
+        columnId: nextCol?.id ?? "",
+        order: "asc" as SortOrder,
+        sortOn: nextCol ? defaultSortOnForColumn(nextCol) : "default",
       },
     ]);
   };
 
   const apply = () => {
-    grid.state.sortModel.set(modelFromDraft(draft, columnLookup));
+    const nextDraft = draft.filter((d) => Boolean(d.columnId));
+    grid.state.sortModel.set(modelFromDraft(nextDraft, columnLookup));
     setOpen(false);
   };
 
   const clear = () => {
     grid.state.sortModel.set([]);
-    setDraft([]);
-    setOpen(false);
+    setDraft([{ id: makeId(), columnId: "", order: "asc" as SortOrder, sortOn: "default" }]);
   };
+
+  const hasValidSort = useMemo(() => {
+    return modelFromDraft(draft.filter((d) => Boolean(d.columnId)), columnLookup).length > 0;
+  }, [columnLookup, draft]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -223,167 +281,169 @@ export function PrismSortManagerDialog<T>({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-2xl p-6">
-        <DialogHeader>
+      <DialogContent className="!w-[min(92vw,52rem)] !max-w-none p-0 overflow-hidden max-h-[85vh]">
+        <DialogHeader className="px-6 py-4 border-b bg-muted/20">
           <DialogTitle>Sort</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-3">
-          {draft.length === 0 ? (
-            <div className="text-sm text-muted-foreground">
-              No sorts applied.
-            </div>
-          ) : (
-            <div className="grid gap-2">
-              <div className="grid grid-cols-[1.6fr_1.4fr_0.9fr_auto] gap-2 text-xs font-semibold text-muted-foreground px-1">
-                <div>Column</div>
-                <div>Sort On</div>
-                <div>Order</div>
-                <div />
-              </div>
+        <div className="px-6 py-4 grid gap-3 overflow-auto">
+          <div className="grid grid-cols-[1.4fr_1.2fr_0.8fr_auto] gap-2 text-xs font-semibold text-muted-foreground">
+            <div>Column</div>
+            <div>Sort On</div>
+            <div>Order</div>
+            <div />
+          </div>
 
-              {draft.map((d) => {
-                const col = columnLookup.get(d.columnId);
-                const sortOnOptions = col ? sortOnOptionsForColumn(col) : [];
-                const sortOnNormalized =
-                  col && !sortOnOptions.some((o) => o.value === d.sortOn)
-                    ? defaultSortOnForColumn(col)
-                    : d.sortOn;
+          <div className="grid gap-2">
+            {draft.map((d, idx) => {
+              const col = d.columnId ? columnLookup.get(d.columnId) : undefined;
+              const sortOnOptions = col ? sortOnOptionsForColumn(col) : [];
+              const sortOnNormalized =
+                col && !sortOnOptions.some((o) => o.value === d.sortOn)
+                  ? defaultSortOnForColumn(col)
+                  : d.sortOn;
 
-                return (
-                  <div
-                    key={d.id}
-                    className="grid grid-cols-[1.6fr_1.4fr_0.9fr_auto] gap-2 items-center"
+              const usedByOthers = new Set(
+                draft
+                  .filter((x) => x.id !== d.id)
+                  .map((x) => x.columnId)
+                  .filter(Boolean)
+              );
+
+              return (
+                <div key={d.id} className="grid grid-cols-[1.4fr_1.2fr_0.8fr_auto] gap-2 items-center">
+                  <SelectMenu
+                    valueLabel={col ? String(col.name ?? col.id) : undefined}
+                    placeholder="Select…"
+                    contentClassName="max-h-72"
                   >
-                    <select
-                      className="h-9 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      value={d.columnId}
-                      onChange={(e) => {
-                        const nextColumnId = e.target.value;
-                        const nextCol = columnLookup.get(nextColumnId);
+                    <DropdownMenuCheckboxItem
+                      checked={!d.columnId}
+                      onSelect={() => {
                         setDraft((prev) =>
                           prev.map((p) =>
                             p.id === d.id
-                              ? {
-                                  ...p,
-                                  columnId: nextColumnId,
-                                  sortOn: nextCol
-                                    ? defaultSortOnForColumn(nextCol)
-                                    : "default",
-                                }
+                              ? { ...p, columnId: "", sortOn: "default" }
                               : p
                           )
                         );
                       }}
                     >
-                      {sortableColumns.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name ?? c.id}
-                        </option>
-                      ))}
-                    </select>
+                      Select…
+                    </DropdownMenuCheckboxItem>
+                    {sortableColumns.map((c) => {
+                      const id = String(c.id);
+                      const disabled = usedByOthers.has(id);
+                      return (
+                        <DropdownMenuCheckboxItem
+                          key={id}
+                          checked={d.columnId === id}
+                          disabled={disabled}
+                          onSelect={() => {
+                            if (disabled) return;
+                            setDraft((prev) =>
+                              prev.map((p) =>
+                                p.id === d.id
+                                  ? { ...p, columnId: id, sortOn: defaultSortOnForColumn(c) }
+                                  : p
+                              )
+                            );
+                          }}
+                        >
+                          {String(c.name ?? c.id)}
+                        </DropdownMenuCheckboxItem>
+                      );
+                    })}
+                  </SelectMenu>
 
-                    <select
-                      className="h-9 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      value={sortOnNormalized}
-                      onChange={(e) => {
-                        const next = e.target.value as SortOn;
-                        setDraft((prev) =>
-                          prev.map((p) =>
-                            p.id === d.id ? { ...p, sortOn: next } : p
-                          )
-                        );
+                  <SelectMenu
+                    valueLabel={col ? (sortOnOptions.find((o) => o.value === sortOnNormalized)?.label ?? String(sortOnNormalized)) : undefined}
+                    placeholder="Sort on…"
+                    disabled={!col}
+                    contentClassName="max-h-60"
+                  >
+                    <DropdownMenuRadioGroup
+                      value={col ? String(sortOnNormalized) : ""}
+                      onValueChange={(v) => {
+                        if (!col) return;
+                        const next = v as SortOn;
+                        setDraft((prev) => prev.map((p) => (p.id === d.id ? { ...p, sortOn: next } : p)));
                       }}
-                      disabled={!col}
                     >
                       {sortOnOptions.map((o) => (
-                        <option key={o.value} value={o.value}>
+                        <DropdownMenuRadioItem key={o.value} value={String(o.value)}>
                           {o.label}
-                        </option>
+                        </DropdownMenuRadioItem>
                       ))}
-                    </select>
+                    </DropdownMenuRadioGroup>
+                  </SelectMenu>
 
-                    <div className="flex items-center gap-1">
+                  <SelectMenu
+                    valueLabel={d.order === "asc" ? "Asc" : "Desc"}
+                    placeholder="Order"
+                    contentClassName="w-44"
+                  >
+                    <DropdownMenuRadioGroup
+                      value={d.order}
+                      onValueChange={(v) => {
+                        const next = v as SortOrder;
+                        setDraft((prev) => prev.map((p) => (p.id === d.id ? { ...p, order: next } : p)));
+                      }}
+                    >
+                      <DropdownMenuRadioItem value="asc">Asc</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="desc">Desc</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </SelectMenu>
+
+                  <div className="flex items-center justify-end gap-1">
+                    {idx === draft.length - 1 && (
                       <Button
                         type="button"
-                        variant={d.order === "asc" ? "secondary" : "outline"}
+                        variant="ghost"
                         size="icon"
                         className="h-9 w-9"
-                        onClick={() =>
-                          setDraft((prev) =>
-                            prev.map((p) =>
-                              p.id === d.id ? { ...p, order: "asc" } : p
-                            )
-                          )
-                        }
-                        aria-label="Sort ascending"
+                        onClick={addSort}
+                        disabled={sortableColumns.length === 0}
+                        aria-label="Add sort"
                       >
-                        <ArrowUp className="h-4 w-4" />
+                        <Plus className="h-4 w-4" />
                       </Button>
-                      <Button
-                        type="button"
-                        variant={d.order === "desc" ? "secondary" : "outline"}
-                        size="icon"
-                        className="h-9 w-9"
-                        onClick={() =>
-                          setDraft((prev) =>
-                            prev.map((p) =>
-                              p.id === d.id ? { ...p, order: "desc" } : p
-                            )
-                          )
-                        }
-                        aria-label="Sort descending"
-                      >
-                        <ArrowDown className="h-4 w-4" />
-                      </Button>
-                    </div>
-
+                    )}
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
                       className="h-9 w-9"
-                      onClick={() =>
-                        setDraft((prev) => prev.filter((p) => p.id !== d.id))
-                      }
+                      onClick={() => {
+                        setDraft((prev) => {
+                          const next = prev.filter((p) => p.id !== d.id);
+                          return next.length > 0
+                            ? next
+                            : [{ id: makeId(), columnId: "", order: "asc" as SortOrder, sortOn: "default" }];
+                        });
+                      }}
                       aria-label="Remove sort"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
-          <div className="flex items-center justify-between">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={addSort}
-              disabled={sortableColumns.length === 0}
-            >
-              <Plus className="h-4 w-4" />
-              Add sort
+        <div className="px-6 py-4 border-t bg-muted/20 flex items-center justify-between">
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" onClick={clear}>
+              Clear
             </Button>
-
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="button" variant="outline" onClick={clear}>
-                Clear
-              </Button>
-              <Button type="button" onClick={apply} disabled={draft.length === 0}>
-                Apply
-              </Button>
-            </div>
+            <Button type="button" onClick={apply} disabled={!hasValidSort}>
+              Apply
+            </Button>
           </div>
         </div>
       </DialogContent>

@@ -196,6 +196,7 @@ export function PrismHeaderRenderer<T>({ grid, column }: HeaderCellRendererParam
   };
 
   const setAgg = (fn?: AggModelFn<T>) => {
+    if (rowGroupModel.length === 0) return;
     grid.state.aggModel.set((prev) => {
       const next = { ...prev };
       if (!fn) delete next[column.id];
@@ -353,7 +354,7 @@ export function PrismHeaderRenderer<T>({ grid, column }: HeaderCellRendererParam
 
               {allowedAggs.length > 0 && (
                 <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
+                  <DropdownMenuSubTrigger disabled={rowGroupModel.length === 0}>
                     <Sigma className="h-4 w-4" />
                     Aggregate
                   </DropdownMenuSubTrigger>
