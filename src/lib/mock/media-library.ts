@@ -2,6 +2,7 @@ import type { MediaNode } from '@/types/media-library';
 
 const now = new Date();
 const daysAgo = (days: number) => new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString();
+const sampleVideoUrl = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
 
 export const mockMediaLibraryNodes: MediaNode[] = [
   {
@@ -128,6 +129,7 @@ export const mockMediaLibraryNodes: MediaNode[] = [
     name: 'Summer Loop.mp4',
     parentId: 'folder-campaigns-summer',
     mimeType: 'video/mp4',
+    assetUrl: sampleVideoUrl,
     sizeBytes: 58_000_000,
     width: 1920,
     height: 1080,
@@ -203,6 +205,7 @@ export const mockMediaLibraryNodes: MediaNode[] = [
     name: 'Winter Promo Loop.mp4',
     parentId: 'folder-campaigns-winter',
     mimeType: 'video/mp4',
+    assetUrl: sampleVideoUrl,
     sizeBytes: 72_500_000,
     width: 1920,
     height: 1080,
@@ -236,6 +239,7 @@ export const mockMediaLibraryNodes: MediaNode[] = [
     name: 'Lobby Welcome.mp4',
     parentId: null,
     mimeType: 'video/mp4',
+    assetUrl: sampleVideoUrl,
     sizeBytes: 38_900_000,
     width: 1920,
     height: 1080,
@@ -261,4 +265,3 @@ export const mockMediaLibraryNodes: MediaNode[] = [
     updatedAt: daysAgo(2),
   },
 ];
-

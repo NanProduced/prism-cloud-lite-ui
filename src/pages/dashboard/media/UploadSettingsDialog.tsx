@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { formatBytes } from '@better-upload/client/helpers';
 import { ChevronDown, FileText, Folder, FolderOpen, FolderPlus, ListCollapse, ListTree, Image as ImageIcon, Video } from 'lucide-react';
-import { toast } from 'sonner';
 import { expandAllFeature, hotkeysCoreFeature, selectionFeature, syncDataLoaderFeature } from '@headless-tree/core';
 import { useTree } from '@headless-tree/react';
 
@@ -26,6 +25,7 @@ export function UploadSettingsDialog({
   onPendingTitleChange,
   onConfirm,
   onPickMore,
+  onRequestCreateFolder,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -36,6 +36,7 @@ export function UploadSettingsDialog({
   onPendingTitleChange: (pendingId: string, title: string) => void;
   onConfirm: () => void;
   onPickMore: () => void;
+  onRequestCreateFolder: (parentId: string | null) => void;
 }) {
   const folderItems = useMemo(() => buildFolderItems(folderNodes), [folderNodes]);
   const selectedTreeId = selectedFolderId ?? MY_MEDIA_ID;
@@ -98,7 +99,7 @@ export function UploadSettingsDialog({
                   variant="outline"
                   size="sm"
                   className="gap-2"
-                  onClick={() => toast.message('TODO: Create folder')}
+                  onClick={() => onRequestCreateFolder(selectedFolderId)}
                 >
                   <FolderPlus className="h-4 w-4" />
                   New
@@ -283,7 +284,7 @@ function buildFolderItems(nodes: MediaNode[]): {
 
   const items: Record<string, FolderItemData> = {
     [ROOT_ID]: { name: 'root', children: [MY_MEDIA_ID] },
-    [MY_MEDIA_ID]: { name: 'My Media', children: topLevel },
+    [MY_MEDIA_ID]: { name: 'Library', children: topLevel },
   };
 
   for (const folder of folders) {

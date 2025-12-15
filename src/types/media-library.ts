@@ -22,10 +22,10 @@ export type MediaAssetNode = MediaNodeBase & {
   sizeBytes: number;
   extension?: string;
   coverUrl?: string;
+  assetUrl?: string;
   width?: number;
   height?: number;
   durationMs?: number;
 };
 
 export type MediaNode = MediaFolderNode | MediaAssetNode;
-

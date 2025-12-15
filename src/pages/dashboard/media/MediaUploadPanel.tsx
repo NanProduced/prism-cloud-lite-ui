@@ -24,6 +24,7 @@ export const MediaUploadPanel = forwardRef<
   {
     defaultFolderId: string | null;
     folderNodes: MediaNode[];
+    onRequestCreateFolder: (parentId: string | null) => void;
     stats: {
       totalBytes: number;
       bytesByKind: Record<MediaAssetKind, number>;
@@ -36,7 +37,7 @@ export const MediaUploadPanel = forwardRef<
       };
     };
   }
->(function MediaUploadPanel({ defaultFolderId, folderNodes, stats }, ref) {
+>(function MediaUploadPanel({ defaultFolderId, folderNodes, onRequestCreateFolder, stats }, ref) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const taskTimersRef = useRef<Map<string, number>>(new Map());
   const md5ControllersRef = useRef<Map<string, AbortController>>(new Map());
@@ -613,6 +614,7 @@ export const MediaUploadPanel = forwardRef<
         onPendingTitleChange={onPendingTitleChange}
         onConfirm={handleUploadConfirm}
         onPickMore={openFilePicker}
+        onRequestCreateFolder={onRequestCreateFolder}
       />
     </div>
   );
