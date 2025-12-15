@@ -1,24 +1,20 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { formatBytes } from '@better-upload/client/helpers';
-import { ChevronRight, FileText, Folder, FolderPlus, Image as ImageIcon, Video } from 'lucide-react';
+import { ChevronDown, FileText, Folder, FolderOpen, FolderPlus, ListCollapse, ListTree, Image as ImageIcon, Video } from 'lucide-react';
 import { toast } from 'sonner';
+import { expandAllFeature, hotkeysCoreFeature, selectionFeature, syncDataLoaderFeature } from '@headless-tree/core';
+import { useTree } from '@headless-tree/react';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Tree, TreeItem, TreeItemLabel } from '@/components/ui/tree';
 import { cn } from '@/lib/utils';
 import type { MediaNode } from '@/types/media-library';
 
 import type { PendingUploadFile } from './uploadModels';
-
-type FolderTreeNode = {
-  id: string;
-  name: string;
-  depth: number;
-  children: FolderTreeNode[];
-};
 
 export function UploadSettingsDialog({
   open,
@@ -41,11 +37,33 @@ export function UploadSettingsDialog({
   onConfirm: () => void;
   onPickMore: () => void;
 }) {
-  const folderTree = useMemo(() => buildFolderTree(folderNodes), [folderNodes]);
+  const folderItems = useMemo(() => buildFolderItems(folderNodes), [folderNodes]);
+  const selectedTreeId = selectedFolderId ?? MY_MEDIA_ID;
+
+  const tree = useTree<FolderItemData>({
+    rootItemId: ROOT_ID,
+    dataLoader: {
+      getItem: (itemId) => folderItems.items[itemId],
+      getChildren: (itemId) => folderItems.items[itemId]?.children ?? [],
+    },
+    getItemName: (item) => item.getItemData().name,
+    isItemFolder: (item) => (folderItems.items[item.getId()]?.children.length ?? 0) > 0,
+    state: {
+      selectedItems: [selectedTreeId],
+    },
+    initialState: {
+      expandedItems: folderItems.initialExpandedItems,
+    },
+    onPrimaryAction: (item) => {
+      const id = item.getId();
+      onSelectedFolderIdChange(id === MY_MEDIA_ID ? null : id);
+    },
+    features: [syncDataLoaderFeature, selectionFeature, hotkeysCoreFeature, expandAllFeature],
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl p-6">
+      <DialogContent className="w-[min(100vw-2rem,980px)] max-w-none p-6">
         <DialogHeader>
           <DialogTitle>Upload Settings</DialogTitle>
           <DialogDescription>
@@ -55,25 +73,104 @@ export function UploadSettingsDialog({
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
           <div className="lg:col-span-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-medium">Destination</p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => toast.message('TODO: Create folder')}
-              >
-                <FolderPlus className="h-4 w-4" />
-                New
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => void tree.expandAll()}
+                >
+                  <ListTree className="h-4 w-4 opacity-70" />
+                  <span className="hidden sm:inline">Expand all</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => tree.collapseAll()}
+                >
+                  <ListCollapse className="h-4 w-4 opacity-70" />
+                  <span className="hidden sm:inline">Collapse all</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => toast.message('TODO: Create folder')}
+                >
+                  <FolderPlus className="h-4 w-4" />
+                  New
+                </Button>
+              </div>
             </div>
             <Separator className="my-3" />
-            <ScrollArea className="max-h-[360px] pr-2">
-              <FolderTree
-                tree={folderTree}
-                selectedId={selectedFolderId}
-                onSelect={onSelectedFolderIdChange}
-              />
+            <ScrollArea className="max-h-[480px] pr-2">
+              <Tree tree={tree} indent={14} className="gap-0.5">
+                {tree.getItems().map((item) => {
+                  const id = item.getId();
+                  const data = item.getItemData();
+                  const hasChildren = data.children.length > 0;
+
+                  return (
+                    <TreeItem
+                      key={id}
+                      item={item}
+                      className="disabled:opacity-100"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        item.setFocused();
+                        tree.setSelectedItems([id]);
+                        item.primaryAction();
+                      }}
+                    >
+                      <TreeItemLabel
+                        item={item}
+                        showChevron={false}
+                        className={cn("w-full justify-start", id === MY_MEDIA_ID && "font-medium")}
+                      >
+                        <span className="flex min-w-0 flex-1 items-center gap-2">
+                          {hasChildren ? (
+                            <span
+                              role="button"
+                              tabIndex={-1}
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                if (item.isExpanded()) item.collapse();
+                                else item.expand();
+                              }}
+                              aria-label={item.isExpanded() ? 'Collapse' : 'Expand'}
+                            >
+                              <ChevronDown
+                                className={cn(
+                                  'h-4 w-4 transition-transform',
+                                  item.isExpanded() ? 'rotate-0' : '-rotate-90',
+                                )}
+                              />
+                            </span>
+                          ) : (
+                            <span className="inline-flex h-7 w-7" aria-hidden="true" />
+                          )}
+
+                          {item.isExpanded() && hasChildren ? (
+                            <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Folder className="h-4 w-4 text-muted-foreground" />
+                          )}
+
+                          <span className="truncate">{data.name}</span>
+                          {hasChildren && (
+                            <span className="shrink-0 text-xs text-muted-foreground">{`(${data.children.length})`}</span>
+                          )}
+                        </span>
+                      </TreeItemLabel>
+                    </TreeItem>
+                  );
+                })}
+              </Tree>
             </ScrollArea>
           </div>
 
@@ -86,7 +183,7 @@ export function UploadSettingsDialog({
             </div>
             <Separator className="my-3" />
 
-            <ScrollArea className="max-h-[360px] pr-2">
+            <ScrollArea className="max-h-[480px] pr-2">
               <div className="space-y-3">
                 {pendingFiles.length === 0 ? (
                   <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">
@@ -158,123 +255,49 @@ export function UploadSettingsDialog({
   );
 }
 
-function buildFolderTree(nodes: MediaNode[]): FolderTreeNode[] {
+type FolderItemData = { name: string; children: string[] };
+
+const ROOT_ID = '__media-folder-root__';
+const MY_MEDIA_ID = '__media-folder-my-media__';
+
+function buildFolderItems(nodes: MediaNode[]): {
+  items: Record<string, FolderItemData>;
+  initialExpandedItems: string[];
+} {
   const folders = nodes.filter((n) => n.type === 'folder');
-  const byParent = new Map<string | null, MediaNode[]>();
+  const folderById = new Map<string, MediaNode>(folders.map((f) => [f.id, f]));
+  const childrenByParent = new Map<string | null, string[]>();
+
   for (const folder of folders) {
-    const arr = byParent.get(folder.parentId) ?? [];
-    arr.push(folder);
-    byParent.set(folder.parentId, arr);
+    const bucket = childrenByParent.get(folder.parentId) ?? [];
+    bucket.push(folder.id);
+    childrenByParent.set(folder.parentId, bucket);
   }
 
-  const walk = (parentId: string | null, depth: number): FolderTreeNode[] => {
-    const children = (byParent.get(parentId) ?? []).slice().sort((a, b) => a.name.localeCompare(b.name));
-    return children.map((child) => ({
-      id: child.id,
-      name: child.name,
-      depth,
-      children: walk(child.id, depth + 1),
-    }));
+  for (const [parentId, ids] of childrenByParent.entries()) {
+    ids.sort((a, b) => (folderById.get(a)?.name ?? '').localeCompare(folderById.get(b)?.name ?? ''));
+    childrenByParent.set(parentId, ids);
+  }
+
+  const topLevel = childrenByParent.get(null) ?? [];
+
+  const items: Record<string, FolderItemData> = {
+    [ROOT_ID]: { name: 'root', children: [MY_MEDIA_ID] },
+    [MY_MEDIA_ID]: { name: 'My Media', children: topLevel },
   };
 
-  return walk(null, 0);
-}
+  for (const folder of folders) {
+    items[folder.id] = {
+      name: folder.name,
+      children: childrenByParent.get(folder.id) ?? [],
+    };
+  }
 
-function FolderTree({
-  tree,
-  selectedId,
-  onSelect,
-}: {
-  tree: FolderTreeNode[];
-  selectedId: string | null;
-  onSelect: (id: string | null) => void;
-}) {
-  return (
-    <div className="space-y-1">
-      <FolderTreeRow
-        depth={0}
-        label="My Media"
-        selected={selectedId == null}
-        onClick={() => onSelect(null)}
-      />
-      {tree.map((node) => (
-        <FolderTreeBranch key={node.id} node={node} selectedId={selectedId} onSelect={onSelect} />
-      ))}
-    </div>
-  );
-}
+  const initialExpandedItems = Object.entries(items)
+    .filter(([id, item]) => id !== ROOT_ID && item.children.length > 0)
+    .map(([id]) => id);
 
-function FolderTreeBranch({
-  node,
-  selectedId,
-  onSelect,
-}: {
-  node: FolderTreeNode;
-  selectedId: string | null;
-  onSelect: (id: string | null) => void;
-}) {
-  const [expanded, setExpanded] = useState(true);
-  const hasChildren = node.children.length > 0;
-
-  return (
-    <div>
-      <div className="flex items-center">
-        {hasChildren ? (
-          <button
-            type="button"
-            className="mr-1 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
-            onClick={() => setExpanded((prev) => !prev)}
-            aria-label={expanded ? 'Collapse' : 'Expand'}
-          >
-            <ChevronRight className={cn('h-4 w-4 transition-transform', expanded && 'rotate-90')} />
-          </button>
-        ) : (
-          <span className="mr-1 inline-flex h-6 w-6" />
-        )}
-        <FolderTreeRow
-          depth={node.depth}
-          label={node.name}
-          selected={selectedId === node.id}
-          onClick={() => onSelect(node.id)}
-        />
-      </div>
-
-      {expanded && hasChildren && (
-        <div className="mt-1 space-y-1">
-          {node.children.map((child) => (
-            <FolderTreeBranch key={child.id} node={child} selectedId={selectedId} onSelect={onSelect} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function FolderTreeRow({
-  depth,
-  label,
-  selected,
-  onClick,
-}: {
-  depth: number;
-  label: string;
-  selected: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      className={cn(
-        'flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors hover:bg-muted',
-        selected && 'bg-muted font-medium',
-      )}
-      onClick={onClick}
-      style={{ paddingLeft: `${depth * 14 + 8}px` }}
-    >
-      <Folder className="h-4 w-4 text-muted-foreground" />
-      <span className="truncate">{label}</span>
-    </button>
-  );
+  return { items, initialExpandedItems };
 }
 
 function formatDuration(durationMs: number): string {
@@ -283,4 +306,3 @@ function formatDuration(durationMs: number): string {
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
-

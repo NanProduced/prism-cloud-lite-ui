@@ -1,4 +1,7 @@
 import React, { type ReactNode, useState } from "react";
+import { createPortal } from "react-dom";
+
+import { cn } from "@/lib/utils";
 
 export interface DialogContextType {
   open: boolean;
@@ -27,8 +30,12 @@ export function DialogTrigger({ children, asChild }: { children: ReactNode; asCh
   if (!context) throw new Error("DialogTrigger must be used within Dialog");
 
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children as React.ReactElement<any>, {
-      onClick: () => context.setOpen(true),
+    const element = children as React.ReactElement<{ onClick?: React.MouseEventHandler }>;
+    return React.cloneElement(element, {
+      onClick: (event) => {
+        element.props.onClick?.(event);
+        context.setOpen(true);
+      },
     });
   }
 
@@ -45,13 +52,19 @@ export function DialogContent({ children, className = "" }: { children: ReactNod
 
   if (!context.open) return null;
 
-  return (
+  return createPortal(
     <>
-      <div className="fixed inset-0 z-40 bg-black/40" onClick={() => context.setOpen(false)} />
-      <div className={`fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-lg border border-border bg-background shadow-lg ${className}`}>
+      <div className="fixed inset-0 z-50 bg-black/40" onClick={() => context.setOpen(false)} />
+      <div
+        className={cn(
+          "fixed left-1/2 top-1/2 z-[51] w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-background shadow-lg",
+          className,
+        )}
+      >
         {children}
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
 
