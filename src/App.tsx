@@ -6,10 +6,10 @@ import AuthPage from "@/pages/AuthPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import OverviewPage from "@/pages/dashboard/OverviewPage";
 import DevicesPage from "@/pages/dashboard/devices/DevicesPage";
+import MediaLibraryPage from "@/pages/dashboard/media/MediaLibraryPage";
 import {
   AnalyticsPage,
   MapPage,
-  MediaPage,
   MonitoringPage,
   ProgramsPage,
   SettingsPage,
@@ -36,7 +36,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="overview" replace /> },
       { path: "overview", element: <OverviewPage /> },
-      { path: "media", element: <MediaPage /> },
+      { path: "media", element: <MediaLibraryPage /> },
       { path: "programs", element: <ProgramsPage /> },
       { path: "devices", element: <DevicesPage /> },
       { path: "schedule", element: <SchedulePage /> },

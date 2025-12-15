@@ -297,7 +297,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-5rem)] bg-gray-50/50 p-4 sm:p-6">
+        <main className="min-h-[calc(100vh-5rem)] bg-gray-50/50 px-4 pb-4 pt-3 sm:px-6 sm:pb-6 sm:pt-4">
           <div className="mx-auto max-w-[1600px]">{children}</div>
         </main>
       </SidebarInset>
@@ -459,4 +459,3 @@ function getToneColor(tone: string) {
       return "text-slate-200";
   }
 }
-
