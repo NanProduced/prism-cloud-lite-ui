@@ -7,11 +7,12 @@ import NotFoundPage from "@/pages/NotFoundPage";
 import OverviewPage from "@/pages/dashboard/OverviewPage";
 import DevicesPage from "@/pages/dashboard/devices/DevicesPage";
 import MediaLibraryPage from "@/pages/dashboard/media/MediaLibraryPage";
+import ProgramsPage from "@/pages/dashboard/programs/ProgramsPage";
+import ProgramEditorPage from "@/pages/dashboard/programs/ProgramEditorPage";
 import {
   AnalyticsPage,
   MapPage,
   MonitoringPage,
-  ProgramsPage,
   SettingsPage,
   LogsPage,
   SchedulePage,
@@ -38,6 +39,7 @@ const router = createBrowserRouter([
       { path: "overview", element: <OverviewPage /> },
       { path: "media", element: <MediaLibraryPage /> },
       { path: "programs", element: <ProgramsPage /> },
+      { path: "programs/:programId/edit", element: <ProgramEditorPage /> },
       { path: "devices", element: <DevicesPage /> },
       { path: "schedule", element: <SchedulePage /> },
       { path: "map", element: <MapPage /> },
