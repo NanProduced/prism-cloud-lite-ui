@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import type { Device, Tag, DeviceStatus, NetworkType } from '@/types/device';
+import type { Device, DeviceLocation, Tag, DeviceStatus, NetworkType } from '@/types/device';
 import { generateMockDeviceCustomFieldValues } from './device-custom-fields';
 
 // Pre-defined constants
@@ -27,6 +27,37 @@ const STATUS_DISTRIBUTION: DeviceStatus[] = [
   ...Array(3).fill('offline'),
   ...Array(2).fill('pending'),
 ] as DeviceStatus[];
+
+const LOCATION_CLUSTERS = [
+  { name: 'Shanghai', lat: 31.2304, lng: 121.4737 },
+  { name: 'Hangzhou', lat: 30.2741, lng: 120.1551 },
+  { name: 'Beijing', lat: 39.9042, lng: 116.4074 },
+  { name: 'Shenzhen', lat: 22.5431, lng: 114.0579 },
+] as const;
+
+function jitterLocation(cluster: (typeof LOCATION_CLUSTERS)[number], radiusKm: number) {
+  const radiusLat = radiusKm / 111;
+  const radiusLng = radiusKm / (111 * Math.cos((cluster.lat * Math.PI) / 180));
+  return {
+    lat: cluster.lat + faker.number.float({ min: -radiusLat, max: radiusLat, fractionDigits: 6 }),
+    lng: cluster.lng + faker.number.float({ min: -radiusLng, max: radiusLng, fractionDigits: 6 }),
+  };
+}
+
+function createDeviceLocation(
+  source: DeviceLocation['source'],
+  point: { lat: number; lng: number },
+  timestamp: Date,
+  options?: { accuracyM?: number }
+): DeviceLocation {
+  return {
+    lat: point.lat,
+    lng: point.lng,
+    source,
+    timestamp: timestamp.toISOString(),
+    accuracyM: options?.accuracyM,
+  };
+}
 
 function generateMockDevice(index: number): Device {
   // Shuffle status distribution for randomness
@@ -91,6 +122,26 @@ function generateMockDevice(index: number): Device {
     ? faker.number.int({ min: 30, max: 100 })
     : undefined;
 
+  const cluster = LOCATION_CLUSTERS[(index - 1) % LOCATION_CLUSTERS.length];
+  const hasGps = status !== 'pending' && faker.helpers.maybe(() => true, { probability: 0.9 });
+  const reportedLocation = hasGps
+    ? createDeviceLocation(
+      'reported',
+      jitterLocation(cluster, 25),
+      lastReportTime,
+      { accuracyM: faker.number.int({ min: 5, max: 40 }) }
+    )
+    : undefined;
+
+  const hasManualLocation = faker.helpers.maybe(() => true, { probability: hasGps ? 0.2 : 0.6 });
+  const manualLocation = hasManualLocation
+    ? createDeviceLocation(
+      'manual',
+      jitterLocation(cluster, 3),
+      faker.date.recent({ days: 30 })
+    )
+    : undefined;
+
   return {
     id: `device-${String(index).padStart(3, '0')}`,
     deviceName: `${faker.location.city()} ${faker.helpers.arrayElement(['Display', 'Screen', 'Terminal', 'Panel'])} ${index}`,
@@ -135,6 +186,9 @@ function generateMockDevice(index: number): Device {
 
     // Screenshot
     latestScreenshot,
+
+    reportedLocation,
+    manualLocation,
   };
 }
 

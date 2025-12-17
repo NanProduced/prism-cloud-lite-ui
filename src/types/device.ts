@@ -35,6 +35,16 @@ export interface Screenshot {
   timestamp: string;
 }
 
+export type LocationSource = 'reported' | 'manual';
+
+export interface DeviceLocation {
+  lat: number;
+  lng: number;
+  source: LocationSource;
+  timestamp: string;
+  accuracyM?: number;
+}
+
 export interface Device {
   id: string;
   deviceName: string;
@@ -79,6 +89,10 @@ export interface Device {
 
   // Screenshot
   latestScreenshot?: Screenshot;
+
+  // Location (WGS84)
+  reportedLocation?: DeviceLocation;
+  manualLocation?: DeviceLocation;
 }
 
 // Filter Condition Types

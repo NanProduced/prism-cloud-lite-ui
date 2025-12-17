@@ -11,9 +11,9 @@ import ProgramsPage from "@/pages/dashboard/programs/ProgramsPage";
 import ProgramDetailsPage from "@/pages/dashboard/programs/ProgramDetailsPage";
 import ProgramEditorPage from "@/pages/dashboard/programs/ProgramEditorPage";
 import SettingsPage from "@/pages/dashboard/settings/SettingsPage";
+import MapPage from "@/pages/dashboard/map/MapPage";
 import {
   AnalyticsPage,
-  MapPage,
   MonitoringPage,
   LogsPage,
   SchedulePage,
