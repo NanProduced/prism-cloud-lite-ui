@@ -76,6 +76,7 @@ export type VsnItem = {
   FileSource?: VsnFileSource;
   Volume?: string;
   Loop?: string;
+  IsScroll?: string;
   Text?: string;
   TextColor?: string;
   LogFont?: VsnLogFont;
@@ -99,4 +100,3 @@ export type VsnLogFont = {
   lfUnderLine?: string | null;
   [key: string]: unknown;
 };
-

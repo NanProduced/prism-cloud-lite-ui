@@ -147,10 +147,13 @@ export function ProgramPreviewDialog({
 
                 {regions.map((region, regionIndex) => {
                   const rect = parseRect(region);
-                  const activeItem = pickItemAtTime(region, pageTimeMs);
+                  const activeItem = region.Name === 'sync_program' ? pickSyncItemAtTime(regions, regionIndex, pageTimeMs) : pickItemAtTime(region, pageTimeMs);
+                  const activeKey = getItemKey(activeItem);
+                  const inEffect = getInEffect(activeItem);
+                  const animation = resolveInEffectAnimation(inEffect);
                   return (
                     <div
-                      key={`${region.Name}-${regionIndex}-${activeItem?.Type ?? 'none'}`}
+                      key={`region-${regionIndex}-${activeKey}`}
                       className={cn('absolute overflow-hidden')}
                       style={{
                         left: rect.x * scale,
@@ -159,7 +162,19 @@ export function ProgramPreviewDialog({
                         height: rect.h * scale,
                       }}
                     >
-                      <PreviewRegionContent item={activeItem} materialIndex={materialIndex} />
+                      <div
+                        className="h-full w-full"
+                        style={
+                          animation
+                            ? {
+                                animation: `${animation.name} ${animation.durationMs}ms ease-out`,
+                                willChange: 'opacity, transform',
+                              }
+                            : undefined
+                        }
+                      >
+                        <PreviewRegionContent item={activeItem} materialIndex={materialIndex} />
+                      </div>
                     </div>
                   );
                 })}
@@ -223,6 +238,53 @@ function pickItemAtTime(region: VsnRegion, timeMs: number): VsnItem | null {
     acc += d;
   }
   return items[items.length - 1] ?? null;
+}
+
+function pickSyncItemAtTime(regions: VsnRegion[], regionIndex: number, timeMs: number): VsnItem | null {
+  const syncRegions = regions.filter((r) => r.Name === 'sync_program');
+  if (syncRegions.length === 0) return null;
+
+  const targetRegion = regions[regionIndex];
+  if (!targetRegion) return null;
+
+  const { segmentIndexByTime } = buildSyncTimeline(syncRegions);
+  const segmentIndex = segmentIndexByTime(timeMs);
+  if (segmentIndex == null) return pickItemAtTime(targetRegion, timeMs);
+
+  const items = targetRegion.Items?.Item;
+  if (!Array.isArray(items) || items.length === 0) return null;
+  if (segmentIndex < items.length) return (items[segmentIndex] as VsnItem) ?? null;
+  return (items[items.length - 1] as VsnItem) ?? null;
+}
+
+function buildSyncTimeline(syncRegions: VsnRegion[]): { segmentIndexByTime: (timeMs: number) => number | null } {
+  const perRegionItems = syncRegions.map((r) => (Array.isArray(r.Items?.Item) ? r.Items.Item : []));
+  const maxLen = Math.max(0, ...perRegionItems.map((items) => items.length));
+  if (maxLen === 0) return { segmentIndexByTime: () => null };
+
+  const segmentDurations = Array.from({ length: maxLen }, (_, idx) => {
+    const duration = Math.max(
+      1,
+      ...perRegionItems.map((items) => Math.max(0, toPosInt(items[idx]?.Duration) ?? 0)),
+    );
+    return duration;
+  });
+
+  const total = segmentDurations.reduce((acc, v) => acc + v, 0);
+  if (total <= 0) return { segmentIndexByTime: () => 0 };
+
+  return {
+    segmentIndexByTime: (timeMs: number) => {
+      const t = ((Math.max(0, Math.round(timeMs)) % total) + total) % total;
+      let acc = 0;
+      for (let i = 0; i < segmentDurations.length; i++) {
+        const d = segmentDurations[i] ?? 0;
+        if (t < acc + d) return i;
+        acc += d;
+      }
+      return segmentDurations.length - 1;
+    },
+  };
 }
 
 function PreviewRegionContent({ item, materialIndex }: { item: VsnItem | null; materialIndex: MaterialIndex }) {
@@ -316,3 +378,33 @@ function formatTimeMs(ms: number): string {
   return `${mm}:${ss}`;
 }
 
+function getItemKey(item: VsnItem | null): string {
+  if (!item) return 'none';
+  const base = item.Type ?? 'unknown';
+  const rid = item.FileSource?.Resource_ID;
+  if (rid) return `${base}:${rid}`;
+  if (item.Type === '4' || item.Type === '5') return `${base}:${(item.Text ?? '').slice(0, 24)}`;
+  return `${base}:${JSON.stringify(item).slice(0, 24)}`;
+}
+
+function getInEffect(item: VsnItem | null): { type: string; timeMs: number } | null {
+  if (!item) return null;
+  const raw = (item as unknown as { inEffect?: unknown }).inEffect;
+  if (!raw || typeof raw !== 'object') return null;
+  const effect = raw as { Type?: unknown; Time?: unknown };
+  const type = typeof effect.Type === 'string' ? effect.Type : '0';
+  const timeMs = toPosInt(typeof effect.Time === 'string' ? effect.Time : '') ?? 500;
+  if (type === '0') return null;
+  return { type, timeMs };
+}
+
+function resolveInEffectAnimation(effect: { type: string; timeMs: number } | null): { name: string; durationMs: number } | null {
+  if (!effect) return null;
+  const durationMs = clampInt(effect.timeMs, 100, 5000);
+  if (effect.type === '31') return { name: 'prism-fade-in', durationMs };
+  if (effect.type === '2') return { name: 'prism-wipe-left-in', durationMs };
+  if (effect.type === '3') return { name: 'prism-wipe-right-in', durationMs };
+  if (effect.type === '4') return { name: 'prism-wipe-up-in', durationMs };
+  if (effect.type === '5') return { name: 'prism-wipe-down-in', durationMs };
+  return { name: 'prism-fade-in', durationMs };
+}

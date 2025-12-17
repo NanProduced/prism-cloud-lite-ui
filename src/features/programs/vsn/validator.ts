@@ -176,23 +176,48 @@ function validateRegion(
   }
 
   const isSyncRegion = region.Name === 'sync_program';
+  const isTickerRegion = region.Name === 'singleline_scroll';
 
   items.forEach((item, itemIndex) => {
     validateItem(item as VsnItem, `${itemsPath}[${itemIndex}]`, ctx);
     if (isSyncRegion) {
       const type = (item as VsnItem).Type;
-      const ok = type === '2' || type === '4' || type === '6';
+      const ok = type === '2' || type === '3' || type === '6';
       if (ctx.mode === 'publish') {
         ctx.req(ok, {
           code: 'sync_program.invalid_type',
-          message: 'sync_program region only supports item types 2/4/6.',
+          message: 'sync_program region only supports item types 2/3/6 (image/video/GIF).',
           path: `${itemsPath}[${itemIndex}].Type`,
         });
       } else {
         ctx.warn(ok, {
           code: 'sync_program.invalid_type',
-          message: 'sync_program region only supports item types 2/4/6.',
+          message: 'sync_program region only supports item types 2/3/6 (image/video/GIF).',
           path: `${itemsPath}[${itemIndex}].Type`,
+        });
+      }
+    }
+
+    if (isTickerRegion) {
+      const type = (item as VsnItem).Type;
+      const okType = type === '2' || type === '5';
+      const isScroll = (item as unknown as { IsScroll?: unknown }).IsScroll;
+      const okScroll = type !== '5' || isScroll === '1';
+      const ok = okType && okScroll;
+      const message = okType
+        ? 'singleline_scroll text items require IsScroll="1".'
+        : 'singleline_scroll region only supports item types 2/5 (image/scroll text).';
+      if (ctx.mode === 'publish') {
+        ctx.req(ok, {
+          code: okType ? 'singleline_scroll.missing_IsScroll' : 'singleline_scroll.invalid_type',
+          message,
+          path: okType ? `${itemsPath}[${itemIndex}].IsScroll` : `${itemsPath}[${itemIndex}].Type`,
+        });
+      } else {
+        ctx.warn(ok, {
+          code: okType ? 'singleline_scroll.missing_IsScroll' : 'singleline_scroll.invalid_type',
+          message,
+          path: okType ? `${itemsPath}[${itemIndex}].IsScroll` : `${itemsPath}[${itemIndex}].Type`,
         });
       }
     }

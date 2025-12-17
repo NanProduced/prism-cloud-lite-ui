@@ -1,4 +1,5 @@
 import type { EditorSelection } from './types';
+import type { VsnItem, VsnRegion } from '../vsn/types';
 
 export function formatDurationMs(ms: number): string {
   if (!Number.isFinite(ms) || ms <= 0) return '0s';
@@ -56,7 +57,48 @@ export function clampInt(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, Math.trunc(value)));
 }
 
+export type RegionMode = 'normal' | 'sync' | 'ticker';
+
+export const REGION_EDITOR_NAME_KEY = '__EditorName';
+
+export function getRegionMode(region: VsnRegion | null | undefined): RegionMode {
+  const name = (region?.Name ?? '').trim();
+  if (name === 'sync_program') return 'sync';
+  if (name === 'singleline_scroll') return 'ticker';
+  return 'normal';
+}
+
+export function getRegionDisplayName(region: VsnRegion, regionIndex?: number): string {
+  const editorName = getEditorRegionName(region);
+  const mode = getRegionMode(region);
+  if (mode === 'sync') return editorName ?? 'Sync window';
+  if (mode === 'ticker') return editorName ?? 'Ticker';
+  const raw = (region.Name ?? '').trim();
+  if (raw) return raw;
+  if (typeof regionIndex === 'number') return `Region ${regionIndex + 1}`;
+  return 'Region';
+}
+
+export function getEditorRegionName(region: VsnRegion): string | null {
+  const raw = (region as unknown as Record<string, unknown>)[REGION_EDITOR_NAME_KEY];
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  return trimmed ? trimmed : null;
+}
+
+export function canRegionAcceptItemType(mode: RegionMode, itemType: string): boolean {
+  if (mode === 'sync') return itemType === '2' || itemType === '3' || itemType === '6';
+  if (mode === 'ticker') return itemType === '2' || itemType === '5';
+  return true;
+}
+
+export function regionHasOnlyAllowedItemTypes(region: VsnRegion, mode: RegionMode): boolean {
+  if (mode === 'normal') return true;
+  const items = region.Items?.Item;
+  if (!Array.isArray(items)) return true;
+  return items.every((item) => canRegionAcceptItemType(mode, (item as VsnItem).Type));
+}
+
 function toHex(value: number): string {
   return Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, '0');
 }
-

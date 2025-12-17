@@ -163,3 +163,12 @@ export function createTextItem(input?: { durationMs?: number; text?: string }): 
     },
   };
 }
+
+export function createScrollTextItem(input?: { durationMs?: number; text?: string }): VsnItem {
+  const item = createTextItem(input);
+  return {
+    ...item,
+    Type: '5',
+    IsScroll: '1',
+  };
+}

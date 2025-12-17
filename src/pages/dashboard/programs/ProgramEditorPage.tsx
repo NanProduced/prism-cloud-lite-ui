@@ -20,7 +20,7 @@ import {
   type ProgramRecord,
 } from '@/features/programs/storage/programsDb';
 import { resolveMaterialId } from '@/features/programs/storage/materialId';
-import { createItemFromMedia, createTextItem } from '@/features/programs/vsn/defaults';
+import { createItemFromMedia, createScrollTextItem, createTextItem } from '@/features/programs/vsn/defaults';
 import type { VsnDocument } from '@/features/programs/vsn/types';
 import { validateVsnDocument } from '@/features/programs/vsn/validator';
 import type { MediaAssetNode } from '@/types/media-library';
@@ -52,7 +52,7 @@ import {
   patchRegionRect,
   resizeProgramCanvas,
 } from '@/features/programs/editor/vsnOps';
-import { clampInt } from '@/features/programs/editor/utils';
+import { canRegionAcceptItemType, getRegionMode, clampInt } from '@/features/programs/editor/utils';
 
 export default function ProgramEditorPage() {
   const navigate = useNavigate();
@@ -467,7 +467,22 @@ export default function ProgramEditorPage() {
                   regionIndex = res.regionIndex;
                 }
 
-                const res = addItem(doc, selection.pageIndex, regionIndex, createTextItem());
+                const targetRegion = getRegions(doc, selection.pageIndex)[regionIndex] ?? null;
+                const targetMode = getRegionMode(targetRegion);
+                if (targetRegion) {
+                  const desiredType = targetMode === 'ticker' ? '5' : '4';
+                  if (!canRegionAcceptItemType(targetMode, desiredType)) {
+                    toast.error('This window type does not support text items.');
+                    return;
+                  }
+                }
+
+                const res = addItem(
+                  doc,
+                  selection.pageIndex,
+                  regionIndex,
+                  targetMode === 'ticker' ? createScrollTextItem() : createTextItem(),
+                );
                 applyVsn(res.doc);
                 setSelection((prev) => ({ ...prev, regionIndex, itemIndex: res.itemIndex }));
               }}
@@ -497,6 +512,14 @@ export default function ProgramEditorPage() {
                   return;
                 }
                 const item = createItemFromMedia(source, { materialId: material.materialId });
+
+                const targetRegion = getRegions(doc, selection.pageIndex)[regionIndex] ?? null;
+                const targetMode = getRegionMode(targetRegion);
+                if (targetRegion && !canRegionAcceptItemType(targetMode, item.Type)) {
+                  toast.error('This window type does not support this item type.');
+                  return;
+                }
+
                 const res = addItem(doc, selection.pageIndex, regionIndex, item);
                 applyVsn(res.doc);
                 setSelection((prev) => ({ ...prev, regionIndex, itemIndex: res.itemIndex }));
@@ -516,6 +539,23 @@ export default function ProgramEditorPage() {
                 onPatchRegionRect={(pageIndex, regionIndex, patch) => {
                   if (!vsn) return;
                   applyVsn(patchRegionRect(vsn, pageIndex, regionIndex, patch));
+                }}
+                onCreateRegionRect={(pageIndex, rect) => {
+                  if (!vsn) return;
+                  const res = addRegion(vsn, pageIndex, {
+                    name: 'Window',
+                    rect: {
+                      X: String(rect.x),
+                      Y: String(rect.y),
+                      Width: String(rect.width),
+                      Height: String(rect.height),
+                      BorderWidth: '0',
+                      BorderColor: '#000000',
+                      BackColor: null,
+                    },
+                  });
+                  applyVsn(res.doc);
+                  setSelection({ pageIndex, regionIndex: res.regionIndex, itemIndex: null });
                 }}
                 onDropMaterial={(materialId, point) => {
                   if (!vsn) return;
@@ -549,13 +589,19 @@ export default function ProgramEditorPage() {
                       height,
                     });
                     if (!regionRes) return;
-                      doc = regionRes.doc;
-                      regionIndex = regionRes.regionIndex;
-                    }
+                    doc = regionRes.doc;
+                    regionIndex = regionRes.regionIndex;
+                  }
 
                   if (regionIndex == null) return;
 
                   const item = createItemFromMedia(source, { materialId });
+                  const targetRegion = getRegions(doc, selection.pageIndex)[regionIndex] ?? null;
+                  const targetMode = getRegionMode(targetRegion);
+                  if (targetRegion && !canRegionAcceptItemType(targetMode, item.Type)) {
+                    toast.error('This window type does not support this item type.');
+                    return;
+                  }
                   const itemRes = addItem(doc, selection.pageIndex, regionIndex, item);
                   applyVsn(itemRes.doc);
                   setSelection((prev) => ({ ...prev, regionIndex, itemIndex: itemRes.itemIndex }));

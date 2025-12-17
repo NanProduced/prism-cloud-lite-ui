@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { Image as ImageIcon, Maximize2, Minus, Plus, Type as TypeIcon, Video as VideoIcon } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { Grid3x3, Image as ImageIcon, Magnet, Maximize2, Minus, MousePointer2, Plus, SquareDashed, Type as TypeIcon, Video as VideoIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { VsnDocument, VsnItem, VsnRect, VsnRegion } from '@/features/programs/vsn/types';
 
 import type { EditorMaterial, EditorSelection } from '../types';
-import { vsnBgColorToCss } from '../utils';
+import { getRegionDisplayName, vsnBgColorToCss } from '../utils';
 import { getPages, getRegions } from '../vsnOps';
 
 type MaterialIndex = Record<string, EditorMaterial>;
@@ -34,6 +34,12 @@ type RegionInteraction =
       startRect: { x: number; y: number; w: number; h: number };
     };
 
+type CreateInteraction = {
+  pointerId: number;
+  start: { x: number; y: number };
+  current: { x: number; y: number };
+};
+
 export function StagePreview({
   doc,
   programWidth,
@@ -43,6 +49,7 @@ export function StagePreview({
   onSelectRegion,
   onPatchRegionRect,
   onDropMaterial,
+  onCreateRegionRect,
   toolbar,
 }: {
   doc: VsnDocument | null;
@@ -53,6 +60,7 @@ export function StagePreview({
   onSelectRegion: (regionIndex: number) => void;
   onPatchRegionRect: (pageIndex: number, regionIndex: number, patch: Partial<VsnRect>) => void;
   onDropMaterial?: (materialId: string, point: { x: number; y: number }) => void;
+  onCreateRegionRect?: (pageIndex: number, rect: { x: number; y: number; width: number; height: number }) => void;
   toolbar?: ReactNode;
 }) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -62,6 +70,11 @@ export function StagePreview({
   const [dragOver, setDragOver] = useState(false);
   const [zoomMode, setZoomMode] = useState<'fit' | 'custom'>('fit');
   const [zoom, setZoom] = useState(1);
+  const [tool, setTool] = useState<'select' | 'create'>('select');
+  const [createInteraction, setCreateInteraction] = useState<CreateInteraction | null>(null);
+  const [showGrid, setShowGrid] = useState(false);
+  const [snapEnabled, setSnapEnabled] = useState(true);
+  const gridSize = 50;
 
   useEffect(() => {
     if (!wrapperRef.current) return;
@@ -111,9 +124,26 @@ export function StagePreview({
     };
   };
 
+  const resolvePointerPoint = useCallback(
+    (clientX: number, clientY: number): { x: number; y: number } | null => {
+      if (!stageRef.current) return null;
+      if (!Number.isFinite(scale) || scale <= 0) return null;
+      const rect = stageRef.current.getBoundingClientRect();
+      const relX = clientX - rect.left;
+      const relY = clientY - rect.top;
+      if (!Number.isFinite(relX) || !Number.isFinite(relY)) return null;
+      return {
+        x: Math.max(0, Math.min(programWidth, relX / scale)),
+        y: Math.max(0, Math.min(programHeight, relY / scale)),
+      };
+    },
+    [programHeight, programWidth, scale],
+  );
+
   useEffect(() => {
     if (!interaction) return;
     const minSize = 20;
+    const snapThreshold = 6;
 
     const onMove = (event: PointerEvent) => {
       if (event.pointerId !== interaction.pointerId) return;
@@ -124,8 +154,13 @@ export function StagePreview({
       const dy = (event.clientY - interaction.startClientY) / scale;
 
       if (interaction.kind === 'move') {
-        const nextX = clampInt(Math.round(interaction.startRect.x + dx), 0, Math.max(0, programWidth - interaction.startRect.w));
-        const nextY = clampInt(Math.round(interaction.startRect.y + dy), 0, Math.max(0, programHeight - interaction.startRect.h));
+        let nextX = clampInt(Math.round(interaction.startRect.x + dx), 0, Math.max(0, programWidth - interaction.startRect.w));
+        let nextY = clampInt(Math.round(interaction.startRect.y + dy), 0, Math.max(0, programHeight - interaction.startRect.h));
+
+        if (snapEnabled) {
+          nextX = snapPosition(nextX, interaction.startRect.w, programWidth, gridSize, snapThreshold);
+          nextY = snapPosition(nextY, interaction.startRect.h, programHeight, gridSize, snapThreshold);
+        }
         onPatchRegionRect(interaction.pageIndex, interaction.regionIndex, {
           X: String(nextX),
           Y: String(nextY),
@@ -156,6 +191,18 @@ export function StagePreview({
         top = clampInt(Math.round(startTop + dy), 0, startBottom - minSize);
       }
 
+      if (snapEnabled) {
+        const snappedLeft = snapEdge(left, gridSize, snapThreshold, [0, Math.round(programWidth / 2)]);
+        const snappedTop = snapEdge(top, gridSize, snapThreshold, [0, Math.round(programHeight / 2)]);
+        const snappedRight = snapEdge(right, gridSize, snapThreshold, [Math.round(programWidth / 2), programWidth]);
+        const snappedBottom = snapEdge(bottom, gridSize, snapThreshold, [Math.round(programHeight / 2), programHeight]);
+
+        if (interaction.handle.includes('w')) left = clampInt(snappedLeft, 0, startRight - minSize);
+        if (interaction.handle.includes('n')) top = clampInt(snappedTop, 0, startBottom - minSize);
+        if (interaction.handle.includes('e')) right = clampInt(snappedRight, startLeft + minSize, programWidth);
+        if (interaction.handle.includes('s')) bottom = clampInt(snappedBottom, startTop + minSize, programHeight);
+      }
+
       onPatchRegionRect(interaction.pageIndex, interaction.regionIndex, {
         X: String(left),
         Y: String(top),
@@ -177,7 +224,51 @@ export function StagePreview({
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onUp);
     };
-  }, [interaction, onPatchRegionRect, programHeight, programWidth, scale]);
+  }, [gridSize, interaction, onPatchRegionRect, programHeight, programWidth, scale, snapEnabled]);
+
+  useEffect(() => {
+    if (!createInteraction) return;
+    const minSize = 20;
+
+    const onMove = (event: PointerEvent) => {
+      if (event.pointerId !== createInteraction.pointerId) return;
+      const point = resolvePointerPoint(event.clientX, event.clientY);
+      if (!point) return;
+      event.preventDefault();
+      setCreateInteraction((prev) => (prev ? { ...prev, current: point } : prev));
+    };
+
+    const onUp = (event: PointerEvent) => {
+      if (event.pointerId !== createInteraction.pointerId) return;
+      const start = createInteraction.start;
+      const end = createInteraction.current;
+      const left = Math.min(start.x, end.x);
+      const top = Math.min(start.y, end.y);
+      const right = Math.max(start.x, end.x);
+      const bottom = Math.max(start.y, end.y);
+      const width = Math.round(right - left);
+      const height = Math.round(bottom - top);
+
+      setCreateInteraction(null);
+
+      if (!onCreateRegionRect) return;
+      if (width < minSize || height < minSize) return;
+
+      const x = clampInt(Math.round(left), 0, Math.max(0, programWidth - width));
+      const y = clampInt(Math.round(top), 0, Math.max(0, programHeight - height));
+
+      onCreateRegionRect(selection.pageIndex, { x, y, width, height });
+    };
+
+    window.addEventListener('pointermove', onMove, { passive: false });
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+  }, [createInteraction, onCreateRegionRect, programHeight, programWidth, resolvePointerPoint, selection.pageIndex]);
 
   const zoomPercent = useMemo(() => Math.round(scale * 100), [scale]);
 
@@ -202,6 +293,52 @@ export function StagePreview({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-md border bg-background p-1">
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className={cn('h-7 w-7', tool === 'select' && 'bg-accent')}
+              onClick={() => setTool('select')}
+              title="Select & edit"
+            >
+              <MousePointer2 className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className={cn('h-7 w-7', tool === 'create' && 'bg-accent')}
+              onClick={() => {
+                if (!onCreateRegionRect) return;
+                setTool((prev) => (prev === 'create' ? 'select' : 'create'));
+              }}
+              disabled={!onCreateRegionRect}
+              title="Draw to create window"
+            >
+              <SquareDashed className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className={cn('h-7 w-7', showGrid && 'bg-accent')}
+              onClick={() => setShowGrid((v) => !v)}
+              title="Toggle grid"
+            >
+              <Grid3x3 className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className={cn('h-7 w-7', snapEnabled && 'bg-accent')}
+              onClick={() => setSnapEnabled((v) => !v)}
+              title="Toggle snapping"
+            >
+              <Magnet className="h-4 w-4" />
+            </Button>
+          </div>
           <div className="flex items-center gap-1 rounded-md border bg-background p-1">
             <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => stepZoom(-1)} title="Zoom out">
               <Minus className="h-4 w-4" />
@@ -244,8 +381,18 @@ export function StagePreview({
           <div
             ref={stageRef}
             data-testid="program-stage"
-            className={cn('relative overflow-hidden', dragOver && 'ring-2 ring-primary/50')}
+            className={cn('relative overflow-hidden', dragOver && 'ring-2 ring-primary/50', tool === 'create' && 'cursor-crosshair')}
             style={{ width: stageWidth, height: stageHeight }}
+            onPointerDown={(event) => {
+              if (event.button !== 0) return;
+              if (tool !== 'create') return;
+              if (!onCreateRegionRect) return;
+              const point = resolvePointerPoint(event.clientX, event.clientY);
+              if (!point) return;
+              event.preventDefault();
+              event.stopPropagation();
+              setCreateInteraction({ pointerId: event.pointerId, start: point, current: point });
+            }}
             onDragEnter={(event) => {
               if (!onDropMaterial) return;
               event.preventDefault();
@@ -269,10 +416,20 @@ export function StagePreview({
             }}
           >
             <div className="absolute inset-0" style={{ background: bg }} />
+            {showGrid && (
+              <div
+                className="pointer-events-none absolute inset-0 opacity-40"
+                style={{
+                  backgroundImage:
+                    'linear-gradient(to right, rgba(255,255,255,0.10) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.10) 1px, transparent 1px)',
+                  backgroundSize: `${Math.max(6, Math.round(gridSize * scale))}px ${Math.max(6, Math.round(gridSize * scale))}px`,
+                }}
+              />
+            )}
 
             {regions.map((region, regionIndex) => (
               <RegionBox
-                key={`${region.Name}-${regionIndex}`}
+                key={`region-${regionIndex}`}
                 region={region}
                 regionIndex={regionIndex}
                 selected={selection.regionIndex === regionIndex}
@@ -281,6 +438,7 @@ export function StagePreview({
                 materialIndex={materialIndex}
                 onMoveStart={(event) => {
                   if (event.button !== 0) return;
+                  if (tool !== 'select') return;
                   const rect = parseRect(region);
                   onSelectRegion(regionIndex);
                   event.preventDefault();
@@ -297,6 +455,7 @@ export function StagePreview({
                 }}
                 onResizeStart={(event, handle) => {
                   if (event.button !== 0) return;
+                  if (tool !== 'select') return;
                   const rect = parseRect(region);
                   onSelectRegion(regionIndex);
                   event.preventDefault();
@@ -314,6 +473,18 @@ export function StagePreview({
                 }}
               />
             ))}
+
+            {createInteraction && (
+              <div
+                className="pointer-events-none absolute border border-primary bg-primary/10"
+                style={{
+                  left: Math.min(createInteraction.start.x, createInteraction.current.x) * scale,
+                  top: Math.min(createInteraction.start.y, createInteraction.current.y) * scale,
+                  width: Math.abs(createInteraction.current.x - createInteraction.start.x) * scale,
+                  height: Math.abs(createInteraction.current.y - createInteraction.start.y) * scale,
+                }}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -385,13 +556,13 @@ function RegionBox({
         background: backColor ?? undefined,
       }}
       onPointerDown={onMoveStart}
-      title={region.Name}
+      title={getRegionDisplayName(region, regionIndex)}
     >
       <div className="relative flex h-full w-full items-center justify-center">
         <RegionContent item={activeItem} materialIndex={materialIndex} />
 
         <div className="pointer-events-none absolute left-1 top-1 flex max-w-[80%] items-center gap-1 rounded bg-background/75 px-1.5 py-0.5 text-[11px] text-foreground shadow-sm">
-          <span className="truncate">{region.Name || `Region ${regionIndex + 1}`}</span>
+          <span className="truncate">{getRegionDisplayName(region, regionIndex)}</span>
         </div>
 
         {selected && (
@@ -548,4 +719,25 @@ function clampInt(value: number, min: number, max: number): number {
 function clampFloat(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
   return Math.min(max, Math.max(min, value));
+}
+
+function snapPosition(pos: number, size: number, total: number, grid: number, threshold: number): number {
+  const candidates = [0, Math.round(total / 2), Math.max(0, total - size), Math.round((total - size) / 2)];
+  let next = pos;
+  candidates.forEach((c) => {
+    if (Math.abs(pos - c) <= threshold) next = c;
+  });
+  const snapped = Math.round(next / grid) * grid;
+  if (Math.abs(next - snapped) <= threshold) next = snapped;
+  return clampInt(next, 0, Math.max(0, total - size));
+}
+
+function snapEdge(value: number, grid: number, threshold: number, guides: number[]): number {
+  let next = value;
+  guides.forEach((g) => {
+    if (Math.abs(value - g) <= threshold) next = g;
+  });
+  const snapped = Math.round(next / grid) * grid;
+  if (Math.abs(next - snapped) <= threshold) next = snapped;
+  return next;
 }

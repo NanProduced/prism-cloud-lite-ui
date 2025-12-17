@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import type { VsnDocument } from '@/features/programs/vsn/types';
 
 export function VsnJsonPanel({ doc }: { doc: VsnDocument | null }) {
-  const jsonText = useMemo(() => (doc ? JSON.stringify(doc, null, 2) : ''), [doc]);
+  const jsonText = useMemo(() => (doc ? JSON.stringify(stripEditorFields(doc), null, 2) : ''), [doc]);
 
   return (
     <div className="flex h-full flex-col">
@@ -50,3 +50,13 @@ export function VsnJsonPanel({ doc }: { doc: VsnDocument | null }) {
   );
 }
 
+function stripEditorFields(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stripEditorFields);
+  if (!value || typeof value !== 'object') return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    if (key.startsWith('__')) continue;
+    out[key] = stripEditorFields(child);
+  }
+  return out;
+}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { BadgeAlert, Image as ImageIcon, Type as TypeIcon, Video as VideoIcon } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +10,17 @@ import type { Device } from '@/types/device';
 import type { VsnDocument, VsnItem, VsnPage, VsnRect, VsnRegion } from '@/features/programs/vsn/types';
 
 import type { EditorMaterial, EditorSelection } from '../types';
-import { cssHexToVsnBgColor, formatDurationMs, vsnBgColorToCss } from '../utils';
+import {
+  REGION_EDITOR_NAME_KEY,
+  cssHexToVsnBgColor,
+  formatDurationMs,
+  getEditorRegionName,
+  getRegionDisplayName,
+  getRegionMode,
+  regionHasOnlyAllowedItemTypes,
+  vsnBgColorToCss,
+  type RegionMode,
+} from '../utils';
 import { getItems, getPages, getRegions } from '../vsnOps';
 import { DeviceResolutionPicker } from './DeviceResolutionPicker';
 
@@ -87,6 +98,7 @@ export function InspectorPanel({
         ) : region ? (
           <RegionInspector
             region={region}
+            showDevFields={showDevFields}
             onPatch={(patch) => onPatchRegion(selection.pageIndex, selection.regionIndex!, patch)}
             onPatchRect={(patch) => onPatchRegionRect(selection.pageIndex, selection.regionIndex!, patch)}
           />
@@ -304,22 +316,90 @@ function PageInspector({
 
 function RegionInspector({
   region,
+  showDevFields,
   onPatch,
   onPatchRect,
 }: {
   region: VsnRegion;
+  showDevFields: boolean;
   onPatch: (patch: Partial<VsnRegion>) => void;
   onPatchRect: (patch: Partial<VsnRect>) => void;
 }) {
   const rect = region.Rect;
   const borderColor = rect.BorderColor ?? '#000000';
   const backColor = rect.BackColor ?? '';
+  const mode = getRegionMode(region);
+  const title = getRegionDisplayName(region);
+  const canSync = regionHasOnlyAllowedItemTypes(region, 'sync');
+  const canTicker = regionHasOnlyAllowedItemTypes(region, 'ticker');
 
   return (
     <div className="space-y-5">
-      <Field label="Name">
-        <Input value={region.Name} onChange={(e) => onPatch({ Name: e.target.value })} />
+      <Field label="Title">
+        <Input
+          value={title}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (mode === 'normal') {
+              onPatch({ Name: value, [REGION_EDITOR_NAME_KEY]: undefined });
+              return;
+            }
+            onPatch({ [REGION_EDITOR_NAME_KEY]: value });
+          }}
+        />
       </Field>
+
+      <Field label="Window type">
+        <select
+          value={mode}
+          onChange={(e) => {
+            const nextMode = e.target.value as RegionMode;
+            if (nextMode === mode) return;
+
+            if (nextMode === 'sync' && !canSync) {
+              toast.error('Sync window only supports image/video/GIF items. Remove other items first.');
+              return;
+            }
+            if (nextMode === 'ticker' && !canTicker) {
+              toast.error('Ticker window only supports image or scroll-text items. Remove other items first.');
+              return;
+            }
+
+            const editorName = getEditorRegionName(region);
+            const fallbackTitle = editorName ?? ((region.Name ?? '').trim() || 'Window');
+
+            if (nextMode === 'normal') {
+              onPatch({ Name: fallbackTitle, [REGION_EDITOR_NAME_KEY]: undefined });
+              return;
+            }
+
+            const nextName = nextMode === 'sync' ? 'sync_program' : 'singleline_scroll';
+            onPatch({ Name: nextName, [REGION_EDITOR_NAME_KEY]: fallbackTitle });
+          }}
+          className="h-9 w-full rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        >
+          <option value="normal">Normal</option>
+          <option value="sync" disabled={!canSync && mode !== 'sync'}>
+            Sync playback
+          </option>
+          <option value="ticker" disabled={!canTicker && mode !== 'ticker'}>
+            Single-line ticker
+          </option>
+        </select>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {mode === 'sync'
+            ? 'Sync windows play items in lockstep across all sync windows on the page.'
+            : mode === 'ticker'
+              ? 'Ticker windows are optimized for single-line scrolling text.'
+              : 'Normal windows support any item types.'}
+        </p>
+      </Field>
+
+      {showDevFields && (
+        <Field label="VSN Name">
+          <Input value={region.Name} readOnly />
+        </Field>
+      )}
 
       <Field label="IsScheduleRegion">
         <select
@@ -660,6 +740,24 @@ function ItemInspector({
             />
           </Field>
 
+          <Field label="Text mode">
+            <select
+              value={item.Type === '5' ? 'scroll' : 'normal'}
+              onChange={(e) => {
+                const next = e.target.value;
+                if (next === 'scroll') {
+                  onPatch({ Type: '5', IsScroll: '1' });
+                  return;
+                }
+                onPatch({ Type: '4', IsScroll: undefined });
+              }}
+              className="h-9 w-full rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            >
+              <option value="normal">Normal</option>
+              <option value="scroll">Single-line scroll</option>
+            </select>
+          </Field>
+
           <Field label="Text">
             <Input value={item.Text ?? ''} onChange={(e) => onPatch({ Text: e.target.value })} />
           </Field>
@@ -769,9 +867,51 @@ const EFFECT_PRESETS: { id: string; name: string }[] = [
   { id: '3', name: 'Wipe right' },
   { id: '4', name: 'Wipe up' },
   { id: '5', name: 'Wipe down' },
+  { id: '6', name: 'Wipe top-left (diagonal)' },
+  { id: '7', name: 'Wipe top-right (diagonal)' },
+  { id: '8', name: 'Wipe bottom-left (diagonal)' },
+  { id: '9', name: 'Wipe bottom-right (diagonal)' },
+  { id: '10', name: 'Wipe top-left (line)' },
+  { id: '11', name: 'Wipe top-right (line)' },
+  { id: '12', name: 'Wipe bottom-left (line)' },
+  { id: '13', name: 'Wipe bottom-right (line)' },
   { id: '14', name: 'Blinds horizontal' },
   { id: '15', name: 'Blinds vertical' },
+  { id: '16', name: 'Split open (horizontal)' },
+  { id: '17', name: 'Split open (vertical)' },
+  { id: '18', name: 'Close (horizontal)' },
+  { id: '19', name: 'Close (vertical)' },
+  { id: '20', name: 'Slide up' },
+  { id: '21', name: 'Slide down' },
+  { id: '22', name: 'Slide left' },
+  { id: '23', name: 'Slide right' },
+  { id: '24', name: 'Slide top-left' },
+  { id: '25', name: 'Slide top-right' },
+  { id: '26', name: 'Slide bottom-left' },
+  { id: '27', name: 'Slide bottom-right' },
+  { id: '28', name: 'Mosaic (small)' },
+  { id: '29', name: 'Mosaic (medium)' },
+  { id: '30', name: 'Mosaic (large)' },
   { id: '31', name: 'Fade' },
+  { id: '32', name: 'Rotate right 360' },
+  { id: '33', name: 'Rotate left 360' },
+  { id: '34', name: 'Rotate right 180' },
+  { id: '35', name: 'Rotate left 180' },
+  { id: '36', name: 'Rotate right 90' },
+  { id: '37', name: 'Rotate left 90' },
+  { id: '38', name: 'Scale up (center)' },
+  { id: '39', name: 'Scale up (top-left)' },
+  { id: '40', name: 'Scale up (top-right)' },
+  { id: '41', name: 'Scale up (bottom-right)' },
+  { id: '42', name: 'Scale up (bottom-left)' },
+  { id: '43', name: 'Rectangle expand (center)' },
+  { id: '44', name: 'Rectangle close (center)' },
+  { id: '45', name: 'Diamond expand (center)' },
+  { id: '46', name: 'Diamond close (center)' },
+  { id: '47', name: 'Cross expand (center)' },
+  { id: '48', name: 'Cross close (center)' },
+  { id: '49', name: '3D animation 1' },
+  { id: '50', name: '3D animation 2' },
 ];
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

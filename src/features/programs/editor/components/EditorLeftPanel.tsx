@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import type { VsnPage, VsnRegion } from '@/features/programs/vsn/types';
 
 import type { EditorMaterial, EditorSelection } from '../types';
+import { getRegionDisplayName } from '../utils';
 
 export function EditorLeftPanel({
   pages,
@@ -125,7 +126,7 @@ export function EditorLeftPanel({
           ) : (
             regions.map((region, index) => (
               <button
-                key={`${region.Name}-${index}`}
+                key={`region-${index}`}
                 type="button"
                 className={cn(
                   'w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors',
@@ -135,7 +136,7 @@ export function EditorLeftPanel({
               >
                 <div className="flex items-center gap-2">
                   <Layers className="h-4 w-4 text-muted-foreground" />
-                  <span className="truncate font-medium">{region.Name || `Region ${index + 1}`}</span>
+                  <span className="truncate font-medium">{getRegionDisplayName(region, index)}</span>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {region.Rect.Width}×{region.Rect.Height} · {region.Items.Item.length} item{region.Items.Item.length === 1 ? '' : 's'}
