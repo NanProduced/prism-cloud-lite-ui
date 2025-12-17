@@ -83,9 +83,21 @@ export default function ProgramEditorPage() {
 
     if (!loaded) return;
     const latest = Math.max(0, ...loaded.versions.map((v) => v.version)) || null;
-    const initialBase = loaded.defaultVersion ?? latest ?? null;
+    const params = new URLSearchParams(location.search);
+    const baseParam = (params.get('base') ?? '').trim().toLowerCase();
+    let initialBase = loaded.defaultVersion ?? latest ?? null;
+    if (baseParam === 'blank') initialBase = null;
+    else if (baseParam) {
+      const raw = baseParam.startsWith('v') ? baseParam.slice(1) : baseParam;
+      const parsed = Number.parseInt(raw, 10);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        const exists = loaded.versions.some((v) => v.version === parsed);
+        if (exists) initialBase = parsed;
+        else toast.error(`Base version v${parsed} not found.`);
+      }
+    }
     setBaseVersion(initialBase);
-  }, [programId]);
+  }, [location.search, programId]);
 
   useEffect(() => {
     if (!programId) return;

@@ -8,12 +8,13 @@ import OverviewPage from "@/pages/dashboard/OverviewPage";
 import DevicesPage from "@/pages/dashboard/devices/DevicesPage";
 import MediaLibraryPage from "@/pages/dashboard/media/MediaLibraryPage";
 import ProgramsPage from "@/pages/dashboard/programs/ProgramsPage";
+import ProgramDetailsPage from "@/pages/dashboard/programs/ProgramDetailsPage";
 import ProgramEditorPage from "@/pages/dashboard/programs/ProgramEditorPage";
+import SettingsPage from "@/pages/dashboard/settings/SettingsPage";
 import {
   AnalyticsPage,
   MapPage,
   MonitoringPage,
-  SettingsPage,
   LogsPage,
   SchedulePage,
   MessagesPage,
@@ -39,6 +40,7 @@ const router = createBrowserRouter([
       { path: "overview", element: <OverviewPage /> },
       { path: "media", element: <MediaLibraryPage /> },
       { path: "programs", element: <ProgramsPage /> },
+      { path: "programs/:programId", element: <ProgramDetailsPage /> },
       { path: "programs/:programId/edit", element: <ProgramEditorPage /> },
       { path: "devices", element: <DevicesPage /> },
       { path: "schedule", element: <SchedulePage /> },

@@ -4,6 +4,7 @@ import { createBlankVsnDocument } from '../vsn/defaults';
 
 export type ProgramDraftRecord = {
   id: string;
+  name?: string | null;
   baseVersion: number | null;
   createdAt: string;
   updatedAt: string;
@@ -53,10 +54,41 @@ export function createProgram(input: { name: string; width: number; height: numb
   const blank = createBlankVsnDocument({ width: input.width, height: input.height, name: input.name });
   const draft: ProgramDraftRecord = {
     id: safeRandomUUID(),
+    name: null,
     baseVersion: null,
     createdAt: nowIso,
     updatedAt: nowIso,
     vsn: blank,
+  };
+
+  const record: ProgramRecord = {
+    id,
+    name: input.name,
+    width: input.width,
+    height: input.height,
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    defaultVersion: null,
+    drafts: [draft],
+    versions: [],
+  };
+
+  const db = loadDb();
+  db.programs.unshift(record);
+  saveDb(db);
+  return record;
+}
+
+export function createProgramFromSeed(input: { name: string; width: number; height: number; vsn: VsnDocument }): ProgramRecord {
+  const nowIso = new Date().toISOString();
+  const id = safeRandomUUID();
+  const draft: ProgramDraftRecord = {
+    id: safeRandomUUID(),
+    name: null,
+    baseVersion: null,
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    vsn: deepClone(input.vsn),
   };
 
   const record: ProgramRecord = {
@@ -87,6 +119,14 @@ export function renameProgram(programId: string, name: string): ProgramRecord | 
   return program;
 }
 
+export function deleteProgram(programId: string): boolean {
+  const db = loadDb();
+  const before = db.programs.length;
+  db.programs = db.programs.filter((p) => p.id !== programId);
+  saveDb(db);
+  return db.programs.length !== before;
+}
+
 export function updateProgramCanvas(
   programId: string,
   input: { width: number; height: number; targetDeviceId: string | null },
@@ -114,6 +154,7 @@ export function ensureDraft(programId: string, baseVersion: number | null): Prog
   const seed = baseVersion ? program.versions.find((v) => v.version === baseVersion)?.vsn : null;
   const draft: ProgramDraftRecord = {
     id: safeRandomUUID(),
+    name: null,
     baseVersion,
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -123,6 +164,31 @@ export function ensureDraft(programId: string, baseVersion: number | null): Prog
   program.updatedAt = nowIso;
   saveDb(db);
   return draft;
+}
+
+export function renameDraft(programId: string, draftId: string, name: string): ProgramDraftRecord | null {
+  const db = loadDb();
+  const program = db.programs.find((p) => p.id === programId);
+  if (!program) return null;
+  const draft = program.drafts.find((d) => d.id === draftId);
+  if (!draft) return null;
+  draft.name = name.trim() || null;
+  draft.updatedAt = new Date().toISOString();
+  program.updatedAt = draft.updatedAt;
+  saveDb(db);
+  return draft;
+}
+
+export function deleteDraft(programId: string, draftId: string): ProgramRecord | null {
+  const db = loadDb();
+  const program = db.programs.find((p) => p.id === programId);
+  if (!program) return null;
+  const before = program.drafts.length;
+  program.drafts = program.drafts.filter((d) => d.id !== draftId);
+  if (program.drafts.length === before) return null;
+  program.updatedAt = new Date().toISOString();
+  saveDb(db);
+  return program;
 }
 
 export function saveDraft(programId: string, draftId: string, vsn: VsnDocument): ProgramDraftRecord | null {
@@ -173,6 +239,31 @@ export function publishDraft(programId: string, draftId: string): { program: Pro
 
   saveDb(db);
   return { program, version };
+}
+
+export function setDefaultProgramVersion(programId: string, version: number | null): ProgramRecord | null {
+  const db = loadDb();
+  const program = db.programs.find((p) => p.id === programId);
+  if (!program) return null;
+  if (version != null && !program.versions.some((v) => v.version === version)) return null;
+  program.defaultVersion = version;
+  program.updatedAt = new Date().toISOString();
+  saveDb(db);
+  return program;
+}
+
+export function deleteProgramVersion(programId: string, version: number): ProgramRecord | null {
+  const db = loadDb();
+  const program = db.programs.find((p) => p.id === programId);
+  if (!program) return null;
+  if (program.defaultVersion === version) return null;
+  if (program.drafts.some((d) => d.baseVersion === version)) return null;
+  const before = program.versions.length;
+  program.versions = program.versions.filter((v) => v.version !== version);
+  if (program.versions.length === before) return null;
+  program.updatedAt = new Date().toISOString();
+  saveDb(db);
+  return program;
 }
 
 function loadDb(): ProgramsDb {

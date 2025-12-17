@@ -21,6 +21,7 @@
   "registries": {
     "@lytenyte": "https://www.1771technologies.com/r/{name}.json",
     "@kibo-ui": "https://www.kibo-ui.com/r/{name}.json",
-    "@react-bits": "https://reactbits.dev/r/{name}.json"
+    "@react-bits": "https://reactbits.dev/r/{name}.json",
+    "@hextaui": "https://hextaui.com/r/{name}.json"
   }
 }
