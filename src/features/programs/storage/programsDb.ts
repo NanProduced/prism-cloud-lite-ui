@@ -22,6 +22,7 @@ export type ProgramRecord = {
   name: string;
   width: number;
   height: number;
+  targetDeviceId?: string | null;
   createdAt: string;
   updatedAt: string;
   defaultVersion: number | null;
@@ -81,6 +82,21 @@ export function renameProgram(programId: string, name: string): ProgramRecord | 
   const program = db.programs.find((p) => p.id === programId);
   if (!program) return null;
   program.name = name;
+  program.updatedAt = new Date().toISOString();
+  saveDb(db);
+  return program;
+}
+
+export function updateProgramCanvas(
+  programId: string,
+  input: { width: number; height: number; targetDeviceId: string | null },
+): ProgramRecord | null {
+  const db = loadDb();
+  const program = db.programs.find((p) => p.id === programId);
+  if (!program) return null;
+  program.width = Math.max(1, Math.round(input.width));
+  program.height = Math.max(1, Math.round(input.height));
+  program.targetDeviceId = input.targetDeviceId;
   program.updatedAt = new Date().toISOString();
   saveDb(db);
   return program;
@@ -190,4 +206,3 @@ function safeRandomUUID(): string {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
   return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
-

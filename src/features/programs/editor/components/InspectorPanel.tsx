@@ -1,22 +1,32 @@
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { BadgeAlert, Image as ImageIcon, Type as TypeIcon, Video as VideoIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import type { Device } from '@/types/device';
 import type { VsnDocument, VsnItem, VsnPage, VsnRect, VsnRegion } from '@/features/programs/vsn/types';
 
 import type { EditorMaterial, EditorSelection } from '../types';
 import { cssHexToVsnBgColor, formatDurationMs, vsnBgColorToCss } from '../utils';
 import { getItems, getPages, getRegions } from '../vsnOps';
+import { DeviceResolutionPicker } from './DeviceResolutionPicker';
 
 type MaterialIndex = Record<string, EditorMaterial>;
 
 export function InspectorPanel({
   doc,
   selection,
+  programName,
+  programWidth,
+  programHeight,
+  targetDeviceId,
+  devices,
   materialIndex,
+  showDevFields = false,
+  onRenameProgram,
+  onSetProgramResolution,
   onPatchPage,
   onPatchRegion,
   onPatchRegionRect,
@@ -24,7 +34,15 @@ export function InspectorPanel({
 }: {
   doc: VsnDocument | null;
   selection: EditorSelection;
+  programName: string;
+  programWidth: number;
+  programHeight: number;
+  targetDeviceId: string | null;
+  devices: Device[];
   materialIndex: MaterialIndex;
+  showDevFields?: boolean;
+  onRenameProgram: (name: string) => void;
+  onSetProgramResolution: (input: { width: number; height: number; targetDeviceId: string | null }) => void;
   onPatchPage: (pageIndex: number, patch: Partial<VsnPage>) => void;
   onPatchRegion: (pageIndex: number, regionIndex: number, patch: Partial<VsnRegion>) => void;
   onPatchRegionRect: (pageIndex: number, regionIndex: number, patch: Partial<VsnRect>) => void;
@@ -48,7 +66,7 @@ export function InspectorPanel({
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">Inspector</p>
         <p className="text-xs text-muted-foreground">
-          {item ? 'Item' : region ? 'Region' : 'Page'}
+          {item ? 'Item' : region ? 'Window' : 'Program'}
         </p>
       </div>
 
@@ -63,6 +81,7 @@ export function InspectorPanel({
           <ItemInspector
             item={item}
             material={resolveMaterial(materialIndex, item)}
+            showDevFields={showDevFields}
             onPatch={(patch) => onPatchItem(selection.pageIndex, selection.regionIndex!, selection.itemIndex!, patch)}
           />
         ) : region ? (
@@ -72,9 +91,146 @@ export function InspectorPanel({
             onPatchRect={(patch) => onPatchRegionRect(selection.pageIndex, selection.regionIndex!, patch)}
           />
         ) : (
-          <PageInspector page={page} onPatch={(patch) => onPatchPage(selection.pageIndex, patch)} />
+          <div className="space-y-6">
+            <ProgramInspector
+              programName={programName}
+              programWidth={programWidth}
+              programHeight={programHeight}
+              targetDeviceId={targetDeviceId}
+              devices={devices}
+              onRenameProgram={onRenameProgram}
+              onSetProgramResolution={onSetProgramResolution}
+            />
+            <Separator />
+            <PageInspector page={page} showDevFields={showDevFields} onPatch={(patch) => onPatchPage(selection.pageIndex, patch)} />
+          </div>
         )}
       </ScrollArea>
+    </div>
+  );
+}
+
+function ProgramInspector({
+  programName,
+  programWidth,
+  programHeight,
+  targetDeviceId,
+  devices,
+  onRenameProgram,
+  onSetProgramResolution,
+}: {
+  programName: string;
+  programWidth: number;
+  programHeight: number;
+  targetDeviceId: string | null;
+  devices: Device[];
+  onRenameProgram: (name: string) => void;
+  onSetProgramResolution: (input: { width: number; height: number; targetDeviceId: string | null }) => void;
+}) {
+  const [nameDraft, setNameDraft] = useState(programName);
+  const [widthDraft, setWidthDraft] = useState(String(programWidth));
+  const [heightDraft, setHeightDraft] = useState(String(programHeight));
+
+  useEffect(() => setNameDraft(programName), [programName]);
+  useEffect(() => setWidthDraft(String(programWidth)), [programWidth]);
+  useEffect(() => setHeightDraft(String(programHeight)), [programHeight]);
+
+  const selectedDevice = useMemo(
+    () => (targetDeviceId ? devices.find((d) => d.id === targetDeviceId) ?? null : null),
+    [devices, targetDeviceId],
+  );
+
+  const commitName = () => {
+    const next = nameDraft.trim();
+    if (!next || next === programName) return;
+    onRenameProgram(next);
+  };
+
+  const commitResolution = () => {
+    const parsedW = parseResolutionInput(widthDraft, 8192);
+    const parsedH = parseResolutionInput(heightDraft, 4096);
+    if (!parsedW || !parsedH) return;
+    if (parsedW === programWidth && parsedH === programHeight && targetDeviceId == null) return;
+    onSetProgramResolution({ width: parsedW, height: parsedH, targetDeviceId: null });
+  };
+
+  return (
+    <div className="space-y-5">
+      <p className="text-sm font-medium">Program</p>
+
+      <Field label="Program name">
+        <Input
+          value={nameDraft}
+          onChange={(e) => setNameDraft(e.target.value)}
+          onBlur={commitName}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              (e.currentTarget as HTMLInputElement).blur();
+            }
+          }}
+          placeholder="e.g. Lobby Screen"
+        />
+      </Field>
+
+      <Field label="Target device (resolution)">
+        <DeviceResolutionPicker
+          devices={devices}
+          value={targetDeviceId}
+          onChange={(deviceId) => {
+            if (!deviceId) {
+              onSetProgramResolution({ width: programWidth, height: programHeight, targetDeviceId: null });
+              return;
+            }
+            const device = devices.find((d) => d.id === deviceId);
+            if (!device) return;
+            onSetProgramResolution({
+              width: device.resolution.width,
+              height: device.resolution.height,
+              targetDeviceId: deviceId,
+            });
+          }}
+        />
+      </Field>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium text-muted-foreground">Canvas resolution</p>
+          <p className="text-xs text-muted-foreground">max 8192×4096</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Width">
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={8192}
+              value={selectedDevice ? String(selectedDevice.resolution.width) : widthDraft}
+              disabled={Boolean(selectedDevice)}
+              onChange={(e) => setWidthDraft(e.target.value)}
+            />
+          </Field>
+          <Field label="Height">
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={4096}
+              value={selectedDevice ? String(selectedDevice.resolution.height) : heightDraft}
+              disabled={Boolean(selectedDevice)}
+              onChange={(e) => setHeightDraft(e.target.value)}
+            />
+          </Field>
+        </div>
+
+        {!selectedDevice && (
+          <div className="flex justify-end">
+            <Button type="button" variant="outline" size="sm" onClick={commitResolution}>
+              Apply
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -85,7 +241,15 @@ function resolveMaterial(materialIndex: MaterialIndex, item: VsnItem): EditorMat
   return materialIndex[id] ?? null;
 }
 
-function PageInspector({ page, onPatch }: { page: VsnPage; onPatch: (patch: Partial<VsnPage>) => void }) {
+function PageInspector({
+  page,
+  showDevFields,
+  onPatch,
+}: {
+  page: VsnPage;
+  showDevFields: boolean;
+  onPatch: (patch: Partial<VsnPage>) => void;
+}) {
   const cssColor = vsnBgColorToCss(page.BgColor);
   const hexColor = cssColor.startsWith('#') ? cssColor : '#000000';
 
@@ -103,12 +267,27 @@ function PageInspector({ page, onPatch }: { page: VsnPage; onPatch: (patch: Part
       </Field>
 
       <Field label="AppointDuration (ms)">
-        <Input value={page.AppointDuration} onChange={(e) => onPatch({ AppointDuration: e.target.value })} />
+        <Input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          step={1000}
+          value={page.AppointDuration}
+          onChange={(e) => {
+            const value = parseStrictPosIntInput(e.target.value);
+            if (value == null) return;
+            onPatch({ AppointDuration: value });
+          }}
+        />
       </Field>
 
       <Field label="Background">
         <div className="flex items-center gap-2">
-          <Input value={page.BgColor} onChange={(e) => onPatch({ BgColor: e.target.value })} />
+          {showDevFields ? (
+            <Input value={page.BgColor} onChange={(e) => onPatch({ BgColor: e.target.value })} />
+          ) : (
+            <Input value={hexColor} readOnly />
+          )}
           <input
             aria-label="Pick background color"
             type="color"
@@ -117,7 +296,7 @@ function PageInspector({ page, onPatch }: { page: VsnPage; onPatch: (patch: Part
             onChange={(e) => onPatch({ BgColor: cssHexToVsnBgColor(e.target.value) })}
           />
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">Stored as 0xAARRGGBB in VSN.</p>
+        {showDevFields && <p className="mt-1 text-xs text-muted-foreground">Stored as 0xAARRGGBB in VSN.</p>}
       </Field>
     </div>
   );
@@ -154,7 +333,19 @@ function RegionInspector({
       </Field>
 
       <Field label="Layer">
-        <Input value={region.Layer ?? ''} onChange={(e) => onPatch({ Layer: e.target.value })} placeholder="e.g. 1" />
+        <Input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          step={1}
+          value={region.Layer ?? ''}
+          onChange={(e) => {
+            const value = parseStrictPosIntInput(e.target.value);
+            if (value == null) return;
+            onPatch({ Layer: value });
+          }}
+          placeholder="e.g. 1"
+        />
       </Field>
 
       <Separator />
@@ -162,19 +353,74 @@ function RegionInspector({
       <p className="text-xs font-medium text-muted-foreground">Rect</p>
       <div className="grid grid-cols-2 gap-3">
         <Field label="X">
-          <Input value={rect.X} onChange={(e) => onPatchRect({ X: e.target.value })} />
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            value={rect.X}
+            onChange={(e) => {
+              const value = parseNonNegIntInput(e.target.value);
+              if (value == null) return;
+              onPatchRect({ X: value });
+            }}
+          />
         </Field>
         <Field label="Y">
-          <Input value={rect.Y} onChange={(e) => onPatchRect({ Y: e.target.value })} />
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            value={rect.Y}
+            onChange={(e) => {
+              const value = parseNonNegIntInput(e.target.value);
+              if (value == null) return;
+              onPatchRect({ Y: value });
+            }}
+          />
         </Field>
         <Field label="Width">
-          <Input value={rect.Width} onChange={(e) => onPatchRect({ Width: e.target.value })} />
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            step={1}
+            value={rect.Width}
+            onChange={(e) => {
+              const value = parseStrictPosIntInput(e.target.value);
+              if (value == null) return;
+              onPatchRect({ Width: value });
+            }}
+          />
         </Field>
         <Field label="Height">
-          <Input value={rect.Height} onChange={(e) => onPatchRect({ Height: e.target.value })} />
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            step={1}
+            value={rect.Height}
+            onChange={(e) => {
+              const value = parseStrictPosIntInput(e.target.value);
+              if (value == null) return;
+              onPatchRect({ Height: value });
+            }}
+          />
         </Field>
         <Field label="BorderWidth">
-          <Input value={rect.BorderWidth} onChange={(e) => onPatchRect({ BorderWidth: e.target.value })} />
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            value={rect.BorderWidth}
+            onChange={(e) => {
+              const value = parseNonNegIntInput(e.target.value);
+              if (value == null) return;
+              onPatchRect({ BorderWidth: value });
+            }}
+          />
         </Field>
         <Field label="BorderColor">
           <div className="flex items-center gap-2">
@@ -203,15 +449,26 @@ function RegionInspector({
 function ItemInspector({
   item,
   material,
+  showDevFields,
   onPatch,
 }: {
   item: VsnItem;
   material: EditorMaterial | null;
+  showDevFields: boolean;
   onPatch: (patch: Partial<VsnItem>) => void;
 }) {
   const icon = item.Type === '3' ? VideoIcon : item.Type === '2' || item.Type === '6' ? ImageIcon : TypeIcon;
   const Icon = icon;
   const durationLabel = material?.durationMs ? formatDurationMs(material.durationMs) : null;
+  const title = material?.name ?? getItemTypeLabel(item.Type, showDevFields);
+  const details = [
+    material ? material.kind.toLowerCase() : getItemTypeLabel(item.Type, false).toLowerCase(),
+    material?.width && material?.height ? `${material.width}×${material.height}` : null,
+    durationLabel,
+    showDevFields && item.FileSource?.Resource_ID ? `materialId: ${item.FileSource.Resource_ID}` : null,
+  ].filter((v): v is string => Boolean(v));
+  const rawAlpha = Number.parseFloat(item.Alhpa ?? '');
+  const alpha = clampFloat(Number.isFinite(rawAlpha) ? rawAlpha : 1, 0, 1);
 
   return (
     <div className="space-y-5">
@@ -221,41 +478,74 @@ function ItemInspector({
             <Icon className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{material?.name ?? `Item type ${item.Type}`}</p>
-            <p className="text-xs text-muted-foreground">
-              {item.FileSource?.Resource_ID ? `materialId: ${item.FileSource.Resource_ID}` : 'no material'}
-              {durationLabel ? ` · ${durationLabel}` : ''}
-            </p>
+            <p className="truncate text-sm font-medium">{title}</p>
+            <p className="text-xs text-muted-foreground">{details.join(' · ')}</p>
           </div>
         </div>
       </div>
 
-      <Field label="Type">
-        <Input value={item.Type} readOnly />
-      </Field>
+      {showDevFields && (
+        <Field label="Type">
+          <Input value={item.Type} readOnly />
+        </Field>
+      )}
 
       {item.Type === '2' || item.Type === '3' || item.Type === '6' ? (
         <div className="space-y-3">
           <Field label="Duration (ms)">
-            <Input value={item.Duration ?? ''} onChange={(e) => onPatch({ Duration: e.target.value, PlayLength: e.target.value })} />
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              step={1000}
+              value={item.Duration ?? ''}
+              onChange={(e) => {
+                const value = parseStrictPosIntInput(e.target.value);
+                if (value == null) return;
+                onPatch({ Duration: value, PlayLength: value });
+              }}
+            />
           </Field>
 
-          <Field label="PlayTimes">
-            <Input value={item.PlayTimes ?? ''} onChange={(e) => onPatch({ PlayTimes: e.target.value })} />
+          <Field label={showDevFields ? 'PlayTimes' : 'Repeat'}>
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              step={1}
+              value={item.PlayTimes ?? ''}
+              onChange={(e) => {
+                const value = parseStrictPosIntInput(e.target.value);
+                if (value == null) return;
+                onPatch({ PlayTimes: value });
+              }}
+            />
           </Field>
 
-          <Field label="Alhpa (0..1)">
-            <Input value={item.Alhpa ?? ''} onChange={(e) => onPatch({ Alhpa: e.target.value })} />
+          <Field label={showDevFields ? 'Alhpa (0..1)' : 'Opacity'}>
+            <div className="flex items-center gap-3">
+              <input
+                aria-label="Opacity"
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={alpha}
+                onChange={(e) => onPatch({ Alhpa: clampFloat(Number(e.target.value), 0, 1).toFixed(6) })}
+                className="flex-1"
+              />
+              <Input className="w-20" value={alpha.toFixed(2)} readOnly />
+            </div>
           </Field>
 
-          <Field label="ReserveAS">
+          <Field label={showDevFields ? 'ReserveAS' : 'Fit'}>
             <select
               value={item.ReserveAS ?? '0'}
               onChange={(e) => onPatch({ ReserveAS: e.target.value })}
               className="h-9 w-full rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             >
-              <option value="0">0 · FIT_XY</option>
-              <option value="1">1 · CENTER_INSIDE</option>
+              <option value="0">{showDevFields ? '0 · FIT_XY' : 'Fill'}</option>
+              <option value="1">{showDevFields ? '1 · CENTER_INSIDE' : 'Contain'}</option>
             </select>
           </Field>
 
@@ -265,7 +555,18 @@ function ItemInspector({
                 <Input value={item.Volume ?? ''} onChange={(e) => onPatch({ Volume: e.target.value })} />
               </Field>
               <Field label="Loop">
-                <Input value={item.Loop ?? ''} onChange={(e) => onPatch({ Loop: e.target.value })} />
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  step={1}
+                  value={item.Loop ?? ''}
+                  onChange={(e) => {
+                    const value = parseStrictPosIntInput(e.target.value);
+                    if (value == null) return;
+                    onPatch({ Loop: value });
+                  }}
+                />
               </Field>
             </>
           )}
@@ -273,11 +574,33 @@ function ItemInspector({
       ) : item.Type === '4' || item.Type === '5' ? (
         <div className="space-y-3">
           <Field label="Duration (ms)">
-            <Input value={item.Duration ?? ''} onChange={(e) => onPatch({ Duration: e.target.value, PlayLength: e.target.value })} />
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              step={1000}
+              value={item.Duration ?? ''}
+              onChange={(e) => {
+                const value = parseStrictPosIntInput(e.target.value);
+                if (value == null) return;
+                onPatch({ Duration: value, PlayLength: value });
+              }}
+            />
           </Field>
 
-          <Field label="PlayTimes">
-            <Input value={item.PlayTimes ?? ''} onChange={(e) => onPatch({ PlayTimes: e.target.value })} />
+          <Field label={showDevFields ? 'PlayTimes' : 'Repeat'}>
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              step={1}
+              value={item.PlayTimes ?? ''}
+              onChange={(e) => {
+                const value = parseStrictPosIntInput(e.target.value);
+                if (value == null) return;
+                onPatch({ PlayTimes: value });
+              }}
+            />
           </Field>
 
           <Field label="Text">
@@ -303,10 +626,16 @@ function ItemInspector({
           <div className="grid grid-cols-2 gap-3">
             <Field label="lfHeight">
               <Input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                step={1}
                 value={item.LogFont?.lfHeight ?? ''}
-                onChange={(e) =>
-                  onPatch({ LogFont: { ...(item.LogFont ?? { lfHeight: '32' }), lfHeight: e.target.value } })
-                }
+                onChange={(e) => {
+                  const value = parseStrictPosIntInput(e.target.value);
+                  if (value == null) return;
+                  onPatch({ LogFont: { ...(item.LogFont ?? { lfHeight: '32' }), lfHeight: value } });
+                }}
               />
             </Field>
             <Field label="lfFaceName">
@@ -354,7 +683,8 @@ function ItemInspector({
           <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-muted">
             <BadgeAlert className="h-4 w-4 text-muted-foreground" />
           </div>
-          Item type {JSON.stringify(item.Type)} is not editable in MVP.
+          This item type is not editable in MVP.
+          {showDevFields && <div className="mt-2 text-xs">Type: {JSON.stringify(item.Type)}</div>}
           <div className="mt-3">
             <Button variant="outline" size="sm" className="gap-2" disabled>
               Keep raw fields
@@ -373,4 +703,43 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       {children}
     </label>
   );
+}
+
+function parseResolutionInput(value: string, max: number): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (!/^\d+$/.test(trimmed)) return null;
+  const num = Number(trimmed);
+  if (!Number.isFinite(num)) return null;
+  const clamped = Math.max(1, Math.min(max, Math.trunc(num)));
+  return clamped;
+}
+
+function parseNonNegIntInput(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (!/^\d+$/.test(trimmed)) return null;
+  const num = Number(trimmed);
+  if (!Number.isFinite(num) || num < 0) return null;
+  return String(Math.trunc(num));
+}
+
+function parseStrictPosIntInput(value: string): string | null {
+  const parsed = parseNonNegIntInput(value);
+  if (parsed == null) return null;
+  if (parsed === '0') return null;
+  return parsed;
+}
+
+function clampFloat(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, value));
+}
+
+function getItemTypeLabel(type: string, showDevFields: boolean): string {
+  if (type === '2') return 'Image';
+  if (type === '3') return 'Video';
+  if (type === '4' || type === '5') return 'Text';
+  if (type === '6') return 'GIF';
+  return showDevFields ? `Item type ${type}` : 'Unsupported item';
 }

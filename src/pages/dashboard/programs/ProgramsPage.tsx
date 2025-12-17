@@ -50,7 +50,7 @@ export default function ProgramsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Programs</h1>
           <p className="text-sm text-muted-foreground">
-            Build signage content with versioned drafts and publish-ready VSN JSON.
+            Build signage content with drafts, versions, and publishing.
           </p>
         </div>
 
@@ -205,4 +205,3 @@ function formatRelativeTime(iso: string): string {
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
 }
-

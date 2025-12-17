@@ -1,17 +1,21 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Code2, ListChecks, Save, Send, SlidersHorizontal, TriangleAlert } from 'lucide-react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, ChevronDown, Code2, Copy, ListChecks, Play, Save, Send, SlidersHorizontal, Trash2, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { mockMediaLibraryNodes } from '@/lib/mock/media-library';
+import { mockDevices } from '@/lib/mock/devices';
 
 import {
   ensureDraft,
   getProgram,
   publishDraft,
+  renameProgram,
   saveDraft,
+  updateProgramCanvas,
   type ProgramDraftRecord,
   type ProgramRecord,
 } from '@/features/programs/storage/programsDb';
@@ -27,11 +31,13 @@ import { InspectorPanel } from '@/features/programs/editor/components/InspectorP
 import { ProblemsPanel } from '@/features/programs/editor/components/ProblemsPanel';
 import { RegionTimeline } from '@/features/programs/editor/components/RegionTimeline';
 import { StagePreview } from '@/features/programs/editor/components/StagePreview';
+import { ProgramPreviewDialog } from '@/features/programs/editor/components/ProgramPreviewDialog';
 import { VsnJsonPanel } from '@/features/programs/editor/components/VsnJsonPanel';
 import {
   addItem,
   addPage,
   addRegion,
+  duplicateRegion,
   deleteItem,
   deletePage,
   deleteRegion,
@@ -43,11 +49,13 @@ import {
   patchPage,
   patchRegion,
   patchRegionRect,
+  resizeProgramCanvas,
 } from '@/features/programs/editor/vsnOps';
 import { clampInt } from '@/features/programs/editor/utils';
 
 export default function ProgramEditorPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { programId } = useParams<{ programId: string }>();
 
   const [program, setProgram] = useState<ProgramRecord | null>(null);
@@ -57,6 +65,15 @@ export default function ProgramEditorPage() {
   const [dirty, setDirty] = useState(false);
   const [selection, setSelection] = useState<EditorSelection>({ pageIndex: 0, regionIndex: null, itemIndex: null });
   const [rightTab, setRightTab] = useState<'inspector' | 'problems' | 'json'>('inspector');
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
 
   useEffect(() => {
     if (!programId) return;
@@ -91,9 +108,26 @@ export default function ProgramEditorPage() {
   const regions = useMemo(() => getRegions(vsn, selection.pageIndex), [vsn, selection.pageIndex]);
   const items = useMemo(() => (selection.regionIndex == null ? [] : getItems(vsn, selection.pageIndex, selection.regionIndex)), [selection.pageIndex, selection.regionIndex, vsn]);
 
-  const validation = useMemo(() => (vsn ? validateVsnDocument(vsn, 'publish') : { issues: [], isValid: false }), [vsn]);
-  const errorCount = useMemo(() => validation.issues.filter((i) => i.severity === 'error').length, [validation.issues]);
-  const warningCount = useMemo(() => validation.issues.filter((i) => i.severity === 'warning').length, [validation.issues]);
+  const canvasWidth = useMemo(() => {
+    const w = Number.parseInt(vsn?.Programs?.Program?.Information?.Width ?? '', 10);
+    return Number.isFinite(w) && w > 0 ? w : program?.width ?? 1920;
+  }, [program?.width, vsn]);
+  const canvasHeight = useMemo(() => {
+    const h = Number.parseInt(vsn?.Programs?.Program?.Information?.Height ?? '', 10);
+    return Number.isFinite(h) && h > 0 ? h : program?.height ?? 1080;
+  }, [program?.height, vsn]);
+
+  const devtoolsEnabled = useMemo(() => {
+    if (!import.meta.env.DEV) return false;
+    return new URLSearchParams(location.search).has('devtools');
+  }, [location.search]);
+
+  const devValidation = useMemo(
+    () => (devtoolsEnabled && vsn ? validateVsnDocument(vsn, 'publish') : { issues: [], isValid: true }),
+    [devtoolsEnabled, vsn],
+  );
+  const errorCount = useMemo(() => devValidation.issues.filter((i) => i.severity === 'error').length, [devValidation.issues]);
+  const warningCount = useMemo(() => devValidation.issues.filter((i) => i.severity === 'warning').length, [devValidation.issues]);
 
   if (!programId) {
     return (
@@ -136,7 +170,6 @@ export default function ProgramEditorPage() {
     const res = validateVsnDocument(vsn, 'publish');
     if (!res.isValid) {
       toast.error(`Fix ${res.issues.filter((i) => i.severity === 'error').length} error(s) before publishing.`);
-      setRightTab('problems');
       return;
     }
     try {
@@ -158,16 +191,144 @@ export default function ProgramEditorPage() {
     setDirty(true);
   };
 
-  const ensureRegionSelected = (): number | null => {
-    if (selection.regionIndex != null) return selection.regionIndex;
-    if (regions.length === 0) return null;
-    setSelection((prev) => ({ ...prev, regionIndex: 0, itemIndex: null }));
-    return 0;
+  const createRegionForInsert = (input: { name?: string; x: number; y: number; width: number; height: number }) => {
+    if (!vsn) return null;
+    const width = Math.min(canvasWidth, Math.max(1, Math.round(input.width)));
+    const height = Math.min(canvasHeight, Math.max(1, Math.round(input.height)));
+    const x = clampInt(Math.round(input.x), 0, Math.max(0, canvasWidth - width));
+    const y = clampInt(Math.round(input.y), 0, Math.max(0, canvasHeight - height));
+    const rect = {
+      X: String(x),
+      Y: String(y),
+      Width: String(width),
+      Height: String(height),
+      BorderWidth: '0',
+      BorderColor: '#000000',
+      BackColor: null,
+    };
+    return addRegion(vsn, selection.pageIndex, { name: input.name, rect });
+  };
+
+  const selectedRegion = selection.regionIndex == null ? null : regions[selection.regionIndex] ?? null;
+  const canEditSelectedRegion = Boolean(vsn && selectedRegion);
+  const canDeleteSelectedRegion = Boolean(vsn && selection.regionIndex != null);
+
+  const getSelectedRegionRect = () => {
+    if (!selectedRegion) return null;
+    const rect = selectedRegion.Rect;
+    const x = Number.parseInt(rect.X ?? '0', 10) || 0;
+    const y = Number.parseInt(rect.Y ?? '0', 10) || 0;
+    const width = Number.parseInt(rect.Width ?? String(canvasWidth), 10) || canvasWidth;
+    const height = Number.parseInt(rect.Height ?? String(canvasHeight), 10) || canvasHeight;
+    return {
+      x: clampInt(x, 0, canvasWidth),
+      y: clampInt(y, 0, canvasHeight),
+      width: clampInt(width, 1, canvasWidth),
+      height: clampInt(height, 1, canvasHeight),
+    };
+  };
+
+  const patchSelectedRegionRect = (patch: { X?: string; Y?: string; Width?: string; Height?: string }) => {
+    if (!vsn) return;
+    if (selection.regionIndex == null) return;
+    applyVsn(patchRegionRect(vsn, selection.pageIndex, selection.regionIndex, patch));
+  };
+
+  const handleDuplicateSelectedRegion = () => {
+    if (!vsn) return;
+    if (selection.regionIndex == null) return;
+    const res = duplicateRegion(vsn, selection.pageIndex, selection.regionIndex);
+    if (res.doc === vsn) return;
+    applyVsn(res.doc);
+    setSelection((prev) => ({ ...prev, regionIndex: res.regionIndex, itemIndex: null }));
+  };
+
+  const handleDeleteSelectedRegion = () => {
+    if (!vsn) return;
+    if (selection.regionIndex == null) return;
+    const next = deleteRegion(vsn, selection.pageIndex, selection.regionIndex);
+    if (next === vsn) return;
+    applyVsn(next);
+    const nextRegions = getRegions(next, selection.pageIndex);
+    if (nextRegions.length === 0) {
+      setSelection((prev) => ({ ...prev, regionIndex: null, itemIndex: null }));
+      return;
+    }
+    setSelection((prev) => ({ ...prev, regionIndex: clampInt(prev.regionIndex ?? 0, 0, nextRegions.length - 1), itemIndex: null }));
+  };
+
+  const handleAlignSelectedRegion = (mode: 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom') => {
+    const rect = getSelectedRegionRect();
+    if (!rect) return;
+
+    if (mode === 'left') patchSelectedRegionRect({ X: '0' });
+    if (mode === 'hcenter') patchSelectedRegionRect({ X: String(Math.round((canvasWidth - rect.width) / 2)) });
+    if (mode === 'right') patchSelectedRegionRect({ X: String(Math.max(0, canvasWidth - rect.width)) });
+    if (mode === 'top') patchSelectedRegionRect({ Y: '0' });
+    if (mode === 'vcenter') patchSelectedRegionRect({ Y: String(Math.round((canvasHeight - rect.height) / 2)) });
+    if (mode === 'bottom') patchSelectedRegionRect({ Y: String(Math.max(0, canvasHeight - rect.height)) });
+  };
+
+  const handleFillSelectedRegion = (mode: 'full' | 'horizontal' | 'vertical') => {
+    if (mode === 'full') {
+      patchSelectedRegionRect({ X: '0', Y: '0', Width: String(canvasWidth), Height: String(canvasHeight) });
+      return;
+    }
+    if (mode === 'horizontal') {
+      patchSelectedRegionRect({ X: '0', Width: String(canvasWidth) });
+      return;
+    }
+    patchSelectedRegionRect({ Y: '0', Height: String(canvasHeight) });
+  };
+
+  const findRegionIndexAtPoint = (point: { x: number; y: number }) => {
+    let bestIndex: number | null = null;
+    let bestLayer = -Infinity;
+
+    regions.forEach((region, index) => {
+      const rect = region.Rect;
+      const x = Number.parseInt(rect?.X ?? '0', 10) || 0;
+      const y = Number.parseInt(rect?.Y ?? '0', 10) || 0;
+      const w = Number.parseInt(rect?.Width ?? '0', 10) || 0;
+      const h = Number.parseInt(rect?.Height ?? '0', 10) || 0;
+      if (w <= 0 || h <= 0) return;
+      const inside = point.x >= x && point.x <= x + w && point.y >= y && point.y <= y + h;
+      if (!inside) return;
+
+      const layer = Number.parseInt(region.Layer ?? '', 10);
+      const layerScore = Number.isFinite(layer) ? layer : index;
+      if (layerScore >= bestLayer) {
+        bestLayer = layerScore;
+        bestIndex = index;
+      }
+    });
+
+    return bestIndex;
+  };
+
+  const handleRenameProgram = (name: string) => {
+    const updated = renameProgram(program.id, name);
+    if (!updated) return;
+    setProgram(updated);
+    toast.success('Program renamed');
+  };
+
+  const handleSetProgramResolution = (input: { width: number; height: number; targetDeviceId: string | null }) => {
+    if (canvasWidth === input.width && canvasHeight === input.height) {
+      const updated = updateProgramCanvas(program.id, input);
+      if (updated) setProgram(updated);
+      return;
+    }
+    if (!vsn) return;
+    const nextDoc = resizeProgramCanvas(vsn, { width: input.width, height: input.height });
+    applyVsn(nextDoc);
+    const updated = updateProgramCanvas(program.id, input);
+    if (updated) setProgram(updated);
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div className="fixed inset-0 z-40 flex flex-col bg-background">
+      <div className="flex flex-col gap-3 border-b bg-background/80 px-4 py-4 backdrop-blur lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-start gap-3">
           <Button
             variant="outline"
@@ -182,7 +343,7 @@ export default function ProgramEditorPage() {
           <div className="min-w-0">
             <h1 className="truncate text-xl font-semibold">{program.name}</h1>
             <p className="text-sm text-muted-foreground">
-              {program.width}×{program.height}
+              {canvasWidth}×{canvasHeight}
               {draft?.baseVersion ? ` · Draft from v${draft.baseVersion}` : ' · Draft'}
               {dirty ? ' · Unsaved changes' : ''}
             </p>
@@ -190,14 +351,28 @@ export default function ProgramEditorPage() {
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-          <div className="flex items-center gap-2">
-            <span className={errorCount ? 'rounded-full bg-red-500/10 px-2 py-1 text-xs text-red-600' : 'rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground'}>
-              {errorCount} error
-            </span>
-            <span className={warningCount ? 'rounded-full bg-amber-500/10 px-2 py-1 text-xs text-amber-700' : 'rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground'}>
-              {warningCount} warn
-            </span>
-          </div>
+          {devtoolsEnabled && (
+            <div className="flex items-center gap-2">
+              <span
+                className={
+                  errorCount
+                    ? 'rounded-full bg-red-500/10 px-2 py-1 text-xs text-red-600'
+                    : 'rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground'
+                }
+              >
+                {errorCount} error
+              </span>
+              <span
+                className={
+                  warningCount
+                    ? 'rounded-full bg-amber-500/10 px-2 py-1 text-xs text-amber-700'
+                    : 'rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground'
+                }
+              >
+                {warningCount} warn
+              </span>
+            </div>
+          )}
 
           <div className="flex items-center gap-2">
             <label className="text-sm text-muted-foreground" htmlFor="base-version">
@@ -225,6 +400,10 @@ export default function ProgramEditorPage() {
             <Save className="h-4 w-4" />
             Save draft
           </Button>
+          <Button className="gap-2" variant="outline" onClick={() => setPreviewOpen(true)} disabled={!vsn}>
+            <Play className="h-4 w-4" />
+            Preview
+          </Button>
           <Button className="gap-2" onClick={handlePublish} disabled={!draft}>
             <Send className="h-4 w-4" />
             Publish
@@ -232,165 +411,312 @@ export default function ProgramEditorPage() {
         </div>
       </div>
 
-      <Separator />
-
-      <div className="grid gap-4 lg:h-[calc(100vh-14rem)] lg:grid-cols-[320px_minmax(0,1fr)_360px]">
-        <div className="min-h-0 rounded-xl border bg-card p-4">
-          <EditorLeftPanel
-            pages={pages}
-            regions={regions}
-            materials={materials}
-            selection={selection}
-            onSelectPage={(pageIndex) => setSelection({ pageIndex, regionIndex: null, itemIndex: null })}
-            onSelectRegion={(regionIndex) => setSelection((prev) => ({ ...prev, regionIndex, itemIndex: null }))}
-            onAddPage={() => {
-              if (!vsn) return;
-              const res = addPage(vsn, { width: program.width, height: program.height });
-              applyVsn(res.doc);
-              setSelection({ pageIndex: res.pageIndex, regionIndex: null, itemIndex: null });
-            }}
-            onDeletePage={() => {
-              if (!vsn) return;
-              const next = deletePage(vsn, selection.pageIndex);
-              if (next === vsn) return;
-              applyVsn(next);
-              setSelection((prev) => ({ ...prev, pageIndex: clampInt(prev.pageIndex, 0, getPages(next).length - 1), regionIndex: null, itemIndex: null }));
-            }}
-            onAddRegion={() => {
-              if (!vsn) return;
-              const res = addRegion(vsn, selection.pageIndex, {});
-              applyVsn(res.doc);
-              setSelection((prev) => ({ ...prev, regionIndex: res.regionIndex, itemIndex: null }));
-            }}
-            onDeleteRegion={() => {
-              if (!vsn) return;
-              if (selection.regionIndex == null) return;
-              const next = deleteRegion(vsn, selection.pageIndex, selection.regionIndex);
-              if (next === vsn) return;
-              applyVsn(next);
-              setSelection((prev) => ({ ...prev, regionIndex: null, itemIndex: null }));
-            }}
-            onAddTextItem={() => {
-              if (!vsn) return;
-              const regionIndex = ensureRegionSelected();
-              if (regionIndex == null) return;
-              const res = addItem(vsn, selection.pageIndex, regionIndex, createTextItem());
-              applyVsn(res.doc);
-              setSelection((prev) => ({ ...prev, regionIndex, itemIndex: res.itemIndex }));
-            }}
-            onAddMaterialItem={(material) => {
-              if (!vsn) return;
-              const regionIndex = ensureRegionSelected();
-              if (regionIndex == null) return;
-              const source = (material.source ?? null) as MediaAssetNode | null;
-              if (!source) {
-                toast.error('Material missing source asset.');
-                return;
-              }
-              const item = createItemFromMedia(source, { materialId: material.materialId });
-              const res = addItem(vsn, selection.pageIndex, regionIndex, item);
-              applyVsn(res.doc);
-              setSelection((prev) => ({ ...prev, regionIndex, itemIndex: res.itemIndex }));
-            }}
-          />
-        </div>
-
-        <div className="min-h-0 grid-cols-1 gap-4 lg:grid lg:grid-rows-[minmax(0,1fr)_260px]">
+      <div className="flex-1 overflow-hidden p-4">
+        <div className="grid h-full gap-4 lg:grid-cols-[320px_minmax(0,1fr)_360px]">
           <div className="min-h-0 rounded-xl border bg-card p-4">
-            <StagePreview
-              doc={vsn}
-              programWidth={program.width}
-              programHeight={program.height}
+            <EditorLeftPanel
+              pages={pages}
+              regions={regions}
+              materials={materials}
               selection={selection}
-              materialIndex={materialIndex}
+              onSelectPage={(pageIndex) => setSelection({ pageIndex, regionIndex: null, itemIndex: null })}
               onSelectRegion={(regionIndex) => setSelection((prev) => ({ ...prev, regionIndex, itemIndex: null }))}
+              onAddPage={() => {
+                if (!vsn) return;
+                const res = addPage(vsn, { width: canvasWidth, height: canvasHeight });
+                applyVsn(res.doc);
+                setSelection({ pageIndex: res.pageIndex, regionIndex: null, itemIndex: null });
+              }}
+              onDeletePage={() => {
+                if (!vsn) return;
+                const next = deletePage(vsn, selection.pageIndex);
+                if (next === vsn) return;
+                applyVsn(next);
+                setSelection((prev) => ({ ...prev, pageIndex: clampInt(prev.pageIndex, 0, getPages(next).length - 1), regionIndex: null, itemIndex: null }));
+              }}
+              onAddRegion={() => {
+                if (!vsn) return;
+                const res = addRegion(vsn, selection.pageIndex, {});
+                applyVsn(res.doc);
+                setSelection((prev) => ({ ...prev, regionIndex: res.regionIndex, itemIndex: null }));
+              }}
+              onDeleteRegion={() => {
+                if (!vsn) return;
+                if (selection.regionIndex == null) return;
+                const next = deleteRegion(vsn, selection.pageIndex, selection.regionIndex);
+                if (next === vsn) return;
+                applyVsn(next);
+                setSelection((prev) => ({ ...prev, regionIndex: null, itemIndex: null }));
+              }}
+              onAddTextItem={() => {
+                if (!vsn) return;
+                let doc = vsn;
+                let regionIndex = selection.regionIndex;
+                if (regionIndex == null) {
+                  const width = Math.round(canvasWidth * 0.6);
+                  const height = Math.round(canvasHeight * 0.2);
+                  const x = Math.round((canvasWidth - width) / 2);
+                  const y = Math.round(canvasHeight * 0.1);
+                  const res = createRegionForInsert({ name: 'Text Window', x, y, width, height });
+                  if (!res) return;
+                  doc = res.doc;
+                  regionIndex = res.regionIndex;
+                }
+
+                const res = addItem(doc, selection.pageIndex, regionIndex, createTextItem());
+                applyVsn(res.doc);
+                setSelection((prev) => ({ ...prev, regionIndex, itemIndex: res.itemIndex }));
+              }}
+              onAddMaterialItem={(material) => {
+                if (!vsn) return;
+                let doc = vsn;
+                let regionIndex = selection.regionIndex;
+                if (regionIndex == null) {
+                  const maxW = Math.round(canvasWidth * 0.6);
+                  const maxH = Math.round(canvasHeight * 0.6);
+                  const srcW = material.width ?? maxW;
+                  const srcH = material.height ?? maxH;
+                  const scale = Math.min(1, maxW / srcW, maxH / srcH);
+                  const width = Math.max(80, Math.round(srcW * scale));
+                  const height = Math.max(60, Math.round(srcH * scale));
+                  const x = Math.round((canvasWidth - width) / 2);
+                  const y = Math.round((canvasHeight - height) / 2);
+                  const res = createRegionForInsert({ name: material.name, x, y, width, height });
+                  if (!res) return;
+                  doc = res.doc;
+                  regionIndex = res.regionIndex;
+                }
+
+                const source = (material.source ?? null) as MediaAssetNode | null;
+                if (!source) {
+                  toast.error('Material missing source asset.');
+                  return;
+                }
+                const item = createItemFromMedia(source, { materialId: material.materialId });
+                const res = addItem(doc, selection.pageIndex, regionIndex, item);
+                applyVsn(res.doc);
+                setSelection((prev) => ({ ...prev, regionIndex, itemIndex: res.itemIndex }));
+              }}
             />
           </div>
 
-          <div className="min-h-0 rounded-xl border bg-card p-4">
-            <RegionTimeline
-              items={items}
-              selectedItemIndex={selection.itemIndex}
-              materialIndex={materialIndex}
-              onSelectItem={(index) => setSelection((prev) => ({ ...prev, itemIndex: index }))}
-              onMoveItem={(from, to) => {
-                if (!vsn) return;
-                if (selection.regionIndex == null) return;
-                const next = moveItem(vsn, selection.pageIndex, selection.regionIndex, from, to);
-                if (next === vsn) return;
-                applyVsn(next);
-                setSelection((prev) => ({ ...prev, itemIndex: clampInt(prev.itemIndex ?? 0, 0, getItems(next, prev.pageIndex, prev.regionIndex ?? 0).length - 1) }));
-              }}
-              onDeleteItem={(index) => {
-                if (!vsn) return;
-                if (selection.regionIndex == null) return;
-                const next = deleteItem(vsn, selection.pageIndex, selection.regionIndex, index);
-                if (next === vsn) return;
-                applyVsn(next);
-                setSelection((prev) => ({ ...prev, itemIndex: null }));
-              }}
-            />
-          </div>
-        </div>
-
-        <div className="flex min-h-0 flex-col rounded-xl border bg-card p-4">
-          <div className="flex items-center gap-2">
-            <RightTabButton active={rightTab === 'inspector'} onClick={() => setRightTab('inspector')} icon={<SlidersHorizontal className="h-4 w-4" />}>
-              Inspector
-            </RightTabButton>
-            <RightTabButton active={rightTab === 'problems'} onClick={() => setRightTab('problems')} icon={<ListChecks className="h-4 w-4" />}>
-              Problems
-            </RightTabButton>
-            <RightTabButton active={rightTab === 'json'} onClick={() => setRightTab('json')} icon={<Code2 className="h-4 w-4" />}>
-              JSON
-            </RightTabButton>
-          </div>
-
-          <Separator className="my-3" />
-
-          <div className="min-h-0 flex-1">
-            {rightTab === 'inspector' ? (
-              <InspectorPanel
+          <div className="min-h-0 grid-cols-1 gap-4 lg:grid lg:grid-rows-[minmax(0,1fr)_260px]">
+            <div className="min-h-0 rounded-xl border bg-card p-4">
+              <StagePreview
                 doc={vsn}
+                programWidth={canvasWidth}
+                programHeight={canvasHeight}
                 selection={selection}
                 materialIndex={materialIndex}
-                onPatchPage={(pageIndex, patch) => {
-                  if (!vsn) return;
-                  applyVsn(patchPage(vsn, pageIndex, patch));
-                }}
-                onPatchRegion={(pageIndex, regionIndex, patch) => {
-                  if (!vsn) return;
-                  applyVsn(patchRegion(vsn, pageIndex, regionIndex, patch));
-                }}
+                onSelectRegion={(regionIndex) => setSelection((prev) => ({ ...prev, regionIndex, itemIndex: null }))}
                 onPatchRegionRect={(pageIndex, regionIndex, patch) => {
                   if (!vsn) return;
                   applyVsn(patchRegionRect(vsn, pageIndex, regionIndex, patch));
                 }}
-                onPatchItem={(pageIndex, regionIndex, itemIndex, patch) => {
+                onDropMaterial={(materialId, point) => {
                   if (!vsn) return;
-                  applyVsn(patchItem(vsn, pageIndex, regionIndex, itemIndex, patch));
-                }}
-              />
-            ) : rightTab === 'problems' ? (
-              <ProblemsPanel
-                issues={validation.issues}
-                onJumpToSelection={(partial) => {
-                  if (typeof partial.pageIndex === 'number') {
-                    setSelection({
-                      pageIndex: partial.pageIndex,
-                      regionIndex: partial.regionIndex ?? null,
-                      itemIndex: partial.itemIndex ?? null,
-                    });
-                    setRightTab('inspector');
+                  const material = materialIndex[materialId];
+                  const source = (material?.source ?? null) as MediaAssetNode | null;
+                  if (!material || !source) {
+                    toast.error('Material missing source asset.');
+                    return;
                   }
+
+                  const hitRegionIndex = findRegionIndexAtPoint(point);
+                  let doc = vsn;
+                  let regionIndex: number | null = hitRegionIndex;
+
+                  if (regionIndex == null) {
+                    const maxW = Math.round(canvasWidth * 0.6);
+                    const maxH = Math.round(canvasHeight * 0.6);
+                    const srcW = material.width ?? maxW;
+                    const srcH = material.height ?? maxH;
+                    const scale = Math.min(1, maxW / srcW, maxH / srcH);
+                    const width = Math.max(80, Math.round(srcW * scale));
+                    const height = Math.max(60, Math.round(srcH * scale));
+                    const x = Math.round(point.x - width / 2);
+                    const y = Math.round(point.y - height / 2);
+
+                    const regionRes = createRegionForInsert({
+                      name: material.name,
+                      x,
+                      y,
+                      width,
+                      height,
+                    });
+                    if (!regionRes) return;
+                      doc = regionRes.doc;
+                      regionIndex = regionRes.regionIndex;
+                    }
+
+                  if (regionIndex == null) return;
+
+                  const item = createItemFromMedia(source, { materialId });
+                  const itemRes = addItem(doc, selection.pageIndex, regionIndex, item);
+                  applyVsn(itemRes.doc);
+                  setSelection((prev) => ({ ...prev, regionIndex, itemIndex: itemRes.itemIndex }));
+                }}
+                toolbar={
+                  <>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={handleDuplicateSelectedRegion}
+                      disabled={!canEditSelectedRegion}
+                      title="Copy window"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={handleDeleteSelectedRegion}
+                      disabled={!canDeleteSelectedRegion}
+                      title="Delete window"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-8 gap-2" disabled={!canEditSelectedRegion}>
+                          Align
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleAlignSelectedRegion('left')}>Left</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAlignSelectedRegion('hcenter')}>Horizontal center</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAlignSelectedRegion('right')}>Right</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAlignSelectedRegion('top')}>Top</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAlignSelectedRegion('vcenter')}>Vertical center</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAlignSelectedRegion('bottom')}>Bottom</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-8 gap-2" disabled={!canEditSelectedRegion}>
+                          Fill
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleFillSelectedRegion('full')}>Full screen</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleFillSelectedRegion('horizontal')}>Horizontal fill</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleFillSelectedRegion('vertical')}>Vertical fill</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
+                }
+              />
+            </div>
+
+            <div className="min-h-0 rounded-xl border bg-card p-4">
+              <RegionTimeline
+                items={items}
+                selectedItemIndex={selection.itemIndex}
+                materialIndex={materialIndex}
+                showDevFields={devtoolsEnabled}
+                onSelectItem={(index) => setSelection((prev) => ({ ...prev, itemIndex: index }))}
+                onMoveItem={(from, to) => {
+                  if (!vsn) return;
+                  if (selection.regionIndex == null) return;
+                  const next = moveItem(vsn, selection.pageIndex, selection.regionIndex, from, to);
+                  if (next === vsn) return;
+                  applyVsn(next);
+                  setSelection((prev) => ({ ...prev, itemIndex: clampInt(prev.itemIndex ?? 0, 0, getItems(next, prev.pageIndex, prev.regionIndex ?? 0).length - 1) }));
+                }}
+                onDeleteItem={(index) => {
+                  if (!vsn) return;
+                  if (selection.regionIndex == null) return;
+                  const next = deleteItem(vsn, selection.pageIndex, selection.regionIndex, index);
+                  if (next === vsn) return;
+                  applyVsn(next);
+                  setSelection((prev) => ({ ...prev, itemIndex: null }));
                 }}
               />
-            ) : (
-              <VsnJsonPanel doc={vsn} />
+            </div>
+          </div>
+
+          <div className="flex min-h-0 flex-col rounded-xl border bg-card p-4">
+            {devtoolsEnabled && (
+              <>
+                <div className="flex items-center gap-2">
+                  <RightTabButton
+                    active={rightTab === 'inspector'}
+                    onClick={() => setRightTab('inspector')}
+                    icon={<SlidersHorizontal className="h-4 w-4" />}
+                  >
+                    Inspector
+                  </RightTabButton>
+                  <RightTabButton active={rightTab === 'problems'} onClick={() => setRightTab('problems')} icon={<ListChecks className="h-4 w-4" />}>
+                    Problems
+                  </RightTabButton>
+                  <RightTabButton active={rightTab === 'json'} onClick={() => setRightTab('json')} icon={<Code2 className="h-4 w-4" />}>
+                    JSON
+                  </RightTabButton>
+                </div>
+                <Separator className="my-3" />
+              </>
             )}
+
+            <div className="min-h-0 flex-1">
+              {!devtoolsEnabled || rightTab === 'inspector' ? (
+                <InspectorPanel
+                  doc={vsn}
+                  selection={selection}
+                  programName={program.name}
+                  programWidth={canvasWidth}
+                  programHeight={canvasHeight}
+                  targetDeviceId={program.targetDeviceId ?? null}
+                  devices={mockDevices}
+                  materialIndex={materialIndex}
+                  showDevFields={devtoolsEnabled}
+                  onRenameProgram={handleRenameProgram}
+                  onSetProgramResolution={handleSetProgramResolution}
+                  onPatchPage={(pageIndex, patch) => {
+                    if (!vsn) return;
+                    applyVsn(patchPage(vsn, pageIndex, patch));
+                  }}
+                  onPatchRegion={(pageIndex, regionIndex, patch) => {
+                    if (!vsn) return;
+                    applyVsn(patchRegion(vsn, pageIndex, regionIndex, patch));
+                  }}
+                  onPatchRegionRect={(pageIndex, regionIndex, patch) => {
+                    if (!vsn) return;
+                    applyVsn(patchRegionRect(vsn, pageIndex, regionIndex, patch));
+                  }}
+                  onPatchItem={(pageIndex, regionIndex, itemIndex, patch) => {
+                    if (!vsn) return;
+                    applyVsn(patchItem(vsn, pageIndex, regionIndex, itemIndex, patch));
+                  }}
+                />
+              ) : rightTab === 'problems' ? (
+                <ProblemsPanel
+                  issues={devValidation.issues}
+                  onJumpToSelection={(partial) => {
+                    if (typeof partial.pageIndex === 'number') {
+                      setSelection({
+                        pageIndex: partial.pageIndex,
+                        regionIndex: partial.regionIndex ?? null,
+                        itemIndex: partial.itemIndex ?? null,
+                      });
+                      setRightTab('inspector');
+                    }
+                  }}
+                />
+              ) : (
+                <VsnJsonPanel doc={vsn} />
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      <ProgramPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} doc={vsn} materialIndex={materialIndex} startPageIndex={selection.pageIndex} />
     </div>
   );
 }

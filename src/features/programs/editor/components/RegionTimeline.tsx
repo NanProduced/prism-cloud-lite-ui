@@ -13,6 +13,7 @@ export function RegionTimeline({
   items,
   selectedItemIndex,
   materialIndex,
+  showDevFields = false,
   onSelectItem,
   onMoveItem,
   onDeleteItem,
@@ -20,6 +21,7 @@ export function RegionTimeline({
   items: VsnItem[];
   selectedItemIndex: number | null;
   materialIndex: MaterialIndex;
+  showDevFields?: boolean;
   onSelectItem: (index: number) => void;
   onMoveItem: (from: number, to: number) => void;
   onDeleteItem: (index: number) => void;
@@ -56,7 +58,7 @@ export function RegionTimeline({
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{getItemLabel(item, materialIndex)}</p>
                       <p className="text-xs text-muted-foreground">
-                        {item.Duration ? `${Math.round(Number(item.Duration) / 1000)}s` : '—'} · Type {item.Type}
+                        {item.Duration ? `${Math.round(Number(item.Duration) / 1000)}s` : '—'} · {getItemTypeLabel(item.Type, showDevFields)}
                       </p>
                     </div>
                   </div>
@@ -106,7 +108,15 @@ function getItemLabel(item: VsnItem, materialIndex: MaterialIndex): string {
   if (item.Type === '4' || item.Type === '5') return item.Text ?? 'Text';
   const materialId = item.FileSource?.Resource_ID;
   if (materialId && materialIndex[materialId]) return materialIndex[materialId].name;
-  return 'Media';
+  return getItemTypeLabel(item.Type, false);
+}
+
+function getItemTypeLabel(type: string, showDevFields: boolean): string {
+  if (type === '2') return 'Image';
+  if (type === '3') return 'Video';
+  if (type === '4' || type === '5') return 'Text';
+  if (type === '6') return 'GIF';
+  return showDevFields ? `Type ${type}` : 'Media';
 }
 
 function ItemIcon({ type }: { type: string }) {
@@ -114,4 +124,3 @@ function ItemIcon({ type }: { type: string }) {
   if (type === '2' || type === '6') return <ImageIcon className="h-4 w-4 text-muted-foreground" />;
   return <TypeIcon className="h-4 w-4 text-muted-foreground" />;
 }
-

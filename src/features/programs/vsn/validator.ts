@@ -65,8 +65,8 @@ function validateProgram(
   });
   if (isObject(program.Information)) {
     const info = program.Information;
-    ctx.req(isPosIntString(info.Width), { code: 'Information.Width.invalid', message: 'Width must be a positive integer string.', path: `${infoPath}.Width` });
-    ctx.req(isPosIntString(info.Height), { code: 'Information.Height.invalid', message: 'Height must be a positive integer string.', path: `${infoPath}.Height` });
+    ctx.req(isStrictPosIntString(info.Width), { code: 'Information.Width.invalid', message: 'Width must be a positive integer string.', path: `${infoPath}.Width` });
+    ctx.req(isStrictPosIntString(info.Height), { code: 'Information.Height.invalid', message: 'Height must be a positive integer string.', path: `${infoPath}.Height` });
   }
 
   const pagesPath = '$.Programs.Program.Pages.Page';
@@ -100,13 +100,13 @@ function validatePage(
   });
 
   if (page.LoopType === '0') {
-    ctx.req(isPosIntString(page.AppointDuration), {
+    ctx.req(isStrictPosIntString(page.AppointDuration), {
       code: 'Page.AppointDuration.required',
       message: 'AppointDuration is required when LoopType is "0".',
       path: `${basePath}.AppointDuration`,
     });
   } else {
-    ctx.warn(isPosIntString(page.AppointDuration), {
+    ctx.warn(isStrictPosIntString(page.AppointDuration), {
       code: 'Page.AppointDuration.recommended',
       message: 'AppointDuration should be provided (even when LoopType is "1").',
       path: `${basePath}.AppointDuration`,
@@ -157,7 +157,7 @@ function validateRegion(
     path: `${basePath}.IsScheduleRegion`,
   });
 
-  ctx.warn(isPosIntString(region.Layer ?? ''), {
+  ctx.warn(isStrictPosIntString(region.Layer ?? ''), {
     code: 'Region.Layer.recommended',
     message: 'Layer should be provided when using multiple regions.',
     path: `${basePath}.Layer`,
@@ -214,9 +214,9 @@ function validateRect(
 
   ctx.req(isIntString(rect.X), { code: 'Rect.X.invalid', message: 'Rect.X must be an integer string.', path: `${path}.X` });
   ctx.req(isIntString(rect.Y), { code: 'Rect.Y.invalid', message: 'Rect.Y must be an integer string.', path: `${path}.Y` });
-  ctx.req(isPosIntString(rect.Width), { code: 'Rect.Width.invalid', message: 'Rect.Width must be a positive integer string.', path: `${path}.Width` });
-  ctx.req(isPosIntString(rect.Height), { code: 'Rect.Height.invalid', message: 'Rect.Height must be a positive integer string.', path: `${path}.Height` });
-  ctx.req(isPosIntString(rect.BorderWidth), { code: 'Rect.BorderWidth.invalid', message: 'Rect.BorderWidth must be a positive integer string.', path: `${path}.BorderWidth` });
+  ctx.req(isStrictPosIntString(rect.Width), { code: 'Rect.Width.invalid', message: 'Rect.Width must be a positive integer string.', path: `${path}.Width` });
+  ctx.req(isStrictPosIntString(rect.Height), { code: 'Rect.Height.invalid', message: 'Rect.Height must be a positive integer string.', path: `${path}.Height` });
+  ctx.req(isPosIntString(rect.BorderWidth), { code: 'Rect.BorderWidth.invalid', message: 'Rect.BorderWidth must be a non-negative integer string.', path: `${path}.BorderWidth` });
 
   if (ctx.mode === 'publish') {
     ctx.req(isNonEmptyString(rect.BorderColor ?? ''), {
@@ -262,7 +262,7 @@ function validateItem(
         message: 'Video Volume must be a float string in [0,1].',
         path: `${path}.Volume`,
       });
-      ctx.req(isPosIntString(item.Loop ?? ''), {
+      ctx.req(isStrictPosIntString(item.Loop ?? ''), {
         code: 'Item.Loop.required',
         message: 'Video Loop must be a positive integer string.',
         path: `${path}.Loop`,
@@ -272,9 +272,9 @@ function validateItem(
   }
 
   if (type === '4' || type === '5') {
-    ctx.req(isPosIntString(item.Duration ?? ''), { code: 'Item.Duration.required', message: 'Text Duration is required (ms as string).', path: `${path}.Duration` });
-    ctx.req(isPosIntString(item.PlayLength ?? ''), { code: 'Item.PlayLength.required', message: 'Text PlayLength is required (ms as string).', path: `${path}.PlayLength` });
-    ctx.req(isPosIntString(item.PlayTimes ?? ''), { code: 'Item.PlayTimes.required', message: 'Text PlayTimes is required.', path: `${path}.PlayTimes` });
+    ctx.req(isStrictPosIntString(item.Duration ?? ''), { code: 'Item.Duration.required', message: 'Text Duration is required (ms as string).', path: `${path}.Duration` });
+    ctx.req(isStrictPosIntString(item.PlayLength ?? ''), { code: 'Item.PlayLength.required', message: 'Text PlayLength is required (ms as string).', path: `${path}.PlayLength` });
+    ctx.req(isStrictPosIntString(item.PlayTimes ?? ''), { code: 'Item.PlayTimes.required', message: 'Text PlayTimes is required.', path: `${path}.PlayTimes` });
 
     ctx.req(isNonEmptyString(item.Text ?? ''), { code: 'Item.Text.required', message: 'Text content is required.', path: `${path}.Text` });
     ctx.req(isString(item.TextColor) && COLOR_RE.test(item.TextColor), {
@@ -304,9 +304,9 @@ function reqMediaFields(
     warn: (cond: boolean, issue: Omit<VsnValidationIssue, 'severity'>) => void;
   },
 ) {
-  ctx.req(isPosIntString(item.Duration ?? ''), { code: 'Item.Duration.required', message: 'Duration is required (ms as string).', path: `${path}.Duration` });
-  ctx.req(isPosIntString(item.PlayLength ?? ''), { code: 'Item.PlayLength.required', message: 'PlayLength is required (ms as string).', path: `${path}.PlayLength` });
-  ctx.req(isPosIntString(item.PlayTimes ?? ''), { code: 'Item.PlayTimes.required', message: 'PlayTimes is required.', path: `${path}.PlayTimes` });
+  ctx.req(isStrictPosIntString(item.Duration ?? ''), { code: 'Item.Duration.required', message: 'Duration is required (ms as string).', path: `${path}.Duration` });
+  ctx.req(isStrictPosIntString(item.PlayLength ?? ''), { code: 'Item.PlayLength.required', message: 'PlayLength is required (ms as string).', path: `${path}.PlayLength` });
+  ctx.req(isStrictPosIntString(item.PlayTimes ?? ''), { code: 'Item.PlayTimes.required', message: 'PlayTimes is required.', path: `${path}.PlayTimes` });
 
   ctx.req(isFloatInRange(item.Alhpa, 0, 1), {
     code: 'Item.Alhpa.required',
@@ -363,7 +363,7 @@ function validateLogFont(
 ) {
   ctx.req(isObject(logFont), { code: 'LogFont.required', message: 'LogFont is required.', path });
   if (!isObject(logFont)) return;
-  ctx.req(isPosIntString(logFont.lfHeight), { code: 'LogFont.lfHeight.required', message: 'LogFont.lfHeight is required.', path: `${path}.lfHeight` });
+  ctx.req(isStrictPosIntString(logFont.lfHeight), { code: 'LogFont.lfHeight.required', message: 'LogFont.lfHeight is required.', path: `${path}.lfHeight` });
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -384,6 +384,11 @@ function isIntString(value: unknown): value is string {
 }
 
 function isPosIntString(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  return /^\d+$/.test(value);
+}
+
+function isStrictPosIntString(value: unknown): value is string {
   if (typeof value !== 'string') return false;
   return /^\d+$/.test(value) && value !== '0';
 }

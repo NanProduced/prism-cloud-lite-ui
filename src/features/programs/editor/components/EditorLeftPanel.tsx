@@ -49,7 +49,7 @@ export function EditorLeftPanel({
     });
   }, [materials, mediaFilter, mediaQuery]);
 
-  const canAddToRegion = selection.regionIndex != null;
+  const hasSelectedRegion = selection.regionIndex != null;
 
   return (
     <div className="flex h-full flex-col gap-3">
@@ -108,7 +108,7 @@ export function EditorLeftPanel({
             size="icon"
             className="h-8 w-8"
             onClick={onDeleteRegion}
-            disabled={regions.length <= 1 || selection.regionIndex == null}
+            disabled={selection.regionIndex == null}
             title="Delete region"
           >
             <Trash2 className="h-4 w-4" />
@@ -118,25 +118,31 @@ export function EditorLeftPanel({
 
       <ScrollArea className="max-h-[220px] pr-2">
         <div className="space-y-2">
-          {regions.map((region, index) => (
-            <button
-              key={`${region.Name}-${index}`}
-              type="button"
-              className={cn(
-                'w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors',
-                selection.regionIndex === index ? 'border-primary/60 bg-accent/30' : 'hover:bg-accent/20',
-              )}
-              onClick={() => onSelectRegion(index)}
-            >
-              <div className="flex items-center gap-2">
-                <Layers className="h-4 w-4 text-muted-foreground" />
-                <span className="truncate font-medium">{region.Name || `Region ${index + 1}`}</span>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {region.Rect.Width}×{region.Rect.Height} · {region.Items.Item.length} item{region.Items.Item.length === 1 ? '' : 's'}
-              </p>
-            </button>
-          ))}
+          {regions.length === 0 ? (
+            <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
+              Drag media onto the canvas to create your first window.
+            </div>
+          ) : (
+            regions.map((region, index) => (
+              <button
+                key={`${region.Name}-${index}`}
+                type="button"
+                className={cn(
+                  'w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors',
+                  selection.regionIndex === index ? 'border-primary/60 bg-accent/30' : 'hover:bg-accent/20',
+                )}
+                onClick={() => onSelectRegion(index)}
+              >
+                <div className="flex items-center gap-2">
+                  <Layers className="h-4 w-4 text-muted-foreground" />
+                  <span className="truncate font-medium">{region.Name || `Region ${index + 1}`}</span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {region.Rect.Width}×{region.Rect.Height} · {region.Items.Item.length} item{region.Items.Item.length === 1 ? '' : 's'}
+                </p>
+              </button>
+            ))
+          )}
         </div>
       </ScrollArea>
 
@@ -144,16 +150,14 @@ export function EditorLeftPanel({
 
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">Insert</p>
-        <Button variant="outline" size="sm" className="gap-2" onClick={onAddTextItem} disabled={!canAddToRegion}>
+        <Button variant="outline" size="sm" className="gap-2" onClick={onAddTextItem}>
           <TypeIcon className="h-4 w-4" />
           Text
         </Button>
       </div>
-      {!canAddToRegion && (
-        <p className="text-xs text-muted-foreground">
-          Select a region to insert media/text.
-        </p>
-      )}
+      <p className="text-xs text-muted-foreground">
+        {hasSelectedRegion ? 'Adds to the selected window.' : 'Creates a new window when nothing is selected.'}
+      </p>
 
       <ScrollArea className="flex-1 pr-2">
         <div className="space-y-3">
@@ -184,11 +188,15 @@ export function EditorLeftPanel({
                   type="button"
                   className={cn(
                     'flex w-full items-center gap-3 rounded-lg border bg-background px-3 py-2 text-left transition-colors',
-                    canAddToRegion ? 'hover:bg-accent/20' : 'opacity-60',
+                    'hover:bg-accent/20',
                   )}
-                  disabled={!canAddToRegion}
                   onClick={() => onAddMaterialItem(m)}
-                  title={!canAddToRegion ? 'Select a region first' : 'Add to region'}
+                  title={hasSelectedRegion ? 'Add to selected window' : 'Create a new window'}
+                  draggable
+                  onDragStart={(event) => {
+                    event.dataTransfer.setData('text/plain', m.materialId);
+                    event.dataTransfer.effectAllowed = 'copy';
+                  }}
                 >
                   <div className="flex h-9 w-12 items-center justify-center overflow-hidden rounded-md bg-muted">
                     {m.coverUrl ? (

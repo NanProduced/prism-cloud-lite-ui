@@ -60,20 +60,7 @@ export function createBlankVsnPage(input: { width: number; height: number; durat
     BgColor: DEFAULT_BG_COLOR,
     BgFile: null,
     Regions: {
-      Region: [
-        createBlankVsnRegion({
-          name: 'Main Window',
-          layer: 1,
-          rect: {
-            X: '0',
-            Y: '0',
-            Width: String(input.width),
-            Height: String(input.height),
-            BorderWidth: '0',
-            BorderColor: DEFAULT_BORDER_COLOR,
-          },
-        }),
-      ],
+      Region: [],
     },
   };
 }
