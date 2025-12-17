@@ -45,6 +45,7 @@ import {
   getPages,
   getRegions,
   moveItem,
+  normalizeVsnForEditor,
   patchItem,
   patchPage,
   patchRegion,
@@ -87,13 +88,16 @@ export default function ProgramEditorPage() {
   }, [programId]);
 
   useEffect(() => {
-    if (!programId || !program) return;
+    if (!programId) return;
+    const loaded = getProgram(programId);
+    if (!loaded) return;
+    setProgram(loaded);
     const d = ensureDraft(programId, baseVersion);
     setDraft(d);
-    setVsn(d?.vsn ?? null);
+    setVsn(d?.vsn ? normalizeVsnForEditor(d.vsn) : null);
     setDirty(false);
     setSelection({ pageIndex: 0, regionIndex: null, itemIndex: null });
-  }, [baseVersion, program, programId]);
+  }, [baseVersion, programId]);
 
   const versionOptions = useMemo(() => {
     if (!program) return [];

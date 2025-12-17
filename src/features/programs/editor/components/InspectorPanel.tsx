@@ -469,6 +469,10 @@ function ItemInspector({
   ].filter((v): v is string => Boolean(v));
   const rawAlpha = Number.parseFloat(item.Alhpa ?? '');
   const alpha = clampFloat(Number.isFinite(rawAlpha) ? rawAlpha : 1, 0, 1);
+  const rawEffect = (item as unknown as { inEffect?: unknown }).inEffect;
+  const effect = isPlainObject(rawEffect) ? rawEffect : null;
+  const effectType = String((effect?.Type as string | undefined) ?? '0');
+  const effectTime = String((effect?.Time as string | undefined) ?? '500');
 
   return (
     <div className="space-y-5">
@@ -547,6 +551,59 @@ function ItemInspector({
               <option value="0">{showDevFields ? '0 · FIT_XY' : 'Fill'}</option>
               <option value="1">{showDevFields ? '1 · CENTER_INSIDE' : 'Contain'}</option>
             </select>
+          </Field>
+
+          <Field label={showDevFields ? 'inEffect' : 'Transition'}>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <select
+                  value={effectType}
+                  onChange={(e) => {
+                    const nextType = e.target.value;
+                    const preset = EFFECT_PRESETS.find((p) => p.id === nextType) ?? EFFECT_PRESETS[0];
+                    if (!preset || preset.id === '0') {
+                      onPatch({ inEffect: null });
+                      return;
+                    }
+                    const next = {
+                      ...(effect ?? {}),
+                      Type: preset.id,
+                      Name: preset.name,
+                      Time: effectTime,
+                    };
+                    onPatch({ inEffect: next });
+                  }}
+                  className="h-9 w-full rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                >
+                  {EFFECT_PRESETS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {showDevFields ? `${p.id} · ${p.name}` : p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">Time (ms)</span>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  step={100}
+                  disabled={effectType === '0'}
+                  value={effectType === '0' ? '' : effectTime}
+                  onChange={(e) => {
+                    const value = parseStrictPosIntInput(e.target.value);
+                    if (value == null) return;
+                    if (effectType === '0') return;
+                    const preset = EFFECT_PRESETS.find((p) => p.id === effectType) ?? EFFECT_PRESETS[0];
+                    const next = { ...(effect ?? {}), Type: preset.id, Name: preset.name, Time: value };
+                    onPatch({ inEffect: next });
+                  }}
+                />
+              </div>
+              <div />
+            </div>
           </Field>
 
           {item.Type === '3' && (
@@ -703,6 +760,22 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       {children}
     </label>
   );
+}
+
+const EFFECT_PRESETS: { id: string; name: string }[] = [
+  { id: '0', name: 'No Effect' },
+  { id: '1', name: 'Random' },
+  { id: '2', name: 'Wipe left' },
+  { id: '3', name: 'Wipe right' },
+  { id: '4', name: 'Wipe up' },
+  { id: '5', name: 'Wipe down' },
+  { id: '14', name: 'Blinds horizontal' },
+  { id: '15', name: 'Blinds vertical' },
+  { id: '31', name: 'Fade' },
+];
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function parseResolutionInput(value: string, max: number): number | null {

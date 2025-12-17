@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { Image as ImageIcon, Type as TypeIcon, Video as VideoIcon } from 'lucide-react';
+import { Image as ImageIcon, Maximize2, Minus, Plus, Type as TypeIcon, Video as VideoIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import type { VsnDocument, VsnItem, VsnRect, VsnRegion } from '@/features/programs/vsn/types';
 
 import type { EditorMaterial, EditorSelection } from '../types';
@@ -59,6 +60,8 @@ export function StagePreview({
   const [wrapperSize, setWrapperSize] = useState({ width: 0, height: 0 });
   const [interaction, setInteraction] = useState<RegionInteraction | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [zoomMode, setZoomMode] = useState<'fit' | 'custom'>('fit');
+  const [zoom, setZoom] = useState(1);
 
   useEffect(() => {
     if (!wrapperRef.current) return;
@@ -72,11 +75,20 @@ export function StagePreview({
     return () => ro.disconnect();
   }, []);
 
-  const scale = useMemo(() => {
+  const fitScale = useMemo(() => {
     if (!programWidth || !programHeight) return 1;
     if (wrapperSize.width <= 0 || wrapperSize.height <= 0) return 1;
     return Math.min(wrapperSize.width / programWidth, wrapperSize.height / programHeight);
   }, [programHeight, programWidth, wrapperSize.height, wrapperSize.width]);
+
+  useEffect(() => {
+    setZoomMode('fit');
+  }, [programHeight, programWidth]);
+
+  const scale = useMemo(() => {
+    if (zoomMode === 'fit') return fitScale;
+    return clampFloat(zoom, 0.05, 4);
+  }, [fitScale, zoom, zoomMode]);
 
   const page = useMemo(() => getPages(doc)[selection.pageIndex] ?? null, [doc, selection.pageIndex]);
   const regions = useMemo(() => getRegions(doc, selection.pageIndex), [doc, selection.pageIndex]);
@@ -167,6 +179,19 @@ export function StagePreview({
     };
   }, [interaction, onPatchRegionRect, programHeight, programWidth, scale]);
 
+  const zoomPercent = useMemo(() => Math.round(scale * 100), [scale]);
+
+  const applyZoom = (next: number) => {
+    setZoomMode('custom');
+    setZoom(clampFloat(next, 0.05, 4));
+  };
+
+  const stepZoom = (dir: -1 | 1) => {
+    const base = zoomMode === 'fit' ? fitScale : zoom;
+    const factor = dir === 1 ? 1.1 : 1 / 1.1;
+    applyZoom(base * factor);
+  };
+
   return (
     <div className="flex h-full flex-col gap-3">
       <div className="flex items-center justify-between text-sm">
@@ -176,86 +201,120 @@ export function StagePreview({
             {programWidth}×{programHeight} · Page {selection.pageIndex + 1}
           </p>
         </div>
-        {toolbar ? <div className="flex items-center gap-2">{toolbar}</div> : <div className="text-xs text-muted-foreground">Preview</div>}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-md border bg-background p-1">
+            <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => stepZoom(-1)} title="Zoom out">
+              <Minus className="h-4 w-4" />
+            </Button>
+            <button
+              type="button"
+              className="px-2 text-xs tabular-nums text-muted-foreground"
+              onClick={() => {
+                if (zoomMode === 'fit') applyZoom(1);
+                else setZoomMode('fit');
+              }}
+              title={zoomMode === 'fit' ? 'Switch to 100%' : 'Fit to view'}
+            >
+              {zoomPercent}%
+              {zoomMode === 'fit' ? ' · Fit' : ''}
+            </button>
+            <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => stepZoom(1)} title="Zoom in">
+              <Plus className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={() => setZoomMode('fit')}
+              title="Fit to view"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Button>
+          </div>
+          {toolbar ? <div className="flex items-center gap-2">{toolbar}</div> : <div className="text-xs text-muted-foreground">Preview</div>}
+        </div>
       </div>
 
       <div
         ref={wrapperRef}
-        className="relative flex flex-1 select-none items-center justify-center overflow-hidden rounded-xl border bg-muted/20"
+        className="relative flex flex-1 select-none overflow-auto rounded-xl border bg-muted/20"
       >
-        <div
-          ref={stageRef}
-          data-testid="program-stage"
-          className={cn('relative overflow-hidden', dragOver && 'ring-2 ring-primary/50')}
-          style={{ width: stageWidth, height: stageHeight }}
-          onDragEnter={(event) => {
-            if (!onDropMaterial) return;
-            event.preventDefault();
-            setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDragOver={(event) => {
-            if (!onDropMaterial) return;
-            event.preventDefault();
-            event.dataTransfer.dropEffect = 'copy';
-          }}
-          onDrop={(event) => {
-            if (!onDropMaterial) return;
-            event.preventDefault();
-            setDragOver(false);
-            const materialId = event.dataTransfer.getData('text/plain')?.trim();
-            if (!materialId) return;
-            const point = resolveDropPoint(event);
-            if (!point) return;
-            onDropMaterial(materialId, point);
-          }}
-        >
-          <div className="absolute inset-0" style={{ background: bg }} />
+        <div className="min-h-full min-w-full p-6 flex items-center justify-center">
+          <div
+            ref={stageRef}
+            data-testid="program-stage"
+            className={cn('relative overflow-hidden', dragOver && 'ring-2 ring-primary/50')}
+            style={{ width: stageWidth, height: stageHeight }}
+            onDragEnter={(event) => {
+              if (!onDropMaterial) return;
+              event.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDragOver={(event) => {
+              if (!onDropMaterial) return;
+              event.preventDefault();
+              event.dataTransfer.dropEffect = 'copy';
+            }}
+            onDrop={(event) => {
+              if (!onDropMaterial) return;
+              event.preventDefault();
+              setDragOver(false);
+              const materialId = event.dataTransfer.getData('text/plain')?.trim();
+              if (!materialId) return;
+              const point = resolveDropPoint(event);
+              if (!point) return;
+              onDropMaterial(materialId, point);
+            }}
+          >
+            <div className="absolute inset-0" style={{ background: bg }} />
 
-          {regions.map((region, regionIndex) => (
-            <RegionBox
-              key={`${region.Name}-${regionIndex}`}
-              region={region}
-              regionIndex={regionIndex}
-              selected={selection.regionIndex === regionIndex}
-              activeItem={pickActiveItem(region, selection)}
-              scale={scale}
-              materialIndex={materialIndex}
-              onMoveStart={(event) => {
-                if (event.button !== 0) return;
-                const rect = parseRect(region);
-                onSelectRegion(regionIndex);
-                event.preventDefault();
-                event.stopPropagation();
-                setInteraction({
-                  kind: 'move',
-                  pageIndex: selection.pageIndex,
-                  regionIndex,
-                  pointerId: event.pointerId,
-                  startClientX: event.clientX,
-                  startClientY: event.clientY,
-                  startRect: rect,
-                });
-              }}
-              onResizeStart={(event, handle) => {
-                if (event.button !== 0) return;
-                const rect = parseRect(region);
-                onSelectRegion(regionIndex);
-                event.preventDefault();
-                event.stopPropagation();
-                setInteraction({
-                  kind: 'resize',
-                  handle,
-                  pageIndex: selection.pageIndex,
-                  regionIndex,
-                  pointerId: event.pointerId,
-                  startClientX: event.clientX,
-                  startClientY: event.clientY,
-                  startRect: rect,
-                });
-              }}
-            />
-          ))}
+            {regions.map((region, regionIndex) => (
+              <RegionBox
+                key={`${region.Name}-${regionIndex}`}
+                region={region}
+                regionIndex={regionIndex}
+                selected={selection.regionIndex === regionIndex}
+                activeItem={pickActiveItem(region, selection)}
+                scale={scale}
+                materialIndex={materialIndex}
+                onMoveStart={(event) => {
+                  if (event.button !== 0) return;
+                  const rect = parseRect(region);
+                  onSelectRegion(regionIndex);
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setInteraction({
+                    kind: 'move',
+                    pageIndex: selection.pageIndex,
+                    regionIndex,
+                    pointerId: event.pointerId,
+                    startClientX: event.clientX,
+                    startClientY: event.clientY,
+                    startRect: rect,
+                  });
+                }}
+                onResizeStart={(event, handle) => {
+                  if (event.button !== 0) return;
+                  const rect = parseRect(region);
+                  onSelectRegion(regionIndex);
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setInteraction({
+                    kind: 'resize',
+                    handle,
+                    pageIndex: selection.pageIndex,
+                    regionIndex,
+                    pointerId: event.pointerId,
+                    startClientX: event.clientX,
+                    startClientY: event.clientY,
+                    startRect: rect,
+                  });
+                }}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -484,4 +543,9 @@ function parseRect(region: VsnRegion): { x: number; y: number; w: number; h: num
 function clampInt(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
   return Math.min(max, Math.max(min, Math.trunc(value)));
+}
+
+function clampFloat(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, value));
 }

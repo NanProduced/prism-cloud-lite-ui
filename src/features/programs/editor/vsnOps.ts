@@ -281,3 +281,52 @@ export function resizeProgramCanvas(doc: VsnDocument, input: { width: number; he
 
   return next;
 }
+
+export function normalizeVsnForEditor(doc: VsnDocument): VsnDocument {
+  const programWidth = Number.parseInt(doc.Programs?.Program?.Information?.Width ?? '', 10);
+  const programHeight = Number.parseInt(doc.Programs?.Program?.Information?.Height ?? '', 10);
+  if (!Number.isFinite(programWidth) || programWidth <= 0 || !Number.isFinite(programHeight) || programHeight <= 0) {
+    return doc;
+  }
+
+  const pages = doc.Programs?.Program?.Pages?.Page;
+  if (!Array.isArray(pages) || pages.length === 0) return doc;
+
+  let changed = false;
+  const next = cloneVsn(doc);
+
+  next.Programs.Program.Pages.Page.forEach((page) => {
+    const regions = page?.Regions?.Region;
+    if (!Array.isArray(regions) || regions.length !== 1) return;
+    const region = regions[0] as VsnRegion | undefined;
+    if (!region) return;
+
+    const name = (region.Name ?? '').trim();
+    if (name !== 'Main Window') return;
+    const items = region.Items?.Item;
+    if (Array.isArray(items) && items.length > 0) return;
+
+    const rect = region.Rect;
+    const x = Number.parseInt(rect?.X ?? '', 10);
+    const y = Number.parseInt(rect?.Y ?? '', 10);
+    const w = Number.parseInt(rect?.Width ?? '', 10);
+    const h = Number.parseInt(rect?.Height ?? '', 10);
+    const bw = Number.parseInt(rect?.BorderWidth ?? '0', 10) || 0;
+    const isFull =
+      Number.isFinite(x) &&
+      Number.isFinite(y) &&
+      Number.isFinite(w) &&
+      Number.isFinite(h) &&
+      x === 0 &&
+      y === 0 &&
+      w === programWidth &&
+      h === programHeight &&
+      bw === 0;
+    if (!isFull) return;
+
+    page.Regions.Region = [];
+    changed = true;
+  });
+
+  return changed ? next : doc;
+}
