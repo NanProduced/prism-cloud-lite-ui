@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { BadgeAlert, Image as ImageIcon, Type as TypeIcon, Video as VideoIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -90,6 +90,7 @@ export function InspectorPanel({
           </div>
         ) : item ? (
           <ItemInspector
+            key={`item-${selection.pageIndex}-${selection.regionIndex}-${selection.itemIndex}`}
             item={item}
             material={resolveMaterial(materialIndex, item)}
             showDevFields={showDevFields}
@@ -97,6 +98,7 @@ export function InspectorPanel({
           />
         ) : region ? (
           <RegionInspector
+            key={`region-${selection.pageIndex}-${selection.regionIndex}`}
             region={region}
             showDevFields={showDevFields}
             onPatch={(patch) => onPatchRegion(selection.pageIndex, selection.regionIndex!, patch)}
@@ -114,7 +116,12 @@ export function InspectorPanel({
               onSetProgramResolution={onSetProgramResolution}
             />
             <Separator />
-            <PageInspector page={page} showDevFields={showDevFields} onPatch={(patch) => onPatchPage(selection.pageIndex, patch)} />
+            <PageInspector
+              key={`page-${selection.pageIndex}`}
+              page={page}
+              showDevFields={showDevFields}
+              onPatch={(patch) => onPatchPage(selection.pageIndex, patch)}
+            />
           </div>
         )}
       </ScrollArea>
@@ -537,6 +544,16 @@ function ItemInspector({
   showDevFields: boolean;
   onPatch: (patch: Partial<VsnItem>) => void;
 }) {
+  const textInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (item.Type === '4' || item.Type === '5') {
+      textInputRef.current?.focus();
+      textInputRef.current?.select();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const icon = item.Type === '3' ? VideoIcon : item.Type === '2' || item.Type === '6' ? ImageIcon : TypeIcon;
   const Icon = icon;
   const durationLabel = material?.durationMs ? formatDurationMs(material.durationMs) : null;
@@ -759,7 +776,11 @@ function ItemInspector({
           </Field>
 
           <Field label="Text">
-            <Input value={item.Text ?? ''} onChange={(e) => onPatch({ Text: e.target.value })} />
+            <Input
+              ref={textInputRef}
+              value={item.Text ?? ''}
+              onChange={(e) => onPatch({ Text: e.target.value })}
+            />
           </Field>
 
           <Field label="TextColor">

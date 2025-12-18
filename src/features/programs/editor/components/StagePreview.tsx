@@ -46,6 +46,9 @@ export function StagePreview({
   programHeight,
   selection,
   materialIndex,
+  currentTime = 0,
+  isPlaying = false,
+  playbackSpeed = 1,
   onSelectRegion,
   onPatchRegionRect,
   onDropMaterial,
@@ -57,6 +60,9 @@ export function StagePreview({
   programHeight: number;
   selection: EditorSelection;
   materialIndex: MaterialIndex;
+  currentTime?: number;
+  isPlaying?: boolean;
+  playbackSpeed?: number;
   onSelectRegion: (regionIndex: number) => void;
   onPatchRegionRect: (pageIndex: number, regionIndex: number, patch: Partial<VsnRect>) => void;
   onDropMaterial?: (materialId: string, point: { x: number; y: number }) => void;
@@ -74,7 +80,18 @@ export function StagePreview({
   const [createInteraction, setCreateInteraction] = useState<CreateInteraction | null>(null);
   const [showGrid, setShowGrid] = useState(false);
   const [snapEnabled, setSnapEnabled] = useState(true);
+  const [isShiftPressed, setIsShiftPressed] = useState(false);
   const gridSize = 50;
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => setIsShiftPressed(e.shiftKey || e.ctrlKey);
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener('keyup', handleKey);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('keyup', handleKey);
+    };
+  }, []);
 
   useEffect(() => {
     if (!wrapperRef.current) return;
@@ -191,6 +208,21 @@ export function StagePreview({
         top = clampInt(Math.round(startTop + dy), 0, startBottom - minSize);
       }
 
+      if (isShiftPressed && interaction.startRect.w > 0 && interaction.startRect.h > 0) {
+        const ratio = interaction.startRect.w / interaction.startRect.h;
+        const currentW = right - left;
+        const currentH = bottom - top;
+        if (Math.abs(dx) > Math.abs(dy)) {
+          const targetH = Math.round(currentW / ratio);
+          if (interaction.handle.includes('n')) top = bottom - targetH;
+          else bottom = top + targetH;
+        } else {
+          const targetW = Math.round(currentH * ratio);
+          if (interaction.handle.includes('w')) left = right - targetW;
+          else right = left + targetW;
+        }
+      }
+
       if (snapEnabled) {
         const snappedLeft = snapEdge(left, gridSize, snapThreshold, [0, Math.round(programWidth / 2)]);
         const snappedTop = snapEdge(top, gridSize, snapThreshold, [0, Math.round(programHeight / 2)]);
@@ -224,7 +256,7 @@ export function StagePreview({
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onUp);
     };
-  }, [gridSize, interaction, onPatchRegionRect, programHeight, programWidth, scale, snapEnabled]);
+  }, [gridSize, interaction, onPatchRegionRect, programHeight, programWidth, scale, snapEnabled, isShiftPressed]);
 
   useEffect(() => {
     if (!createInteraction) return;
@@ -427,52 +459,59 @@ export function StagePreview({
               />
             )}
 
-            {regions.map((region, regionIndex) => (
-              <RegionBox
-                key={`region-${regionIndex}`}
-                region={region}
-                regionIndex={regionIndex}
-                selected={selection.regionIndex === regionIndex}
-                activeItem={pickActiveItem(region, selection)}
-                scale={scale}
-                materialIndex={materialIndex}
-                onMoveStart={(event) => {
-                  if (event.button !== 0) return;
-                  if (tool !== 'select') return;
-                  const rect = parseRect(region);
-                  onSelectRegion(regionIndex);
-                  event.preventDefault();
-                  event.stopPropagation();
-                  setInteraction({
-                    kind: 'move',
-                    pageIndex: selection.pageIndex,
-                    regionIndex,
-                    pointerId: event.pointerId,
-                    startClientX: event.clientX,
-                    startClientY: event.clientY,
-                    startRect: rect,
-                  });
-                }}
-                onResizeStart={(event, handle) => {
-                  if (event.button !== 0) return;
-                  if (tool !== 'select') return;
-                  const rect = parseRect(region);
-                  onSelectRegion(regionIndex);
-                  event.preventDefault();
-                  event.stopPropagation();
-                  setInteraction({
-                    kind: 'resize',
-                    handle,
-                    pageIndex: selection.pageIndex,
-                    regionIndex,
-                    pointerId: event.pointerId,
-                    startClientX: event.clientX,
-                    startClientY: event.clientY,
-                    startRect: rect,
-                  });
-                }}
-              />
-            ))}
+            {regions.map((region, regionIndex) => {
+              const { item, startTime } = pickActiveItem(region, regionIndex, selection, currentTime);
+              return (
+                <RegionBox
+                  key={`region-${regionIndex}`}
+                  region={region}
+                  regionIndex={regionIndex}
+                  selected={selection.regionIndex === regionIndex}
+                  activeItem={item}
+                  itemStartTime={startTime}
+                  currentTime={currentTime}
+                  isPlaying={isPlaying}
+                  playbackSpeed={playbackSpeed}
+                  scale={scale}
+                  materialIndex={materialIndex}
+                  onMoveStart={(event) => {
+                    if (event.button !== 0) return;
+                    if (tool !== 'select') return;
+                    const rect = parseRect(region);
+                    onSelectRegion(regionIndex);
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setInteraction({
+                      kind: 'move',
+                      pageIndex: selection.pageIndex,
+                      regionIndex,
+                      pointerId: event.pointerId,
+                      startClientX: event.clientX,
+                      startClientY: event.clientY,
+                      startRect: rect,
+                    });
+                  }}
+                  onResizeStart={(event, handle) => {
+                    if (event.button !== 0) return;
+                    if (tool !== 'select') return;
+                    const rect = parseRect(region);
+                    onSelectRegion(regionIndex);
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setInteraction({
+                      kind: 'resize',
+                      handle,
+                      pageIndex: selection.pageIndex,
+                      regionIndex,
+                      pointerId: event.pointerId,
+                      startClientX: event.clientX,
+                      startClientY: event.clientY,
+                      startRect: rect,
+                    });
+                  }}
+                />
+              );
+            })}
 
             {createInteraction && (
               <div
@@ -492,14 +531,47 @@ export function StagePreview({
   );
 }
 
-function pickActiveItem(region: VsnRegion, selection: EditorSelection): VsnItem | null {
+function pickActiveItem(
+  region: VsnRegion,
+  regionIndex: number,
+  selection: EditorSelection,
+  currentTime: number,
+): { item: VsnItem | null; startTime: number } {
   const items = region.Items?.Item ?? [];
-  if (!Array.isArray(items) || items.length === 0) return null;
-  if (selection.itemIndex != null && selection.regionIndex != null) {
+  if (!Array.isArray(items) || items.length === 0) return { item: null, startTime: 0 };
+
+  // Prioritize selection
+  if (selection.regionIndex === regionIndex && selection.itemIndex != null) {
     const match = items[selection.itemIndex];
-    if (match) return match as VsnItem;
+    let offset = 0;
+    for (let i = 0; i < selection.itemIndex; i++) {
+      offset += Number(items[i].Duration) || 0;
+    }
+    if (match) return { item: match as VsnItem, startTime: offset };
   }
-  return (items[0] as VsnItem) ?? null;
+
+  let accumulated = 0;
+  for (const item of items) {
+    const duration = Number(item.Duration) || 0;
+    if (currentTime >= accumulated && currentTime < accumulated + duration) {
+      return { item: item as VsnItem, startTime: accumulated };
+    }
+    accumulated += duration;
+  }
+
+  if (accumulated > 0) {
+    const loopedTime = currentTime % accumulated;
+    let loopAccumulated = 0;
+    for (const item of items) {
+      const duration = Number(item.Duration) || 0;
+      if (loopedTime >= loopAccumulated && loopedTime < loopAccumulated + duration) {
+        return { item: item as VsnItem, startTime: loopAccumulated };
+      }
+      loopAccumulated += duration;
+    }
+  }
+
+  return { item: (items[0] as VsnItem) ?? null, startTime: 0 };
 }
 
 function RegionBox({
@@ -507,6 +579,10 @@ function RegionBox({
   regionIndex,
   selected,
   activeItem,
+  itemStartTime,
+  currentTime,
+  isPlaying,
+  playbackSpeed,
   scale,
   materialIndex,
   onMoveStart,
@@ -516,6 +592,10 @@ function RegionBox({
   regionIndex: number;
   selected: boolean;
   activeItem: VsnItem | null;
+  itemStartTime: number;
+  currentTime: number;
+  isPlaying: boolean;
+  playbackSpeed: number;
   scale: number;
   materialIndex: Record<string, EditorMaterial>;
   onMoveStart: (event: ReactPointerEvent) => void;
@@ -559,7 +639,21 @@ function RegionBox({
       title={getRegionDisplayName(region, regionIndex)}
     >
       <div className="relative flex h-full w-full items-center justify-center">
-        <RegionContent item={activeItem} materialIndex={materialIndex} />
+        {activeItem ? (
+          <RegionContent 
+            item={activeItem} 
+            materialIndex={materialIndex} 
+            currentTime={currentTime} 
+            itemStartTime={itemStartTime}
+            isPlaying={isPlaying}
+            playbackSpeed={playbackSpeed}
+          />
+        ) : (
+          <div className="flex flex-col items-center gap-1 opacity-20 group-hover:opacity-40 transition-opacity">
+            <ImageIcon className="h-5 w-5" />
+            <span className="text-[10px] font-bold uppercase tracking-tighter">Empty</span>
+          </div>
+        )}
 
         <div className="pointer-events-none absolute left-1 top-1 flex max-w-[80%] items-center gap-1 rounded bg-background/75 px-1.5 py-0.5 text-[11px] text-foreground shadow-sm">
           <span className="truncate">{getRegionDisplayName(region, regionIndex)}</span>
@@ -613,7 +707,45 @@ function ResizeHandleDot({
   );
 }
 
-function RegionContent({ item, materialIndex }: { item: VsnItem | null; materialIndex: Record<string, EditorMaterial> }) {
+function RegionContent({
+  item,
+  materialIndex,
+  currentTime,
+  itemStartTime,
+  isPlaying,
+  playbackSpeed
+}: {
+  item: VsnItem | null;
+  materialIndex: Record<string, EditorMaterial>;
+  currentTime: number;
+  itemStartTime: number;
+  isPlaying: boolean;
+  playbackSpeed: number;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (item?.Type === '3' && video) {
+      const internalTime = (currentTime - itemStartTime) / 1000;
+      
+      const speed = Number.isFinite(playbackSpeed) && playbackSpeed > 0 ? playbackSpeed : 1;
+      if (video.playbackRate !== speed) {
+        video.playbackRate = speed;
+      }
+
+      if (isPlaying && video.paused) {
+        video.play().catch(() => {});
+      } else if (!isPlaying && !video.paused) {
+        video.pause();
+      }
+
+      if (Math.abs(video.currentTime - internalTime) > 0.3) {
+        video.currentTime = Math.max(0, internalTime);
+      }
+    }
+  }, [currentTime, itemStartTime, item?.Type, isPlaying, playbackSpeed]);
+
   if (!item) {
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -645,14 +777,14 @@ function RegionContent({ item, materialIndex }: { item: VsnItem | null; material
     if (material?.assetUrl) {
       return (
         <video
+          ref={videoRef}
           className="h-full w-full"
           style={{ objectFit: item.ReserveAS === '1' ? 'contain' : 'fill' }}
           src={material.assetUrl}
           poster={material.coverUrl}
           muted
           playsInline
-          loop
-          autoPlay
+          loop={item.Loop === '1'}
         />
       );
     }

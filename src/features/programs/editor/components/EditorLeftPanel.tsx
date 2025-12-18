@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { FilePlus2, Image as ImageIcon, Layers, Plus, Trash2, Type as TypeIcon, Video as VideoIcon } from 'lucide-react';
+import { Clock, FilePlus2, Image as ImageIcon, Layers, Plus, Trash2, Type as TypeIcon, Video as VideoIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -211,10 +211,22 @@ export function EditorLeftPanel({
 
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{m.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {m.kind}
-                      {m.width && m.height ? ` · ${m.width}×${m.height}` : ''}
-                    </p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">
+                        {m.kind}
+                      </span>
+                      {m.width && m.height && (
+                        <span className="text-[9px] text-muted-foreground/60">
+                          {m.width}×{m.height}
+                        </span>
+                      )}
+                      {m.kind === 'video' && m.durationMs && (
+                        <span className="flex items-center gap-1 text-[9px] text-primary font-bold ml-auto bg-primary/10 px-1 rounded">
+                          <Clock className="h-2 w-2" />
+                          {formatDurationSimple(m.durationMs)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </button>
               ))
@@ -224,6 +236,13 @@ export function EditorLeftPanel({
       </ScrollArea>
     </div>
   );
+}
+
+function formatDurationSimple(ms: number) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 function FilterPill({

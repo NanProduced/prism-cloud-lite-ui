@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useBlocker } from 'react-router';
-import { ArrowLeft, ChevronDown, Code2, Copy, ListChecks, Play, Save, Send, SlidersHorizontal, Trash2, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Code2, Copy, Layers, ListChecks, Play, Redo2, Save, Send, SlidersHorizontal, Trash2, TriangleAlert, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 import { mockMediaLibraryNodes } from '@/lib/mock/media-library';
 import { mockDevices } from '@/lib/mock/devices';
 import { listProgramDeployments, type ProgramDeploymentRecord } from '@/features/programs/storage/deploymentsDb';
@@ -34,7 +37,7 @@ import type { EditorMaterial, EditorSelection } from '@/features/programs/editor
 import { EditorLeftPanel } from '@/features/programs/editor/components/EditorLeftPanel';
 import { InspectorPanel } from '@/features/programs/editor/components/InspectorPanel';
 import { ProblemsPanel } from '@/features/programs/editor/components/ProblemsPanel';
-import { RegionTimeline } from '@/features/programs/editor/components/RegionTimeline';
+import { AdvancedTimeline } from '@/features/programs/editor/components/AdvancedTimeline';
 import { StagePreview } from '@/features/programs/editor/components/StagePreview';
 import { ProgramPreviewDialog } from '@/features/programs/editor/components/ProgramPreviewDialog';
 import { VsnJsonPanel } from '@/features/programs/editor/components/VsnJsonPanel';
@@ -63,6 +66,7 @@ export default function ProgramEditorPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { programId } = useParams<{ programId: string }>();
+  const isMobile = useIsMobile();
 
   type DraftPromptIntent =
     | { type: 'navigate' }
@@ -72,12 +76,56 @@ export default function ProgramEditorPage() {
   const [baseVersion, setBaseVersion] = useState<number | null>(null);
   const [draft, setDraft] = useState<ProgramDraftRecord | null>(null);
   const [vsn, setVsn] = useState<VsnDocument | null>(null);
+  const [past, setPast] = useState<VsnDocument[]>([]);
+  const [future, setFuture] = useState<VsnDocument[]>([]);
   const [dirty, setDirty] = useState(false);
   const vsnRevisionRef = useRef(0);
   const autosaveTimerRef = useRef<number | null>(null);
   const [autosavePending, setAutosavePending] = useState(false);
   const [selection, setSelection] = useState<EditorSelection>({ pageIndex: 0, regionIndex: null, itemIndex: null });
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [rightTab, setRightTab] = useState<'inspector' | 'problems' | 'json'>('inspector');
+
+  const pages = useMemo(() => getPages(vsn), [vsn]);
+  const regions = useMemo(() => getRegions(vsn, selection.pageIndex), [vsn, selection.pageIndex]);
+  const items = useMemo(
+    () =>
+      selection.regionIndex == null
+        ? []
+        : getItems(vsn, selection.pageIndex, selection.regionIndex),
+    [selection.pageIndex, selection.regionIndex, vsn],
+  );
+
+  const maxPageDurationMs = useMemo(() => {
+    let max = 5000;
+    regions.forEach((r) => {
+      const total = r.Items.Item.reduce((sum, item) => sum + (Number(item.Duration) || 0), 0);
+      if (total > max) max = total;
+    });
+    return max;
+  }, [regions]);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+    let lastTime = performance.now();
+    let frame: number;
+    const tick = () => {
+      const now = performance.now();
+      const delta = (now - lastTime) * playbackSpeed;
+      lastTime = now;
+      setCurrentTime((prev) => {
+        const next = prev + delta;
+        return next > maxPageDurationMs ? 0 : next;
+      });
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [isPlaying, maxPageDurationMs]);
+
+  const togglePlayback = useCallback(() => setIsPlaying((p) => !p), []);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [deployments, setDeployments] = useState<ProgramDeploymentRecord[]>([]);
@@ -202,6 +250,8 @@ export default function ProgramEditorPage() {
     const d = ensureDraft(programId, baseVersion);
     setDraft(d);
     setVsn(d?.vsn ? normalizeVsnForEditor(d.vsn) : null);
+    setPast([]);
+    setFuture([]);
     setDirty(false);
     setSessionHasChanges(false);
     setAutosavePending(false);
@@ -250,10 +300,6 @@ export default function ProgramEditorPage() {
   const materials = useMemo(() => buildEditorMaterials(mockMediaLibraryNodes), []);
   const materialIndex = useMemo(() => Object.fromEntries(materials.map((m) => [m.materialId, m])) as Record<string, EditorMaterial>, [materials]);
 
-  const pages = useMemo(() => getPages(vsn), [vsn]);
-  const regions = useMemo(() => getRegions(vsn, selection.pageIndex), [vsn, selection.pageIndex]);
-  const items = useMemo(() => (selection.regionIndex == null ? [] : getItems(vsn, selection.pageIndex, selection.regionIndex)), [selection.pageIndex, selection.regionIndex, vsn]);
-
   const canvasWidth = useMemo(() => {
     const w = Number.parseInt(vsn?.Programs?.Program?.Information?.Width ?? '', 10);
     return Number.isFinite(w) && w > 0 ? w : program?.width ?? 1920;
@@ -274,6 +320,72 @@ export default function ProgramEditorPage() {
   );
   const errorCount = useMemo(() => devValidation.issues.filter((i) => i.severity === 'error').length, [devValidation.issues]);
   const warningCount = useMemo(() => devValidation.issues.filter((i) => i.severity === 'warning').length, [devValidation.issues]);
+
+  const applyVsn = (next: VsnDocument, options?: { noHistory?: boolean }) => {
+    if (vsn && !options?.noHistory) {
+      setPast((prev) => [...prev.slice(-49), vsn]);
+      setFuture([]);
+    }
+    vsnRevisionRef.current += 1;
+    setVsn(next);
+    setDirty(true);
+    setSessionHasChanges(true);
+  };
+
+  const undo = useCallback(() => {
+    if (past.length === 0 || !vsn) return;
+    const previous = past[past.length - 1];
+    setPast((prev) => prev.slice(0, -1));
+    setFuture((prev) => [vsn, ...prev]);
+    vsnRevisionRef.current += 1;
+    setVsn(previous);
+    setDirty(true);
+    setSessionHasChanges(true);
+  }, [past, vsn]);
+
+  const redo = useCallback(() => {
+    if (future.length === 0 || !vsn) return;
+    const next = future[0];
+    setFuture((prev) => prev.slice(1));
+    setPast((prev) => [...prev, vsn]);
+    vsnRevisionRef.current += 1;
+    setVsn(next);
+    setDirty(true);
+    setSessionHasChanges(true);
+  }, [future, vsn]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+      if (e.code === 'Space' && !isInput) {
+        e.preventDefault();
+        togglePlayback();
+      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !isInput) {
+        if (selection.regionIndex != null && selection.itemIndex != null && vsn) {
+          const next = deleteItem(vsn, selection.pageIndex, selection.regionIndex, selection.itemIndex);
+          if (next !== vsn) {
+            applyVsn(next);
+            setSelection((prev) => ({ ...prev, itemIndex: null }));
+          }
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          redo();
+        } else {
+          e.preventDefault();
+          undo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
 
   if (!programId) {
     return (
@@ -318,13 +430,6 @@ export default function ProgramEditorPage() {
       const message = error instanceof Error ? error.message : 'Publish failed.';
       toast.error(message);
     }
-  };
-
-  const applyVsn = (next: VsnDocument) => {
-    vsnRevisionRef.current += 1;
-    setVsn(next);
-    setDirty(true);
-    setSessionHasChanges(true);
   };
 
   const createRegionForInsert = (input: { name?: string; x: number; y: number; width: number; height: number }) => {
@@ -462,6 +567,196 @@ export default function ProgramEditorPage() {
     if (updated) setProgram(updated);
   };
 
+  const leftPanelContent = (
+    <EditorLeftPanel
+      pages={pages}
+      regions={regions}
+      materials={materials}
+      selection={selection}
+      onSelectPage={(pageIndex) => setSelection({ pageIndex, regionIndex: null, itemIndex: null })}
+      onSelectRegion={(regionIndex) => setSelection((prev) => ({ ...prev, regionIndex, itemIndex: null }))}
+      onAddPage={() => {
+        if (!vsn) return;
+        const res = addPage(vsn, { width: canvasWidth, height: canvasHeight });
+        applyVsn(res.doc);
+        setSelection({ pageIndex: res.pageIndex, regionIndex: null, itemIndex: null });
+      }}
+      onDeletePage={() => {
+        if (!vsn) return;
+        const next = deletePage(vsn, selection.pageIndex);
+        if (next === vsn) return;
+        applyVsn(next);
+        setSelection((prev) => ({
+          ...prev,
+          pageIndex: clampInt(prev.pageIndex, 0, getPages(next).length - 1),
+          regionIndex: null,
+          itemIndex: null,
+        }));
+      }}
+      onAddRegion={() => {
+        if (!vsn) return;
+        const res = addRegion(vsn, selection.pageIndex, {});
+        applyVsn(res.doc);
+        setSelection((prev) => ({ ...prev, regionIndex: res.regionIndex, itemIndex: null }));
+      }}
+      onDeleteRegion={() => {
+        if (!vsn) return;
+        if (selection.regionIndex == null) return;
+        const next = deleteRegion(vsn, selection.pageIndex, selection.regionIndex);
+        if (next === vsn) return;
+        applyVsn(next);
+        setSelection((prev) => ({ ...prev, regionIndex: null, itemIndex: null }));
+      }}
+      onAddTextItem={() => {
+        if (!vsn) return;
+        let doc = vsn;
+        let regionIndex = selection.regionIndex;
+        if (regionIndex == null) {
+          const width = Math.round(canvasWidth * 0.6);
+          const height = Math.round(canvasHeight * 0.2);
+          const x = Math.round((canvasWidth - width) / 2);
+          const y = Math.round(canvasHeight * 0.1);
+          const res = createRegionForInsert({ name: 'Text Window', x, y, width, height });
+          if (!res) return;
+          doc = res.doc;
+          regionIndex = res.regionIndex;
+        }
+
+        const targetRegion = getRegions(doc, selection.pageIndex)[regionIndex] ?? null;
+        const targetMode = getRegionMode(targetRegion);
+        if (targetRegion) {
+          const desiredType = targetMode === 'ticker' ? '5' : '4';
+          if (!canRegionAcceptItemType(targetMode, desiredType)) {
+            toast.error('This window type does not support text items.');
+            return;
+          }
+        }
+
+        const res = addItem(
+          doc,
+          selection.pageIndex,
+          regionIndex,
+          targetMode === 'ticker' ? createScrollTextItem() : createTextItem(),
+        );
+        applyVsn(res.doc);
+        setSelection((prev) => ({ ...prev, regionIndex, itemIndex: res.itemIndex }));
+      }}
+      onAddMaterialItem={(material) => {
+        if (!vsn) return;
+        let doc = vsn;
+        let regionIndex = selection.regionIndex;
+        if (regionIndex == null) {
+          const maxW = Math.round(canvasWidth * 0.6);
+          const maxH = Math.round(canvasHeight * 0.6);
+          const srcW = material.width ?? maxW;
+          const srcH = material.height ?? maxH;
+          const scale = Math.min(1, maxW / srcW, maxH / srcH);
+          const width = Math.max(80, Math.round(srcW * scale));
+          const height = Math.max(60, Math.round(srcH * scale));
+          const x = Math.round((canvasWidth - width) / 2);
+          const y = Math.round((canvasHeight - height) / 2);
+          const res = createRegionForInsert({ name: material.name, x, y, width, height });
+          if (!res) return;
+          doc = res.doc;
+          regionIndex = res.regionIndex;
+        }
+
+        const source = (material.source ?? null) as MediaAssetNode | null;
+        if (!source) {
+          toast.error('Material missing source asset.');
+          return;
+        }
+        const item = createItemFromMedia(source, { materialId: material.materialId });
+
+        const targetRegion = getRegions(doc, selection.pageIndex)[regionIndex] ?? null;
+        const targetMode = getRegionMode(targetRegion);
+        if (targetRegion && !canRegionAcceptItemType(targetMode, item.Type)) {
+          toast.error('This window type does not support this item type.');
+          return;
+        }
+
+        const res = addItem(doc, selection.pageIndex, regionIndex, item);
+        applyVsn(res.doc);
+        setSelection((prev) => ({ ...prev, regionIndex, itemIndex: res.itemIndex }));
+      }}
+    />
+  );
+
+  const rightPanelContent = (
+    <div className="flex min-h-0 flex-1 flex-col">
+      {devtoolsEnabled && (
+        <>
+          <div className="flex items-center gap-2">
+            <RightTabButton
+              active={rightTab === 'inspector'}
+              onClick={() => setRightTab('inspector')}
+              icon={<SlidersHorizontal className="h-4 w-4" />}
+            >
+              Inspector
+            </RightTabButton>
+            <RightTabButton active={rightTab === 'problems'} onClick={() => setRightTab('problems')} icon={<ListChecks className="h-4 w-4" />}>
+              Problems
+            </RightTabButton>
+            <RightTabButton active={rightTab === 'json'} onClick={() => setRightTab('json')} icon={<Code2 className="h-4 w-4" />}>
+              JSON
+            </RightTabButton>
+          </div>
+          <Separator className="my-3" />
+        </>
+      )}
+
+      <div className="min-h-0 flex-1">
+        {!devtoolsEnabled || rightTab === 'inspector' ? (
+          <InspectorPanel
+            doc={vsn}
+            selection={selection}
+            programName={program.name}
+            programWidth={canvasWidth}
+            programHeight={canvasHeight}
+            targetDeviceId={program.targetDeviceId ?? null}
+            devices={mockDevices}
+            materialIndex={materialIndex}
+            showDevFields={devtoolsEnabled}
+            onRenameProgram={handleRenameProgram}
+            onSetProgramResolution={handleSetProgramResolution}
+            onPatchPage={(pageIndex, patch) => {
+              if (!vsn) return;
+              applyVsn(patchPage(vsn, pageIndex, patch));
+            }}
+            onPatchRegion={(pageIndex, regionIndex, patch) => {
+              if (!vsn) return;
+              applyVsn(patchRegion(vsn, pageIndex, regionIndex, patch));
+            }}
+            onPatchRegionRect={(pageIndex, regionIndex, patch) => {
+              if (!vsn) return;
+              applyVsn(patchRegionRect(vsn, pageIndex, regionIndex, patch));
+            }}
+            onPatchItem={(pageIndex, regionIndex, itemIndex, patch) => {
+              if (!vsn) return;
+              applyVsn(patchItem(vsn, pageIndex, regionIndex, itemIndex, patch));
+            }}
+          />
+        ) : rightTab === 'problems' ? (
+          <ProblemsPanel
+            issues={devValidation.issues}
+            onJumpToSelection={(partial) => {
+              if (typeof partial.pageIndex === 'number') {
+                setSelection({
+                  pageIndex: partial.pageIndex,
+                  regionIndex: partial.regionIndex ?? null,
+                  itemIndex: partial.itemIndex ?? null,
+                });
+                setRightTab('inspector');
+              }
+            }}
+          />
+        ) : (
+          <VsnJsonPanel doc={vsn} />
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-background">
       <div className="flex flex-col gap-3 border-b bg-background/80 px-4 py-4 backdrop-blur lg:flex-row lg:items-center lg:justify-between">
@@ -532,6 +827,29 @@ export default function ProgramEditorPage() {
             </select>
           </div>
 
+          <div className="mr-2 flex items-center gap-1 border-r pr-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={undo}
+              disabled={past.length === 0}
+              title="Undo (Ctrl+Z)"
+            >
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={redo}
+              disabled={future.length === 0}
+              title="Redo (Ctrl+Y / Ctrl+Shift+Z)"
+            >
+              <Redo2 className="h-4 w-4" />
+            </Button>
+          </div>
+
           <Button
             className="gap-2"
             variant="outline"
@@ -552,117 +870,18 @@ export default function ProgramEditorPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden p-4">
-        <div className="grid h-full gap-4 lg:grid-cols-[320px_minmax(0,1fr)_360px]">
-          <div className="min-h-0 rounded-xl border bg-card p-4">
-            <EditorLeftPanel
-              pages={pages}
-              regions={regions}
-              materials={materials}
-              selection={selection}
-              onSelectPage={(pageIndex) => setSelection({ pageIndex, regionIndex: null, itemIndex: null })}
-              onSelectRegion={(regionIndex) => setSelection((prev) => ({ ...prev, regionIndex, itemIndex: null }))}
-              onAddPage={() => {
-                if (!vsn) return;
-                const res = addPage(vsn, { width: canvasWidth, height: canvasHeight });
-                applyVsn(res.doc);
-                setSelection({ pageIndex: res.pageIndex, regionIndex: null, itemIndex: null });
-              }}
-              onDeletePage={() => {
-                if (!vsn) return;
-                const next = deletePage(vsn, selection.pageIndex);
-                if (next === vsn) return;
-                applyVsn(next);
-                setSelection((prev) => ({ ...prev, pageIndex: clampInt(prev.pageIndex, 0, getPages(next).length - 1), regionIndex: null, itemIndex: null }));
-              }}
-              onAddRegion={() => {
-                if (!vsn) return;
-                const res = addRegion(vsn, selection.pageIndex, {});
-                applyVsn(res.doc);
-                setSelection((prev) => ({ ...prev, regionIndex: res.regionIndex, itemIndex: null }));
-              }}
-              onDeleteRegion={() => {
-                if (!vsn) return;
-                if (selection.regionIndex == null) return;
-                const next = deleteRegion(vsn, selection.pageIndex, selection.regionIndex);
-                if (next === vsn) return;
-                applyVsn(next);
-                setSelection((prev) => ({ ...prev, regionIndex: null, itemIndex: null }));
-              }}
-              onAddTextItem={() => {
-                if (!vsn) return;
-                let doc = vsn;
-                let regionIndex = selection.regionIndex;
-                if (regionIndex == null) {
-                  const width = Math.round(canvasWidth * 0.6);
-                  const height = Math.round(canvasHeight * 0.2);
-                  const x = Math.round((canvasWidth - width) / 2);
-                  const y = Math.round(canvasHeight * 0.1);
-                  const res = createRegionForInsert({ name: 'Text Window', x, y, width, height });
-                  if (!res) return;
-                  doc = res.doc;
-                  regionIndex = res.regionIndex;
-                }
-
-                const targetRegion = getRegions(doc, selection.pageIndex)[regionIndex] ?? null;
-                const targetMode = getRegionMode(targetRegion);
-                if (targetRegion) {
-                  const desiredType = targetMode === 'ticker' ? '5' : '4';
-                  if (!canRegionAcceptItemType(targetMode, desiredType)) {
-                    toast.error('This window type does not support text items.');
-                    return;
-                  }
-                }
-
-                const res = addItem(
-                  doc,
-                  selection.pageIndex,
-                  regionIndex,
-                  targetMode === 'ticker' ? createScrollTextItem() : createTextItem(),
-                );
-                applyVsn(res.doc);
-                setSelection((prev) => ({ ...prev, regionIndex, itemIndex: res.itemIndex }));
-              }}
-              onAddMaterialItem={(material) => {
-                if (!vsn) return;
-                let doc = vsn;
-                let regionIndex = selection.regionIndex;
-                if (regionIndex == null) {
-                  const maxW = Math.round(canvasWidth * 0.6);
-                  const maxH = Math.round(canvasHeight * 0.6);
-                  const srcW = material.width ?? maxW;
-                  const srcH = material.height ?? maxH;
-                  const scale = Math.min(1, maxW / srcW, maxH / srcH);
-                  const width = Math.max(80, Math.round(srcW * scale));
-                  const height = Math.max(60, Math.round(srcH * scale));
-                  const x = Math.round((canvasWidth - width) / 2);
-                  const y = Math.round((canvasHeight - height) / 2);
-                  const res = createRegionForInsert({ name: material.name, x, y, width, height });
-                  if (!res) return;
-                  doc = res.doc;
-                  regionIndex = res.regionIndex;
-                }
-
-                const source = (material.source ?? null) as MediaAssetNode | null;
-                if (!source) {
-                  toast.error('Material missing source asset.');
-                  return;
-                }
-                const item = createItemFromMedia(source, { materialId: material.materialId });
-
-                const targetRegion = getRegions(doc, selection.pageIndex)[regionIndex] ?? null;
-                const targetMode = getRegionMode(targetRegion);
-                if (targetRegion && !canRegionAcceptItemType(targetMode, item.Type)) {
-                  toast.error('This window type does not support this item type.');
-                  return;
-                }
-
-                const res = addItem(doc, selection.pageIndex, regionIndex, item);
-                applyVsn(res.doc);
-                setSelection((prev) => ({ ...prev, regionIndex, itemIndex: res.itemIndex }));
-              }}
-            />
-          </div>
+      <div className="flex-1 overflow-hidden p-4 pb-24 lg:pb-4">
+        <div
+          className={cn(
+            'grid h-full gap-4',
+            isMobile ? 'grid-cols-1' : 'lg:grid-cols-[320px_minmax(0,1fr)_360px]',
+          )}
+        >
+          {!isMobile && (
+            <div className="min-h-0 rounded-xl border bg-card p-4">
+              {leftPanelContent}
+            </div>
+          )}
 
           <div className="min-h-0 grid-cols-1 gap-4 lg:grid lg:grid-rows-[minmax(0,1fr)_260px]">
             <div className="min-h-0 rounded-xl border bg-card p-4">
@@ -672,6 +891,9 @@ export default function ProgramEditorPage() {
                 programHeight={canvasHeight}
                 selection={selection}
                 materialIndex={materialIndex}
+                currentTime={currentTime}
+                isPlaying={isPlaying}
+                playbackSpeed={playbackSpeed}
                 onSelectRegion={(regionIndex) => setSelection((prev) => ({ ...prev, regionIndex, itemIndex: null }))}
                 onPatchRegionRect={(pageIndex, regionIndex, patch) => {
                   if (!vsn) return;
@@ -801,107 +1023,86 @@ export default function ProgramEditorPage() {
               />
             </div>
 
-            <div className="min-h-0 rounded-xl border bg-card p-4">
-              <RegionTimeline
-                items={items}
-                selectedItemIndex={selection.itemIndex}
+            <div className="min-h-0 overflow-hidden rounded-xl border bg-zinc-950">
+              <AdvancedTimeline
+                regions={regions}
+                selection={selection}
                 materialIndex={materialIndex}
-                showDevFields={devtoolsEnabled}
-                onSelectItem={(index) => setSelection((prev) => ({ ...prev, itemIndex: index }))}
-                onMoveItem={(from, to) => {
+                currentTime={currentTime}
+                playbackSpeed={playbackSpeed}
+                onCurrentTimeChange={setCurrentTime}
+                onPlaybackSpeedChange={setPlaybackSpeed}
+                onSelectItem={(rIdx, iIdx) =>
+                  setSelection((prev) => ({ ...prev, regionIndex: rIdx, itemIndex: iIdx }))
+                }
+                onSelectRegion={(rIdx) => setSelection((prev) => ({ ...prev, regionIndex: rIdx, itemIndex: null }))}
+                onPatchItem={(rIdx, iIdx, patch) => {
                   if (!vsn) return;
-                  if (selection.regionIndex == null) return;
-                  const next = moveItem(vsn, selection.pageIndex, selection.regionIndex, from, to);
-                  if (next === vsn) return;
-                  applyVsn(next);
-                  setSelection((prev) => ({ ...prev, itemIndex: clampInt(prev.itemIndex ?? 0, 0, getItems(next, prev.pageIndex, prev.regionIndex ?? 0).length - 1) }));
+                  applyVsn(patchItem(vsn, selection.pageIndex, rIdx, iIdx, patch));
                 }}
-                onDeleteItem={(index) => {
+                onDeleteItem={(rIdx, iIdx) => {
                   if (!vsn) return;
-                  if (selection.regionIndex == null) return;
-                  const next = deleteItem(vsn, selection.pageIndex, selection.regionIndex, index);
+                  const next = deleteItem(vsn, selection.pageIndex, rIdx, iIdx);
                   if (next === vsn) return;
                   applyVsn(next);
                   setSelection((prev) => ({ ...prev, itemIndex: null }));
+                }}
+                onMoveItem={(rIdx, from, to) => {
+                  if (!vsn) return;
+                  const next = moveItem(vsn, selection.pageIndex, rIdx, from, to);
+                  if (next === vsn) return;
+                  applyVsn(next);
+                  setSelection((prev) => ({ ...prev, regionIndex: rIdx, itemIndex: to }));
                 }}
               />
             </div>
           </div>
 
-          <div className="flex min-h-0 flex-col rounded-xl border bg-card p-4">
-            {devtoolsEnabled && (
-              <>
-                <div className="flex items-center gap-2">
-                  <RightTabButton
-                    active={rightTab === 'inspector'}
-                    onClick={() => setRightTab('inspector')}
-                    icon={<SlidersHorizontal className="h-4 w-4" />}
-                  >
-                    Inspector
-                  </RightTabButton>
-                  <RightTabButton active={rightTab === 'problems'} onClick={() => setRightTab('problems')} icon={<ListChecks className="h-4 w-4" />}>
-                    Problems
-                  </RightTabButton>
-                  <RightTabButton active={rightTab === 'json'} onClick={() => setRightTab('json')} icon={<Code2 className="h-4 w-4" />}>
-                    JSON
-                  </RightTabButton>
-                </div>
-                <Separator className="my-3" />
-              </>
-            )}
-
-            <div className="min-h-0 flex-1">
-              {!devtoolsEnabled || rightTab === 'inspector' ? (
-                <InspectorPanel
-                  doc={vsn}
-                  selection={selection}
-                  programName={program.name}
-                  programWidth={canvasWidth}
-                  programHeight={canvasHeight}
-                  targetDeviceId={program.targetDeviceId ?? null}
-                  devices={mockDevices}
-                  materialIndex={materialIndex}
-                  showDevFields={devtoolsEnabled}
-                  onRenameProgram={handleRenameProgram}
-                  onSetProgramResolution={handleSetProgramResolution}
-                  onPatchPage={(pageIndex, patch) => {
-                    if (!vsn) return;
-                    applyVsn(patchPage(vsn, pageIndex, patch));
-                  }}
-                  onPatchRegion={(pageIndex, regionIndex, patch) => {
-                    if (!vsn) return;
-                    applyVsn(patchRegion(vsn, pageIndex, regionIndex, patch));
-                  }}
-                  onPatchRegionRect={(pageIndex, regionIndex, patch) => {
-                    if (!vsn) return;
-                    applyVsn(patchRegionRect(vsn, pageIndex, regionIndex, patch));
-                  }}
-                  onPatchItem={(pageIndex, regionIndex, itemIndex, patch) => {
-                    if (!vsn) return;
-                    applyVsn(patchItem(vsn, pageIndex, regionIndex, itemIndex, patch));
-                  }}
-                />
-              ) : rightTab === 'problems' ? (
-                <ProblemsPanel
-                  issues={devValidation.issues}
-                  onJumpToSelection={(partial) => {
-                    if (typeof partial.pageIndex === 'number') {
-                      setSelection({
-                        pageIndex: partial.pageIndex,
-                        regionIndex: partial.regionIndex ?? null,
-                        itemIndex: partial.itemIndex ?? null,
-                      });
-                      setRightTab('inspector');
-                    }
-                  }}
-                />
-              ) : (
-                <VsnJsonPanel doc={vsn} />
-              )}
+          {!isMobile && (
+            <div className="flex min-h-0 flex-col rounded-xl border bg-card p-4">
+              {rightPanelContent}
             </div>
-          </div>
+          )}
         </div>
       </div>
+
+      {isMobile && (
+        <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full border bg-background/95 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
+                <Layers className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[min(320px,85vw)] p-0">
+              <div className="flex h-full flex-col p-4">
+                <SheetHeader className="mb-4 text-left">
+                  <SheetTitle>Structure & Media</SheetTitle>
+                </SheetHeader>
+                <div className="min-h-0 flex-1">{leftPanelContent}</div>
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          <Separator orientation="vertical" className="h-8" />
+
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
+                <SlidersHorizontal className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[min(360px,90vw)] p-0">
+              <div className="flex h-full flex-col p-4">
+                <SheetHeader className="mb-4 text-left">
+                  <SheetTitle>Properties</SheetTitle>
+                </SheetHeader>
+                <div className="min-h-0 flex-1">{rightPanelContent}</div>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      )}
 
       <ProgramPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} doc={vsn} materialIndex={materialIndex} startPageIndex={selection.pageIndex} />
       <ProgramPublishDialog

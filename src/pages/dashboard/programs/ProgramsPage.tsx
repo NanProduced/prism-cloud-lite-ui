@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { FilePlus2, LayoutPanelTop, MoreHorizontal, Pencil, Send, Trash2, XCircle } from 'lucide-react';
+import { FilePlus2, LayoutPanelTop, MoreHorizontal, Pencil, Plus, Send, Sparkles, Trash2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatBytes } from '@better-upload/client/helpers';
 
@@ -261,20 +261,42 @@ export default function ProgramsPage() {
               </div>
             )
           ) : filteredPrograms.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 px-6 py-14 text-center">
-              <div className="rounded-full bg-muted p-3">
-                <FilePlus2 className="h-6 w-6 text-muted-foreground" />
+            <div className="flex flex-col items-center justify-center gap-6 px-6 py-20 text-center">
+              <div className="relative">
+                <div className="absolute -inset-4 rounded-full bg-primary/10 blur-2xl" />
+                <div className="relative rounded-full bg-muted p-5 ring-8 ring-background">
+                  <Sparkles className="h-8 w-8 text-primary" />
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium">No programs found</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Create a program to start designing content for your devices.
+              <div className="max-w-[420px] space-y-2">
+                <p className="text-xl font-semibold tracking-tight">Create your first program</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Programs are where you design your content. Combine media and text in a custom canvas, then publish to your devices in minutes.
                 </p>
               </div>
-              <Button className="gap-2" onClick={() => setCreateOpen(true)}>
-                <FilePlus2 className="h-4 w-4" />
-                Create program
-              </Button>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Button size="lg" className="gap-2 px-8 shadow-lg shadow-primary/20" onClick={() => setCreateOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  Create program
+                </Button>
+                <Button size="lg" variant="outline" className="px-8" onClick={() => setSearchParams({ tab: 'templates' })}>
+                  Explore templates
+                </Button>
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Step 1</p>
+                  <p className="mt-1 text-xs font-medium">Design Canvas</p>
+                </div>
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Step 2</p>
+                  <p className="mt-1 text-xs font-medium">Add Media</p>
+                </div>
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Step 3</p>
+                  <p className="mt-1 text-xs font-medium">Publish Live</p>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="divide-y">
