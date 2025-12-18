@@ -1,18 +1,23 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useBlocker } from 'react-router';
 import { ArrowLeft, ChevronDown, Code2, Copy, ListChecks, Play, Save, Send, SlidersHorizontal, Trash2, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { mockMediaLibraryNodes } from '@/lib/mock/media-library';
 import { mockDevices } from '@/lib/mock/devices';
+import { listProgramDeployments, type ProgramDeploymentRecord } from '@/features/programs/storage/deploymentsDb';
+import { ProgramPublishDialog } from '@/features/programs/publishing/ProgramPublishDialog';
+import { getProgramDraftSavePolicy } from '@/features/programs/storage/draftPolicyDb';
 
 import {
   ensureDraft,
+  deleteDraft,
   getProgram,
-  publishDraft,
   renameProgram,
   saveDraft,
   updateProgramCanvas,
@@ -59,14 +64,98 @@ export default function ProgramEditorPage() {
   const location = useLocation();
   const { programId } = useParams<{ programId: string }>();
 
+  type DraftPromptIntent =
+    | { type: 'navigate' }
+    | { type: 'switch'; nextBaseVersion: number | null };
+
   const [program, setProgram] = useState<ProgramRecord | null>(null);
   const [baseVersion, setBaseVersion] = useState<number | null>(null);
   const [draft, setDraft] = useState<ProgramDraftRecord | null>(null);
   const [vsn, setVsn] = useState<VsnDocument | null>(null);
   const [dirty, setDirty] = useState(false);
+  const vsnRevisionRef = useRef(0);
+  const autosaveTimerRef = useRef<number | null>(null);
+  const [autosavePending, setAutosavePending] = useState(false);
   const [selection, setSelection] = useState<EditorSelection>({ pageIndex: 0, regionIndex: null, itemIndex: null });
   const [rightTab, setRightTab] = useState<'inspector' | 'problems' | 'json'>('inspector');
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [deployments, setDeployments] = useState<ProgramDeploymentRecord[]>([]);
+  const [sessionHasChanges, setSessionHasChanges] = useState(false);
+  const [draftPromptOpen, setDraftPromptOpen] = useState(false);
+  const [draftPromptIntent, setDraftPromptIntent] = useState<DraftPromptIntent | null>(null);
+
+  const clearAutosaveTimer = () => {
+    if (autosaveTimerRef.current != null) {
+      window.clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+  };
+
+  const persistWorkingCopy = useCallback((options?: { toast?: boolean }) => {
+    if (!program || !draft || !vsn) return null;
+    const saved = saveDraft(program.id, draft.id, vsn);
+    if (saved) setDraft(saved);
+    setDirty(false);
+    setAutosavePending(false);
+    clearAutosaveTimer();
+    if (options?.toast) toast.success('Saved');
+    return saved;
+  }, [draft, program, vsn]);
+
+  const discardWorkingCopy = useCallback(() => {
+    if (!program || !draft) return;
+    deleteDraft(program.id, draft.id);
+  }, [draft, program]);
+
+  const navigationBlocker = useBlocker(sessionHasChanges);
+
+  const requestBaseVersionChange = (next: number | null) => {
+    if (next === baseVersion) return;
+    if (!sessionHasChanges) {
+      setBaseVersion(next);
+      return;
+    }
+
+    const policy = getProgramDraftSavePolicy();
+    if (policy === 'always') {
+      persistWorkingCopy();
+      setSessionHasChanges(false);
+      setBaseVersion(next);
+      return;
+    }
+    if (policy === 'never') {
+      discardWorkingCopy();
+      setSessionHasChanges(false);
+      setBaseVersion(next);
+      return;
+    }
+
+    setDraftPromptIntent({ type: 'switch', nextBaseVersion: next });
+    setDraftPromptOpen(true);
+  };
+
+  useEffect(() => {
+    if (navigationBlocker.state !== 'blocked') return;
+
+    const policy = getProgramDraftSavePolicy();
+    if (policy === 'always') {
+      persistWorkingCopy();
+      setSessionHasChanges(false);
+      navigationBlocker.proceed?.();
+      return;
+    }
+
+    if (policy === 'never') {
+      discardWorkingCopy();
+      setSessionHasChanges(false);
+      navigationBlocker.proceed?.();
+      return;
+    }
+
+    setDraftPromptIntent({ type: 'navigate' });
+    setDraftPromptOpen(true);
+  }, [discardWorkingCopy, navigationBlocker, persistWorkingCopy]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -85,7 +174,8 @@ export default function ProgramEditorPage() {
     const latest = Math.max(0, ...loaded.versions.map((v) => v.version)) || null;
     const params = new URLSearchParams(location.search);
     const baseParam = (params.get('base') ?? '').trim().toLowerCase();
-    let initialBase = loaded.defaultVersion ?? latest ?? null;
+    const resumeDraft = pickLatestDraft(loaded);
+    let initialBase = resumeDraft?.baseVersion ?? loaded.defaultVersion ?? latest ?? null;
     if (baseParam === 'blank') initialBase = null;
     else if (baseParam) {
       const raw = baseParam.startsWith('v') ? baseParam.slice(1) : baseParam;
@@ -101,6 +191,11 @@ export default function ProgramEditorPage() {
 
   useEffect(() => {
     if (!programId) return;
+    setDeployments(listProgramDeployments(programId));
+  }, [programId]);
+
+  useEffect(() => {
+    if (!programId) return;
     const loaded = getProgram(programId);
     if (!loaded) return;
     setProgram(loaded);
@@ -108,8 +203,43 @@ export default function ProgramEditorPage() {
     setDraft(d);
     setVsn(d?.vsn ? normalizeVsnForEditor(d.vsn) : null);
     setDirty(false);
+    setSessionHasChanges(false);
+    setAutosavePending(false);
+    clearAutosaveTimer();
     setSelection({ pageIndex: 0, regionIndex: null, itemIndex: null });
   }, [baseVersion, programId]);
+
+  useEffect(() => {
+    return () => {
+      clearAutosaveTimer();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!dirty || !program || !draft || !vsn) return;
+    const revision = vsnRevisionRef.current;
+    setAutosavePending(true);
+    clearAutosaveTimer();
+
+    const programIdForSave = program.id;
+    const draftIdForSave = draft.id;
+    const doc = vsn;
+
+    autosaveTimerRef.current = window.setTimeout(() => {
+      if (vsnRevisionRef.current !== revision) return;
+      const saved = saveDraft(programIdForSave, draftIdForSave, doc);
+      if (saved) setDraft(saved);
+      setDirty(false);
+      setAutosavePending(false);
+      autosaveTimerRef.current = null;
+    }, 1200);
+
+    return () => {
+      clearAutosaveTimer();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty, vsn, draft?.id, program?.id]);
 
   const versionOptions = useMemo(() => {
     if (!program) return [];
@@ -174,13 +304,6 @@ export default function ProgramEditorPage() {
     );
   }
 
-  const handleSaveDraft = () => {
-    if (!draft || !vsn) return;
-    saveDraft(program.id, draft.id, vsn);
-    toast.success('Draft saved');
-    setDirty(false);
-  };
-
   const handlePublish = () => {
     if (!draft || !vsn) return;
     const res = validateVsnDocument(vsn, 'publish');
@@ -189,13 +312,8 @@ export default function ProgramEditorPage() {
       return;
     }
     try {
-      if (dirty) saveDraft(program.id, draft.id, vsn);
-      const res = publishDraft(program.id, draft.id);
-      if (!res) throw new Error('Publish failed.');
-      setProgram(res.program);
-      toast.success(`Published v${res.version.version}`);
-      setBaseVersion(res.version.version);
-      setDirty(false);
+      if (dirty) persistWorkingCopy();
+      setPublishOpen(true);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Publish failed.';
       toast.error(message);
@@ -203,8 +321,10 @@ export default function ProgramEditorPage() {
   };
 
   const applyVsn = (next: VsnDocument) => {
+    vsnRevisionRef.current += 1;
     setVsn(next);
     setDirty(true);
+    setSessionHasChanges(true);
   };
 
   const createRegionForInsert = (input: { name?: string; x: number; y: number; width: number; height: number }) => {
@@ -360,8 +480,8 @@ export default function ProgramEditorPage() {
             <h1 className="truncate text-xl font-semibold">{program.name}</h1>
             <p className="text-sm text-muted-foreground">
               {canvasWidth}×{canvasHeight}
-              {draft?.baseVersion ? ` · Draft from v${draft.baseVersion}` : ' · Draft'}
-              {dirty ? ' · Unsaved changes' : ''}
+              {baseVersion != null ? ` · Based on v${baseVersion}` : ' · Blank'}
+              {dirty ? (autosavePending ? ' · Saving…' : ' · Unsaved changes') : ' · Saved'}
             </p>
           </div>
         </div>
@@ -392,14 +512,14 @@ export default function ProgramEditorPage() {
 
           <div className="flex items-center gap-2">
             <label className="text-sm text-muted-foreground" htmlFor="base-version">
-              Base
+              Edit from
             </label>
             <select
               id="base-version"
               value={baseVersion === null ? 'blank' : String(baseVersion)}
               onChange={(e) => {
                 const value = e.target.value === 'blank' ? null : Number(e.target.value);
-                setBaseVersion(value);
+                requestBaseVersionChange(value);
               }}
               className="h-9 rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             >
@@ -412,9 +532,14 @@ export default function ProgramEditorPage() {
             </select>
           </div>
 
-          <Button className="gap-2" variant="outline" onClick={handleSaveDraft} disabled={!draft || !vsn || !dirty}>
+          <Button
+            className="gap-2"
+            variant="outline"
+            onClick={() => persistWorkingCopy({ toast: true })}
+            disabled={!draft || !vsn || (!dirty && !autosavePending)}
+          >
             <Save className="h-4 w-4" />
-            Save draft
+            Save
           </Button>
           <Button className="gap-2" variant="outline" onClick={() => setPreviewOpen(true)} disabled={!vsn}>
             <Play className="h-4 w-4" />
@@ -779,6 +904,89 @@ export default function ProgramEditorPage() {
       </div>
 
       <ProgramPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} doc={vsn} materialIndex={materialIndex} startPageIndex={selection.pageIndex} />
+      <ProgramPublishDialog
+        open={publishOpen}
+        onOpenChange={setPublishOpen}
+        program={program}
+        deployments={deployments}
+        preferredDraftId={draft?.id ?? null}
+        onAfterPublish={({ program: nextProgram, deployments: nextDeployments }) => {
+          setProgram(nextProgram);
+          setDeployments(nextDeployments);
+          if (nextProgram.defaultVersion != null) setBaseVersion(nextProgram.defaultVersion);
+        }}
+      />
+
+      <Dialog
+        open={draftPromptOpen}
+        onOpenChange={(next) => {
+          setDraftPromptOpen(next);
+          if (!next) {
+            if (draftPromptIntent?.type === 'navigate') navigationBlocker.reset?.();
+            setDraftPromptIntent(null);
+          }
+        }}
+      >
+        <DialogContent className="w-[min(100vw-2rem,520px)] max-w-none">
+          <DialogHeader>
+            <DialogTitle>Unpublished changes</DialogTitle>
+            <DialogDescription>
+              You have unpublished changes in the editor. Save a draft snapshot before leaving or switching versions?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+              <p className="font-medium">{program.name}</p>
+              <p className="mt-1 text-muted-foreground">
+                Base {baseVersion == null ? 'Blank' : `v${baseVersion}`} · Draft {draft?.id ? draft.id.slice(0, 8) : '—'}
+              </p>
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setDraftPromptOpen(false);
+                  if (draftPromptIntent?.type === 'navigate') navigationBlocker.reset?.();
+                  setDraftPromptIntent(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  discardWorkingCopy();
+                  setSessionHasChanges(false);
+                  setDraftPromptOpen(false);
+                  const intent = draftPromptIntent;
+                  setDraftPromptIntent(null);
+                  if (intent?.type === 'switch') setBaseVersion(intent.nextBaseVersion);
+                  else if (intent?.type === 'navigate') navigationBlocker.proceed?.();
+                }}
+              >
+                Discard
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  persistWorkingCopy();
+                  setSessionHasChanges(false);
+                  setDraftPromptOpen(false);
+                  const intent = draftPromptIntent;
+                  setDraftPromptIntent(null);
+                  if (intent?.type === 'switch') setBaseVersion(intent.nextBaseVersion);
+                  else if (intent?.type === 'navigate') navigationBlocker.proceed?.();
+                }}
+              >
+                Save draft
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -830,4 +1038,9 @@ function buildEditorMaterials(nodes: unknown[]): EditorMaterial[] {
         durationMs: asset.durationMs,
       } satisfies EditorMaterial;
     });
+}
+
+function pickLatestDraft(program: ProgramRecord): ProgramDraftRecord | null {
+  if (!program.drafts.length) return null;
+  return [...program.drafts].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0] ?? null;
 }

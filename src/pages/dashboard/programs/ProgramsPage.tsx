@@ -1,17 +1,26 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FilePlus2, LayoutPanelTop } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { FilePlus2, LayoutPanelTop, MoreHorizontal, Pencil, Send, Trash2, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { formatBytes } from '@better-upload/client/helpers';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { mockMediaLibraryNodes } from '@/lib/mock/media-library';
 import { cn } from '@/lib/utils';
 
-import { createProgram, createProgramFromSeed, listPrograms, type ProgramRecord } from '@/features/programs/storage/programsDb';
+import { listDeployments, undeployProgramEverywhere, type ProgramDeploymentRecord } from '@/features/programs/storage/deploymentsDb';
+import { createProgram, createProgramFromSeed, deleteProgram, listPrograms, renameProgram, type ProgramRecord } from '@/features/programs/storage/programsDb';
 import { deleteProgramTemplate, listProgramTemplates, renameProgramTemplate, type ProgramTemplateRecord } from '@/features/programs/storage/templatesDb';
+import { buildMaterialSizeIndex, sumMaterialBytesForDoc } from '@/features/programs/vsn/materials';
 import { summarizeVsn } from '@/features/programs/vsn/summary';
+import type { VsnDocument } from '@/features/programs/vsn/types';
+import { ProgramPublishDialog } from '@/features/programs/publishing/ProgramPublishDialog';
 
 type ResolutionPreset = { label: string; width: number; height: number };
 
@@ -28,6 +37,34 @@ export default function ProgramsPage() {
   const [programs, setPrograms] = useState<ProgramRecord[]>(() => listPrograms());
   const [templates, setTemplates] = useState<ProgramTemplateRecord[]>(() => listProgramTemplates());
   const [query, setQuery] = useState('');
+  const [deployments, setDeployments] = useState<ProgramDeploymentRecord[]>(() => listDeployments());
+
+  const materialSizeIndex = useMemo(() => buildMaterialSizeIndex(mockMediaLibraryNodes), []);
+  const deploymentsByProgramId = useMemo(() => {
+    const map = new Map<string, ProgramDeploymentRecord[]>();
+    for (const d of deployments) {
+      const existing = map.get(d.programId);
+      if (existing) existing.push(d);
+      else map.set(d.programId, [d]);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => b.deployedAt.localeCompare(a.deployedAt));
+    }
+    return map;
+  }, [deployments]);
+
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<ProgramRecord | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ProgramRecord | null>(null);
+
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [publishTarget, setPublishTarget] = useState<ProgramRecord | null>(null);
+
+  const [unpublishOpen, setUnpublishOpen] = useState(false);
+  const [unpublishTarget, setUnpublishTarget] = useState<ProgramRecord | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('New Program');
@@ -39,15 +76,63 @@ export default function ProgramsPage() {
 
   const filteredPrograms = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return programs;
-    return programs.filter((p) => p.name.toLowerCase().includes(q));
+    const list = q ? programs.filter((p) => p.name.toLowerCase().includes(q)) : [...programs];
+    return list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [programs, query]);
 
   const filteredTemplates = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return templates;
-    return templates.filter((t) => t.name.toLowerCase().includes(q));
+    const list = q ? templates.filter((t) => t.name.toLowerCase().includes(q)) : [...templates];
+    return list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [query, templates]);
+
+  const openPublishDialog = (program: ProgramRecord) => {
+    setPublishTarget(program);
+    setPublishOpen(true);
+  };
+
+  const requestUnpublish = (program: ProgramRecord) => {
+    setUnpublishTarget(program);
+    setUnpublishOpen(true);
+  };
+
+  const handleConfirmUnpublish = () => {
+    if (!unpublishTarget) return;
+    const deployed = deploymentsByProgramId.get(unpublishTarget.id) ?? [];
+    undeployProgramEverywhere(unpublishTarget.id);
+    setDeployments(listDeployments());
+    toast.success(`Unpublished from ${deployed.length} device${deployed.length === 1 ? '' : 's'}`);
+    setUnpublishOpen(false);
+    setUnpublishTarget(null);
+  };
+
+  const handleProgramRename = () => {
+    if (!renameTarget) return;
+    const next = renameProgram(renameTarget.id, renameValue.trim() || renameTarget.name);
+    if (!next) {
+      toast.error('Rename failed');
+      return;
+    }
+    setPrograms(listPrograms());
+    toast.success('Program renamed');
+    setRenameOpen(false);
+    setRenameTarget(null);
+  };
+
+  const handleProgramDelete = () => {
+    if (!deleteTarget) return;
+    undeployProgramEverywhere(deleteTarget.id);
+    setDeployments(listDeployments());
+    const ok = deleteProgram(deleteTarget.id);
+    if (!ok) {
+      toast.error('Delete failed');
+      return;
+    }
+    setPrograms(listPrograms());
+    toast.success('Program deleted');
+    setDeleteOpen(false);
+    setDeleteTarget(null);
+  };
 
   const handleCreate = () => {
     const name = createName.trim() || 'Untitled Program';
@@ -75,7 +160,7 @@ export default function ProgramsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Programs</h1>
           <p className="text-sm text-muted-foreground">
-            Build signage content with drafts, versions, and publishing.
+            Build signage content and publish versions to devices.
           </p>
         </div>
 
@@ -84,7 +169,7 @@ export default function ProgramsPage() {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search programs…"
+              placeholder={tab === 'templates' ? 'Search templates…' : 'Search programs…'}
             />
           </div>
           <Button className="gap-2" onClick={() => setCreateOpen(true)}>
@@ -193,38 +278,122 @@ export default function ProgramsPage() {
             </div>
           ) : (
             <div className="divide-y">
-              {filteredPrograms.map((program) => (
-                <div key={program.id} className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{program.name}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {program.width}×{program.height} · {program.versions.length} version{program.versions.length === 1 ? '' : 's'}
-                      {program.defaultVersion ? ` · default v${program.defaultVersion}` : ''}
-                      {program.drafts.length ? ` · ${program.drafts.length} draft${program.drafts.length === 1 ? '' : 's'}` : ''}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Updated {formatRelativeTime(program.updatedAt)}
-                    </p>
-                  </div>
+              {filteredPrograms.map((program) => {
+                const unpublishedChanges = hasUnpublishedChanges(program);
+                const previewDoc = pickProgramPreviewDoc(program);
+                const summary = summarizeVsn(previewDoc);
+                const materialBytes = sumMaterialBytesForDoc(previewDoc, materialSizeIndex);
+                const latestPublished = pickLatestPublished(program);
 
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <Button
-                      variant="outline"
-                      className={cn('justify-center')}
-                      onClick={() => navigate(`/dashboard/programs/${program.id}`)}
+                const programDeployments = deploymentsByProgramId.get(program.id) ?? [];
+                const deploymentVersions = getVersionDistribution(programDeployments);
+                const isMixed = deploymentVersions.length > 1;
+                const liveLabel = programDeployments.length === 0
+                  ? 'Not published'
+                  : isMixed
+                    ? `Live (mixed) · ${programDeployments.length}`
+                    : `Live v${deploymentVersions[0]?.version ?? ''} · ${programDeployments.length}`;
+
+                return (
+                  <div
+                    key={program.id}
+                    className="group flex flex-col gap-3 px-6 py-4 transition-colors hover:bg-muted/20 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <Link
+                      to={`/dashboard/programs/${program.id}`}
+                      className="flex min-w-0 items-start gap-4 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                     >
-                      Manage
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className={cn('justify-center')}
-                      onClick={() => navigate(`/dashboard/programs/${program.id}/edit`)}
-                    >
-                      Edit
-                    </Button>
+                      <ProgramListThumbnail doc={previewDoc} />
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate text-sm font-semibold group-hover:underline">{program.name}</p>
+                          {unpublishedChanges ? (
+                            <Badge className="bg-amber-500/10 text-amber-700 hover:bg-amber-500/10">
+                              Unpublished changes
+                            </Badge>
+                          ) : null}
+                          <Badge
+                            className={cn(
+                              programDeployments.length === 0
+                                ? 'bg-muted text-muted-foreground hover:bg-muted'
+                                : isMixed
+                                  ? 'bg-amber-500/10 text-amber-700 hover:bg-amber-500/10'
+                                  : 'bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10',
+                            )}
+                          >
+                            {liveLabel}
+                          </Badge>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {program.width}×{program.height} · {latestPublished ? `v${latestPublished.version}` : 'Draft'} · {formatDurationMs(summary.totalDurationMs)} · {formatBytes(materialBytes)}
+                          {' · '}Updated {formatRelativeTime(program.updatedAt)}
+                        </p>
+                        {programDeployments.length > 0 ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {isMixed ? `Versions: ${formatVersionDistribution(deploymentVersions)}` : 'All devices on the same version'}
+                          </p>
+                        ) : null}
+                      </div>
+                    </Link>
+
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <Button size="sm" className={cn('justify-center gap-2')} onClick={() => navigate(`/dashboard/programs/${program.id}/edit`)}>
+                        <LayoutPanelTop className="h-4 w-4" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => openPublishDialog(program)}
+                      >
+                        <Send className="h-4 w-4" />
+                        Publish
+                      </Button>
+                      {programDeployments.length > 0 ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2 text-destructive hover:text-destructive"
+                          onClick={() => requestUnpublish(program)}
+                        >
+                          <XCircle className="h-4 w-4" />
+                          Unpublish
+                        </Button>
+                      ) : null}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="icon" className="h-9 w-9" aria-label="Program actions">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              setRenameTarget(program);
+                              setRenameValue(program.name);
+                              setRenameOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                            Rename
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onSelect={() => {
+                              setDeleteTarget(program);
+                              setDeleteOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -250,7 +419,14 @@ export default function ProgramsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (createMode === 'template' && !createTemplateId) return;
+              handleCreate();
+            }}
+          >
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="program-name">
                 Name
@@ -320,11 +496,118 @@ export default function ProgramsPage() {
             </div>
 
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button variant="ghost" onClick={() => setCreateOpen(false)}>
+              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleCreate} disabled={createMode === 'template' && !createTemplateId}>
+              <Button type="submit" disabled={createMode === 'template' && !createTemplateId}>
                 Create &amp; open editor
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {publishTarget ? (
+        <ProgramPublishDialog
+          open={publishOpen}
+          onOpenChange={(next) => {
+            setPublishOpen(next);
+            if (!next) setPublishTarget(null);
+          }}
+          program={publishTarget}
+          deployments={deploymentsByProgramId.get(publishTarget.id) ?? []}
+          onAfterPublish={() => {
+            setPrograms(listPrograms());
+            setDeployments(listDeployments());
+          }}
+        />
+      ) : null}
+
+      <Dialog
+        open={unpublishOpen}
+        onOpenChange={(open) => {
+          setUnpublishOpen(open);
+          if (!open) setUnpublishTarget(null);
+        }}
+      >
+        <DialogContent className="w-[min(100vw-2rem,520px)] max-w-none">
+          <DialogHeader>
+            <DialogTitle>Unpublish program</DialogTitle>
+            <DialogDescription>Remove this program from all devices currently running it.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+              <p className="font-medium">{unpublishTarget?.name ?? ''}</p>
+              <p className="mt-1 text-muted-foreground">
+                {unpublishTarget ? (deploymentsByProgramId.get(unpublishTarget.id)?.length ?? 0) : 0} device(s) will stop playing this program.
+              </p>
+            </div>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="ghost" onClick={() => setUnpublishOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleConfirmUnpublish} disabled={!unpublishTarget}>
+                Unpublish
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={renameOpen}
+        onOpenChange={(open) => {
+          setRenameOpen(open);
+          if (!open) setRenameTarget(null);
+        }}
+      >
+        <DialogContent className="w-[min(100vw-2rem,520px)] max-w-none">
+          <DialogHeader>
+            <DialogTitle>Rename program</DialogTitle>
+            <DialogDescription>Update the program name across lists and editors.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} placeholder="Program name" />
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="ghost" onClick={() => setRenameOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleProgramRename} disabled={!renameTarget}>
+                Save
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          setDeleteOpen(open);
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <DialogContent className="w-[min(100vw-2rem,520px)] max-w-none">
+          <DialogHeader>
+            <DialogTitle>Delete program</DialogTitle>
+            <DialogDescription>This removes unpublished changes and version history from your account.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+              <p className="font-medium">{deleteTarget?.name ?? ''}</p>
+              {deleteTarget ? (
+                <p className="mt-1 text-muted-foreground">
+                  {deleteTarget.width}×{deleteTarget.height} · {deleteTarget.versions.length} versions
+                  {hasUnpublishedChanges(deleteTarget) ? ' · Unpublished changes' : ''}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="ghost" onClick={() => setDeleteOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleProgramDelete} disabled={!deleteTarget}>
+                Delete
               </Button>
             </div>
           </div>
@@ -347,6 +630,102 @@ function formatRelativeTime(iso: string): string {
   return `${days}d ago`;
 }
 
+function formatDurationMs(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return '0s';
+  const totalSeconds = Math.round(ms / 1000);
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}m ${seconds}s`;
+}
+
+function getVersionDistribution(deployments: ProgramDeploymentRecord[]): Array<{ version: number; count: number }> {
+  const counts = new Map<number, number>();
+  for (const d of deployments) {
+    counts.set(d.version, (counts.get(d.version) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([version, count]) => ({ version, count }))
+    .sort((a, b) => b.version - a.version);
+}
+
+function formatVersionDistribution(versions: Array<{ version: number; count: number }>): string {
+  const parts = versions.slice(0, 3).map((v) => `v${v.version}×${v.count}`);
+  return versions.length > 3 ? `${parts.join(', ')}, …` : parts.join(', ');
+}
+
+function pickLatestDraft(program: ProgramRecord): ProgramRecord['drafts'][number] | null {
+  if (!program.drafts.length) return null;
+  return [...program.drafts].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0] ?? null;
+}
+
+function pickLatestPublished(program: ProgramRecord): ProgramRecord['versions'][number] | null {
+  if (!program.versions.length) return null;
+  return [...program.versions].sort((a, b) => b.version - a.version)[0] ?? null;
+}
+
+function hasUnpublishedChanges(program: ProgramRecord): boolean {
+  const draft = pickLatestDraft(program);
+  if (!draft) return false;
+  const published = pickLatestPublished(program);
+  if (!published) return true;
+  return draft.updatedAt > published.createdAt;
+}
+
+function pickProgramPreviewDoc(program: ProgramRecord): VsnDocument | null {
+  if (program.defaultVersion) {
+    const def = program.versions.find((v) => v.version === program.defaultVersion)?.vsn ?? null;
+    if (def) return def;
+  }
+  const latest = pickLatestPublished(program)?.vsn ?? null;
+  if (latest) return latest;
+  return pickLatestDraft(program)?.vsn ?? null;
+}
+
+function ProgramListThumbnail({ doc }: { doc: VsnDocument | null }) {
+  const info = doc?.Programs?.Program?.Information;
+  const w = Number.parseInt(info?.Width ?? '0', 10) || 1920;
+  const h = Number.parseInt(info?.Height ?? '0', 10) || 1080;
+
+  const page = doc?.Programs?.Program?.Pages?.Page?.[0] ?? null;
+  const regions = page?.Regions?.Region;
+  const regionArr = Array.isArray(regions) ? regions : [];
+
+  const maxW = 120;
+  const maxH = 72;
+  const scale = Math.min(maxW / Math.max(1, w), maxH / Math.max(1, h));
+  const innerW = Math.max(1, Math.round(w * scale));
+  const innerH = Math.max(1, Math.round(h * scale));
+  const offsetX = Math.round((maxW - innerW) / 2);
+  const offsetY = Math.round((maxH - innerH) / 2);
+
+  return (
+    <div className="relative overflow-hidden rounded-lg border bg-black/70" style={{ width: maxW, height: maxH }}>
+      <div className="absolute" style={{ left: offsetX, top: offsetY, width: innerW, height: innerH }}>
+        {regionArr.map((region, idx) => {
+          const rect = (region as { Rect?: { X?: unknown; Y?: unknown; Width?: unknown; Height?: unknown } }).Rect;
+          const x = Number.parseFloat(String(rect?.X ?? '0')) || 0;
+          const y = Number.parseFloat(String(rect?.Y ?? '0')) || 0;
+          const rw = Number.parseFloat(String(rect?.Width ?? '0')) || 1;
+          const rh = Number.parseFloat(String(rect?.Height ?? '0')) || 1;
+          return (
+            <div
+              key={`r-${idx}`}
+              className="absolute rounded border border-white/40 bg-white/5"
+              style={{
+                left: x * scale,
+                top: y * scale,
+                width: Math.max(2, rw * scale),
+                height: Math.max(2, rh * scale),
+              }}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function TemplateRow({
   template,
   onUse,
@@ -366,6 +745,11 @@ function TemplateRow({
     <div className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold">{template.name}</p>
+        {template.description ? (
+          <p className="mt-1 truncate text-xs text-muted-foreground">
+            {template.description}
+          </p>
+        ) : null}
         <p className="mt-1 text-xs text-muted-foreground">
           {template.width}×{template.height} · {summary.regionCount} window{summary.regionCount === 1 ? '' : 's'} · {summary.pageCount} page
           {summary.pageCount === 1 ? '' : 's'} · Updated {formatRelativeTime(template.updatedAt)}

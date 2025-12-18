@@ -9,6 +9,8 @@ import SettingsAPIKeys, { type APIKey } from '@/registry/new-york/blocks/setting
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/registry/new-york/ui/tabs';
 
 import { DeviceDefaultsCard, type DeviceDefaults } from './DeviceDefaultsCard';
+import { ProgramDraftPolicyCard } from './ProgramDraftPolicyCard';
+import { getProgramDraftSavePolicy, setProgramDraftSavePolicy, type ProgramDraftSavePolicy } from '@/features/programs/storage/draftPolicyDb';
 
 const STORAGE_KEYS = {
   profile: 'prism.settings.profile',
@@ -138,6 +140,7 @@ export default function SettingsPage() {
   ));
 
   const [apiKeys, setApiKeys] = useState<APIKey[]>(() => DEFAULT_API_KEYS);
+  const [programDraftPolicy, setProgramDraftPolicyState] = useState<ProgramDraftSavePolicy>(() => getProgramDraftSavePolicy());
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6">
@@ -179,14 +182,25 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent className="mt-0" forceMount value="preferences">
-          <SettingsPreferences
-            preferences={preferences}
-            onSave={async (next) => {
-              setPreferences(next);
-              safeWriteJson(STORAGE_KEYS.preferences, next);
-              toast.success('Preferences saved');
-            }}
-          />
+          <div className="space-y-6">
+            <SettingsPreferences
+              preferences={preferences}
+              onSave={async (next) => {
+                setPreferences(next);
+                safeWriteJson(STORAGE_KEYS.preferences, next);
+                toast.success('Preferences saved');
+              }}
+            />
+
+            <ProgramDraftPolicyCard
+              value={programDraftPolicy}
+              onChange={(next) => {
+                setProgramDraftSavePolicy(next);
+                setProgramDraftPolicyState(next);
+                toast.success('Draft save rule updated');
+              }}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent className="mt-0" forceMount value="notifications">
