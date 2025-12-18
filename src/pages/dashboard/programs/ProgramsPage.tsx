@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { FilePlus2, LayoutPanelTop, MoreHorizontal, Pencil, Plus, Send, Sparkles, Trash2, XCircle } from 'lucide-react';
+import { Copy, FilePlus2, History, LayoutPanelTop, MoreHorizontal, Pencil, Plus, Send, Sparkles, Trash2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatBytes } from '@better-upload/client/helpers';
 
@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { mockMediaLibraryNodes } from '@/lib/mock/media-library';
@@ -16,7 +16,8 @@ import { cn } from '@/lib/utils';
 
 import { listDeployments, undeployProgramEverywhere, type ProgramDeploymentRecord } from '@/features/programs/storage/deploymentsDb';
 import { createProgram, createProgramFromSeed, deleteProgram, listPrograms, renameProgram, type ProgramRecord } from '@/features/programs/storage/programsDb';
-import { deleteProgramTemplate, listProgramTemplates, renameProgramTemplate, type ProgramTemplateRecord } from '@/features/programs/storage/templatesDb';
+import { addProgramAuditLog } from '@/features/programs/storage/auditLogsDb';
+import { createProgramTemplate, deleteProgramTemplate, listProgramTemplates, renameProgramTemplate, type ProgramTemplateRecord } from '@/features/programs/storage/templatesDb';
 import { buildMaterialSizeIndex, sumMaterialBytesForDoc } from '@/features/programs/vsn/materials';
 import { summarizeVsn } from '@/features/programs/vsn/summary';
 import type { VsnDocument } from '@/features/programs/vsn/types';
@@ -59,6 +60,11 @@ export default function ProgramsPage() {
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ProgramRecord | null>(null);
+
+  const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
+  const [saveAsTemplateTarget, setSaveAsTemplateTarget] = useState<ProgramRecord | null>(null);
+  const [templateName, setTemplateName] = useState('');
+  const [templateDesc, setTemplateDesc] = useState('');
 
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishTarget, setPublishTarget] = useState<ProgramRecord | null>(null);
@@ -134,6 +140,24 @@ export default function ProgramsPage() {
     setDeleteTarget(null);
   };
 
+  const handleSaveAsTemplate = () => {
+    if (!saveAsTemplateTarget) return;
+    const vsn = pickProgramPreviewDoc(saveAsTemplateTarget);
+    if (!vsn) {
+      toast.error('No content to save as template');
+      return;
+    }
+    createProgramTemplate({
+      name: templateName.trim() || saveAsTemplateTarget.name,
+      description: templateDesc.trim(),
+      sourceVsn: vsn,
+    });
+    setTemplates(listProgramTemplates());
+    toast.success('Template created');
+    setSaveAsTemplateOpen(false);
+    setSaveAsTemplateTarget(null);
+  };
+
   const handleCreate = () => {
     const name = createName.trim() || 'Untitled Program';
 
@@ -148,22 +172,22 @@ export default function ProgramsPage() {
     }
 
     const preset = RESOLUTION_PRESETS[createPresetIndex] ?? RESOLUTION_PRESETS[0];
-    const record = createProgram({ name, width: preset.width, height: preset.height });
+    const p = createProgram({ name, width: preset.width, height: preset.height });
+    addProgramAuditLog({
+      programId: p.id,
+      action: 'CREATE',
+      userId: 'admin',
+      userName: 'Administrator',
+      details: { description: `Resolution: ${preset.width}x${preset.height}` }
+    });
     setPrograms(listPrograms());
     setCreateOpen(false);
-    navigate(`/dashboard/programs/${record.id}/edit`);
+    navigate(`/dashboard/programs/${p.id}/edit`);
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Programs</h1>
-          <p className="text-sm text-muted-foreground">
-            Build signage content and publish versions to devices.
-          </p>
-        </div>
-
+    <div className="flex flex-1 flex-col gap-6 p-6 pt-2">
+      <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <div className="w-full sm:w-[280px]">
             <Input
@@ -319,23 +343,30 @@ export default function ProgramsPage() {
                 return (
                   <div
                     key={program.id}
-                    className="group flex flex-col gap-3 px-6 py-4 transition-colors hover:bg-muted/20 sm:flex-row sm:items-center sm:justify-between"
+                    className="group flex flex-col gap-4 px-6 py-5 transition-all hover:bg-muted/20 sm:flex-row sm:items-center sm:justify-between border-b last:border-b-0"
                   >
-                    <Link
-                      to={`/dashboard/programs/${program.id}`}
-                      className="flex min-w-0 items-start gap-4 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                    >
-                      <ProgramListThumbnail doc={previewDoc} />
-                      <div className="min-w-0">
+                    <div className="flex min-w-0 flex-1 items-start gap-5">
+                      <div className="relative shrink-0">
+                        <ProgramListThumbnail doc={previewDoc} />
+                        <div className="absolute inset-0 rounded-lg ring-1 ring-inset ring-foreground/5 shadow-sm" />
+                      </div>
+                      
+                      <div className="min-w-0 flex-1 space-y-1.5">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="truncate text-sm font-semibold group-hover:underline">{program.name}</p>
-                          {unpublishedChanges ? (
-                            <Badge className="bg-amber-500/10 text-amber-700 hover:bg-amber-500/10">
-                              Unpublished changes
+                          <Link 
+                            to={`/dashboard/programs/${program.id}`}
+                            className="truncate text-[15px] font-bold tracking-tight hover:text-primary transition-colors leading-none"
+                          >
+                            {program.name}
+                          </Link>
+                          {unpublishedChanges && (
+                            <Badge variant="outline" className="bg-amber-500/5 text-amber-600 border-amber-500/20 px-1.5 h-4.5 text-[10px] font-bold uppercase">
+                              Unpublished
                             </Badge>
-                          ) : null}
+                          )}
                           <Badge
                             className={cn(
+                              "px-1.5 h-4.5 text-[10px] font-bold uppercase",
                               programDeployments.length === 0
                                 ? 'bg-muted text-muted-foreground hover:bg-muted'
                                 : isMixed
@@ -346,50 +377,73 @@ export default function ProgramsPage() {
                             {liveLabel}
                           </Badge>
                         </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {program.width}×{program.height} · {latestPublished ? `v${latestPublished.version}` : 'Draft'} · {formatDurationMs(summary.totalDurationMs)} · {formatBytes(materialBytes)}
-                          {' · '}Updated {formatRelativeTime(program.updatedAt)}
-                        </p>
-                        {programDeployments.length > 0 ? (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {isMixed ? `Versions: ${formatVersionDistribution(deploymentVersions)}` : 'All devices on the same version'}
-                          </p>
-                        ) : null}
-                      </div>
-                    </Link>
 
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                      <Button size="sm" className={cn('justify-center gap-2')} onClick={() => navigate(`/dashboard/programs/${program.id}/edit`)}>
-                        <LayoutPanelTop className="h-4 w-4" />
-                        Edit
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <span className="font-semibold text-foreground/70">{program.width}×{program.height}</span>
+                          </span>
+                          <span className="flex items-center gap-1">
+                            Version: <span className="font-semibold text-foreground/70">{latestPublished ? `v${latestPublished.version}` : 'Draft'}</span>
+                          </span>
+                          <span className="flex items-center gap-1">
+                            Duration: <span className="font-semibold text-foreground/70">{formatDurationMs(summary.totalDurationMs)}</span>
+                          </span>
+                          <span className="flex items-center gap-1">
+                            Size: <span className="font-semibold text-foreground/70">{formatBytes(materialBytes)}</span>
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <p className="text-[11px] text-muted-foreground/60 italic">
+                            Updated {formatRelativeTime(program.updatedAt)}
+                          </p>
+                          {programDeployments.length > 0 && (
+                            <>
+                              <Separator orientation="vertical" className="h-2.5" />
+                              <p className="text-[11px] font-medium text-emerald-600">
+                                {isMixed ? `Mixed: ${formatVersionDistribution(deploymentVersions)}` : 'Fully deployed'}
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2 sm:ml-4">
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors sm:h-9 sm:w-auto sm:px-3 sm:gap-2"
+                        onClick={() => navigate(`/dashboard/programs/${program.id}/edit`)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Edit</span>
                       </Button>
+                      
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        className="gap-2"
+                        className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors sm:h-9 sm:w-auto sm:px-3 sm:gap-2"
                         onClick={() => openPublishDialog(program)}
                       >
-                        <Send className="h-4 w-4" />
-                        Publish
+                        <Send className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Publish</span>
                       </Button>
-                      {programDeployments.length > 0 ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-2 text-destructive hover:text-destructive"
-                          onClick={() => requestUnpublish(program)}
-                        >
-                          <XCircle className="h-4 w-4" />
-                          Unpublish
-                        </Button>
-                      ) : null}
+
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="icon" className="h-9 w-9" aria-label="Program actions">
-                            <MoreHorizontal className="h-4 w-4" />
+                          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" aria-label="Program actions">
+                            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem
+                            onSelect={() => navigate(`/dashboard/programs/${program.id}`)}
+                          >
+                            <History className="mr-2 h-4 w-4" />
+                            View Status & History
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onSelect={() => {
                               setRenameTarget(program);
@@ -397,9 +451,30 @@ export default function ProgramsPage() {
                               setRenameOpen(true);
                             }}
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Pencil className="mr-2 h-4 w-4" />
                             Rename
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              setTemplateName(`${program.name} Template`);
+                              setTemplateDesc('');
+                              setSaveAsTemplateTarget(program);
+                              setSaveAsTemplateOpen(true);
+                            }}
+                          >
+                            <Copy className="mr-2 h-4 w-4" />
+                            Save as template
+                          </DropdownMenuItem>
+                          <Separator className="my-1" />
+                          {programDeployments.length > 0 && (
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onSelect={() => requestUnpublish(program)}
+                            >
+                              <XCircle className="mr-2 h-4 w-4" />
+                              Unpublish all
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
                             onSelect={() => {
@@ -407,8 +482,8 @@ export default function ProgramsPage() {
                               setDeleteOpen(true);
                             }}
                           >
-                            <Trash2 className="h-4 w-4" />
-                            Delete
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete program
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -526,6 +601,53 @@ export default function ProgramsPage() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={saveAsTemplateOpen}
+        onOpenChange={(open) => {
+          setSaveAsTemplateOpen(open);
+          if (!open) {
+            setSaveAsTemplateTarget(null);
+            setTemplateName('');
+            setTemplateDesc('');
+          }
+        }}
+      >
+        <DialogContent className="w-[min(100vw-2rem,520px)] max-w-none">
+          <DialogHeader>
+            <DialogTitle>Save as Template</DialogTitle>
+            <DialogDescription>
+              Create a reusable template from this program's layout and content.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Template name</label>
+              <Input 
+                value={templateName} 
+                onChange={(e) => setTemplateName(e.target.value)} 
+                placeholder="e.g. Promo Layout" 
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description (optional)</label>
+              <Input 
+                value={templateDesc} 
+                onChange={(e) => setTemplateDesc(e.target.value)} 
+                placeholder="e.g. Standard 16:9 promo template" 
+              />
+            </div>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="ghost" onClick={() => setSaveAsTemplateOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveAsTemplate} disabled={!templateName.trim()}>
+                Create template
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

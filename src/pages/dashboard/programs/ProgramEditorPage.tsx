@@ -17,16 +17,8 @@ import { listProgramDeployments, type ProgramDeploymentRecord } from '@/features
 import { ProgramPublishDialog } from '@/features/programs/publishing/ProgramPublishDialog';
 import { getProgramDraftSavePolicy } from '@/features/programs/storage/draftPolicyDb';
 
-import {
-  ensureDraft,
-  deleteDraft,
-  getProgram,
-  renameProgram,
-  saveDraft,
-  updateProgramCanvas,
-  type ProgramDraftRecord,
-  type ProgramRecord,
-} from '@/features/programs/storage/programsDb';
+import { getProgram, deleteProgram, type ProgramRecord, saveDraft, updateProgramCanvas, type ProgramDraftRecord, renameProgram, ensureDraft, deleteDraft } from '@/features/programs/storage/programsDb';
+import { addProgramAuditLog } from '@/features/programs/storage/auditLogsDb';
 import { resolveMaterialId } from '@/features/programs/storage/materialId';
 import { createItemFromMedia, createScrollTextItem, createTextItem } from '@/features/programs/vsn/defaults';
 import type { VsnDocument } from '@/features/programs/vsn/types';
@@ -143,7 +135,16 @@ export default function ProgramEditorPage() {
   const persistWorkingCopy = useCallback((options?: { toast?: boolean }) => {
     if (!program || !draft || !vsn) return null;
     const saved = saveDraft(program.id, draft.id, vsn);
-    if (saved) setDraft(saved);
+    if (saved) {
+      setDraft(saved);
+      addProgramAuditLog({
+        programId: program.id,
+        action: 'SAVE_DRAFT',
+        userId: 'admin',
+        userName: 'Administrator',
+        details: { snapshotId: draft.id }
+      });
+    }
     setDirty(false);
     setAutosavePending(false);
     clearAutosaveTimer();
@@ -321,6 +322,7 @@ export default function ProgramEditorPage() {
   const errorCount = useMemo(() => devValidation.issues.filter((i) => i.severity === 'error').length, [devValidation.issues]);
   const warningCount = useMemo(() => devValidation.issues.filter((i) => i.severity === 'warning').length, [devValidation.issues]);
 
+  const lastEditLogRef = useRef<number>(0);
   const applyVsn = (next: VsnDocument, options?: { noHistory?: boolean }) => {
     if (vsn && !options?.noHistory) {
       setPast((prev) => [...prev.slice(-49), vsn]);
@@ -330,6 +332,19 @@ export default function ProgramEditorPage() {
     setVsn(next);
     setDirty(true);
     setSessionHasChanges(true);
+
+    // Throttle edit logs (once per 5 minutes of active editing)
+    const now = Date.now();
+    if (program && now - lastEditLogRef.current > 5 * 60 * 1000) {
+      addProgramAuditLog({
+        programId: program.id,
+        action: 'EDIT',
+        userId: 'admin',
+        userName: 'Administrator',
+        details: { description: 'Updated layout and configuration' }
+      });
+      lastEditLogRef.current = now;
+    }
   };
 
   const undo = useCallback(() => {
