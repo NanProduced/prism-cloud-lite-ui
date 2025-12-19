@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import type { Device } from '@/types/device';
 import { DeviceScreenshot } from '@/components/devices/DeviceScreenshot';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +25,8 @@ interface DeviceCardViewProps {
   onCreateTag: (draft: { name: string; color: string; icon?: string }) => Tag;
 }
 
-export function DeviceCardView({ devices, tags, onToggleDeviceTag, onCreateTag }: DeviceCardViewProps) {
+export function DeviceCardView({ devices, tags, onToggleDeviceTag, onCreateTag }: DeviceCardViewProps) {  
+  const navigate = useNavigate();
   if (devices.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 border rounded-lg bg-muted/20">
@@ -34,7 +36,7 @@ export function DeviceCardView({ devices, tags, onToggleDeviceTag, onCreateTag }
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3"> 
       {devices.map((device) => (
         <DeviceCard
           key={device.id}
@@ -42,6 +44,7 @@ export function DeviceCardView({ devices, tags, onToggleDeviceTag, onCreateTag }
           tags={tags}
           onToggleDeviceTag={onToggleDeviceTag}
           onCreateTag={onCreateTag}
+          onNavigate={() => navigate(`/dashboard/devices/${device.id}`)}
         />
       ))}
     </div>
@@ -53,11 +56,13 @@ function DeviceCard({
   tags,
   onToggleDeviceTag,
   onCreateTag,
+  onNavigate,
 }: {
   device: Device;
   tags: Tag[];
   onToggleDeviceTag: (deviceId: string, tag: Tag) => void;
   onCreateTag: (draft: { name: string; color: string; icon?: string }) => Tag;
+  onNavigate: () => void;
 }) {
   const lastReport = new Date(device.lastReportTime);
   const now = new Date();
@@ -77,12 +82,12 @@ function DeviceCard({
 
   return (
     <Card className="group overflow-hidden">
-      <div className="relative">
+      <div className="relative cursor-pointer" onClick={onNavigate}>
         <DeviceScreenshot
           src={device.latestScreenshot?.url}
           timestamp={device.latestScreenshot?.timestamp}
           deviceName={device.deviceName}
-          className="w-full h-24 rounded-none"
+          className="w-full h-24 rounded-none transition-transform group-hover:scale-105 duration-300"
         />
         <div className="absolute top-2 left-2">
           <StatusPill status={device.status} offlineDuration={device.offlineDuration} />
@@ -92,7 +97,12 @@ function DeviceCard({
       <CardContent className="p-3 space-y-2">
         <div className="min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="font-semibold text-sm truncate">{device.deviceName}</h3>
+            <h3 
+              className="font-semibold text-sm truncate cursor-pointer hover:text-primary transition-colors"
+              onClick={onNavigate}
+            >
+              {device.deviceName}
+            </h3>
             <Badge variant="secondary" className="text-xs font-medium">
               {device.model}
             </Badge>
@@ -101,7 +111,6 @@ function DeviceCard({
             <p className="text-xs text-muted-foreground truncate">{device.alias}</p>
           )}
         </div>
-
         <div className="flex items-center gap-2 text-sm min-w-0">
           <Play className="h-4 w-4 text-muted-foreground shrink-0" />
           {device.currentProgram ? (

@@ -12,6 +12,7 @@ import ProgramDetailsPage from "@/pages/dashboard/programs/ProgramDetailsPage";
 import ProgramEditorPage from "@/pages/dashboard/programs/ProgramEditorPage";
 import SettingsPage from "@/pages/dashboard/settings/SettingsPage";
 import MapPage from "@/pages/dashboard/map/MapPage";
+import DeviceDetailsPage from "@/pages/dashboard/devices/DeviceDetailsPage";
 import {
   AnalyticsPage,
   MonitoringPage,
@@ -43,6 +44,7 @@ const router = createBrowserRouter([
       { path: "programs/:programId", element: <ProgramDetailsPage /> },
       { path: "programs/:programId/edit", element: <ProgramEditorPage /> },
       { path: "devices", element: <DevicesPage /> },
+      { path: "devices/:deviceId", element: <DeviceDetailsPage /> },
       { path: "schedule", element: <SchedulePage /> },
       { path: "map", element: <MapPage /> },
       { path: "analytics", element: <AnalyticsPage /> },

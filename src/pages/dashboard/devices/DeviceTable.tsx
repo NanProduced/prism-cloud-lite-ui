@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useId } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLyteNyte, useClientRowDataSource } from '@lytenyte/hooks/use-lytenyte-core';
 import { LyteNyte } from '@lytenyte/components/lytenyte-core';
 import type {
@@ -36,7 +37,7 @@ interface DeviceTableProps {
   onCustomFieldDefsChange: (next: DeviceCustomFieldDef[]) => void;
   onCustomFieldCreate: (def: DeviceCustomFieldDef) => void;
   onCustomFieldDelete: (fieldId: number) => void;
-  onCustomFieldValueChange: (deviceId: string, fieldId: number, value: DeviceCustomFieldValue) => void;
+  onCustomFieldValueChange: (deviceId: string, fieldId: number, value: DeviceCustomFieldValue) => void;   
 }
 
 function CustomFieldOptionChip({
@@ -88,6 +89,7 @@ export function DeviceTable({
   onCustomFieldValueChange,
 }: DeviceTableProps) {
   const gridId = useId();
+  const navigate = useNavigate();
 
   const customColumns = useMemo<Column<Device>[]>(() => {
     const sorted = customFieldDefs.slice().sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
@@ -109,7 +111,7 @@ export function DeviceTable({
           const raw = data.data.customFieldValues?.[String(def.fieldId)];
           if (raw == null) return '';
           if (def.fieldType === 'NUMBER') return typeof raw === 'number' ? raw : Number(raw);
-          if (def.fieldType === 'BOOLEAN') return raw === true ? 'true' : raw === false ? 'false' : '';
+          if (def.fieldType === 'BOOLEAN') return raw === true ? 'true' : raw === false ? 'false' : '';   
           if (def.fieldType === 'SELECT') {
             if (typeof raw !== 'string') return '';
             const hit = def.options?.find((o) => o.optionKey === raw);
@@ -143,7 +145,7 @@ export function DeviceTable({
 
           if (def.fieldType === 'DATETIME' && typeof raw === 'string') {
             const d = new Date(raw);
-            if (Number.isNaN(d.getTime())) return <span className="text-muted-foreground">-</span>;
+            if (Number.isNaN(d.getTime())) return <span className="text-muted-foreground">-</span>;       
             return <span className="text-sm">{d.toLocaleString()}</span>;
           }
 
@@ -164,7 +166,7 @@ export function DeviceTable({
             const hit = def.options?.find((o) => o.optionKey === raw);
             const label = hit?.displayName ?? raw;
             const inactive = hit?.active === false;
-            return <CustomFieldOptionChip label={label} color={hit?.color} inactive={inactive} />;
+            return <CustomFieldOptionChip label={label} color={hit?.color} inactive={inactive} />;        
           }
 
           if (def.fieldType === 'MULTI_SELECT' && Array.isArray(raw)) {
@@ -345,15 +347,19 @@ export function DeviceTable({
 
         return (
           <div className="flex flex-col gap-0.5 min-w-0 px-1">
-            <span className="font-medium truncate">{device.deviceName}</span>
+            <span 
+              className="font-medium truncate cursor-pointer hover:text-primary transition-colors"
+              onClick={() => navigate(`/dashboard/devices/${device.id}`)}
+            >
+              {device.deviceName}
+            </span>
             {device.alias && (
               <span className="text-xs text-muted-foreground truncate">{device.alias}</span>
             )}
           </div>
         );
       },
-    },
-    {
+    },    {
       id: 'latestScreenshot',
       name: 'Screenshot',
       type: 'string',
