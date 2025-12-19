@@ -160,9 +160,10 @@ export function EditorLeftPanel({
         {hasSelectedRegion ? 'Adds to the selected window.' : 'Creates a new window when nothing is selected.'}
       </p>
 
-      <ScrollArea className="flex-1 pr-2">
-        <div className="space-y-3 p-0.5">
-          <div className="space-y-2">
+      <ScrollArea className="flex-1">
+        <div className="space-y-4 p-4">
+          <div className="space-y-3">
+            <div className="space-y-2">
             <Input value={mediaQuery} onChange={(e) => setMediaQuery(e.target.value)} placeholder="Search media…" />
             <div className="flex items-center gap-2">
               <FilterPill active={mediaFilter === 'all'} onClick={() => setMediaFilter('all')}>
@@ -232,6 +233,7 @@ export function EditorLeftPanel({
               ))
             )}
           </div>
+        </div>
         </div>
       </ScrollArea>
     </div>

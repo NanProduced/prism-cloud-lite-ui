@@ -96,48 +96,48 @@ export function InspectorPanel({
 
       <Separator className="my-3" />
 
-      <ScrollArea className="flex-1 -mx-0.5 px-0.5">
-        <div className="pr-3">
+      <ScrollArea className="flex-1">
+        <div className="space-y-6 px-4 py-4">
           {!doc || !page ? (
-          <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">
-            No document loaded.
-          </div>
-        ) : item ? (
-          <ItemInspector
-            key={`item-${selection.pageIndex}-${selection.regionIndex}-${selection.itemIndex}`}
-            item={item}
-            material={resolveMaterial(materialIndex, item)}
-            showDevFields={showDevFields}
-            onPatch={(patch) => onPatchItem(selection.pageIndex, selection.regionIndex!, selection.itemIndex!, patch)}
-          />
-        ) : region ? (
-          <RegionInspector
-            key={`region-${selection.pageIndex}-${selection.regionIndex}`}
-            region={region}
-            showDevFields={showDevFields}
-            onPatch={(patch) => onPatchRegion(selection.pageIndex, selection.regionIndex!, patch)}
-            onPatchRect={(patch) => onPatchRegionRect(selection.pageIndex, selection.regionIndex!, patch)}
-          />
-        ) : (
-          <div className="space-y-6">
-            <ProgramInspector
-              programName={programName}
-              programWidth={programWidth}
-              programHeight={programHeight}
-              targetDeviceId={targetDeviceId}
-              devices={devices}
-              onRenameProgram={onRenameProgram}
-              onSetProgramResolution={onSetProgramResolution}
-            />
-            <Separator />
-            <PageInspector
-              key={`page-${selection.pageIndex}`}
-              page={page}
+            <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">
+              No document loaded.
+            </div>
+          ) : item ? (
+            <ItemInspector
+              key={`item-${selection.pageIndex}-${selection.regionIndex}-${selection.itemIndex}`}
+              item={item}
+              material={resolveMaterial(materialIndex, item)}
               showDevFields={showDevFields}
-              onPatch={(patch) => onPatchPage(selection.pageIndex, patch)}
+              onPatch={(patch) => onPatchItem(selection.pageIndex, selection.regionIndex!, selection.itemIndex!, patch)}
             />
-          </div>
-        )}
+          ) : region ? (
+            <RegionInspector
+              key={`region-${selection.pageIndex}-${selection.regionIndex}`}
+              region={region}
+              showDevFields={showDevFields}
+              onPatch={(patch) => onPatchRegion(selection.pageIndex, selection.regionIndex!, patch)}
+              onPatchRect={(patch) => onPatchRegionRect(selection.pageIndex, selection.regionIndex!, patch)}
+            />
+          ) : (
+            <div className="space-y-8">
+              <ProgramInspector
+                programName={programName}
+                programWidth={programWidth}
+                programHeight={programHeight}
+                targetDeviceId={targetDeviceId}
+                devices={devices}
+                onRenameProgram={onRenameProgram}
+                onSetProgramResolution={onSetProgramResolution}
+              />
+              <Separator />
+              <PageInspector
+                key={`page-${selection.pageIndex}`}
+                page={page}
+                showDevFields={showDevFields}
+                onPatch={(patch) => onPatchPage(selection.pageIndex, patch)}
+              />
+            </div>
+          )}
         </div>
       </ScrollArea>
     </div>

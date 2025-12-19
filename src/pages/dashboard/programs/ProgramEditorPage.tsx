@@ -4,6 +4,7 @@ import { useBlocker } from 'react-router';
 import { ArrowLeft, ChevronDown, Code2, Copy, Layers, ListChecks, Play, Redo2, Save, Send, SlidersHorizontal, Trash2, TriangleAlert, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -1185,62 +1186,83 @@ export default function ProgramEditorPage() {
           }
         }}
       >
-        <DialogContent className="w-[min(100vw-2rem,520px)] max-w-none">
-          <DialogHeader>
-            <DialogTitle>Unpublished changes</DialogTitle>
-            <DialogDescription>
-              You have unpublished changes in the editor. Save a draft snapshot before leaving or switching versions?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="rounded-lg border bg-muted/20 p-3 text-sm">
-              <p className="font-medium">{program.name}</p>
-              <p className="mt-1 text-muted-foreground">
-                Base {baseVersion == null ? 'Blank' : `v${baseVersion}`} · Draft {draft?.id ? draft.id.slice(0, 8) : '—'}
-              </p>
+        <DialogContent className="max-w-[500px] p-0 overflow-hidden border-0 shadow-2xl rounded-2xl ring-1 ring-foreground/5">
+          <div className="bg-background">
+            <div className="p-10 pb-6">
+              <div className="mb-8 flex h-14 w-14 items-center justify-center rounded-[1.25rem] bg-amber-500/10 text-amber-600 shadow-inner">
+                <TriangleAlert className="h-7 w-7" />
+              </div>
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-black tracking-tight text-foreground">Unpublished Changes</DialogTitle>
+                <DialogDescription className="text-sm leading-relaxed pt-3 opacity-70">
+                  Your workspace has active modifications. Choose how to handle these changes before navigating away.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="mt-8">
+                <div className="rounded-[1.5rem] border border-border/40 bg-muted/20 p-6 transition-all hover:bg-muted/30">
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground/40 mb-3">Workspace Context</p>
+                  <p className="text-lg font-black tracking-tight text-foreground/80">{program.name}</p>
+                  <div className="mt-5 flex items-center gap-4">
+                    <Badge variant="outline" className="h-6 px-2 font-black text-[10px] bg-background border-border/50 uppercase tracking-wider">
+                      {baseVersion == null ? 'Blank Baseline' : `Baseline v${baseVersion}`}
+                    </Badge>
+                    <div className="h-4 w-px bg-border/40" />
+                    <p className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-widest">
+                      Snap: {draft?.id ? draft.id.slice(0, 8) : 'New'}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <div className="flex flex-col gap-3 p-10 pt-8 sm:flex-row sm:items-center border-t bg-muted/5">
               <Button
                 type="button"
                 variant="ghost"
+                className="font-black text-[10px] uppercase tracking-[0.2em] px-6 h-11"
                 onClick={() => {
                   setDraftPromptOpen(false);
                   if (draftPromptIntent?.type === 'navigate') navigationBlocker.reset?.();
                   setDraftPromptIntent(null);
                 }}
               >
-                Cancel
+                Return
               </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => {
-                  discardWorkingCopy();
-                  setSessionHasChanges(false);
-                  setDraftPromptOpen(false);
-                  const intent = draftPromptIntent;
-                  setDraftPromptIntent(null);
-                  if (intent?.type === 'switch') setBaseVersion(intent.nextBaseVersion);
-                  else if (intent?.type === 'navigate') navigationBlocker.proceed?.();
-                }}
-              >
-                Discard
-              </Button>
-              <Button
-                type="button"
-                onClick={() => {
-                  persistWorkingCopy();
-                  setSessionHasChanges(false);
-                  setDraftPromptOpen(false);
-                  const intent = draftPromptIntent;
-                  setDraftPromptIntent(null);
-                  if (intent?.type === 'switch') setBaseVersion(intent.nextBaseVersion);
-                  else if (intent?.type === 'navigate') navigationBlocker.proceed?.();
-                }}
-              >
-                Save draft
-              </Button>
+              <div className="hidden sm:block flex-1" />
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="font-black text-[10px] uppercase tracking-[0.15em] px-8 h-11 border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive transition-all active:scale-95"
+                  onClick={() => {
+                    discardWorkingCopy();
+                    setSessionHasChanges(false);
+                    setDraftPromptOpen(false);
+                    const intent = draftPromptIntent;
+                    setDraftPromptIntent(null);
+                    if (intent?.type === 'switch') setBaseVersion(intent.nextBaseVersion);
+                    else if (intent?.type === 'navigate') navigationBlocker.proceed?.();
+                  }}
+                >
+                  Discard
+                </Button>
+                <Button
+                  type="button"
+                  className="font-black text-[10px] uppercase tracking-[0.15em] px-10 h-11 shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  onClick={() => {
+                    persistWorkingCopy();
+                    setSessionHasChanges(false);
+                    setDraftPromptOpen(false);
+                    const intent = draftPromptIntent;
+                    setDraftPromptIntent(null);
+                    if (intent?.type === 'switch') setBaseVersion(intent.nextBaseVersion);
+                    else if (intent?.type === 'navigate') navigationBlocker.proceed?.();
+                  }}
+                >
+                  Save Draft
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>

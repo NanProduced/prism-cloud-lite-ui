@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Copy, FilePlus2, History, LayoutPanelTop, MoreHorizontal, Pencil, Plus, Search, Send, Sparkles, Trash2, XCircle } from 'lucide-react';
+import { AlertCircle, Copy, FilePlus2, History, LayoutPanelTop, MoreHorizontal, Pencil, Plus, Search, Send, Sparkles, Trash2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatBytes } from '@better-upload/client/helpers';
 
@@ -543,103 +543,125 @@ export default function ProgramsPage() {
           }
         }}
       >
-        <DialogContent className="w-[min(100vw-2rem,520px)] max-w-none">
-          <DialogHeader>
-            <DialogTitle>Create Program</DialogTitle>
-            <DialogDescription>
-              Choose a canvas size and start editing. You can publish up to 10 versions in Lite.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-[500px] p-0 overflow-hidden border-0 shadow-2xl rounded-2xl ring-1 ring-foreground/5">
+          <div className="bg-background">
+            <div className="p-8">
+              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <FilePlus2 className="h-6 w-6" />
+              </div>
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold tracking-tight">Create Program</DialogTitle>
+                <DialogDescription className="text-sm leading-relaxed pt-2">
+                  Initialize a new program workspace. Choose between a blank canvas or start from a saved template.
+                </DialogDescription>
+              </DialogHeader>
 
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (createMode === 'template' && !createTemplateId) return;
-              handleCreate();
-            }}
-          >
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="program-name">
-                Name
-              </label>
-              <Input
-                id="program-name"
-                value={createName}
-                onChange={(e) => setCreateName(e.target.value)}
-                placeholder="e.g. Lobby Screen"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="program-create-mode">
-                Start from
-              </label>
-              <Select
-                value={createMode}
-                onValueChange={(v) => setCreateMode(v as typeof createMode)}
+              <form
+                id="create-program-form"
+                className="mt-8 space-y-8"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (createMode === 'template' && !createTemplateId) return;
+                  handleCreate();
+                }}
               >
-                <SelectTrigger id="program-create-mode">
-                  <SelectValue placeholder="Select mode" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="blank">Blank program</SelectItem>
-                  <SelectItem value="template" disabled={templates.length === 0}>Template</SelectItem>
-                </SelectContent>
-              </Select>
-              {createMode === 'template' && templates.length === 0 && (
-                <p className="text-xs text-muted-foreground">No templates yet. Create one from a program details page.</p>
-              )}
+                <div className="grid grid-cols-1 gap-6 px-1">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-1" htmlFor="program-name">
+                      Program Name
+                    </label>
+                    <Input
+                      id="program-name"
+                      value={createName}
+                      onChange={(e) => setCreateName(e.target.value)}
+                      placeholder="e.g. Lobby Display"
+                      className="h-11 bg-muted/20 border-border/50 focus-visible:ring-primary/20 text-sm font-bold"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-1" htmlFor="program-create-mode">
+                        Content Source
+                      </label>
+                      <Select
+                        value={createMode}
+                        onValueChange={(v) => setCreateMode(v as typeof createMode)}
+                      >
+                        <SelectTrigger id="program-create-mode" className="h-11 bg-muted/20 border-border/50 font-bold text-sm">
+                          <SelectValue placeholder="Select mode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="blank" className="text-sm font-bold">Blank Canvas</SelectItem>
+                          <SelectItem value="template" disabled={templates.length === 0} className="text-sm font-bold">From Template</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-1" htmlFor="program-resolution">
+                        {createMode === 'template' ? 'Template' : 'Resolution'}
+                      </label>
+                      {createMode === 'template' ? (
+                        <Select
+                          value={createTemplateId}
+                          onValueChange={(v) => setCreateTemplateId(v)}
+                        >
+                          <SelectTrigger id="program-resolution" className="h-11 bg-muted/20 border-border/50 font-bold text-sm">
+                            <SelectValue placeholder="Pick template" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {templates.map((tpl) => (
+                              <SelectItem key={tpl.id} value={tpl.id} className="text-sm font-bold">
+                                {tpl.name} · {tpl.width}×{tpl.height}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Select
+                          value={String(createPresetIndex)}
+                          onValueChange={(v) => setCreatePresetIndex(Number(v))}
+                        >
+                          <SelectTrigger id="program-resolution" className="h-11 bg-muted/20 border-border/50 font-bold text-sm">
+                            <SelectValue placeholder="Pick size" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {RESOLUTION_PRESETS.map((preset, index) => (
+                              <SelectItem key={preset.label} value={String(index)} className="text-sm font-bold">
+                                {preset.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {createMode === 'template' && templates.length === 0 && (
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-[11px] text-amber-700 font-bold">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>Your template library is currently empty.</span>
+                  </div>
+                )}
+              </form>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="program-resolution">
-                {createMode === 'template' ? 'Template' : 'Resolution'}
-              </label>
-              {createMode === 'template' ? (
-                <Select
-                  value={createTemplateId}
-                  onValueChange={(v) => setCreateTemplateId(v)}
-                >
-                  <SelectTrigger id="program-resolution">
-                    <SelectValue placeholder="Select a template…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {templates.map((tpl) => (
-                      <SelectItem key={tpl.id} value={tpl.id}>
-                        {tpl.name} · {tpl.width}×{tpl.height}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Select
-                  value={String(createPresetIndex)}
-                  onValueChange={(v) => setCreatePresetIndex(Number(v))}
-                >
-                  <SelectTrigger id="program-resolution">
-                    <SelectValue placeholder="Select resolution" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {RESOLUTION_PRESETS.map((preset, index) => (
-                      <SelectItem key={preset.label} value={String(index)}>
-                        {preset.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
+            <div className="flex items-center justify-end gap-3 p-8 pt-0">
+              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)} className="font-bold text-xs uppercase tracking-widest px-8">
                 Cancel
               </Button>
-              <Button type="submit" disabled={createMode === 'template' && !createTemplateId}>
-                Create &amp; open editor
+              <Button 
+                form="create-program-form"
+                type="submit" 
+                disabled={createMode === 'template' && !createTemplateId} 
+                className="font-bold text-xs uppercase tracking-widest px-10 h-11 shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                Create Workspace
               </Button>
             </div>
-          </form>
+          </div>
         </DialogContent>
       </Dialog>
 

@@ -546,68 +546,91 @@ function DeviceSelectStep({
              <span className="flex-1">Device</span>
              <span className="w-32 text-center">STATUS</span>
           </div>
-          <ScrollArea className="flex-1 scrollbar-thin">
-             <div className="divide-y divide-foreground/[0.03]">
-                {filteredDevices.map((d) => {
-                   const isSelected = selectedDeviceIds.has(d.id);
-                   const isConflict = d.resolution.width !== programResolution.width || d.resolution.height !== programResolution.height;
-                   const deployed = deploymentsByDeviceId.get(d.id);
-                   
-                   return (
-                     <div key={d.id} className={cn("group flex items-center gap-6 px-10 py-4 transition-all cursor-pointer relative", isSelected ? "bg-primary/[0.04]" : "hover:bg-muted/10")} onClick={() => onSelectedDeviceIdsChange((prev: Set<string>) => {
-                       const next = new Set(prev);
-                       if (isSelected) next.delete(d.id); else next.add(d.id);
-                       return next;
-                     })}>
-                       <div className={cn("absolute left-0 top-0 bottom-0 w-1.5 transition-all rounded-r-full", isSelected ? "bg-primary shadow-[0_0_12px_rgba(59,130,246,0.4)]" : "bg-transparent")} />
-                       <Checkbox checked={isSelected} onCheckedChange={() => {}} className="rounded-md h-5 w-5" />
-                       <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2.5">
-                             <span className="text-sm font-black tracking-tight group-hover:text-primary transition-colors">{d.alias || d.deviceName}</span>
-                             {deployed && (
-                                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 px-1.5 h-4.5 text-[9px] font-black">
-                                   v{deployed.version}
-                                </Badge>
-                             )}
-                             {isConflict && (
-                                <TooltipProvider>
-                                   <Tooltip>
-                                      <TooltipTrigger asChild>
-                                         <div className="p-1 rounded-full bg-amber-500/10"><AlertCircle className="h-3.5 w-3.5 text-amber-500" /></div>
-                                      </TooltipTrigger>
-                                      <TooltipContent className="bg-amber-900 text-amber-50 border-amber-800 p-3 rounded-xl shadow-xl max-w-[280px]">
-                                        <p className="font-bold flex items-center gap-2 mb-1 uppercase text-[10px] tracking-widest"><AlertCircle className="h-3 w-3" /> Resolution Mismatch</p>
-                                        <p className="text-[11px] opacity-80 leading-relaxed">This hardware runs at {d.resolution.width}x{d.resolution.height}, but your program is {programResolution.width}x{programResolution.height}. Content scaling may occur.</p>
-                                      </TooltipContent>
-                                   </Tooltip>
-                                </TooltipProvider>
-                             )}
-                          </div>
-                          <div className="flex items-center gap-3 mt-1.5">
-                             <p className="text-[9px] text-muted-foreground font-mono opacity-50 tracking-tighter uppercase">{d.id.slice(0, 8)}</p>
-                             <div className="h-2 w-px bg-muted" />
-                             <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">{d.resolution.width}×{d.resolution.height}</span>
-                          </div>
-                       </div>
-                       <div className="flex items-center gap-4">
-                          <div className="text-right min-w-[80px]">
-                             <div className="flex items-center gap-2 justify-end">
-                                <div className={cn("w-1.5 h-1.5 rounded-full transition-all", d.status === 'online' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" : "bg-zinc-300")} />
-                                <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground group-hover:text-foreground">{d.status}</span>
-                             </div>
-                          </div>
-                       </div>
-                     </div>
-                   );
-                })}
-                {filteredDevices.length === 0 && (
-                  <div className="py-40 text-center flex flex-col items-center gap-4 opacity-20 grayscale">
-                     <Monitor className="h-14 w-14" />
-                     <p className="text-sm font-black uppercase tracking-[0.2em]">Null results returned</p>
-                  </div>
-                )}
-             </div>
-          </ScrollArea>
+
+          {filteredDevices.length > 0 ? (
+            <ScrollArea className="flex-1 scrollbar-thin">
+               <div className="divide-y divide-foreground/[0.03]">
+                  {filteredDevices.map((d) => {
+                     const isSelected = selectedDeviceIds.has(d.id);
+                     const isConflict = d.resolution.width !== programResolution.width || d.resolution.height !== programResolution.height;
+                     const deployed = deploymentsByDeviceId.get(d.id);
+                     
+                     return (
+                        <div key={d.id} className={cn("group flex items-center gap-6 px-10 py-4 transition-all cursor-pointer relative", isSelected ? "bg-primary/[0.04]" : "hover:bg-muted/10")} onClick={() => onSelectedDeviceIdsChange((prev: Set<string>) => {
+                        const next = new Set(prev);
+                        if (isSelected) next.delete(d.id); else next.add(d.id);
+                        return next;
+                        })}>
+                        <div className={cn("absolute left-0 top-0 bottom-0 w-1.5 transition-all rounded-r-full", isSelected ? "bg-primary shadow-[0_0_12px_rgba(59,130,246,0.4)]" : "bg-transparent")} />
+                        <Checkbox checked={isSelected} onCheckedChange={() => {}} className="rounded-md h-5 w-5" />
+                        <div className="min-w-0 flex-1">
+                           <div className="flex items-center gap-2.5">
+                              <span className="text-sm font-black tracking-tight group-hover:text-primary transition-colors">{d.alias || d.deviceName}</span>
+                              {deployed && (
+                                 <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 px-1.5 h-4.5 text-[9px] font-black">
+                                    v{deployed.version}
+                                 </Badge>
+                              )}
+                              {isConflict && (
+                                 <TooltipProvider>
+                                    <Tooltip>
+                                       <TooltipTrigger asChild>
+                                          <div className="p-1 rounded-full bg-amber-500/10"><AlertCircle className="h-3.5 w-3.5 text-amber-500" /></div>
+                                       </TooltipTrigger>
+                                       <TooltipContent className="bg-amber-900 text-amber-50 border-amber-800 p-3 rounded-xl shadow-xl max-w-[280px]">
+                                          <p className="font-bold flex items-center gap-2 mb-1 uppercase text-[10px] tracking-widest"><AlertCircle className="h-3 w-3" /> Resolution Mismatch</p>
+                                          <p className="text-[11px] opacity-80 leading-relaxed">This hardware runs at {d.resolution.width}x{d.resolution.height}, but your program is {programResolution.width}x{programResolution.height}. Content scaling may occur.</p>
+                                       </TooltipContent>
+                                    </Tooltip>
+                                 </TooltipProvider>
+                              )}
+                           </div>
+                           <div className="flex items-center gap-3 mt-1.5">
+                              <p className="text-[9px] text-muted-foreground font-mono opacity-50 tracking-tighter uppercase">{d.id.slice(0, 8)}</p>
+                              <div className="h-2 w-px bg-muted" />
+                              <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">{d.resolution.width}×{d.resolution.height}</span>
+                           </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                           <div className="text-right min-w-[80px]">
+                              <div className="flex items-center gap-2 justify-end">
+                                 <div className={cn("w-1.5 h-1.5 rounded-full transition-all", d.status === 'online' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" : "bg-zinc-300")} />
+                                 <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground group-hover:text-foreground">{d.status}</span>
+                              </div>
+                           </div>
+                        </div>
+                        </div>
+                     );
+                  })}
+               </div>
+            </ScrollArea>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in-95 duration-500">
+               <div className="p-6 rounded-3xl bg-muted/10 border-2 border-dashed border-muted flex items-center justify-center mb-6 opacity-40">
+                  <Monitor className="h-12 w-12 text-muted-foreground" />
+               </div>
+               <div className="space-y-2 max-w-[320px]">
+                  <p className="text-base font-black uppercase tracking-[0.2em] text-foreground/80">No Nodes Found</p>
+                  <p className="text-[10px] text-muted-foreground font-bold leading-relaxed opacity-60">
+                     We couldn't find any devices matching your current search parameters or active filters.
+                  </p>
+               </div>
+               <Button 
+                  variant="default"
+                  size="sm" 
+                  className="mt-8 font-black text-[9px] uppercase tracking-[0.2em] px-10 h-10 rounded-xl shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+                  onClick={() => {
+                     onDeviceQueryChange('');
+                     onOnlineOnlyChange(false);
+                     onResolutionOnlyChange('any');
+                     onTagFiltersChange(new Set());
+                     onTagMatchModeChange('any');
+                  }}
+               >
+                  Reset All Filters
+               </Button>
+            </div>
+          )}
        </div>
     </div>
   );
