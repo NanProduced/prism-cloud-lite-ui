@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Copy, FilePlus2, History, LayoutPanelTop, MoreHorizontal, Pencil, Plus, Send, Sparkles, Trash2, XCircle } from 'lucide-react';
+import { Copy, FilePlus2, History, LayoutPanelTop, MoreHorizontal, Pencil, Plus, Search, Send, Sparkles, Trash2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatBytes } from '@better-upload/client/helpers';
 
@@ -10,7 +10,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { mockMediaLibraryNodes } from '@/lib/mock/media-library';
 import { cn } from '@/lib/utils';
 
@@ -187,43 +200,45 @@ export default function ProgramsPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6 pt-2">
-      <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          <div className="w-full sm:w-[280px]">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border shadow-inner w-fit">
+          <button
+            type="button"
+            className={cn(
+              'rounded-lg px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-all',
+              tab !== 'templates' ? 'bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.03]' : 'text-muted-foreground/60 hover:text-muted-foreground',
+            )}
+            onClick={() => setSearchParams((prev) => { const p = new URLSearchParams(prev); p.delete('tab'); return p; })}
+          >
+            All programs
+          </button>
+          <button
+            type="button"
+            className={cn(
+              'rounded-lg px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-all',
+              tab === 'templates' ? 'bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.03]' : 'text-muted-foreground/60 hover:text-muted-foreground',
+            )}
+            onClick={() => setSearchParams((prev) => { const p = new URLSearchParams(prev); p.set('tab', 'templates'); return p; })}
+          >
+            Templates
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="relative w-full sm:w-[280px] group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50 transition-colors group-focus-within:text-primary" />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={tab === 'templates' ? 'Search templates…' : 'Search programs…'}
+              className="pl-9 h-9 text-sm bg-muted/20 border-border"
             />
           </div>
-          <Button className="gap-2" onClick={() => setCreateOpen(true)}>
+          <Button className="h-9 gap-2 font-bold px-4" onClick={() => setCreateOpen(true)}>
             <FilePlus2 className="h-4 w-4" />
             Create
           </Button>
         </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          className={cn(
-            'rounded-full border px-4 py-2 text-sm transition-colors',
-            tab !== 'templates' ? 'border-primary/50 bg-accent text-accent-foreground' : 'hover:bg-accent/20',
-          )}
-          onClick={() => setSearchParams((prev) => { const p = new URLSearchParams(prev); p.delete('tab'); return p; })}
-        >
-          All programs
-        </button>
-        <button
-          type="button"
-          className={cn(
-            'rounded-full border px-4 py-2 text-sm transition-colors',
-            tab === 'templates' ? 'border-primary/50 bg-accent text-accent-foreground' : 'hover:bg-accent/20',
-          )}
-          onClick={() => setSearchParams((prev) => { const p = new URLSearchParams(prev); p.set('tab', 'templates'); return p; })}
-        >
-          Templates
-        </button>
       </div>
 
       <Card>
@@ -364,18 +379,38 @@ export default function ProgramsPage() {
                               Unpublished
                             </Badge>
                           )}
-                          <Badge
-                            className={cn(
-                              "px-1.5 h-4.5 text-[10px] font-bold uppercase",
-                              programDeployments.length === 0
-                                ? 'bg-muted text-muted-foreground hover:bg-muted'
-                                : isMixed
-                                  ? 'bg-amber-500/10 text-amber-700 hover:bg-amber-500/10'
-                                  : 'bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10',
-                            )}
-                          >
-                            {liveLabel}
-                          </Badge>
+                          
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge
+                                  className={cn(
+                                    "px-1.5 h-4.5 text-[10px] font-bold uppercase cursor-help",
+                                    programDeployments.length === 0
+                                      ? 'bg-muted text-muted-foreground hover:bg-muted'
+                                      : isMixed
+                                        ? 'bg-amber-500/10 text-amber-700 hover:bg-amber-500/10'
+                                        : 'bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10',
+                                  )}
+                                >
+                                  {liveLabel}
+                                </Badge>
+                              </TooltipTrigger>
+                              {programDeployments.length > 0 && (
+                                <TooltipContent className="p-3 rounded-xl shadow-xl bg-background border ring-1 ring-foreground/5">
+                                  <p className="text-[10px] font-black uppercase text-muted-foreground mb-2 tracking-wider">Distribution</p>
+                                  <div className="space-y-1.5">
+                                    {deploymentVersions.map(v => (
+                                      <div key={v.version} className="flex items-center justify-between gap-6">
+                                        <Badge variant="outline" className="h-4 px-1 text-[9px] font-black">v{v.version}</Badge>
+                                        <span className="text-[10px] font-bold">{v.count} device{v.count === 1 ? '' : 's'}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
 
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -540,17 +575,18 @@ export default function ProgramsPage() {
               <label className="text-sm font-medium" htmlFor="program-create-mode">
                 Start from
               </label>
-              <select
-                id="program-create-mode"
+              <Select
                 value={createMode}
-                onChange={(e) => setCreateMode(e.target.value as typeof createMode)}
-                className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                onValueChange={(v) => setCreateMode(v as typeof createMode)}
               >
-                <option value="blank">Blank program</option>
-                <option value="template" disabled={templates.length === 0}>
-                  Template
-                </option>
-              </select>
+                <SelectTrigger id="program-create-mode">
+                  <SelectValue placeholder="Select mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="blank">Blank program</SelectItem>
+                  <SelectItem value="template" disabled={templates.length === 0}>Template</SelectItem>
+                </SelectContent>
+              </Select>
               {createMode === 'template' && templates.length === 0 && (
                 <p className="text-xs text-muted-foreground">No templates yet. Create one from a program details page.</p>
               )}
@@ -561,34 +597,37 @@ export default function ProgramsPage() {
                 {createMode === 'template' ? 'Template' : 'Resolution'}
               </label>
               {createMode === 'template' ? (
-                <select
-                  id="program-resolution"
+                <Select
                   value={createTemplateId}
-                  onChange={(e) => setCreateTemplateId(e.target.value)}
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                  onValueChange={(v) => setCreateTemplateId(v)}
                 >
-                  <option value="" disabled>
-                    Select a template…
-                  </option>
-                  {templates.map((tpl) => (
-                    <option key={tpl.id} value={tpl.id}>
-                      {tpl.name} · {tpl.width}×{tpl.height}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id="program-resolution">
+                    <SelectValue placeholder="Select a template…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((tpl) => (
+                      <SelectItem key={tpl.id} value={tpl.id}>
+                        {tpl.name} · {tpl.width}×{tpl.height}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               ) : (
-                <select
-                  id="program-resolution"
+                <Select
                   value={String(createPresetIndex)}
-                  onChange={(e) => setCreatePresetIndex(Number(e.target.value))}
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                  onValueChange={(v) => setCreatePresetIndex(Number(v))}
                 >
-                  {RESOLUTION_PRESETS.map((preset, index) => (
-                    <option key={preset.label} value={String(index)}>
-                      {preset.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id="program-resolution">
+                    <SelectValue placeholder="Select resolution" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RESOLUTION_PRESETS.map((preset, index) => (
+                      <SelectItem key={preset.label} value={String(index)}>
+                        {preset.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             </div>
 

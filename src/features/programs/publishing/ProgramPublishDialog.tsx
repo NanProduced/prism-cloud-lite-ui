@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
-import { Check, ChevronsRight, ChevronLeft, ChevronRight, X, Clock, RotateCcw, AlertCircle, Monitor, ShieldCheck, Zap, Search, Filter, Send, History } from 'lucide-react';
+import * as Icons from 'lucide-react';
+import { Check, ChevronsRight, ChevronRight, X, Clock, AlertCircle, Monitor, ShieldCheck, Search, Filter, Send, History, Database, TrendingUp, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -53,6 +55,7 @@ export function ProgramPublishDialog({
 
   const [deviceQuery, setDeviceQuery] = useState('');
   const [tagFilters, setTagFilters] = useState<Set<string>>(() => new Set());
+  const [tagMatchMode, setTagMatchMode] = useState<'any' | 'all'>('any');
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [resolutionOnly, setResolutionOnly] = useState<'any' | 'match'>('any');
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<Set<string>>(() => new Set());
@@ -69,12 +72,21 @@ export function ProgramPublishDialog({
     return mockDevices.filter((device) => {
       if (onlineOnly && device.status !== 'online') return false;
       if (resolutionOnly === 'match' && (device.resolution.width !== program.width || device.resolution.height !== program.height)) return false;
-      if (tagFilters.size > 0 && !device.tags.some((t) => tagFilters.has(t.id))) return false;
+      
+      if (tagFilters.size > 0) {
+        const deviceTagIds = device.tags.map(t => t.id);
+        if (tagMatchMode === 'all') {
+          if (![...tagFilters].every(id => deviceTagIds.includes(id))) return false;
+        } else {
+          if (![...tagFilters].some(id => deviceTagIds.includes(id))) return false;
+        }
+      }
+
       if (!q) return true;
       const name = (device.alias ?? device.deviceName).toLowerCase();
       return name.includes(q) || device.id.toLowerCase().includes(q);
     });
-  }, [deviceQuery, onlineOnly, program.height, program.width, resolutionOnly, tagFilters]);
+  }, [deviceQuery, onlineOnly, program.height, program.width, resolutionOnly, tagFilters, tagMatchMode]);
 
   const selectedDevices = useMemo(() => {
     const map = new Map(mockDevices.map((d) => [d.id, d]));
@@ -259,11 +271,14 @@ export function ProgramPublishDialog({
                       onOnlineOnlyChange={setOnlineOnly}
                       onResolutionOnlyChange={setResolutionOnly}
                       onTagFiltersChange={setTagFilters}
+                      tagMatchMode={tagMatchMode}
+                      onTagMatchModeChange={setTagMatchMode}
                       resolutionOnly={resolutionOnly}
                       selectedDeviceIds={selectedDeviceIds}
                       tagFilters={tagFilters}
                       onSelectedDeviceIdsChange={setSelectedDeviceIds}
                       programResolution={{ width: program.width, height: program.height }}
+                      deploymentsByDeviceId={deploymentsByDeviceId}
                     />
                   )}
                   {step === 1 && (
@@ -335,7 +350,7 @@ export function ProgramPublishDialog({
                         <p className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">Device Queue</p>
                         <Badge variant="secondary" className="h-4 text-[9px] font-black px-1.5">{selectedDeviceIds.size}</Badge>
                      </div>
-                     <ScrollArea className="flex-1 -mx-2 px-2">
+                     <ScrollArea className="flex-1 -mx-2 px-2 scrollbar-thin">
                         <div className="space-y-2 pb-8">
                            {selectedDevices.map(d => (
                               <div key={d.id} className="group relative p-3 rounded-xl border bg-background shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
@@ -370,15 +385,6 @@ export function ProgramPublishDialog({
                            )}
                         </div>
                      </ScrollArea>
-                  </div>
-               </div>
-
-               <div className="mt-auto pt-6">
-                  <div className="rounded-2xl bg-primary/5 border border-primary/10 p-4 flex items-start gap-3 shadow-sm ring-1 ring-primary/5">
-                     <Zap className="h-5 w-5 text-primary shrink-0" />
-                     <p className="text-[10px] leading-relaxed text-primary/80 font-bold uppercase tracking-tight">
-                        Cloud Sync Enabled: Deployment tasks will automatically resume when target nodes establish a secure connection.
-                     </p>
                   </div>
                </div>
             </div>
@@ -418,6 +424,8 @@ interface DeviceSelectStepProps {
   onResolutionOnlyChange: (v: 'any' | 'match') => void;
   onSelectedDeviceIdsChange: Dispatch<SetStateAction<Set<string>>>;
   onTagFiltersChange: Dispatch<SetStateAction<Set<string>>>;
+  tagMatchMode: 'any' | 'all';
+  onTagMatchModeChange: (v: 'any' | 'all') => void;
   programResolution: { width: number; height: number };
   resolutionOnly: 'any' | 'match';
   selectedDeviceIds: Set<string>;
@@ -425,6 +433,7 @@ interface DeviceSelectStepProps {
   allTags: Tag[];
   deviceQuery: string;
   onDeviceQueryChange: (v: string) => void;
+  deploymentsByDeviceId: Map<string, ProgramDeploymentRecord>;
 }
 
 function DeviceSelectStep({
@@ -434,13 +443,16 @@ function DeviceSelectStep({
   onResolutionOnlyChange,
   onSelectedDeviceIdsChange,
   onTagFiltersChange,
+  tagMatchMode,
+  onTagMatchModeChange,
   programResolution,
   resolutionOnly,
   selectedDeviceIds,
   tagFilters,
   allTags,
   deviceQuery,
-  onDeviceQueryChange
+  onDeviceQueryChange,
+  deploymentsByDeviceId
 }: DeviceSelectStepProps) {
   const filteredIds = filteredDevices.map((d) => d.id);
   const allSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedDeviceIds.has(id));
@@ -470,9 +482,25 @@ function DeviceSelectStep({
        </div>
 
        <div className="mb-6 space-y-4 px-1">
-          <div className="flex items-center gap-3">
-             <Filter className="h-3 w-3 text-muted-foreground" />
-             <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Quick Filters</span>
+          <div className="flex items-center justify-between">
+             <div className="flex items-center gap-3">
+                <Filter className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Quick Filters</span>
+             </div>
+             <div className="flex items-center gap-1 bg-muted/40 p-0.5 rounded-lg border shadow-inner">
+                <button 
+                  onClick={() => onTagMatchModeChange('any')}
+                  className={cn("px-2 py-1 text-[9px] font-black rounded-md transition-all", tagMatchMode === 'any' ? "bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.02]" : "text-muted-foreground/40 hover:text-muted-foreground")}
+                >
+                  ANY
+                </button>
+                <button 
+                  onClick={() => onTagMatchModeChange('all')}
+                  className={cn("px-2 py-1 text-[9px] font-black rounded-md transition-all", tagMatchMode === 'all' ? "bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.02]" : "text-muted-foreground/40 hover:text-muted-foreground")}
+                >
+                  ALL
+                </button>
+             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
              <button onClick={() => onOnlineOnlyChange(!onlineOnly)} className={cn("px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all shadow-sm", onlineOnly ? "bg-emerald-500 border-emerald-500 text-white" : "bg-card text-muted-foreground hover:border-muted-foreground/30")}>Online Only</button>
@@ -483,16 +511,27 @@ function DeviceSelectStep({
              
              {/* Tag Scroll Area */}
              <div className="flex-1 min-w-0 overflow-hidden relative">
-                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar scrollbar-thin">
                    {allTags.map((t) => {
                      const active = tagFilters.has(t.id);
+                     const Icon = (Icons as any)[t.icon || 'Tag'] || Icons.Tag;
                      return (
-                       <button key={t.id} onClick={() => onTagFiltersChange((prev) => {
-                         const next = new Set(prev);
-                         if (next.has(t.id)) next.delete(t.id); else next.add(t.id);
-                         return next;
-                       })} className={cn("px-3 py-2 rounded-xl text-[10px] font-bold border flex items-center gap-2 transition-all whitespace-nowrap shadow-sm", active ? "bg-accent border-primary/40 text-foreground ring-2 ring-primary/5" : "bg-card text-muted-foreground hover:border-muted-foreground/20")}>
-                         <div className="w-1.5 h-1.5 rounded-full" style={{ background: t.color || '#ccc' }} />
+                       <button 
+                         key={t.id} 
+                         onClick={() => onTagFiltersChange((prev) => {
+                           const next = new Set(prev);
+                           if (next.has(t.id)) next.delete(t.id); else next.add(t.id);
+                           return next;
+                         })} 
+                         className={cn(
+                           "px-3 py-1.5 rounded-full text-[10px] font-bold border flex items-center gap-2 transition-all whitespace-nowrap shadow-sm", 
+                           active 
+                             ? "bg-accent border-primary/40 text-foreground ring-2 ring-primary/5" 
+                             : "bg-muted/30 border-transparent text-muted-foreground grayscale opacity-60 hover:grayscale-0 hover:opacity-100 hover:bg-muted/50"
+                         )}
+                         style={active ? { backgroundColor: `${t.color}15`, borderColor: `${t.color}40`, color: t.color } : {}}
+                       >
+                         <Icon className="h-3 w-3" style={active ? { color: t.color } : {}} />
                          {t.name}
                        </button>
                      );
@@ -504,17 +543,18 @@ function DeviceSelectStep({
 
        <div className="flex-1 border rounded-[2rem] bg-muted/5 overflow-hidden flex flex-col shadow-inner">
           <div className="flex items-center gap-4 px-10 py-3.5 bg-muted/20 text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 border-b">
-             <span className="flex-1">Hardware Identification</span>
-             <span className="w-32 text-center">Node Health</span>
+             <span className="flex-1">Device</span>
+             <span className="w-32 text-center">STATUS</span>
           </div>
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 scrollbar-thin">
              <div className="divide-y divide-foreground/[0.03]">
                 {filteredDevices.map((d) => {
                    const isSelected = selectedDeviceIds.has(d.id);
                    const isConflict = d.resolution.width !== programResolution.width || d.resolution.height !== programResolution.height;
+                   const deployed = deploymentsByDeviceId.get(d.id);
                    
                    return (
-                     <div key={d.id} className={cn("group flex items-center gap-6 px-10 py-4 transition-all cursor-pointer relative", isSelected ? "bg-primary/[0.04]" : "hover:bg-muted/10")} onClick={() => onSelectedDeviceIdsChange((prev: any) => {
+                     <div key={d.id} className={cn("group flex items-center gap-6 px-10 py-4 transition-all cursor-pointer relative", isSelected ? "bg-primary/[0.04]" : "hover:bg-muted/10")} onClick={() => onSelectedDeviceIdsChange((prev: Set<string>) => {
                        const next = new Set(prev);
                        if (isSelected) next.delete(d.id); else next.add(d.id);
                        return next;
@@ -524,6 +564,11 @@ function DeviceSelectStep({
                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2.5">
                              <span className="text-sm font-black tracking-tight group-hover:text-primary transition-colors">{d.alias || d.deviceName}</span>
+                             {deployed && (
+                                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 px-1.5 h-4.5 text-[9px] font-black">
+                                   v{deployed.version}
+                                </Badge>
+                             )}
                              {isConflict && (
                                 <TooltipProvider>
                                    <Tooltip>
@@ -539,9 +584,9 @@ function DeviceSelectStep({
                              )}
                           </div>
                           <div className="flex items-center gap-3 mt-1.5">
-                             <p className="text-[9px] text-muted-foreground font-mono opacity-50 tracking-tighter uppercase">{d.id}</p>
+                             <p className="text-[9px] text-muted-foreground font-mono opacity-50 tracking-tighter uppercase">{d.id.slice(0, 8)}</p>
                              <div className="h-2 w-px bg-muted" />
-                             <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">{d.ip || '0.0.0.0'}</span>
+                             <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">{d.resolution.width}×{d.resolution.height}</span>
                           </div>
                        </div>
                        <div className="flex items-center gap-4">
@@ -586,7 +631,8 @@ interface StrategyStepProps {
 
 function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, program, existingVersion, onExistingVersionChange, latest, scope, onScopeChange, selectedCount, deployments, mode, onModeChange }: StrategyStepProps) {
   return (
-    <div className="h-full space-y-10 animate-in fade-in slide-in-from-right-2 duration-300 py-4">
+    <ScrollArea className="h-full scrollbar-thin">
+      <div className="space-y-10 animate-in fade-in slide-in-from-right-2 duration-300 py-4 pr-4">
        <div className="space-y-5">
           <div className="flex items-center justify-between px-1">
              <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-3">
@@ -607,10 +653,24 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
                 {versionMode === 'existing' && <div className="absolute top-5 right-5 h-7 w-7 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="h-4 w-4 text-white" /></div>}
                 <span className="text-lg font-black mb-1.5 tracking-tight group-hover:text-primary transition-colors">Redeploy Stable Archive</span>
                 <p className="text-[13px] text-muted-foreground leading-relaxed mb-6">Access the version library to redistribute or roll back nodes to a previously validated and immutable release snapshot.</p>
-                <div className="mt-auto group-focus-within:ring-2 ring-primary/20 rounded-xl overflow-hidden shadow-inner bg-muted/60">
-                   <select value={String(existingVersion)} onChange={e => onExistingVersionChange(Number(e.target.value))} disabled={versionMode !== 'existing'} className="w-full h-12 text-xs font-black px-4 border-0 outline-none cursor-pointer appearance-none bg-transparent">
-                      {[...program.versions].reverse().map(v => <option key={v.version} value={v.version}>v{v.version} — {v.version === latest?.version ? 'CURRENT LIVE RELEASE' : 'LEGACY ARCHIVE'}</option>)}
-                   </select>
+                
+                <div className="mt-auto">
+                   <Select 
+                      value={String(existingVersion)} 
+                      onValueChange={v => onExistingVersionChange(Number(v))}
+                      disabled={versionMode !== 'existing'}
+                   >
+                      <SelectTrigger className="w-full h-12 text-xs font-black px-4 bg-muted/60 border-0 shadow-inner rounded-xl">
+                         <SelectValue placeholder="Select version" />
+                      </SelectTrigger>
+                      <SelectContent>
+                         {[...program.versions].reverse().map(v => (
+                           <SelectItem key={v.version} value={String(v.version)} className="text-xs font-bold">
+                             v{v.version} — {v.version === latest?.version ? 'CURRENT LIVE RELEASE' : 'LEGACY ARCHIVE'}
+                           </SelectItem>
+                         ))}
+                      </SelectContent>
+                   </Select>
                 </div>
              </button>
           </div>
@@ -643,7 +703,8 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
              </p>
           </div>
        </div>
-    </div>
+      </div>
+    </ScrollArea>
   );
 }
 
@@ -701,7 +762,13 @@ function ReviewStep({ plan }: { plan: any }) {
                        </div>
                        <div className="w-44 flex items-center justify-center gap-5">
                           <span className="text-[10px] font-black opacity-30 tabular-nums">v{row.current || '0'}</span>
-                          <ChevronsRight className={cn("h-4 w-4", isChange ? "text-primary animate-pulse" : "opacity-10")} />
+                          <div className="flex items-center justify-center w-6 h-6">
+                            {row.action === 'deploy' && <Plus className="h-4 w-4 text-blue-500 animate-pulse" />}
+                            {row.action === 'update' && <TrendingUp className="h-4 w-4 text-emerald-500 animate-pulse" />}
+                            {row.action === 'rollback' && <History className="h-4 w-4 text-amber-500 animate-pulse" />}
+                            {row.action === 'no-change' && <Check className="h-4 w-4 text-muted-foreground opacity-20" />}
+                            {row.action === 'skip' && <ChevronsRight className="h-4 w-4 opacity-10" />}
+                          </div>
                           <span className={cn("text-[11px] font-black tabular-nums tracking-tighter px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20 shadow-sm", isChange ? "" : "opacity-50 grayscale")}>v{row.target}</span>
                        </div>
                        <div className="w-24 text-right">

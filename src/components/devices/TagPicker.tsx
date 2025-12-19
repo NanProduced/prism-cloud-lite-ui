@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { TagChip } from './TagChip';
 import { TAG_COLOR_PRESETS, TAG_ICON_OPTIONS, isHexColor } from './tagging';
 import { ArrowLeft, Check, Palette, Plus, X } from 'lucide-react';
+import { PopoverColorPicker } from '@/components/ui/popover-color-picker';
 
 interface CreateTagDraft {
   name: string;
@@ -268,17 +269,14 @@ export function TagPicker({
                   ))}
 
                   <div className="flex items-center gap-2 ms-auto">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Palette className="h-4 w-4" />
+                    <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                      <Palette className="h-3 w-3" />
                       Custom
                     </div>
-                    <input
-                      type="color"
+                    <PopoverColorPicker
                       value={customColorValue}
-                      onChange={(e) => setDraftColor(e.target.value)}
-                      className="h-8 w-10 rounded border bg-transparent p-0"
-                      aria-label="Custom color"
-                      title="Custom color"
+                      onChange={(v) => setDraftColor(v)}
+                      className="h-8 w-24 px-2"
                     />
                   </div>
                 </div>

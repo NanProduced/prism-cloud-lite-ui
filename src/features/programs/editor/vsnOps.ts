@@ -173,6 +173,39 @@ export function moveItem(doc: VsnDocument, pageIndex: number, regionIndex: numbe
   return next;
 }
 
+export function moveItemToRegion(
+  doc: VsnDocument,
+  pageIndex: number,
+  fromRegionIndex: number,
+  fromItemIndex: number,
+  toRegionIndex: number,
+  toItemIndex: number,
+): VsnDocument {
+  if (fromRegionIndex === toRegionIndex) {
+    return moveItem(doc, pageIndex, fromRegionIndex, fromItemIndex, toItemIndex);
+  }
+  const next = cloneVsn(doc);
+  const page = next.Programs.Program.Pages.Page[pageIndex];
+  if (!page) return doc;
+  const regions = page.Regions?.Region;
+  if (!Array.isArray(regions)) return doc;
+
+  const fromRegion = regions[fromRegionIndex];
+  const toRegion = regions[toRegionIndex];
+  if (!fromRegion || !toRegion) return doc;
+
+  const fromItems = fromRegion.Items?.Item;
+  const toItems = toRegion.Items?.Item;
+  if (!Array.isArray(fromItems) || !Array.isArray(toItems)) return doc;
+  if (fromItemIndex < 0 || fromItemIndex >= fromItems.length) return doc;
+
+  const [picked] = fromItems.splice(fromItemIndex, 1);
+  const clampedTo = Math.max(0, Math.min(toItems.length, toItemIndex));
+  toItems.splice(clampedTo, 0, picked);
+
+  return next;
+}
+
 export function patchPage(doc: VsnDocument, pageIndex: number, patch: Partial<VsnPage>): VsnDocument {
   const next = cloneVsn(doc);
   const page = next.Programs.Program.Pages.Page[pageIndex];

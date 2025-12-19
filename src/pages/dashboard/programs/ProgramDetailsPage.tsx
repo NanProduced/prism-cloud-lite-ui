@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { 
-  ArrowLeft, Pencil, Send, MoreHorizontal, History, 
-  Monitor, Info, CheckCircle2, Clock, AlertCircle, 
-  User, Database, Layers, XCircle, Search
-} from 'lucide-react';
-import { toast } from 'sonner';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Send, 
+  Monitor, Info, CheckCircle2, AlertCircle,
+  Database, Layers, XCircle, Search, Pencil, MoreHorizontal, History as HistoryIcon
+} from 'lucide-react';import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -84,9 +82,9 @@ export default function ProgramDetailsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-           <Button variant="outline" size="sm" className="font-bold gap-2" onClick={() => navigate(`/dashboard/programs/${program.id}/edit`)}>
-              <Pencil className="h-3.5 w-3.5" /> Edit Workspace
-           </Button>
+                  <Button className="h-10 px-6 gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]" onClick={() => navigate(`/dashboard/programs/${programId}/edit`)}>
+                    <Pencil className="h-3.5 w-3.5" /> Edit Workspace
+                  </Button>
            <Button size="sm" className="font-bold gap-2 shadow-lg shadow-primary/20" onClick={() => setPublishOpen(true)}>
               <Send className="h-3.5 w-3.5" /> Publish New
            </Button>
@@ -144,7 +142,7 @@ export default function ProgramDetailsPage() {
                     <Monitor className="h-3.5 w-3.5" /> Running Nodes
                  </TabsTrigger>
                  <TabsTrigger value="history" className="px-6 rounded-lg gap-2 font-bold text-xs uppercase tracking-wider data-[state=active]:shadow-sm">
-                    <History className="h-3.5 w-3.5" /> Full Audit Trail
+                    <HistoryIcon className="h-3.5 w-3.5" /> Full Audit Trail
                  </TabsTrigger>
               </TabsList>
 

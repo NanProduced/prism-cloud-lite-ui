@@ -175,12 +175,38 @@ export function StagePreview({
         let nextY = clampInt(Math.round(interaction.startRect.y + dy), 0, Math.max(0, programHeight - interaction.startRect.h));
 
         if (snapEnabled) {
-          nextX = snapPosition(nextX, interaction.startRect.w, programWidth, gridSize, snapThreshold);
-          nextY = snapPosition(nextY, interaction.startRect.h, programHeight, gridSize, snapThreshold);
+          const otherRegions = regions.filter((_, i) => i !== interaction.regionIndex);
+          const guidesX = [0, Math.round(programWidth / 2), programWidth];
+          const guidesY = [0, Math.round(programHeight / 2), programHeight];
+          otherRegions.forEach(r => {
+            const rx = Number(r.Rect.X) || 0;
+            const ry = Number(r.Rect.Y) || 0;
+            const rw = Number(r.Rect.Width) || 0;
+            const rh = Number(r.Rect.Height) || 0;
+            guidesX.push(rx, rx + rw, Math.round(rx + rw / 2));
+            guidesY.push(ry, ry + rh, Math.round(ry + rh / 2));
+          });
+
+          // Snap left edge, center, or right edge
+          const sL = snapEdge(nextX, gridSize, snapThreshold, guidesX);
+          const sC = snapEdge(nextX + interaction.startRect.w / 2, gridSize, snapThreshold, guidesX) - interaction.startRect.w / 2;
+          const sR = snapEdge(nextX + interaction.startRect.w, gridSize, snapThreshold, guidesX) - interaction.startRect.w;
+
+          if (Math.abs(sL - nextX) <= snapThreshold) nextX = sL;
+          else if (Math.abs(sC - nextX) <= snapThreshold) nextX = sC;
+          else if (Math.abs(sR - nextX) <= snapThreshold) nextX = sR;
+
+          const sT = snapEdge(nextY, gridSize, snapThreshold, guidesY);
+          const sMid = snapEdge(nextY + interaction.startRect.h / 2, gridSize, snapThreshold, guidesY) - interaction.startRect.h / 2;
+          const sB = snapEdge(nextY + interaction.startRect.h, gridSize, snapThreshold, guidesY) - interaction.startRect.h;
+
+          if (Math.abs(sT - nextY) <= snapThreshold) nextY = sT;
+          else if (Math.abs(sMid - nextY) <= snapThreshold) nextY = sMid;
+          else if (Math.abs(sB - nextY) <= snapThreshold) nextY = sB;
         }
         onPatchRegionRect(interaction.pageIndex, interaction.regionIndex, {
-          X: String(nextX),
-          Y: String(nextY),
+          X: String(clampInt(Math.round(nextX), 0, Math.max(0, programWidth - interaction.startRect.w))),
+          Y: String(clampInt(Math.round(nextY), 0, Math.max(0, programHeight - interaction.startRect.h))),
         });
         return;
       }
@@ -224,10 +250,23 @@ export function StagePreview({
       }
 
       if (snapEnabled) {
-        const snappedLeft = snapEdge(left, gridSize, snapThreshold, [0, Math.round(programWidth / 2)]);
-        const snappedTop = snapEdge(top, gridSize, snapThreshold, [0, Math.round(programHeight / 2)]);
-        const snappedRight = snapEdge(right, gridSize, snapThreshold, [Math.round(programWidth / 2), programWidth]);
-        const snappedBottom = snapEdge(bottom, gridSize, snapThreshold, [Math.round(programHeight / 2), programHeight]);
+        const otherRegions = regions.filter((_, i) => i !== interaction.regionIndex);
+        const guidesX = [0, Math.round(programWidth / 2), programWidth];
+        const guidesY = [0, Math.round(programHeight / 2), programHeight];
+        
+        otherRegions.forEach(r => {
+          const rx = Number(r.Rect.X) || 0;
+          const ry = Number(r.Rect.Y) || 0;
+          const rw = Number(r.Rect.Width) || 0;
+          const rh = Number(r.Rect.Height) || 0;
+          guidesX.push(rx, rx + rw, Math.round(rx + rw / 2));
+          guidesY.push(ry, ry + rh, Math.round(ry + rh / 2));
+        });
+
+        const snappedLeft = snapEdge(left, gridSize, snapThreshold, guidesX);
+        const snappedTop = snapEdge(top, gridSize, snapThreshold, guidesY);
+        const snappedRight = snapEdge(right, gridSize, snapThreshold, guidesX);
+        const snappedBottom = snapEdge(bottom, gridSize, snapThreshold, guidesY);
 
         if (interaction.handle.includes('w')) left = clampInt(snappedLeft, 0, startRight - minSize);
         if (interaction.handle.includes('n')) top = clampInt(snappedTop, 0, startBottom - minSize);
@@ -523,6 +562,21 @@ export function StagePreview({
                   height: Math.abs(createInteraction.current.y - createInteraction.start.y) * scale,
                 }}
               />
+            )}
+
+            {interaction && (
+              <div 
+                className="pointer-events-none absolute z-[100] rounded bg-primary px-2 py-1 text-[10px] font-bold text-white shadow-lg"
+                style={{
+                  left: (interaction.kind === 'move' ? Number(regions[interaction.regionIndex].Rect.X) : interaction.startRect.x) * scale,
+                  top: (interaction.kind === 'move' ? Number(regions[interaction.regionIndex].Rect.Y) : interaction.startRect.y) * scale - 28,
+                }}
+              >
+                {(() => {
+                  const r = regions[interaction.regionIndex].Rect;
+                  return `${r.X}, ${r.Y} · ${r.Width}×${r.Height}`;
+                })()}
+              </div>
             )}
           </div>
         </div>
@@ -851,17 +905,6 @@ function clampInt(value: number, min: number, max: number): number {
 function clampFloat(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
   return Math.min(max, Math.max(min, value));
-}
-
-function snapPosition(pos: number, size: number, total: number, grid: number, threshold: number): number {
-  const candidates = [0, Math.round(total / 2), Math.max(0, total - size), Math.round((total - size) / 2)];
-  let next = pos;
-  candidates.forEach((c) => {
-    if (Math.abs(pos - c) <= threshold) next = c;
-  });
-  const snapped = Math.round(next / grid) * grid;
-  if (Math.abs(next - snapped) <= threshold) next = snapped;
-  return clampInt(next, 0, Math.max(0, total - size));
 }
 
 function snapEdge(value: number, grid: number, threshold: number, guides: number[]): number {

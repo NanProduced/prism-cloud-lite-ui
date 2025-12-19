@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Clock, Layers, Trash2, Type as TypeIcon, Video as VideoIcon, ImageIcon, Zap, Minus, Plus } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Clock, Trash2, Type as TypeIcon, Video as VideoIcon, ImageIcon, Zap, Minus, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import type { VsnItem, VsnRegion } from '@/features/programs/vsn/types';
 import type { EditorMaterial, EditorSelection } from '../types';
 import { getRegionDisplayName } from '../utils';
@@ -20,7 +19,7 @@ interface AdvancedTimelineProps {
   onSelectRegion: (regionIndex: number) => void;
   onPatchItem: (regionIndex: number, itemIndex: number, patch: Partial<VsnItem>) => void;
   onDeleteItem: (regionIndex: number, itemIndex: number) => void;
-  onMoveItem: (regionIndex: number, from: number, to: number) => void;
+  onMoveItem: (fromRegionIndex: number, fromItemIndex: number, toRegionIndex: number, toItemIndex: number) => void;
 }
 
 const MIN_DURATION_MS = 200;
@@ -32,6 +31,7 @@ export function AdvancedTimeline({
   selection,
   materialIndex,
   currentTime,
+  isPlaying,
   playbackSpeed,
   onCurrentTimeChange,
   onPlaybackSpeedChange,
@@ -40,7 +40,7 @@ export function AdvancedTimeline({
   onPatchItem,
   onDeleteItem,
   onMoveItem,
-}: AdvancedTimelineProps) {
+}: AdvancedTimelineProps & { isPlaying: boolean }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [pxPerSec, setPxPerSec] = useState(60);
   const [draggingItem, setDraggingItem] = useState<{ rIdx: number; iIdx: number } | null>(null);
@@ -90,6 +90,22 @@ export function AdvancedTimeline({
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
   };
+
+  // Auto-scroll follow
+  useEffect(() => {
+    if (!isPlaying || !scrollRef.current) return;
+    const el = scrollRef.current;
+    const padding = 100; // 边缘留白
+    const pos = (currentTime / 1000) * pxPerSec;
+    
+    const isVisible = pos >= el.scrollLeft && pos <= el.scrollLeft + el.clientWidth;
+    if (!isVisible) {
+      el.scrollLeft = pos - padding;
+    } else if (pos > el.scrollLeft + el.clientWidth - 40) {
+      // 快到右边缘了，往前滚一点
+      el.scrollLeft += 100;
+    }
+  }, [currentTime, isPlaying, pxPerSec]);
 
   const playheadPos = (Number(currentTime) || 0) / 1000 * pxPerSec;
 
@@ -210,6 +226,14 @@ export function AdvancedTimeline({
                     "relative w-full flex items-center border-b border-foreground/[0.02] group",
                     selection.regionIndex === rIdx && "bg-primary/[0.01]"
                   )}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    if (draggingItem && draggingItem.rIdx !== rIdx) {
+                      const items = region.Items.Item;
+                      onMoveItem(draggingItem.rIdx, draggingItem.iIdx, rIdx, items.length);
+                      setDraggingItem({ rIdx, iIdx: items.length });
+                    }
+                  }}
                 >
                   <div className="absolute inset-0 flex items-center px-0.5">
                     {region.Items.Item.map((item, iIdx) => (
@@ -225,9 +249,15 @@ export function AdvancedTimeline({
                         onDragStart={() => setDraggingItem({ rIdx, iIdx })}
                         onDragOver={(e) => {
                           e.preventDefault();
-                          if (draggingItem && draggingItem.rIdx === rIdx && draggingItem.iIdx !== iIdx) {
-                            onMoveItem(rIdx, draggingItem.iIdx, iIdx);
-                            setDraggingItem({ rIdx, iIdx });
+                          e.stopPropagation();
+                          if (draggingItem) {
+                            if (draggingItem.rIdx === rIdx && draggingItem.iIdx !== iIdx) {
+                              onMoveItem(rIdx, draggingItem.iIdx, rIdx, iIdx);
+                              setDraggingItem({ rIdx, iIdx });
+                            } else if (draggingItem.rIdx !== rIdx) {
+                              onMoveItem(draggingItem.rIdx, draggingItem.iIdx, rIdx, iIdx);
+                              setDraggingItem({ rIdx, iIdx });
+                            }
                           }
                         }}
                       />
@@ -314,10 +344,10 @@ function TimelineItemBlock({
       };
       const onUp = () => {
         document.body.style.cursor = '';
-        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mousemove', onMouseMove);
         window.removeEventListener('mouseup', onUp);
       };
-      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mousemove', onMouseMove);
       window.addEventListener('mouseup', onUp);
     }
   };
@@ -348,7 +378,7 @@ function TimelineItemBlock({
           onClick={(e) => { 
             e.preventDefault();
             e.stopPropagation(); 
-            onDeleteItem(); 
+            onDelete(); 
           }}
         >
           <Trash2 className="h-2.5 w-2.5" />

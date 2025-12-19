@@ -1,10 +1,22 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { BadgeAlert, Image as ImageIcon, Type as TypeIcon, Video as VideoIcon } from 'lucide-react';
+import { BadgeAlert, ChevronDown, Image as ImageIcon, Type as TypeIcon, Video as VideoIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import type { Device } from '@/types/device';
 import type { VsnDocument, VsnItem, VsnPage, VsnRect, VsnRegion } from '@/features/programs/vsn/types';
@@ -23,6 +35,7 @@ import {
 } from '../utils';
 import { getItems, getPages, getRegions } from '../vsnOps';
 import { DeviceResolutionPicker } from './DeviceResolutionPicker';
+import { PopoverColorPicker } from '@/components/ui/popover-color-picker';
 
 type MaterialIndex = Record<string, EditorMaterial>;
 
@@ -83,8 +96,9 @@ export function InspectorPanel({
 
       <Separator className="my-3" />
 
-      <ScrollArea className="flex-1 pr-3">
-        {!doc || !page ? (
+      <ScrollArea className="flex-1 -mx-0.5 px-0.5">
+        <div className="pr-3">
+          {!doc || !page ? (
           <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">
             No document loaded.
           </div>
@@ -124,6 +138,7 @@ export function InspectorPanel({
             />
           </div>
         )}
+        </div>
       </ScrollArea>
     </div>
   );
@@ -275,14 +290,18 @@ function PageInspector({
   return (
     <div className="space-y-5">
       <Field label="Loop type">
-        <select
+        <Select
           value={page.LoopType}
-          onChange={(e) => onPatch({ LoopType: e.target.value as VsnPage['LoopType'] })}
-          className="h-9 w-full rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          onValueChange={(v) => onPatch({ LoopType: v as VsnPage['LoopType'] })}
         >
-          <option value="1">1 · Auto duration</option>
-          <option value="0">0 · Fixed duration</option>
-        </select>
+          <SelectTrigger className="h-9 w-full">
+            <SelectValue placeholder="Select loop type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1">1 · Auto duration</SelectItem>
+            <SelectItem value="0">0 · Fixed duration</SelectItem>
+          </SelectContent>
+        </Select>
       </Field>
 
       <Field label="AppointDuration (ms)">
@@ -301,21 +320,16 @@ function PageInspector({
       </Field>
 
       <Field label="Background">
-        <div className="flex items-center gap-2">
-          {showDevFields ? (
-            <Input value={page.BgColor} onChange={(e) => onPatch({ BgColor: e.target.value })} />
-          ) : (
-            <Input value={hexColor} readOnly />
-          )}
-          <input
-            aria-label="Pick background color"
-            type="color"
-            value={hexColor}
-            className="h-9 w-10 cursor-pointer rounded-md border bg-background p-1"
-            onChange={(e) => onPatch({ BgColor: cssHexToVsnBgColor(e.target.value) })}
-          />
-        </div>
-        {showDevFields && <p className="mt-1 text-xs text-muted-foreground">Stored as 0xAARRGGBB in VSN.</p>}
+        <PopoverColorPicker
+          value={hexColor}
+          onChange={(v) => onPatch({ BgColor: cssHexToVsnBgColor(v) })}
+        />
+        {showDevFields && (
+          <div className="mt-2 space-y-1">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">VSN Internal</p>
+            <Input value={page.BgColor} onChange={(e) => onPatch({ BgColor: e.target.value })} className="h-8 text-xs font-mono" />
+          </div>
+        )}
       </Field>
     </div>
   );
@@ -357,10 +371,10 @@ function RegionInspector({
       </Field>
 
       <Field label="Window type">
-        <select
+        <Select
           value={mode}
-          onChange={(e) => {
-            const nextMode = e.target.value as RegionMode;
+          onValueChange={(v) => {
+            const nextMode = v as RegionMode;
             if (nextMode === mode) return;
 
             if (nextMode === 'sync' && !canSync) {
@@ -383,16 +397,20 @@ function RegionInspector({
             const nextName = nextMode === 'sync' ? 'sync_program' : 'singleline_scroll';
             onPatch({ Name: nextName, [REGION_EDITOR_NAME_KEY]: fallbackTitle });
           }}
-          className="h-9 w-full rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
         >
-          <option value="normal">Normal</option>
-          <option value="sync" disabled={!canSync && mode !== 'sync'}>
-            Sync playback
-          </option>
-          <option value="ticker" disabled={!canTicker && mode !== 'ticker'}>
-            Single-line ticker
-          </option>
-        </select>
+          <SelectTrigger className="h-9 w-full">
+            <SelectValue placeholder="Select mode" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="normal">Normal</SelectItem>
+            <SelectItem value="sync" disabled={!canSync && mode !== 'sync'}>
+              Sync playback
+            </SelectItem>
+            <SelectItem value="ticker" disabled={!canTicker && mode !== 'ticker'}>
+              Single-line ticker
+            </SelectItem>
+          </SelectContent>
+        </Select>
         <p className="mt-1 text-xs text-muted-foreground">
           {mode === 'sync'
             ? 'Sync windows play items in lockstep across all sync windows on the page.'
@@ -409,14 +427,18 @@ function RegionInspector({
       )}
 
       <Field label="IsScheduleRegion">
-        <select
+        <Select
           value={region.IsScheduleRegion}
-          onChange={(e) => onPatch({ IsScheduleRegion: e.target.value as VsnRegion['IsScheduleRegion'] })}
-          className="h-9 w-full rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          onValueChange={(v) => onPatch({ IsScheduleRegion: v as VsnRegion['IsScheduleRegion'] })}
         >
-          <option value="0">0 · No</option>
-          <option value="1">1 · Yes</option>
-        </select>
+          <SelectTrigger className="h-9 w-full">
+            <SelectValue placeholder="Is schedule region" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="0">0 · No</SelectItem>
+            <SelectItem value="1">1 · Yes</SelectItem>
+          </SelectContent>
+        </Select>
       </Field>
 
       <Field label="Layer">
@@ -437,98 +459,102 @@ function RegionInspector({
 
       <Separator />
 
-      <p className="text-xs font-medium text-muted-foreground">Rect</p>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="X">
-          <Input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            step={1}
-            value={rect.X}
-            onChange={(e) => {
-              const value = parseNonNegIntInput(e.target.value);
-              if (value == null) return;
-              onPatchRect({ X: value });
-            }}
-          />
-        </Field>
-        <Field label="Y">
-          <Input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            step={1}
-            value={rect.Y}
-            onChange={(e) => {
-              const value = parseNonNegIntInput(e.target.value);
-              if (value == null) return;
-              onPatchRect({ Y: value });
-            }}
-          />
-        </Field>
-        <Field label="Width">
-          <Input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            step={1}
-            value={rect.Width}
-            onChange={(e) => {
-              const value = parseStrictPosIntInput(e.target.value);
-              if (value == null) return;
-              onPatchRect({ Width: value });
-            }}
-          />
-        </Field>
-        <Field label="Height">
-          <Input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            step={1}
-            value={rect.Height}
-            onChange={(e) => {
-              const value = parseStrictPosIntInput(e.target.value);
-              if (value == null) return;
-              onPatchRect({ Height: value });
-            }}
-          />
-        </Field>
-        <Field label="BorderWidth">
-          <Input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            step={1}
-            value={rect.BorderWidth}
-            onChange={(e) => {
-              const value = parseNonNegIntInput(e.target.value);
-              if (value == null) return;
-              onPatchRect({ BorderWidth: value });
-            }}
-          />
-        </Field>
-        <Field label="BorderColor">
-          <div className="flex items-center gap-2">
-            <Input value={borderColor} onChange={(e) => onPatchRect({ BorderColor: e.target.value })} />
-            <input
-              aria-label="Pick border color"
-              type="color"
-              value={borderColor.startsWith('#') ? borderColor.slice(0, 7) : '#000000'}
-              className="h-9 w-10 cursor-pointer rounded-md border bg-background p-1"
-              onChange={(e) => onPatchRect({ BorderColor: e.target.value })}
-            />
+      <Collapsible defaultOpen className="space-y-2">
+        <CollapsibleTrigger asChild>
+          <button className="flex w-full items-center justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">
+            Rect
+            <ChevronDown className="h-3 w-3 transition-transform duration-200" />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-4 pt-2">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="X">
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                step={1}
+                value={rect.X}
+                onChange={(e) => {
+                  const value = parseNonNegIntInput(e.target.value);
+                  if (value == null) return;
+                  onPatchRect({ X: value });
+                }}
+              />
+            </Field>
+            <Field label="Y">
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                step={1}
+                value={rect.Y}
+                onChange={(e) => {
+                  const value = parseNonNegIntInput(e.target.value);
+                  if (value == null) return;
+                  onPatchRect({ Y: value });
+                }}
+              />
+            </Field>
+            <Field label="Width">
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                step={1}
+                value={rect.Width}
+                onChange={(e) => {
+                  const value = parseStrictPosIntInput(e.target.value);
+                  if (value == null) return;
+                  onPatchRect({ Width: value });
+                }}
+              />
+            </Field>
+            <Field label="Height">
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                step={1}
+                value={rect.Height}
+                onChange={(e) => {
+                  const value = parseStrictPosIntInput(e.target.value);
+                  if (value == null) return;
+                  onPatchRect({ Height: value });
+                }}
+              />
+            </Field>
+            <Field label="BorderWidth">
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                step={1}
+                value={rect.BorderWidth}
+                onChange={(e) => {
+                  const value = parseNonNegIntInput(e.target.value);
+                  if (value == null) return;
+                  onPatchRect({ BorderWidth: value });
+                }}
+              />
+            </Field>
+            <Field label="BorderColor">
+              <PopoverColorPicker
+                value={borderColor}
+                onChange={(v) => onPatchRect({ BorderColor: v })}
+              />
+            </Field>
+            <div className="col-span-2">
+              <Field label="BackColor (optional)">
+                <PopoverColorPicker
+                  value={backColor || ''}
+                  onChange={(v) => onPatchRect({ BackColor: v || null })}
+                />
+              </Field>
+            </div>
           </div>
-        </Field>
-        <Field label="BackColor (optional)">
-          <Input
-            value={backColor}
-            onChange={(e) => onPatchRect({ BackColor: e.target.value ? e.target.value : null })}
-            placeholder="#000000"
-          />
-        </Field>
-      </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }
@@ -640,68 +666,83 @@ function ItemInspector({
           </Field>
 
           <Field label={showDevFields ? 'ReserveAS' : 'Fit'}>
-            <select
+            <Select
               value={item.ReserveAS ?? '0'}
-              onChange={(e) => onPatch({ ReserveAS: e.target.value })}
-              className="h-9 w-full rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+              onValueChange={(v) => onPatch({ ReserveAS: v })}
             >
-              <option value="0">{showDevFields ? '0 · FIT_XY' : 'Fill'}</option>
-              <option value="1">{showDevFields ? '1 · CENTER_INSIDE' : 'Contain'}</option>
-            </select>
+              <SelectTrigger className="h-9 w-full">
+                <SelectValue placeholder="Select fit" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">{showDevFields ? '0 · FIT_XY' : 'Fill'}</SelectItem>
+                <SelectItem value="1">{showDevFields ? '1 · CENTER_INSIDE' : 'Contain'}</SelectItem>
+              </SelectContent>
+            </Select>
           </Field>
 
-          <Field label={showDevFields ? 'inEffect' : 'Transition'}>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
-                <select
-                  value={effectType}
-                  onChange={(e) => {
-                    const nextType = e.target.value;
-                    const preset = EFFECT_PRESETS.find((p) => p.id === nextType) ?? EFFECT_PRESETS[0];
-                    if (!preset || preset.id === '0') {
-                      onPatch({ inEffect: null });
-                      return;
-                    }
-                    const next = {
-                      ...(effect ?? {}),
-                      Type: preset.id,
-                      Name: preset.name,
-                      Time: effectTime,
-                    };
-                    onPatch({ inEffect: next });
-                  }}
-                  className="h-9 w-full rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                >
-                  {EFFECT_PRESETS.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {showDevFields ? `${p.id} · ${p.name}` : p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <Collapsible className="space-y-2">
+            <CollapsibleTrigger asChild>
+              <button className="flex w-full items-center justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">
+                {showDevFields ? 'inEffect' : 'Transition'}
+                <ChevronDown className="h-3 w-3 transition-transform duration-200" />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 pt-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <Select
+                    value={effectType}
+                    onValueChange={(v) => {
+                      const nextType = v;
+                      const preset = EFFECT_PRESETS.find((p) => p.id === nextType) ?? EFFECT_PRESETS[0];
+                      if (!preset || preset.id === '0') {
+                        onPatch({ inEffect: null });
+                        return;
+                      }
+                      const next = {
+                        ...(effect ?? {}),
+                        Type: preset.id,
+                        Name: preset.name,
+                        Time: effectTime,
+                      };
+                      onPatch({ inEffect: next });
+                    }}
+                  >
+                    <SelectTrigger className="h-9 w-full">
+                      <SelectValue placeholder="Select transition" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px] scrollbar-thin">
+                      {EFFECT_PRESETS.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {showDevFields ? `${p.id} · ${p.name}` : p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-1.5">
-                <span className="text-xs font-medium text-muted-foreground">Time (ms)</span>
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  step={100}
-                  disabled={effectType === '0'}
-                  value={effectType === '0' ? '' : effectTime}
-                  onChange={(e) => {
-                    const value = parseStrictPosIntInput(e.target.value);
-                    if (value == null) return;
-                    if (effectType === '0') return;
-                    const preset = EFFECT_PRESETS.find((p) => p.id === effectType) ?? EFFECT_PRESETS[0];
-                    const next = { ...(effect ?? {}), Type: preset.id, Name: preset.name, Time: value };
-                    onPatch({ inEffect: next });
-                  }}
-                />
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Time (ms)</span>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    step={100}
+                    disabled={effectType === '0'}
+                    value={effectType === '0' ? '' : effectTime}
+                    onChange={(e) => {
+                      const value = parseStrictPosIntInput(e.target.value);
+                      if (value == null) return;
+                      if (effectType === '0') return;
+                      const preset = EFFECT_PRESETS.find((p) => p.id === effectType) ?? EFFECT_PRESETS[0];
+                      const next = { ...(effect ?? {}), Type: preset.id, Name: preset.name, Time: value };
+                      onPatch({ inEffect: next });
+                    }}
+                  />
+                </div>
               </div>
-              <div />
-            </div>
-          </Field>
+            </CollapsibleContent>
+          </Collapsible>
 
           {item.Type === '3' && (
             <>
@@ -758,21 +799,25 @@ function ItemInspector({
           </Field>
 
           <Field label="Text mode">
-            <select
+            <Select
               value={item.Type === '5' ? 'scroll' : 'normal'}
-              onChange={(e) => {
-                const next = e.target.value;
+              onValueChange={(v) => {
+                const next = v;
                 if (next === 'scroll') {
                   onPatch({ Type: '5', IsScroll: '1' });
                   return;
                 }
                 onPatch({ Type: '4', IsScroll: undefined });
               }}
-              className="h-9 w-full rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             >
-              <option value="normal">Normal</option>
-              <option value="scroll">Single-line scroll</option>
-            </select>
+              <SelectTrigger className="h-9 w-full">
+                <SelectValue placeholder="Select mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="scroll">Single-line scroll</SelectItem>
+              </SelectContent>
+            </Select>
           </Field>
 
           <Field label="Text">
@@ -784,75 +829,86 @@ function ItemInspector({
           </Field>
 
           <Field label="TextColor">
-            <div className="flex items-center gap-2">
-              <Input value={item.TextColor ?? ''} onChange={(e) => onPatch({ TextColor: e.target.value })} />
-              <input
-                aria-label="Pick text color"
-                type="color"
-                value={(item.TextColor ?? '#ffffff').startsWith('#') ? (item.TextColor ?? '#ffffff').slice(0, 7) : '#ffffff'}
-                className="h-9 w-10 cursor-pointer rounded-md border bg-background p-1"
-                onChange={(e) => onPatch({ TextColor: e.target.value })}
-              />
-            </div>
+            <PopoverColorPicker
+              value={item.TextColor || '#ffffff'}
+              onChange={(v) => onPatch({ TextColor: v })}
+            />
           </Field>
 
           <Separator />
 
-          <p className="text-xs font-medium text-muted-foreground">Font</p>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="lfHeight">
-              <Input
-                type="number"
-                inputMode="numeric"
-                min={1}
-                step={1}
-                value={item.LogFont?.lfHeight ?? ''}
-                onChange={(e) => {
-                  const value = parseStrictPosIntInput(e.target.value);
-                  if (value == null) return;
-                  onPatch({ LogFont: { ...(item.LogFont ?? { lfHeight: '32' }), lfHeight: value } });
-                }}
-              />
-            </Field>
-            <Field label="lfFaceName">
-              <Input
-                value={item.LogFont?.lfFaceName ?? ''}
-                onChange={(e) =>
-                  onPatch({ LogFont: { ...(item.LogFont ?? { lfHeight: '32' }), lfFaceName: e.target.value } })
-                }
-                placeholder="e.g. SimHei"
-              />
-            </Field>
-            <Field label="lfWeight">
-              <Input
-                value={item.LogFont?.lfWeight ?? ''}
-                onChange={(e) => onPatch({ LogFont: { ...(item.LogFont ?? { lfHeight: '32' }), lfWeight: e.target.value } })}
-                placeholder="400 / 700"
-              />
-            </Field>
-            <Field label="Italic">
-              <select
-                value={item.LogFont?.lfItalic ?? '0'}
-                onChange={(e) => onPatch({ LogFont: { ...(item.LogFont ?? { lfHeight: '32' }), lfItalic: e.target.value } })}
-                className="h-9 w-full rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-              >
-                <option value="0">0 · No</option>
-                <option value="1">1 · Yes</option>
-              </select>
-            </Field>
-            <Field label="Underline">
-              <select
-                value={item.LogFont?.lfUnderLine ?? '0'}
-                onChange={(e) =>
-                  onPatch({ LogFont: { ...(item.LogFont ?? { lfHeight: '32' }), lfUnderLine: e.target.value } })
-                }
-                className="h-9 w-full rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-              >
-                <option value="0">0 · No</option>
-                <option value="1">1 · Yes</option>
-              </select>
-            </Field>
-          </div>
+          <Collapsible defaultOpen className="space-y-2">
+            <CollapsibleTrigger asChild>
+              <button className="flex w-full items-center justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">
+                Font
+                <ChevronDown className="h-3 w-3 transition-transform duration-200" />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 pt-2">
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="lfHeight">
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    step={1}
+                    value={item.LogFont?.lfHeight ?? ''}
+                    onChange={(e) => {
+                      const value = parseStrictPosIntInput(e.target.value);
+                      if (value == null) return;
+                      onPatch({ LogFont: { ...(item.LogFont ?? { lfHeight: '32' }), lfHeight: value } });
+                    }}
+                  />
+                </Field>
+                <Field label="lfFaceName">
+                  <Input
+                    value={item.LogFont?.lfFaceName ?? ''}
+                    onChange={(e) =>
+                      onPatch({ LogFont: { ...(item.LogFont ?? { lfHeight: '32' }), lfFaceName: e.target.value } })
+                    }
+                    placeholder="e.g. SimHei"
+                  />
+                </Field>
+                <Field label="lfWeight">
+                  <Input
+                    value={item.LogFont?.lfWeight ?? ''}
+                    onChange={(e) => onPatch({ LogFont: { ...(item.LogFont ?? { lfHeight: '32' }), lfWeight: e.target.value } })}
+                    placeholder="400 / 700"
+                  />
+                </Field>
+                <Field label="Italic">
+                  <Select
+                    value={item.LogFont?.lfItalic ?? '0'}
+                    onValueChange={(v) => onPatch({ LogFont: { ...(item.LogFont ?? { lfHeight: '32' }), lfItalic: v } })}
+                  >
+                    <SelectTrigger className="h-9 w-full">
+                      <SelectValue placeholder="Italic" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">0 · No</SelectItem>
+                      <SelectItem value="1">1 · Yes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="Underline">
+                  <Select
+                    value={item.LogFont?.lfUnderLine ?? '0'}
+                    onValueChange={(v) =>
+                      onPatch({ LogFont: { ...(item.LogFont ?? { lfHeight: '32' }), lfUnderLine: v } })
+                    }
+                  >
+                    <SelectTrigger className="h-9 w-full">
+                      <SelectValue placeholder="Underline" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">0 · No</SelectItem>
+                      <SelectItem value="1">1 · Yes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       ) : (
         <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">

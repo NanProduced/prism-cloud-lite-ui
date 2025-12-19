@@ -9,6 +9,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { mockMediaLibraryNodes } from '@/lib/mock/media-library';
@@ -17,7 +24,7 @@ import { listProgramDeployments, type ProgramDeploymentRecord } from '@/features
 import { ProgramPublishDialog } from '@/features/programs/publishing/ProgramPublishDialog';
 import { getProgramDraftSavePolicy } from '@/features/programs/storage/draftPolicyDb';
 
-import { getProgram, deleteProgram, type ProgramRecord, saveDraft, updateProgramCanvas, type ProgramDraftRecord, renameProgram, ensureDraft, deleteDraft } from '@/features/programs/storage/programsDb';
+import { getProgram, type ProgramRecord, saveDraft, updateProgramCanvas, type ProgramDraftRecord, renameProgram, ensureDraft, deleteDraft } from '@/features/programs/storage/programsDb';
 import { addProgramAuditLog } from '@/features/programs/storage/auditLogsDb';
 import { resolveMaterialId } from '@/features/programs/storage/materialId';
 import { createItemFromMedia, createScrollTextItem, createTextItem } from '@/features/programs/vsn/defaults';
@@ -41,10 +48,9 @@ import {
   deleteItem,
   deletePage,
   deleteRegion,
-  getItems,
   getPages,
   getRegions,
-  moveItem,
+  moveItemToRegion,
   normalizeVsnForEditor,
   patchItem,
   patchPage,
@@ -82,13 +88,6 @@ export default function ProgramEditorPage() {
 
   const pages = useMemo(() => getPages(vsn), [vsn]);
   const regions = useMemo(() => getRegions(vsn, selection.pageIndex), [vsn, selection.pageIndex]);
-  const items = useMemo(
-    () =>
-      selection.regionIndex == null
-        ? []
-        : getItems(vsn, selection.pageIndex, selection.regionIndex),
-    [selection.pageIndex, selection.regionIndex, vsn],
-  );
 
   const maxPageDurationMs = useMemo(() => {
     let max = 5000;
@@ -356,6 +355,7 @@ export default function ProgramEditorPage() {
     setVsn(previous);
     setDirty(true);
     setSessionHasChanges(true);
+    toast.info('Action undone', { duration: 1500 });
   }, [past, vsn]);
 
   const redo = useCallback(() => {
@@ -367,6 +367,7 @@ export default function ProgramEditorPage() {
     setVsn(next);
     setDirty(true);
     setSessionHasChanges(true);
+    toast.info('Action redone', { duration: 1500 });
   }, [future, vsn]);
 
   useEffect(() => {
@@ -385,6 +386,43 @@ export default function ProgramEditorPage() {
           }
         }
       }
+
+      // Timeline & Selection Navigation
+      if (!isInput) {
+        if (e.key === 'ArrowRight') {
+          setCurrentTime((prev) => Math.min(maxPageDurationMs, prev + (e.shiftKey ? 1000 : 100)));
+        } else if (e.key === 'ArrowLeft') {
+          setCurrentTime((prev) => Math.max(0, prev - (e.shiftKey ? 1000 : 100)));
+        } else if (e.key === '[' || e.key === ']') {
+          const boundaries = new Set([0, maxPageDurationMs]);
+          regions.forEach(r => {
+            let t = 0;
+            r.Items.Item.forEach(item => {
+              t += Number(item.Duration) || 0;
+              boundaries.add(t);
+            });
+          });
+          const sorted = Array.from(boundaries).sort((a, b) => a - b);
+          if (e.key === '[') {
+            const next = sorted.reverse().find(b => b < currentTime - 10) ?? 0;
+            setCurrentTime(next);
+          } else {
+            const next = sorted.find(b => b > currentTime + 10) ?? maxPageDurationMs;
+            setCurrentTime(next);
+          }
+        } else if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+          e.preventDefault();
+          if (regions.length === 0) return;
+          setSelection(prev => {
+            const curr = prev.regionIndex ?? -1;
+            const next = e.key === 'ArrowUp' 
+              ? (curr <= 0 ? regions.length - 1 : curr - 1)
+              : (curr >= regions.length - 1 ? 0 : curr + 1);
+            return { ...prev, regionIndex: next, itemIndex: null };
+          });
+        }
+      }
+
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         if (e.shiftKey) {
           e.preventDefault();
@@ -821,25 +859,28 @@ export default function ProgramEditorPage() {
           )}
 
           <div className="flex items-center gap-2">
-            <label className="text-sm text-muted-foreground" htmlFor="base-version">
+            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60" htmlFor="base-version">
               Edit from
             </label>
-            <select
-              id="base-version"
+            <Select
               value={baseVersion === null ? 'blank' : String(baseVersion)}
-              onChange={(e) => {
-                const value = e.target.value === 'blank' ? null : Number(e.target.value);
+              onValueChange={(v) => {
+                const value = v === 'blank' ? null : Number(v);
                 requestBaseVersionChange(value);
               }}
-              className="h-9 rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             >
-              <option value="blank">Blank</option>
-              {versionOptions.map((v) => (
-                <option key={v} value={String(v)}>
-                  v{v}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="base-version" className="h-9 w-[100px] font-bold text-xs bg-muted/20 border-border">
+                <SelectValue placeholder="Base version" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="blank" className="text-xs font-bold">Blank</SelectItem>
+                {versionOptions.map((v) => (
+                  <SelectItem key={v} value={String(v)} className="text-xs font-bold">
+                    v{v}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="mr-2 flex items-center gap-1 border-r pr-2">
@@ -1044,6 +1085,7 @@ export default function ProgramEditorPage() {
                 selection={selection}
                 materialIndex={materialIndex}
                 currentTime={currentTime}
+                isPlaying={isPlaying}
                 playbackSpeed={playbackSpeed}
                 onCurrentTimeChange={setCurrentTime}
                 onPlaybackSpeedChange={setPlaybackSpeed}
@@ -1062,12 +1104,12 @@ export default function ProgramEditorPage() {
                   applyVsn(next);
                   setSelection((prev) => ({ ...prev, itemIndex: null }));
                 }}
-                onMoveItem={(rIdx, from, to) => {
+                onMoveItem={(fromRIdx, fromIIdx, toRIdx, toIIdx) => {
                   if (!vsn) return;
-                  const next = moveItem(vsn, selection.pageIndex, rIdx, from, to);
+                  const next = moveItemToRegion(vsn, selection.pageIndex, fromRIdx, fromIIdx, toRIdx, toIIdx);
                   if (next === vsn) return;
                   applyVsn(next);
-                  setSelection((prev) => ({ ...prev, regionIndex: rIdx, itemIndex: to }));
+                  setSelection((prev) => ({ ...prev, regionIndex: toRIdx, itemIndex: toIIdx }));
                 }}
               />
             </div>

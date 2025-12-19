@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pause, Play, X, RotateCcw, FastForward, Rewind, Volume2, VolumeX, Maximize } from 'lucide-react';
+import { Pause, Play, X, Volume2, Maximize } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -115,16 +115,15 @@ export function ProgramPreviewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
         className="h-full w-full max-w-none rounded-none border-0 bg-black p-0 overflow-hidden"
-        onMouseMove={handleMouseMove}
       >
-        <div className="flex h-full flex-col relative group">
+        <div className="flex h-full flex-col relative group" onMouseMove={handleMouseMove}>
           {/* Header - Auto hide */}
           <div className={cn(
             "absolute top-0 inset-x-0 z-50 flex items-center justify-between px-6 py-4 bg-gradient-to-b from-black/80 to-transparent transition-opacity duration-300",
             !showControls && "opacity-0 pointer-events-none"
           )}>
             <div className="text-white">
-              <h2 className="text-lg font-medium">{doc?.Programs?.Program?.Information?.Name || 'Program Preview'}</h2>
+              <h2 className="text-lg font-medium">{(doc?.Programs?.Program?.Information?.Name as string) || 'Program Preview'}</h2>
               <p className="text-xs text-white/60">{programWidth}×{programHeight} • Page {pageIndex + 1}/{pages.length}</p>
             </div>
             <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="text-white hover:bg-white/20 rounded-full">
