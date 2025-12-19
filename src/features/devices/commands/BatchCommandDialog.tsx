@@ -25,7 +25,10 @@ import {
   AlertCircle,
   LayoutGrid,
   ChevronLeft,
-  Server
+  Server,
+  CloudUpload,
+  ArrowUpRight,
+  ExternalLink
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -43,7 +46,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import type { Device, Tag } from '@/types/device';
 
-// Action Types
+// --- Types ---
+
 type ActionType = 
   | 'WAKE_SLEEP' 
   | 'REBOOT' 
@@ -60,9 +64,6 @@ interface ActionConfig {
   params: any;
 }
 
-// Modes: 
-// 1. MULTI_DEVICE_SINGLE_COMMAND (N Devices + 1 Command)
-// 2. SINGLE_DEVICE_MULTI_COMMAND (1 Device + N Commands)
 type CommandMode = 'MULTI_DEVICE_SINGLE_COMMAND' | 'SINGLE_DEVICE_MULTI_COMMAND';
 
 interface BatchCommandDialogProps {
@@ -71,9 +72,36 @@ interface BatchCommandDialogProps {
   devices: Device[];
   tags: Tag[];
   initialSelectedDeviceIds?: string[];
-  // Input mode simplified to Boolean or String from parent
   mode?: 'multi-device' | 'single-device'; 
 }
+
+// --- Logic Helpers ---
+
+function formatActionParams(type: ActionType, params: any): string {
+  switch (type) {
+    case 'WAKE_SLEEP':
+      return params.state === 'wake' ? 'Switch to Wake State' : 'Switch to Sleep State';
+    case 'REBOOT':
+      return 'Full System Reboot';
+    case 'BRIGHTNESS':
+      return params.auto ? 'Automatic Brightness' : `Fixed Luminance: ${params.value}%`;
+    case 'VOLUME':
+      return `Volume Level: ${params.value}/15`;
+    case 'TIMEZONE':
+      return `${params.timezone} ${params.sync ? '(NTP Sync On)' : ''}`;
+    case 'LANGUAGE':
+      const langs: any = { zh: 'Chinese', en: 'English', ja: 'Japanese' };
+      return `Node Language: ${langs[params.language] || params.language}`;
+    case 'DISPLAY_NAME':
+    case 'MATERIAL_STATS':
+    case 'PROGRAM_STATS':
+      return params.enabled ? 'Protocol Enabled' : 'Protocol Disabled';
+    default:
+      return '';
+  }
+}
+
+// --- Main Component ---
 
 export function BatchCommandDialog({
   open,
@@ -93,11 +121,8 @@ export function BatchCommandDialog({
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResults, setExecutionResults] = useState<Record<string, any>>({});
 
-  // Reset when dialog opens
   useEffect(() => {
     if (open) {
-      // If we already have device(s) selected, move to config
-      // But in single-device mode, we always have 1 device, so we start at step 0 (which will be locked) or skip to 1
       setStep(initialSelectedDeviceIds.length > 0 ? 1 : 0);
       setSelectedDeviceIds(new Set(initialSelectedDeviceIds));
       setActions([]);
@@ -118,43 +143,43 @@ export function BatchCommandDialog({
     setIsExecuting(true);
     setStep(3);
     
-    // Mock execution based on mode
-    if (mode === 'MULTI_DEVICE_SINGLE_COMMAND') {
-      const devicesArray = Array.from(selectedDeviceIds);
-      for (const deviceId of devicesArray) {
-        await simulateStatusUpdate(deviceId);
-      }
-    } else {
-      // SINGLE_DEVICE_MULTI_COMMAND
-      const deviceId = Array.from(selectedDeviceIds)[0];
-      for (let i = 0; i < actions.length; i++) {
-        await simulateStatusUpdate(`${deviceId}-action-${i}`);
-      }
+    // Process list
+    const targets = mode === 'MULTI_DEVICE_SINGLE_COMMAND' 
+      ? Array.from(selectedDeviceIds) 
+      : actions.map((_, i) => `${Array.from(selectedDeviceIds)[0]}-action-${i}`);
+
+    for (const targetId of targets) {
+      // Async simulation
+      simulateStatusUpdate(targetId);
     }
-    setIsExecuting(false);
+    
+    // In a real app, the "Execute" button triggers the API, 
+    // and we don't necessarily block the UI here.
+    // The user can close the dialog anytime.
+    setTimeout(() => setIsExecuting(false), 500); 
   };
 
   const simulateStatusUpdate = async (id: string) => {
     setExecutionResults(prev => ({ ...prev, [id]: { status: 'DISPATCHED' } }));
-    await new Promise(r => setTimeout(r, 600 + Math.random() * 800));
+    await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
     setExecutionResults(prev => ({ ...prev, [id]: { status: 'ACKED' } }));
-    await new Promise(r => setTimeout(r, 800 + Math.random() * 1500));
+    await new Promise(r => setTimeout(r, 1500 + Math.random() * 2000));
     const success = Math.random() > 0.1;
     setExecutionResults(prev => ({ ...prev, [id]: { status: success ? 'SUCCEEDED' : 'FAILED' } }));
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[1200px] h-[800px] p-0 overflow-hidden border-0 shadow-2xl rounded-[2.5rem] flex flex-row">
+      <DialogContent className="max-w-[1200px] h-[800px] p-0 overflow-hidden border-0 shadow-2xl rounded-[3rem] flex flex-row bg-background">
         {/* Left Side: Vertical Stepper */}
-        <div className="w-[280px] bg-muted/30 border-r flex flex-col p-8 shrink-0">
-          <div className="flex items-center gap-3 mb-12">
-            <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
-              <Zap className="h-5 w-5" />
+        <div className="w-[300px] bg-muted/20 border-r flex flex-col p-10 shrink-0">
+          <div className="flex items-center gap-4 mb-16">
+            <div className="p-3 rounded-2xl bg-primary text-white shadow-xl shadow-primary/20">
+              <Zap className="h-6 w-6" />
             </div>
             <div>
               <h2 className="text-sm font-black uppercase tracking-widest leading-none">Command</h2>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Center</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1 opacity-50">Bridge Interface</p>
             </div>
           </div>
 
@@ -162,41 +187,51 @@ export function BatchCommandDialog({
             currentStep={step} 
             steps={[
               { label: 'Nodes', description: mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? 'Select targets' : 'Target Locked' },
-              { label: 'Config', description: mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? 'Single Action' : 'Action Builder' },
-              { label: 'Confirm', description: 'Review Manifest' },
-              { label: 'Status', description: 'Live Monitor' }
+              { label: 'Config', description: 'Action Payload' },
+              { label: 'Confirm', description: 'Manifest Review' },
+              { label: 'Deploy', description: 'Execution Stream' }
             ]} 
           />
 
-          <div className="mt-auto pt-8 border-t border-muted-foreground/10 opacity-40">
-             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Secure Protocol
+          <div className="mt-auto space-y-6">
+             <div className="p-5 rounded-2xl bg-background/50 border border-muted-foreground/10 space-y-3">
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground">
+                   <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+                   Security Status
+                </div>
+                <p className="text-[9px] leading-relaxed text-muted-foreground font-medium">Commands are encrypted via TLS 1.3 and signed by the core controller.</p>
              </div>
+             <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 text-center">Prism Cloud Lite v2.5</p>
           </div>
         </div>
 
         {/* Right Side: Content */}
-        <div className="flex-1 flex flex-col bg-background min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 relative">
           {/* Header */}
-          <div className="px-10 py-6 border-b flex items-center justify-between">
+          <div className="px-12 py-8 flex items-center justify-between">
             <div>
-              <DialogTitle className="text-xl font-black tracking-tight">
-                {mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? 'Multi-Device Single-Command' : 'Single-Device Multi-Command'}
+              <DialogTitle className="text-2xl font-black tracking-tighter uppercase">
+                {mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? 'Mass Deployment' : 'Deep Node Config'}
               </DialogTitle>
-              <p className="text-xs font-medium text-muted-foreground mt-1 uppercase tracking-wider">
-                {mode === 'MULTI_DEVICE_SINGLE_COMMAND' 
-                  ? `Executing on ${selectedDeviceIds.size} devices`
-                  : `Target: ${devices.find(d => d.id === Array.from(selectedDeviceIds)[0])?.deviceName || 'Selected Node'}`
-                }
-              </p>
+              <div className="flex items-center gap-3 mt-1.5">
+                 <Badge variant="outline" className="border-primary/20 text-primary bg-primary/5 text-[9px] font-black uppercase tracking-widest px-2 h-5">
+                   Mode: {mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? 'BATCH_NODES' : 'BATCH_ACTIONS'}
+                 </Badge>
+                 <Separator orientation="vertical" className="h-3" />
+                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider opacity-60">
+                   {mode === 'MULTI_DEVICE_SINGLE_COMMAND' 
+                     ? `${selectedDeviceIds.size} Target Terminals`
+                     : `Target: ${devices.find(d => d.id === Array.from(selectedDeviceIds)[0])?.deviceName}`
+                   }
+                 </span>
+              </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={close} className="rounded-full hover:bg-muted/50 -mr-4">
+            <Button variant="ghost" size="icon" onClick={close} className="rounded-2xl hover:bg-muted/50 h-12 w-12 border">
               <X className="h-5 w-5" />
             </Button>
           </div>
 
-          <div className="flex-1 overflow-hidden p-10">
+          <div className="flex-1 overflow-hidden px-12 pb-12">
             {step === 0 && (
               <DeviceSelectStep
                 devices={devices}
@@ -232,33 +267,36 @@ export function BatchCommandDialog({
           </div>
 
           {/* Footer Actions */}
-          <div className="px-10 py-6 border-t bg-muted/5 flex items-center justify-between">
+          <div className="px-12 py-8 bg-muted/5 border-t flex items-center justify-between">
             <Button 
               variant="ghost" 
               onClick={step === 0 ? close : () => setStep(s => s - 1)} 
               disabled={step === 3 && isExecuting}
-              className="px-8 font-black uppercase text-[11px] tracking-[0.2em] h-12 rounded-2xl gap-2"
+              className="px-8 font-black uppercase text-[10px] tracking-[0.25em] h-14 rounded-2xl gap-3 border hover:bg-background"
             >
               <ChevronLeft className="h-4 w-4" />
               {step === 0 ? 'Abort' : 'Back'}
             </Button>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               {step < 3 && (
                 <Button 
                   onClick={step === 2 ? handleExecute : () => setStep(s => s + 1)} 
                   disabled={!canNext}
-                  className="px-12 font-black uppercase text-[11px] tracking-[0.2em] h-12 rounded-2xl gap-3 shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  className="px-14 font-black uppercase text-[10px] tracking-[0.25em] h-14 rounded-2xl gap-4 shadow-2xl shadow-primary/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
                   {step === 2 ? (
-                    <><ShieldCheck className="h-4 w-4" /> Execute Manifest</>
+                    <><CloudUpload className="h-4 w-4" /> Deploy Manifest</>
                   ) : (
-                    <>Continue <ChevronRight className="h-4 w-4" /></>
+                    <>Next Phase <ChevronRight className="h-4 w-4" /></>
                   )}
                 </Button>
               )}
-              {step === 3 && !isExecuting && (
-                <Button onClick={close} className="px-12 font-black uppercase text-[11px] tracking-[0.2em] h-12 rounded-2xl">
-                  Close Bridge
+              {step === 3 && (
+                <Button 
+                   onClick={close} 
+                   className="px-14 font-black uppercase text-[10px] tracking-[0.25em] h-14 rounded-2xl bg-zinc-900 text-white hover:bg-zinc-800 shadow-xl"
+                >
+                  Minimize Window
                 </Button>
               )}
             </div>
@@ -273,35 +311,33 @@ export function BatchCommandDialog({
 
 function VerticalStepper({ currentStep, steps }: { currentStep: number, steps: { label: string, description: string }[] }) {
   return (
-    <nav className="flex flex-col gap-6">
+    <nav className="flex flex-col gap-10">
       {steps.map((step, idx) => {
         const isActive = idx === currentStep;
         const isCompleted = idx < currentStep;
         
         return (
-          <div key={idx} className="relative flex items-start gap-4">
-            {/* Step Line */}
+          <div key={idx} className="relative flex items-start gap-6">
             {idx < steps.length - 1 && (
               <div className={cn(
-                "absolute left-4 top-10 w-0.5 h-6 transition-colors duration-500",
+                "absolute left-[15px] top-10 w-[2px] h-10 transition-all duration-700",
                 isCompleted ? "bg-primary" : "bg-muted"
               )} />
             )}
             
-            {/* Step Circle */}
             <div className={cn(
-              "z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300",
-              isActive ? "border-primary bg-background shadow-[0_0_15px_rgba(var(--primary),0.3)] scale-110" : 
-              isCompleted ? "border-primary bg-primary text-white" : "border-muted bg-background text-muted-foreground/40"
+              "z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-500",
+              isActive ? "border-primary bg-background shadow-[0_0_20px_rgba(var(--primary),0.4)] scale-125" : 
+              isCompleted ? "border-primary bg-primary text-white" : "border-muted bg-background text-muted-foreground/30"
             )}>
-              {isCompleted ? <Check className="h-4 w-4" /> : (
+              {isCompleted ? <Check className="h-4 w-4 stroke-[3]" /> : (
                 <span className="text-[10px] font-black">{idx + 1}</span>
               )}
             </div>
 
-            <div className="flex flex-col gap-0.5 min-w-0">
+            <div className="flex flex-col gap-1 min-w-0">
                <span className={cn(
-                 "text-[11px] font-black uppercase tracking-widest transition-colors",
+                 "text-[11px] font-black uppercase tracking-[0.2em] transition-colors",
                  isActive ? "text-foreground" : "text-muted-foreground/40"
                )}>{step.label}</span>
                <span className={cn(
@@ -342,24 +378,24 @@ function DeviceSelectStep({
   };
 
   return (
-    <div className="h-full flex flex-col gap-6 animate-in fade-in slide-in-from-left-4 duration-500">
+    <div className="h-full flex flex-col gap-8 animate-in fade-in slide-in-from-left-6 duration-700">
       {!locked && (
         <div className="relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/50 transition-colors group-focus-within:text-primary" />
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/40 transition-colors group-focus-within:text-primary" />
           <Input 
             value={query} 
             onChange={(e) => setQuery(e.target.value)} 
-            placeholder="Filter target devices..." 
-            className="pl-12 h-14 bg-muted/20 border-none rounded-2xl font-bold"
+            placeholder="Search Target Terminals..." 
+            className="pl-14 h-16 bg-muted/20 border-none rounded-3xl font-black text-sm tracking-tight focus-visible:ring-2 focus-visible:ring-primary/20"
           />
         </div>
       )}
 
       <div className={cn(
-        "flex-1 border-2 border-muted rounded-[2rem] bg-muted/5 overflow-hidden flex flex-col",
-        locked && "bg-primary/[0.02] border-primary/10 ring-8 ring-primary/[0.01]"
+        "flex-1 border-2 border-muted rounded-[3rem] bg-muted/5 overflow-hidden flex flex-col",
+        locked && "bg-primary/[0.02] border-primary/20 ring-12 ring-primary/[0.01]"
       )}>
-        <div className="flex items-center gap-6 px-10 py-5 bg-muted/20 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 border-b">
+        <div className="flex items-center gap-6 px-12 py-6 bg-muted/20 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 border-b">
           {!locked && (
             <Checkbox 
               checked={filtered.length > 0 && filtered.every(d => selectedDeviceIds.has(d.id))}
@@ -372,53 +408,53 @@ function DeviceSelectStep({
               className="rounded-lg h-5 w-5"
             />
           )}
-          <span className="flex-1">Hardware Node</span>
+          <span className="flex-1">Hardware Endpoint</span>
           <span className="w-32 text-center">Telemetry</span>
-          <span className="w-24 text-right">State</span>
+          <span className="w-24 text-right">Status</span>
         </div>
         <ScrollArea className="flex-1">
           <div className="divide-y divide-foreground/[0.03]">
             {locked ? (
-              <div className="p-10 flex flex-col items-center justify-center text-center gap-4">
-                 <div className="p-6 rounded-full bg-primary/10 border-2 border-primary/20">
-                    <Server className="h-10 w-10 text-primary" />
+              <div className="p-20 flex flex-col items-center justify-center text-center gap-6">
+                 <div className="p-8 rounded-[2.5rem] bg-primary/10 border-2 border-primary/20 shadow-2xl shadow-primary/10">
+                    <Server className="h-12 w-12 text-primary" />
                  </div>
                  <div>
-                    <p className="text-lg font-black tracking-tight">{devices.find(d => d.id === Array.from(selectedDeviceIds)[0])?.deviceName}</p>
-                    <p className="text-[10px] font-mono text-muted-foreground uppercase mt-1 tracking-widest">Device Selection Immutable</p>
+                    <p className="text-2xl font-black tracking-tighter uppercase">{devices.find(d => d.id === Array.from(selectedDeviceIds)[0])?.deviceName}</p>
+                    <Badge className="bg-primary text-white border-none mt-2 px-3 h-5 text-[9px] font-black uppercase tracking-widest">Target Locked</Badge>
                  </div>
               </div>
             ) : filtered.map(d => (
               <div 
                 key={d.id} 
                 className={cn(
-                  "flex items-center gap-6 px-10 py-5 hover:bg-primary/[0.02] cursor-pointer transition-all relative group",
-                  selectedDeviceIds.has(d.id) ? "bg-primary/[0.04]" : "grayscale opacity-60 hover:grayscale-0 hover:opacity-100"
+                  "flex items-center gap-6 px-12 py-6 hover:bg-primary/[0.02] cursor-pointer transition-all relative group",
+                  selectedDeviceIds.has(d.id) ? "bg-primary/[0.04]" : "grayscale opacity-50 hover:grayscale-0 hover:opacity-100"
                 )}
                 onClick={() => toggle(d.id)}
               >
                 {selectedDeviceIds.has(d.id) && (
-                   <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary shadow-[2px_0_15px_rgba(var(--primary),0.4)] rounded-r-full" />
+                   <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary shadow-[4px_0_20px_rgba(var(--primary),0.6)] rounded-r-full" />
                 )}
-                <Checkbox checked={selectedDeviceIds.has(d.id)} onCheckedChange={() => {}} className="rounded-lg h-5 w-5" />
+                <Checkbox checked={selectedDeviceIds.has(d.id)} onCheckedChange={() => {}} className="rounded-lg h-6 w-6 border-2" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-black truncate tracking-tight">{d.deviceName}</p>
-                  <p className="text-[9px] text-muted-foreground font-mono opacity-50 uppercase tracking-tighter mt-1">{d.id}</p>
+                  <p className="text-base font-black truncate tracking-tight uppercase">{d.deviceName}</p>
+                  <p className="text-[10px] text-muted-foreground font-mono opacity-50 uppercase tracking-tighter mt-1">{d.id}</p>
                 </div>
-                <div className="w-32 flex flex-col items-center gap-1">
+                <div className="w-32 flex flex-col items-center gap-1.5">
                    <div className="flex items-center gap-2">
-                      <Sun className="h-3 w-3 text-amber-500" />
-                      <span className="text-[10px] font-black">{d.brightness}%</span>
+                      <Sun className="h-3.5 w-3.5 text-amber-500" />
+                      <span className="text-[11px] font-black tabular-nums">{d.brightness}%</span>
                    </div>
-                   <div className="flex items-center gap-2">
-                      <Volume2 className="h-3 w-3 text-blue-500" />
-                      <span className="text-[10px] font-black">{d.volume}</span>
+                   <div className="flex items-center gap-2 opacity-50">
+                      <Volume2 className="h-3.5 w-3.5 text-blue-500" />
+                      <span className="text-[11px] font-black tabular-nums">{d.volume}</span>
                    </div>
                 </div>
                 <div className="w-24 text-right">
                    <Badge className={cn(
-                     "text-[8px] font-black uppercase tracking-widest px-2 h-5 border-none",
-                     d.status === 'online' ? "bg-emerald-500 shadow-lg shadow-emerald-500/20" : "bg-zinc-400"
+                     "text-[9px] font-black uppercase tracking-widest px-3 h-6 border-none rounded-lg shadow-sm",
+                     d.status === 'online' ? "bg-emerald-500 text-white" : "bg-zinc-500 text-white/70"
                    )}>
                      {d.status}
                    </Badge>
@@ -441,8 +477,6 @@ function ActionConfigStep({
   onActionsChange: (actions: ActionConfig[]) => void,
   mode: CommandMode
 }) {
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-
   const ALL_ACTION_TYPES: { type: ActionType, label: string, icon: any }[] = [
     { type: 'WAKE_SLEEP', label: 'Wake/Sleep', icon: Power },
     { type: 'REBOOT', label: 'Hard Reboot', icon: RotateCcw },
@@ -459,21 +493,17 @@ function ActionConfigStep({
     const defaultParams = getDefaultParams(type);
     if (mode === 'MULTI_DEVICE_SINGLE_COMMAND') {
       onActionsChange([{ type, params: defaultParams }]);
-      setEditingIndex(0);
     } else {
       if (actions.some(a => a.type === type)) {
         toast.error('Instruction already in queue');
         return;
       }
-      const next = [...actions, { type, params: defaultParams }];
-      onActionsChange(next);
-      setEditingIndex(next.length - 1);
+      onActionsChange([...actions, { type, params: defaultParams }]);
     }
   };
 
   const removeAction = (index: number) => {
     onActionsChange(actions.filter((_, i) => i !== index));
-    if (editingIndex === index) setEditingIndex(null);
   };
 
   const updateParam = (index: number, key: string, value: any) => {
@@ -483,9 +513,8 @@ function ActionConfigStep({
   };
 
   return (
-    <div className="h-full flex flex-col gap-10 animate-in fade-in slide-in-from-right-4 duration-500">
-      {/* Action Selection Grid */}
-      <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-3">
+    <div className="h-full flex flex-col gap-12 animate-in fade-in slide-in-from-right-6 duration-700">
+      <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-4">
          {ALL_ACTION_TYPES.map(item => {
            const isSelected = actions.some(a => a.type === item.type);
            const Icon = item.icon;
@@ -494,161 +523,176 @@ function ActionConfigStep({
                key={item.type}
                onClick={() => addAction(item.type)}
                className={cn(
-                 "group flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2",
-                 isSelected ? "border-primary bg-primary/[0.03] shadow-lg shadow-primary/5" : "border-muted bg-muted/5 hover:border-primary/40 hover:bg-muted/10 grayscale opacity-70 hover:grayscale-0 hover:opacity-100"
+                 "group flex flex-col items-center justify-center p-5 rounded-[2rem] border-2 transition-all gap-3 relative",
+                 isSelected ? "border-primary bg-primary/[0.05] shadow-2xl shadow-primary/10" : "border-muted bg-muted/5 hover:border-primary/40 hover:bg-muted/10 grayscale opacity-60 hover:grayscale-0 hover:opacity-100"
                )}
              >
                <div className={cn(
-                 "p-2 rounded-xl transition-colors",
-                 isSelected ? "bg-primary text-white" : "bg-muted group-hover:bg-primary/20 group-hover:text-primary"
+                 "p-3 rounded-2xl transition-all duration-500",
+                 isSelected ? "bg-primary text-white scale-110 shadow-lg" : "bg-muted group-hover:bg-primary/20 group-hover:text-primary"
                )}>
-                 <Icon className="h-5 w-5" />
+                 <Icon className="h-6 w-6" />
                </div>
-               <span className="text-[9px] font-black uppercase tracking-tighter whitespace-nowrap">{item.label}</span>
+               <span className="text-[10px] font-black uppercase tracking-tighter whitespace-nowrap">{item.label}</span>
+               {isSelected && mode === 'MULTI_DEVICE_SINGLE_COMMAND' && (
+                  <div className="absolute -top-1.5 -right-1.5 bg-primary text-white rounded-full p-1 shadow-lg"><Check className="h-3 w-3 stroke-[4]" /></div>
+               )}
              </button>
            );
          })}
       </div>
 
-      <Separator />
+      <Separator className="opacity-50" />
 
-      {/* Action Editor */}
-      <div className="flex-1 flex flex-col gap-4 min-h-0">
+      <div className="flex-1 flex flex-col gap-6 min-h-0">
         <div className="flex items-center justify-between">
-           <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-             <Settings2 className="h-3.5 w-3.5" />
-             Instruction Payload {mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? '(Global)' : '(Sequence)'}
+           <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground flex items-center gap-3">
+             <Settings2 className="h-4 w-4 text-primary" />
+             Instruction Chain Setup
            </h3>
-           <Badge variant="outline" className="font-mono text-[9px] opacity-40">{actions.length} COMMANDS</Badge>
+           <Badge variant="outline" className="font-mono text-[10px] opacity-40 px-3 h-6 rounded-lg border-2 uppercase">{actions.length} Task(s)</Badge>
         </div>
 
-        <ScrollArea className="flex-1 pr-4">
-          <div className="space-y-4">
+        <ScrollArea className="flex-1 -mr-4 pr-4">
+          <div className="space-y-6 pb-6">
             {actions.map((action, index) => (
-              <div key={index} className="bg-background border-2 rounded-[1.5rem] p-8 shadow-sm relative group animate-in slide-in-from-bottom-2 duration-300">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-2xl bg-primary text-white shadow-lg shadow-primary/20">
-                      <ActionIcon type={action.type} className="h-5 w-5" />
+              <div key={index} className="bg-background border-2 rounded-[2.5rem] p-10 shadow-sm relative group animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center justify-between mb-10">
+                  <div className="flex items-center gap-5">
+                    <div className="p-4 rounded-3xl bg-primary text-white shadow-2xl shadow-primary/30">
+                      <ActionIcon type={action.type} className="h-7 w-7" />
                     </div>
                     <div>
-                       <span className="text-base font-black uppercase tracking-tight">{formatActionType(action.type)}</span>
-                       <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-50">Node Configuration</p>
+                       <span className="text-xl font-black uppercase tracking-tight">{formatActionType(action.type)}</span>
+                       <p className="text-[11px] font-bold text-muted-foreground uppercase opacity-40 tracking-widest mt-1">Payload Parameters</p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => removeAction(index)}>
-                    <Trash2 className="h-4 w-4" />
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-12 w-12 rounded-2xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive border border-transparent hover:border-destructive/20 transition-all" 
+                    onClick={() => removeAction(index)}
+                  >
+                    <Trash2 className="h-5 w-5" />
                   </Button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                   {action.type === 'WAKE_SLEEP' && (
-                    <div className="space-y-4 col-span-2">
-                      <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Command Target State</p>
-                      <div className="flex gap-4">
+                    <div className="space-y-5 col-span-2">
+                      <p className="text-[11px] font-black uppercase text-muted-foreground tracking-widest ml-1">Target Power State</p>
+                      <div className="flex gap-6">
                         <button 
                           onClick={() => updateParam(index, 'state', 'wake')}
                           className={cn(
-                            "flex-1 h-14 rounded-2xl border-2 font-black uppercase text-xs transition-all",
-                            action.params.state === 'wake' ? "border-primary bg-primary/5 text-primary" : "border-muted hover:border-primary/40"
+                            "flex-1 h-20 rounded-3xl border-2 font-black uppercase text-sm tracking-widest transition-all shadow-sm flex items-center justify-center gap-3",
+                            action.params.state === 'wake' ? "border-primary bg-primary/[0.03] text-primary shadow-xl shadow-primary/5" : "border-muted hover:border-primary/40 bg-muted/5"
                           )}
-                        >Wake Terminal</button>
+                        ><Power className="h-4 w-4" /> Wake Terminal</button>
                         <button 
                           onClick={() => updateParam(index, 'state', 'sleep')}
                           className={cn(
-                            "flex-1 h-14 rounded-2xl border-2 font-black uppercase text-xs transition-all",
-                            action.params.state === 'sleep' ? "border-primary bg-primary/5 text-primary" : "border-muted hover:border-primary/40"
+                            "flex-1 h-20 rounded-3xl border-2 font-black uppercase text-sm tracking-widest transition-all shadow-sm flex items-center justify-center gap-3",
+                            action.params.state === 'sleep' ? "border-primary bg-primary/[0.03] text-primary shadow-xl shadow-primary/5" : "border-muted hover:border-primary/40 bg-muted/5"
                           )}
-                        >Suspend Screen</button>
+                        ><Moon className="h-4 w-4" /> Suspend Screen</button>
                       </div>
                     </div>
                   )}
                   {action.type === 'BRIGHTNESS' && (
                     <>
-                      <ControlItem label="Intelligent Auto-Adjust">
-                         <div className="flex items-center justify-between p-4 bg-muted/20 rounded-2xl">
-                           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ambient Light Sensor</span>
+                      <ControlItem label="Intelligent Logic">
+                         <div className="flex items-center justify-between p-6 bg-muted/20 rounded-[1.5rem] border border-transparent hover:border-primary/20 transition-all">
+                           <div>
+                              <span className="text-xs font-black uppercase tracking-wider text-foreground">Automatic Gain</span>
+                              <p className="text-[10px] text-muted-foreground font-medium uppercase mt-0.5 opacity-60">Adaptive sensor feedback</p>
+                           </div>
                            <Switch checked={action.params.auto} onCheckedChange={(v) => updateParam(index, 'auto', v)} />
                          </div>
                       </ControlItem>
                       {!action.params.auto && (
-                        <ControlItem label={`Manual Luminance: ${action.params.value}%`}>
-                           <div className="pt-2 px-1">
+                        <ControlItem label={`Manual Intensity: ${action.params.value}%`}>
+                           <div className="pt-4 px-2">
                               <Slider value={[action.params.value]} onValueChange={([v]) => updateParam(index, 'value', v)} max={100} step={1} />
+                              <div className="flex justify-between mt-3 text-[9px] font-black uppercase text-muted-foreground/40 tracking-tighter">
+                                 <span>Min</span>
+                                 <span>Mid</span>
+                                 <span>Max</span>
+                              </div>
                            </div>
                         </ControlItem>
                       )}
                     </>
                   )}
                   {action.type === 'VOLUME' && (
-                    <ControlItem label={`Audio Gain Output: ${action.params.value}`} className="col-span-2">
-                       <div className="pt-4 px-1 flex items-center gap-6">
-                          <Volume2 className="h-5 w-5 text-blue-500 opacity-40" />
-                          <Slider value={[action.params.value]} onValueChange={([v]) => updateParam(index, 'value', v)} max={15} step={1} />
-                          <span className="font-black tabular-nums text-lg w-8">15</span>
+                    <ControlItem label={`Acoustic Output Level: ${action.params.value}`} className="col-span-2">
+                       <div className="pt-6 px-2 flex items-center gap-8 bg-muted/10 p-6 rounded-[1.5rem]">
+                          <Volume2 className="h-6 w-6 text-primary animate-pulse" />
+                          <Slider value={[action.params.value]} onValueChange={([v]) => updateParam(index, 'value', v)} max={15} step={1} className="flex-1" />
+                          <span className="font-black tabular-nums text-2xl w-12 text-primary">15</span>
                        </div>
                     </ControlItem>
                   )}
                   {action.type === 'TIMEZONE' && (
                     <>
-                      <ControlItem label="Network Time Sync (NTP)">
-                         <div className="flex items-center justify-between p-4 bg-muted/20 rounded-2xl">
-                           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Online Clock Master</span>
+                      <ControlItem label="Chrono Sync Protocol">
+                         <div className="flex items-center justify-between p-6 bg-muted/20 rounded-[1.5rem]">
+                           <span className="text-xs font-black uppercase tracking-wider">Network Time Master</span>
                            <Switch checked={action.params.sync} onCheckedChange={(v) => updateParam(index, 'sync', v)} />
                          </div>
                       </ControlItem>
-                      <ControlItem label="Geographic Offset">
+                      <ControlItem label="Geographic Reference">
                         <Select value={action.params.timezone} onValueChange={(v) => updateParam(index, 'timezone', v)}>
-                          <SelectTrigger className="h-14 rounded-2xl bg-muted/20 border-none font-bold">
+                          <SelectTrigger className="h-16 rounded-[1.5rem] bg-muted/20 border-none font-black text-xs uppercase px-6">
                             <SelectValue placeholder="Select Timezone" />
                           </SelectTrigger>
                           <SelectContent className="z-[101]">
-                            <SelectItem value="UTC+8" className="font-bold uppercase text-[10px]">Asia/Shanghai (UTC+8)</SelectItem>
-                            <SelectItem value="UTC+0" className="font-bold uppercase text-[10px]">Europe/London (UTC+0)</SelectItem>
-                            <SelectItem value="UTC-5" className="font-bold uppercase text-[10px]">America/New York (UTC-5)</SelectItem>
+                            <SelectItem value="UTC+8" className="font-black uppercase text-[10px] py-3">Asia/Shanghai (UTC+8)</SelectItem>
+                            <SelectItem value="UTC+0" className="font-black uppercase text-[10px] py-3">Europe/London (UTC+0)</SelectItem>
+                            <SelectItem value="UTC-5" className="font-black uppercase text-[10px] py-3">America/New York (UTC-5)</SelectItem>
                           </SelectContent>
                         </Select>
                       </ControlItem>
                     </>
                   )}
                   {action.type === 'LANGUAGE' && (
-                    <ControlItem label="Interface Dialect" className="col-span-2">
+                    <ControlItem label="Interface Core Dialect" className="col-span-2">
                       <Select value={action.params.language} onValueChange={(v) => updateParam(index, 'language', v)}>
-                        <SelectTrigger className="h-14 rounded-2xl bg-muted/20 border-none font-bold">
+                        <SelectTrigger className="h-16 rounded-[1.5rem] bg-muted/20 border-none font-black text-xs uppercase px-6">
                           <SelectValue placeholder="Select Language" />
                         </SelectTrigger>
                         <SelectContent className="z-[101]">
-                          <SelectItem value="zh" className="font-bold uppercase text-[10px]">Simplified Chinese (zh-CN)</SelectItem>
-                          <SelectItem value="en" className="font-bold uppercase text-[10px]">Standard English (en-US)</SelectItem>
-                          <SelectItem value="ja" className="font-bold uppercase text-[10px]">Japanese Nihongo (ja-JP)</SelectItem>
+                          <SelectItem value="zh" className="font-black uppercase text-[10px] py-3">Simplified Chinese (zh-CN)</SelectItem>
+                          <SelectItem value="en" className="font-black uppercase text-[10px] py-3">Standard English (en-US)</SelectItem>
+                          <SelectItem value="ja" className="font-black uppercase text-[10px] py-3">Japanese Nihongo (ja-JP)</SelectItem>
                         </SelectContent>
                       </Select>
                     </ControlItem>
                   )}
                   {['DISPLAY_NAME', 'MATERIAL_STATS', 'PROGRAM_STATS'].includes(action.type) && (
-                    <ControlItem label="Operation Protocol" className="col-span-2">
-                      <div className="flex items-center justify-between p-5 bg-primary/[0.02] border-2 border-dashed border-primary/20 rounded-2xl">
+                    <ControlItem label="Feedback Protocol" className="col-span-2">
+                      <div className="flex items-center justify-between p-8 bg-primary/[0.02] border-2 border-dashed border-primary/20 rounded-[2rem]">
                         <div>
-                           <p className="text-xs font-black uppercase tracking-tight">{formatActionType(action.type)} State</p>
-                           <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">Global switch for node feedback</p>
+                           <p className="text-sm font-black uppercase tracking-tight">{formatActionType(action.type)} Monitor</p>
+                           <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-50 mt-1 tracking-widest">Global telemetry override</p>
                         </div>
-                        <Switch checked={action.params.enabled} onCheckedChange={(v) => updateParam(index, 'enabled', v)} />
+                        <Switch checked={action.params.enabled} onCheckedChange={(v) => updateParam(index, 'enabled', v)} className="scale-125" />
                       </div>
                     </ControlItem>
                   )}
                   {action.type === 'REBOOT' && (
-                    <div className="col-span-2 flex items-center gap-4 p-6 bg-rose-500/5 border-2 border-rose-500/10 rounded-2xl">
-                       <AlertCircle className="h-6 w-6 text-rose-500 shrink-0" />
-                       <p className="text-[11px] text-rose-700/80 font-bold uppercase leading-relaxed">Safety Protocol: Requesting a full hardware power cycle. The terminal will be unavailable for approx. 120 seconds after deployment.</p>
+                    <div className="col-span-2 flex items-center gap-6 p-8 bg-rose-500/5 border-2 border-rose-500/10 rounded-[2rem]">
+                       <div className="p-4 rounded-2xl bg-rose-500/10"><AlertCircle className="h-8 w-8 text-rose-600" /></div>
+                       <p className="text-xs text-rose-900/70 font-black uppercase leading-relaxed tracking-wider">Warning: Node will perform a full kernel restart. All active play tasks will be terminated until system recovery.</p>
                     </div>
                   )}
                 </div>
               </div>
             ))}
             {actions.length === 0 && (
-              <div className="h-64 flex flex-col items-center justify-center opacity-10 grayscale border-4 border-dashed rounded-[3rem] animate-pulse">
-                <Plus className="h-16 w-16 mb-4" />
-                <p className="text-sm font-black uppercase tracking-[0.3em]">Initialize Instruction</p>
+              <div className="h-80 flex flex-col items-center justify-center opacity-10 grayscale border-4 border-dashed rounded-[4rem] animate-pulse transition-all">
+                <div className="p-10 rounded-full border-4 border-dashed mb-6"><Plus className="h-20 w-20" /></div>
+                <p className="text-base font-black uppercase tracking-[0.5em]">Initialize Protocol</p>
               </div>
             )}
           </div>
@@ -660,8 +704,8 @@ function ActionConfigStep({
 
 function ControlItem({ label, children, className }: { label: string, children: React.ReactNode, className?: string }) {
   return (
-    <div className={cn("space-y-3", className)}>
-       <label className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.15em] ml-1">{label}</label>
+    <div className={cn("space-y-4", className)}>
+       <label className="text-[11px] font-black uppercase text-muted-foreground tracking-[0.25em] ml-2">{label}</label>
        {children}
     </div>
   );
@@ -679,38 +723,34 @@ function ReviewStep({
   actions: ActionConfig[] 
 }) {
   return (
-    <div className="h-full flex flex-col space-y-10 animate-in fade-in zoom-in-95 duration-500">
-       <div className="grid grid-cols-2 gap-6">
-         <div className="p-8 rounded-[2.5rem] bg-primary/[0.03] border-2 border-primary/10 relative overflow-hidden group">
-           <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:scale-110 transition-transform"><Monitor className="h-20 w-20" /></div>
-           <p className="text-[10px] font-black uppercase text-primary/50 mb-2 tracking-widest">Nodes Identified</p>
-           <p className="text-5xl font-black tabular-nums tracking-tighter">{selectedDeviceIds.size}</p>
+    <div className="h-full flex flex-col space-y-12 animate-in fade-in zoom-in-95 duration-700">
+       <div className="grid grid-cols-2 gap-8">
+         <div className="p-10 rounded-[3rem] bg-primary/[0.04] border-2 border-primary/20 relative overflow-hidden group hover:border-primary/40 transition-all">
+           <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:scale-110 transition-transform"><Monitor className="h-32 w-32" /></div>
+           <p className="text-[11px] font-black uppercase text-primary/60 mb-2 tracking-[0.3em]">Endpoints Verified</p>
+           <p className="text-6xl font-black tabular-nums tracking-tighter">{selectedDeviceIds.size}</p>
          </div>
-         <div className="p-8 rounded-[2.5rem] bg-emerald-500/[0.03] border-2 border-emerald-500/10 relative overflow-hidden group">
-           <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:scale-110 transition-transform"><Zap className="h-20 w-20" /></div>
-           <p className="text-[10px] font-black uppercase text-emerald-500/50 mb-2 tracking-widest">Active Instructions</p>
-           <p className="text-5xl font-black tabular-nums tracking-tighter">{actions.length}</p>
+         <div className="p-10 rounded-[3rem] bg-emerald-500/[0.04] border-2 border-emerald-500/20 relative overflow-hidden group hover:border-emerald-500/40 transition-all">
+           <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:scale-110 transition-transform"><Zap className="h-32 w-32" /></div>
+           <p className="text-[11px] font-black uppercase text-emerald-600/60 mb-2 tracking-[0.3em]">Signals Pending</p>
+           <p className="text-6xl font-black tabular-nums tracking-tighter">{actions.length}</p>
          </div>
        </div>
 
-       <div className="flex-1 border-2 border-muted rounded-[3rem] bg-muted/5 overflow-hidden flex flex-col shadow-inner relative">
-          <div className="flex items-center gap-6 px-12 py-5 bg-muted/20 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 border-b">
-             <span className="flex-1">Target Resource</span>
-             <span className="w-48 text-center">Protocol Hash</span>
-             <span className="w-24 text-right">Scope</span>
+       <div className="flex-1 border-2 border-muted rounded-[3.5rem] bg-muted/5 overflow-hidden flex flex-col shadow-inner">
+          <div className="flex items-center gap-6 px-14 py-6 bg-muted/20 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 border-b">
+             <span className="flex-1">Object Identifier</span>
+             <span className="w-64 text-center">Config Summary</span>
+             <span className="w-32 text-right">Context</span>
           </div>
           <ScrollArea className="flex-1">
-             <div className="divide-y divide-foreground/[0.04] p-6">
-                {/* Devices Summary */}
-                <div className="mb-10 space-y-3">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-primary/60 ml-4 mb-4 flex items-center gap-3">
-                    <div className="h-1 w-6 bg-primary rounded-full" /> Endpoint List
-                  </p>
-                  <div className="flex flex-wrap gap-2 px-4">
+             <div className="divide-y divide-foreground/[0.04] px-8 py-4">
+                <div className="mb-12">
+                  <div className="flex flex-wrap gap-3 px-6">
                     {Array.from(selectedDeviceIds).map(id => {
                       const d = devices.find(x => x.id === id);
                       return (
-                        <Badge key={id} variant="outline" className="text-[9px] font-black uppercase py-1.5 px-3 rounded-lg border-2 bg-background shadow-sm">
+                        <Badge key={id} variant="outline" className="text-[10px] font-black uppercase py-2.5 px-5 rounded-2xl border-2 bg-background shadow-sm hover:border-primary transition-colors">
                           {d?.deviceName || id}
                         </Badge>
                       );
@@ -718,26 +758,25 @@ function ReviewStep({
                   </div>
                 </div>
 
-                {/* Operations Summary */}
-                <div className="space-y-4 pt-6">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600/60 ml-4 mb-4 flex items-center gap-3">
-                    <div className="h-1 w-6 bg-emerald-500 rounded-full" /> Instruction Chain
-                  </p>
-                  <div className="space-y-3 px-4">
+                <div className="space-y-4 pt-10">
+                  <div className="space-y-4 px-6">
                     {actions.map((a, i) => (
-                      <div key={i} className="flex items-center gap-6 p-5 bg-background rounded-[1.5rem] border-2 shadow-sm group hover:border-primary/30 transition-all">
-                        <div className="p-3 rounded-xl bg-muted text-foreground group-hover:bg-primary group-hover:text-white transition-colors shadow-inner">
-                           <ActionIcon type={a.type} className="h-4 w-4" />
+                      <div key={i} className="flex items-center gap-8 p-8 bg-background rounded-[2.5rem] border-2 shadow-md group hover:border-primary/30 transition-all">
+                        <div className="p-5 rounded-2xl bg-muted text-foreground group-hover:bg-primary group-hover:text-white transition-all duration-500 shadow-inner group-hover:shadow-primary/30 group-hover:scale-110">
+                           <ActionIcon type={a.type} className="h-6 w-6" />
                         </div>
                         <div className="min-w-0 flex-1">
-                           <span className="text-xs font-black uppercase tracking-widest">{formatActionType(a.type)}</span>
-                           <div className="flex items-center gap-2 mt-1 opacity-40">
-                              <span className="text-[9px] font-mono truncate">{JSON.stringify(a.params)}</span>
-                           </div>
+                           <span className="text-sm font-black uppercase tracking-[0.2em] text-foreground/80">{formatActionType(a.type)}</span>
+                           <p className="text-[11px] font-bold text-muted-foreground mt-1.5 uppercase tracking-wider opacity-60">
+                              {formatActionParams(a.type, a.params)}
+                           </p>
                         </div>
-                        <div className="flex items-center gap-2 text-primary">
-                           <ArrowRight className="h-3 w-3" />
-                           <span className="text-[9px] font-black">DEQUEUED</span>
+                        <div className="flex flex-col items-end gap-1">
+                           <div className="flex items-center gap-2 text-primary">
+                              <span className="text-[10px] font-black uppercase tracking-widest">Validated</span>
+                              <Check className="h-3.5 w-3.5 stroke-[3]" />
+                           </div>
+                           <p className="text-[9px] font-mono opacity-30">P: {Math.random().toString(36).substring(7).toUpperCase()}</p>
                         </div>
                       </div>
                     ))}
@@ -763,92 +802,133 @@ function ExecutionStep({
   actions: ActionConfig[],
   results: Record<string, any>
 }) {
-  // Tracking Targets:
-  // If MULTI_DEVICE: each entry is a device
-  // If SINGLE_DEVICE: each entry is an action
+  const onlineDevices = useMemo(() => 
+    Array.from(selectedDeviceIds).map(id => devices.find(d => d.id === id)).filter(d => d?.status === 'online'),
+  [selectedDeviceIds, devices]);
+
+  const offlineDevices = useMemo(() => 
+    Array.from(selectedDeviceIds).map(id => devices.find(d => d.id === id)).filter(d => d?.status !== 'online'),
+  [selectedDeviceIds, devices]);
+
   const trackingData = mode === 'MULTI_DEVICE_SINGLE_COMMAND' 
-    ? Array.from(selectedDeviceIds).map(id => ({ 
-        id, 
-        label: devices.find(d => d.id === id)?.deviceName || id,
-        sub: id,
-        isDevice: true,
-        deviceStatus: devices.find(d => d.id === id)?.status
-      }))
+    ? Array.from(selectedDeviceIds).map(id => {
+        const d = devices.find(x => x.id === id);
+        return { 
+          id, 
+          label: d?.deviceName || id,
+          sub: id,
+          isDevice: true,
+          deviceStatus: d?.status,
+          isOffline: d?.status !== 'online'
+        }
+      })
     : actions.map((a, idx) => ({
         id: `${Array.from(selectedDeviceIds)[0]}-action-${idx}`,
         label: formatActionType(a.type),
-        sub: JSON.stringify(a.params),
+        sub: formatActionParams(a.type, a.params),
         isDevice: false,
-        type: a.type
+        type: a.type,
+        isOffline: false // Single device mode only happens for online/local device usually
       }));
 
+  // Grouped for display
+  const activeStream = trackingData.filter(t => !t.isOffline);
+  const queueStream = trackingData.filter(t => t.isOffline);
+
   return (
-    <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-700">
-      <div className="flex items-center justify-between bg-primary/5 p-6 rounded-[2rem] border-2 border-primary/10">
-        <div className="flex items-center gap-4">
-          <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-             <Zap className="h-6 w-6 text-white animate-pulse" />
+    <div className="h-full flex flex-col space-y-10 animate-in fade-in duration-1000">
+      <div className="flex items-center justify-between bg-zinc-900 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:rotate-12 transition-transform duration-1000"><Zap className="h-40 w-40 text-white" /></div>
+        <div className="flex items-center gap-6 relative z-10">
+          <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center shadow-2xl shadow-primary/40 ring-4 ring-white/5">
+             <CloudUpload className="h-8 w-8 text-white animate-bounce" />
           </div>
           <div>
-            <h3 className="text-lg font-black tracking-tight">Signal Bridge Active</h3>
-            <div className="flex items-center gap-3 mt-1">
-               <Badge variant="outline" className="bg-background text-emerald-600 border-emerald-500/20 text-[9px] font-black uppercase tracking-widest gap-1.5 h-5 px-2">
-                 <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> SSE LIVE STREAM
+            <h3 className="text-xl font-black tracking-tight text-white uppercase">Broadcast Signal Live</h3>
+            <div className="flex items-center gap-3 mt-2">
+               <Badge className="bg-emerald-500 text-white border-none text-[9px] font-black uppercase tracking-widest gap-2 h-6 px-3">
+                 <div className="h-2 w-2 rounded-full bg-white animate-pulse" /> SSE CONNECTED
                </Badge>
+               <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Socket Bridge: RT-1029</span>
             </div>
           </div>
         </div>
-        <Badge variant="outline" className="h-10 px-6 rounded-xl border-2 font-mono text-xs opacity-50 uppercase">Session: {Math.random().toString(36).substring(7).toUpperCase()}</Badge>
+        <div className="text-right relative z-10 hidden md:block">
+           <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em] mb-1">Session Protocol</p>
+           <p className="text-xs font-mono text-primary font-bold">X7-SIGNAL-982-B</p>
+        </div>
       </div>
 
-      <div className="flex-1 border-2 border-muted rounded-[2.5rem] bg-muted/5 overflow-hidden flex flex-col relative">
-        <div className="flex items-center gap-6 px-12 py-5 bg-muted/20 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 border-b">
+      <div className="flex-1 border-2 border-muted rounded-[3.5rem] bg-muted/5 overflow-hidden flex flex-col relative shadow-inner">
+        <div className="flex items-center gap-6 px-14 py-6 bg-muted/20 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 border-b">
           <span className="flex-1">{mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? 'Node Endpoint' : 'Instruction Chain'}</span>
-          <span className="w-48 text-center">Execution Lifecycle</span>
+          <span className="w-56 text-center">Life Cycle Status</span>
         </div>
         <ScrollArea className="flex-1">
-          <div className="divide-y divide-foreground/[0.03]">
-            {trackingData.map(item => {
-              const res = results[item.id] || { status: 'WAITING' };
-              const isOffline = item.isDevice && item.deviceStatus === 'offline';
-              
-              return (
-                <div key={item.id} className="flex items-center gap-6 px-12 py-6 hover:bg-muted/10 transition-all relative group">
-                  <div className="flex-1 min-w-0 flex items-center gap-4">
-                    {item.isDevice ? (
-                       <div className="p-3 rounded-xl bg-card border-2 shadow-sm text-primary group-hover:scale-110 transition-transform">
-                          <Monitor className="h-5 w-5" />
-                       </div>
-                    ) : (
-                       <div className="p-3 rounded-xl bg-card border-2 shadow-sm text-emerald-500 group-hover:scale-110 transition-transform">
-                          <ActionIcon type={(item as any).type} className="h-5 w-5" />
-                       </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="text-sm font-black truncate tracking-tight">{item.label}</p>
-                      <p className="text-[10px] font-mono text-muted-foreground opacity-40 truncate max-w-[400px] mt-1 uppercase tracking-tighter">{item.sub}</p>
+          <div className="divide-y divide-foreground/[0.04]">
+            {/* Active Execution Section */}
+            {activeStream.length > 0 && (
+               <div className="pb-4">
+                  {activeStream.map(item => (
+                    <div key={item.id} className="flex items-center gap-8 px-14 py-8 hover:bg-muted/10 transition-all relative group">
+                      <div className="flex-1 min-w-0 flex items-center gap-6">
+                        <div className={cn(
+                           "p-4 rounded-2xl bg-card border-2 shadow-sm transition-all duration-500 group-hover:scale-110",
+                           item.isDevice ? "text-primary border-primary/10" : "text-emerald-500 border-emerald-500/10"
+                        )}>
+                          {item.isDevice ? <Monitor className="h-6 w-6" /> : <ActionIcon type={(item as any).type} className="h-6 w-6" />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-base font-black truncate tracking-tight uppercase">{item.label}</p>
+                          <p className="text-[11px] font-bold text-muted-foreground opacity-40 truncate max-w-[450px] mt-1.5 uppercase tracking-wider">{item.sub}</p>
+                        </div>
+                      </div>
+                      <div className="w-56 flex justify-center">
+                        <StatusBadge status={results[item.id]?.status || 'WAITING'} />
+                      </div>
                     </div>
+                  ))}
+               </div>
+            )}
+
+            {/* Offline/Waiting Queue Section */}
+            {queueStream.length > 0 && (
+               <div className="bg-muted/10 border-t-2 border-dashed">
+                  <div className="px-14 py-4 flex items-center gap-3 opacity-40">
+                     <Clock className="h-3.5 w-3.5" />
+                     <span className="text-[9px] font-black uppercase tracking-widest">Post-Deployment Queue (Offline Nodes)</span>
                   </div>
-                  <div className="w-48 flex justify-center">
-                    <StatusBadge status={isOffline ? 'WAITING' : res.status} />
-                  </div>
-                </div>
-              );
-            })}
+                  {queueStream.map(item => (
+                    <div key={item.id} className="flex items-center gap-8 px-14 py-6 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all">
+                      <div className="flex-1 min-w-0 flex items-center gap-6">
+                        <div className="p-4 rounded-2xl bg-card border-2 shadow-sm"><Monitor className="h-6 w-6" /></div>
+                        <div className="min-w-0">
+                          <p className="text-base font-black truncate tracking-tight uppercase">{item.label}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1 tracking-widest">Pending: Will pull on next heartbeat</p>
+                        </div>
+                      </div>
+                      <div className="w-56 flex justify-center">
+                         <StatusBadge status="WAITING" />
+                      </div>
+                    </div>
+                  ))}
+               </div>
+            )}
           </div>
         </ScrollArea>
-        {/* Progress HUD */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1.5 p-2 bg-black/80 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl">
-           <div className="flex -space-x-2 px-2">
-              {trackingData.slice(0, 5).map(t => (
-                <div key={t.id} className={cn(
-                  "w-2 h-2 rounded-full border border-black transition-colors",
-                  results[t.id]?.status === 'SUCCEEDED' ? "bg-emerald-500" : "bg-muted"
-                )} />
-              ))}
-           </div>
-           <span className="text-[9px] font-black text-white px-2 uppercase tracking-tighter opacity-60">Real-time Telemetry Processing</span>
+
+        {/* Global Progress Bar at the bottom of list */}
+        <div className="h-1.5 bg-muted">
+           <div 
+              className="h-full bg-primary transition-all duration-1000 shadow-[0_0_10px_rgba(var(--primary),0.8)]" 
+              style={{ width: `${(Object.values(results).filter(r => r.status === 'SUCCEEDED').length / trackingData.length) * 100}%` }} 
+           />
         </div>
+      </div>
+      
+      <div className="flex items-center justify-center gap-4 text-muted-foreground/40 animate-pulse">
+         <Info className="h-3 w-3" />
+         <span className="text-[9px] font-black uppercase tracking-[0.4em]">Node Feedback Processing - Synchronous Response Required</span>
       </div>
     </div>
   );
@@ -858,52 +938,43 @@ function StatusBadge({ status }: { status: string }) {
   switch (status) {
     case 'WAITING':
       return (
-        <Badge variant="outline" className="bg-zinc-500/10 text-zinc-500 border-zinc-200/50 gap-2 h-7 px-3 rounded-lg">
-          <Clock className="h-3 w-3" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Pending</span>
+        <Badge variant="outline" className="bg-zinc-100 text-zinc-500 border-zinc-200 gap-2 h-8 px-4 rounded-xl">
+          <Clock className="h-3.5 w-3.5" />
+          <span className="text-[10px] font-black uppercase tracking-widest">In Queue</span>
         </Badge>
       );
     case 'DISPATCHED':
       return (
-        <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-200 gap-2 h-7 px-3 rounded-lg shadow-sm">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          <span className="text-[10px] font-black uppercase tracking-widest">In Transit</span>
+        <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-200 gap-2 h-8 px-4 rounded-xl shadow-sm">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <span className="text-[10px] font-black uppercase tracking-widest">Dispatching</span>
         </Badge>
       );
     case 'ACKED':
       return (
-        <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200 gap-2 h-7 px-3 rounded-lg shadow-sm">
-          <Check className="h-3 w-3" />
+        <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200 gap-2 h-8 px-4 rounded-xl shadow-sm">
+          <Check className="h-3.5 w-3.5" />
           <span className="text-[10px] font-black uppercase tracking-widest">Received</span>
         </Badge>
       );
     case 'SUCCEEDED':
       return (
-        <Badge className="bg-emerald-500 text-white border-none gap-2 h-7 px-3 rounded-lg shadow-lg shadow-emerald-500/20">
-          <Check className="h-3 w-3" />
+        <Badge className="bg-emerald-500 text-white border-none gap-2 h-8 px-4 rounded-xl shadow-xl shadow-emerald-500/30">
+          <Check className="h-3.5 w-3.5 stroke-[3]" />
           <span className="text-[10px] font-black uppercase tracking-widest">Success</span>
         </Badge>
       );
     case 'FAILED':
       return (
-        <Badge className="bg-destructive text-white border-none gap-2 h-7 px-3 rounded-lg shadow-lg shadow-destructive/20">
-          <AlertCircle className="h-3 w-3" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Terminal Error</span>
-        </Badge>
-      );
-    case 'TIMEOUT':
-      return (
-        <Badge className="bg-zinc-800 text-white border-none gap-2 h-7 px-3 rounded-lg">
-          <Clock className="h-3 w-3" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Timeout</span>
+        <Badge className="bg-destructive text-white border-none gap-2 h-8 px-4 rounded-xl shadow-xl shadow-destructive/30">
+          <AlertCircle className="h-3.5 w-3.5" />
+          <span className="text-[10px] font-black uppercase tracking-widest">Failed</span>
         </Badge>
       );
     default:
-      return <Badge variant="outline" className="opacity-20 h-7 px-3">-</Badge>;
+      return <Badge variant="outline" className="opacity-20 h-8 px-4">-</Badge>;
   }
 }
-
-// Sub-components & Helpers
 
 function ActionIcon({ type, className }: { type: ActionType, className?: string }) {
   switch (type) {

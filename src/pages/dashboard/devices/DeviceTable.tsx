@@ -806,16 +806,17 @@ export function DeviceTable({
     rowSelectChildren: true,
   });
 
+  const gridSelectedIds = grid.state.rowSelectedIds.useValue();
+
   // Sync external selection -> grid
   useEffect(() => {
-    const gridSelection = new Set(grid.state.rowSelectedIds.get());
     const external = selectedDeviceIds;
+    const currentGrid = new Set(grid.state.rowSelectedIds.get());
     
-    // Simple check to avoid infinite loops
-    let changed = gridSelection.size !== external.size;
+    let changed = external.size !== currentGrid.size;
     if (!changed) {
       for (const id of external) {
-        if (!gridSelection.has(id)) {
+        if (!currentGrid.has(id)) {
           changed = true;
           break;
         }
@@ -827,28 +828,25 @@ export function DeviceTable({
     }
   }, [grid, selectedDeviceIds]);
 
-  // Sync grid -> external selection
+  // Sync grid selection -> external
   useEffect(() => {
-    const removeListener = grid.state.rowSelectedIds.subscribe((next) => {
-      const nextSet = new Set(next);
-      const external = selectedDeviceIds;
+    const nextSet = new Set(gridSelectedIds);
+    const external = selectedDeviceIds;
 
-      let changed = nextSet.size !== external.size;
-      if (!changed) {
-        for (const id of nextSet) {
-          if (!external.has(id)) {
-            changed = true;
-            break;
-          }
+    let changed = nextSet.size !== external.size;
+    if (!changed) {
+      for (const id of nextSet) {
+        if (!external.has(id)) {
+          changed = true;
+          break;
         }
       }
+    }
 
-      if (changed) {
-        onSelectionChange(nextSet);
-      }
-    });
-    return removeListener;
-  }, [grid, onSelectionChange, selectedDeviceIds]);
+    if (changed) {
+      onSelectionChange(nextSet);
+    }
+  }, [gridSelectedIds, onSelectionChange, selectedDeviceIds]);
 
   useEffect(() => {
     const merge = (prev: Column<Device>[], next: Column<Device>[]) => {
