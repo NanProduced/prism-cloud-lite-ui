@@ -9,7 +9,8 @@ import { DeviceFilters, type DeviceFilterState } from '@/components/devices/Devi
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, Grid3x3, LayoutGrid, Download, Loader2 } from 'lucide-react';
+import { Search, Grid3x3, LayoutGrid, Download, Loader2, Zap } from 'lucide-react';
+import { BatchCommandDialog } from '@/features/devices/commands/BatchCommandDialog';
 
 type ViewMode = 'grid' | 'card';
 
@@ -28,6 +29,8 @@ export default function DevicesPage() {
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<DeviceFilterState>({});
+  const [selectedDeviceIds, setSelectedDeviceIds] = useState<Set<string>>(new Set());
+  const [showBatchCommandDialog, setShowBatchCommandDialog] = useState(false);
   const [showGridDialog, setShowGridDialog] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [gridLoading, setGridLoading] = useState(false);
@@ -233,6 +236,15 @@ export default function DevicesPage() {
               <LayoutGrid className="h-4 w-4" />
             </Button>
           </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-2"
+            onClick={() => setShowBatchCommandDialog(true)}
+          >
+            <Zap className="h-4 w-4" />
+            Batch Command
+          </Button>
           {viewMode === 'card' && (
             <Button variant="outline" size="sm" className="gap-2">
               <Download className="h-4 w-4" />
@@ -241,6 +253,15 @@ export default function DevicesPage() {
           )}
         </div>
       </div>
+
+      <BatchCommandDialog
+        open={showBatchCommandDialog}
+        onOpenChange={setShowBatchCommandDialog}
+        devices={devices}
+        tags={tags}
+        initialSelectedDeviceIds={Array.from(selectedDeviceIds)}
+        mode="multi-device"
+      />
 
       {/* Stats */}
       <div className="flex items-center gap-6 text-sm">
@@ -288,6 +309,9 @@ export default function DevicesPage() {
             devices={fullDevices.length > 0 ? fullDevices : devices}
             customFieldDefs={customFieldDefs}
             isProActive={isProActive}
+            selectedDeviceIds={selectedDeviceIds}
+            onSelectionChange={setSelectedDeviceIds}
+            onBatchCommand={() => setShowBatchCommandDialog(true)}
             onProActiveChange={setIsProActive}
             onCustomFieldDefsChange={setCustomFieldDefs}
             onCustomFieldCreate={addCustomFieldDef}
@@ -299,6 +323,8 @@ export default function DevicesPage() {
         <DeviceCardView
           devices={filteredDevices}
           tags={tags}
+          selectedDeviceIds={selectedDeviceIds}
+          onSelectionChange={setSelectedDeviceIds}
           onCreateTag={createTag}
           onToggleDeviceTag={toggleDeviceTag}
         />

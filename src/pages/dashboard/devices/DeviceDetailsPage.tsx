@@ -64,8 +64,9 @@ import { toast } from "sonner";
 import { DeviceScreenshot } from "@/components/devices/DeviceScreenshot";
 import { DeviceStatusBadge } from "@/components/devices/DeviceStatusBadge";
 import { SlideToUnlock } from "@/components/ui/slide-to-unlock";
+import { BatchCommandDialog } from "@/features/devices/commands/BatchCommandDialog";
 import type { DeviceDetails } from "@/types/device-details";
-import { mockDevices } from "@/lib/mock/devices";
+import { mockDevices, mockTags } from "@/lib/mock/devices";
 import { cn } from "@/lib/utils";
 
 export default function DeviceDetailsPage() {
@@ -75,6 +76,7 @@ export default function DeviceDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [showBatchCommand, setShowBatchCommand] = useState(false);
 
   // Interactive States (Mapped to UI requirements)
   const [brightnessPct, setBrightnessPct] = useState(0); // 0-100%
@@ -238,6 +240,13 @@ export default function DeviceDetailsPage() {
             <div className="flex items-center gap-2">
                <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard/devices")} className="rounded-xl border h-10 w-10">
                   <ArrowLeft className="h-4 w-4" />
+               </Button>
+               <Button 
+                  variant="outline" 
+                  className="h-10 rounded-xl font-black text-xs gap-2" 
+                  onClick={() => setShowBatchCommand(true)}
+               >
+                  <Zap className="h-4 w-4 text-amber-500" /> BATCH
                </Button>
                <Button variant="outline" className="h-10 rounded-xl font-black text-xs gap-2" onClick={handleRefresh} disabled={isRefreshing}>
                   <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} /> SYNC
@@ -571,6 +580,15 @@ export default function DeviceDetailsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <BatchCommandDialog
+        open={showBatchCommand}
+        onOpenChange={setShowBatchCommand}
+        devices={mockDevices}
+        tags={mockTags}
+        initialSelectedDeviceIds={device ? [device.id] : []}
+        mode="single-device"
+      />
 
     </div>
   );

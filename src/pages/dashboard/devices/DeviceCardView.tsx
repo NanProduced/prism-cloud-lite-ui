@@ -3,6 +3,7 @@ import type { Device } from '@/types/device';
 import { DeviceScreenshot } from '@/components/devices/DeviceScreenshot';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import type { Tag } from '@/types/device';
 import { TagChip } from '@/components/devices/TagChip';
 import { TagPicker } from '@/components/devices/TagPicker';
@@ -21,12 +22,29 @@ import { cn } from '@/lib/utils';
 interface DeviceCardViewProps {
   devices: Device[];
   tags: Tag[];
+  selectedDeviceIds: Set<string>;
+  onSelectionChange: (ids: Set<string>) => void;
   onToggleDeviceTag: (deviceId: string, tag: Tag) => void;
   onCreateTag: (draft: { name: string; color: string; icon?: string }) => Tag;
 }
 
-export function DeviceCardView({ devices, tags, onToggleDeviceTag, onCreateTag }: DeviceCardViewProps) {  
+export function DeviceCardView({
+  devices,
+  tags,
+  selectedDeviceIds,
+  onSelectionChange,
+  onToggleDeviceTag,
+  onCreateTag,
+}: DeviceCardViewProps) {
   const navigate = useNavigate();
+
+  const handleToggleSelection = (id: string) => {
+    const next = new Set(selectedDeviceIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onSelectionChange(next);
+  };
+
   if (devices.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 border rounded-lg bg-muted/20">
@@ -36,12 +54,14 @@ export function DeviceCardView({ devices, tags, onToggleDeviceTag, onCreateTag }
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3"> 
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
       {devices.map((device) => (
         <DeviceCard
           key={device.id}
           device={device}
           tags={tags}
+          isSelected={selectedDeviceIds.has(device.id)}
+          onToggleSelection={() => handleToggleSelection(device.id)}
           onToggleDeviceTag={onToggleDeviceTag}
           onCreateTag={onCreateTag}
           onNavigate={() => navigate(`/dashboard/devices/${device.id}`)}
@@ -54,12 +74,16 @@ export function DeviceCardView({ devices, tags, onToggleDeviceTag, onCreateTag }
 function DeviceCard({
   device,
   tags,
+  isSelected,
+  onToggleSelection,
   onToggleDeviceTag,
   onCreateTag,
   onNavigate,
 }: {
   device: Device;
   tags: Tag[];
+  isSelected: boolean;
+  onToggleSelection: () => void;
   onToggleDeviceTag: (deviceId: string, tag: Tag) => void;
   onCreateTag: (draft: { name: string; color: string; icon?: string }) => Tag;
   onNavigate: () => void;
@@ -70,9 +94,7 @@ function DeviceCard({
   const isOutdated = diffMinutes > 60;
 
   const NetworkIcon =
-    device.networkType === 'WiFi' ? Wifi :
-    device.networkType === '4G' ? RadioTower :
-    EthernetPort;
+    device.networkType === 'WiFi' ? Wifi : device.networkType === '4G' ? RadioTower : EthernetPort;
 
   const lastReportLabel = formatRelativeTime(diffMinutes);
   const showOutdatedWarn = device.status === 'online' && isOutdated;
@@ -81,16 +103,25 @@ function DeviceCard({
   const remainingTagCount = Math.max(0, device.tags.length - displayedTags.length);
 
   return (
-    <Card className="group overflow-hidden">
-      <div className="relative cursor-pointer" onClick={onNavigate}>
-        <DeviceScreenshot
-          src={device.latestScreenshot?.url}
-          timestamp={device.latestScreenshot?.timestamp}
-          deviceName={device.deviceName}
-          className="w-full h-24 rounded-none transition-transform group-hover:scale-105 duration-300"
-        />
+    <Card className={cn('group overflow-hidden transition-all', isSelected && 'ring-2 ring-primary')}>
+      <div className="relative">
+        <div className="cursor-pointer" onClick={onNavigate}>
+          <DeviceScreenshot
+            src={device.latestScreenshot?.url}
+            timestamp={device.latestScreenshot?.timestamp}
+            deviceName={device.deviceName}
+            className="h-24 w-full rounded-none transition-transform duration-300 group-hover:scale-105"
+          />
+        </div>
         <div className="absolute top-2 left-2">
           <StatusPill status={device.status} offlineDuration={device.offlineDuration} />
+        </div>
+        <div className="absolute top-2 right-2">
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={onToggleSelection}
+            className="h-5 w-5 rounded-md border-white/50 bg-black/20 shadow-lg backdrop-blur-sm data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+          />
         </div>
       </div>
 

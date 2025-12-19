@@ -33,6 +33,9 @@ interface DeviceTableProps {
   devices: Device[];
   customFieldDefs: DeviceCustomFieldDef[];
   isProActive: boolean;
+  selectedDeviceIds: Set<string>;
+  onSelectionChange: (ids: Set<string>) => void;
+  onBatchCommand: () => void;
   onProActiveChange?: (next: boolean) => void;
   onCustomFieldDefsChange: (next: DeviceCustomFieldDef[]) => void;
   onCustomFieldCreate: (def: DeviceCustomFieldDef) => void;
@@ -82,11 +85,14 @@ export function DeviceTable({
   devices,
   customFieldDefs,
   isProActive,
+  selectedDeviceIds,
+  onSelectionChange,
   onProActiveChange,
   onCustomFieldDefsChange,
   onCustomFieldCreate,
   onCustomFieldDelete,
   onCustomFieldValueChange,
+  onBatchCommand,
 }: DeviceTableProps) {
   const gridId = useId();
   const navigate = useNavigate();
@@ -800,6 +806,50 @@ export function DeviceTable({
     rowSelectChildren: true,
   });
 
+  // Sync external selection -> grid
+  useEffect(() => {
+    const gridSelection = new Set(grid.state.rowSelectedIds.get());
+    const external = selectedDeviceIds;
+    
+    // Simple check to avoid infinite loops
+    let changed = gridSelection.size !== external.size;
+    if (!changed) {
+      for (const id of external) {
+        if (!gridSelection.has(id)) {
+          changed = true;
+          break;
+        }
+      }
+    }
+
+    if (changed) {
+      grid.state.rowSelectedIds.set(Array.from(external));
+    }
+  }, [grid, selectedDeviceIds]);
+
+  // Sync grid -> external selection
+  useEffect(() => {
+    const removeListener = grid.state.rowSelectedIds.subscribe((next) => {
+      const nextSet = new Set(next);
+      const external = selectedDeviceIds;
+
+      let changed = nextSet.size !== external.size;
+      if (!changed) {
+        for (const id of nextSet) {
+          if (!external.has(id)) {
+            changed = true;
+            break;
+          }
+        }
+      }
+
+      if (changed) {
+        onSelectionChange(nextSet);
+      }
+    });
+    return removeListener;
+  }, [grid, onSelectionChange, selectedDeviceIds]);
+
   useEffect(() => {
     const merge = (prev: Column<Device>[], next: Column<Device>[]) => {
       const nextById = new Map(next.map((c) => [c.id, c]));
@@ -917,6 +967,7 @@ export function DeviceTable({
         defaultColumns={columns}
         customFieldDefs={customFieldDefs}
         isProActive={isProActive}
+        onBatchCommand={onBatchCommand}
         onProActiveChange={onProActiveChange}
         onCustomFieldDefsChange={onCustomFieldDefsChange}
         onCustomFieldCreate={onCustomFieldCreate}

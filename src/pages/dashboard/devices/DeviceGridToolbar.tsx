@@ -25,6 +25,7 @@ interface DeviceGridToolbarProps {
   defaultColumns: Column<Device>[];
   customFieldDefs: DeviceCustomFieldDef[];
   isProActive: boolean;
+  onBatchCommand: () => void;
   onProActiveChange?: (next: boolean) => void;
   onCustomFieldDefsChange: (next: DeviceCustomFieldDef[]) => void;
   onCustomFieldCreate: (def: DeviceCustomFieldDef) => void;
@@ -38,6 +39,7 @@ export function DeviceGridToolbar({
   defaultColumns,
   customFieldDefs,
   isProActive,
+  onBatchCommand,
   onProActiveChange,
   onCustomFieldDefsChange,
   onCustomFieldCreate,
@@ -296,6 +298,11 @@ export function DeviceGridToolbar({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={onBatchCommand}>
+                <Zap className="h-4 w-4" />
+                Batch Command
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem disabled={selectedCount === 0} onSelect={() => runBulkAction('wake-sleep')}>
                 <Power className="h-4 w-4" />
                 Wake/Sleep
