@@ -246,18 +246,15 @@ export default function DevicesPage() {
                     size="sm" 
                     className="gap-2"
                     onClick={() => setShowBatchCommandDialog(true)}
-                    disabled={selectedDeviceIds.size === 0}
                   >
                     <Zap className="h-4 w-4" />
-                    Batch Command {selectedDeviceIds.size > 0 && `(${selectedDeviceIds.size})`}
+                    Command {selectedDeviceIds.size > 0 && `(${selectedDeviceIds.size})`}
                   </Button>
                 </span>
               </TooltipTrigger>
-              {selectedDeviceIds.size === 0 && (
-                <TooltipContent>
-                  <p>Select devices first to use batch commands</p>
-                </TooltipContent>
-              )}
+              <TooltipContent>
+                <p>{selectedDeviceIds.size === 0 ? "Open command wizard" : `Command ${selectedDeviceIds.size} selected device(s)`}</p>
+              </TooltipContent>
             </Tooltip>
           </TooltipProvider>
           {viewMode === 'card' && (
@@ -273,7 +270,6 @@ export default function DevicesPage() {
         open={showBatchCommandDialog}
         onOpenChange={setShowBatchCommandDialog}
         devices={devices}
-        tags={tags}
         initialSelectedDeviceIds={Array.from(selectedDeviceIds)}
         mode="multi-device"
       />

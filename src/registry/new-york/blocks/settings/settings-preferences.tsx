@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, Clock, Globe, Languages, Loader2, Moon, Save, Sun } from "lucide-react";
+import { Calendar, Clock, Globe, Languages, Loader2, Moon, Save, Sun, Timer } from "lucide-react";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/registry/new-york/ui/button";
@@ -36,6 +36,7 @@ export interface PreferencesData {
   dateFormat: DateFormatPreset;
   timeFormat: "12h" | "24h";
   showSeconds: boolean;
+  defaultCommandTimeout: number; // in minutes
 }
 
 export interface SettingsPreferencesProps {
@@ -115,6 +116,7 @@ const defaultPreferences: PreferencesData = {
   dateFormat: "YYYY-MM-DD",
   timeFormat: "24h",
   showSeconds: false,
+  defaultCommandTimeout: 60,
 };
 
 export default function SettingsPreferences({
@@ -123,7 +125,10 @@ export default function SettingsPreferences({
   className,
 }: SettingsPreferencesProps) {
   const [isSaving, setIsSaving] = useState(false);
-  const [localPreferences, setLocalPreferences] = useState<PreferencesData>(preferences);
+  const [localPreferences, setLocalPreferences] = useState<PreferencesData>({
+    ...defaultPreferences,
+    ...preferences,
+  });
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -299,7 +304,7 @@ export default function SettingsPreferences({
                       {timezones.map((tz) => (
                         <SelectItem key={tz.value} value={tz.value}>
                           <span className="flex items-center gap-2">
-                            <Globe className="size-4" />
+                             <Globe className="size-4" />
                             {tz.label}
                           </span>
                         </SelectItem>
@@ -419,9 +424,48 @@ export default function SettingsPreferences({
               </p>
             </div>
           </div>
+
+          <Separator />
+
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-2">
+              <Timer className="size-5 text-muted-foreground" />
+              <h3 className="font-semibold text-base">Commands</h3>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field>
+                <FieldLabel htmlFor="command-timeout">Default Command Timeout</FieldLabel>
+                <FieldContent>
+                  <Select
+                    onValueChange={(next) =>
+                      setLocalPreferences((p) => ({
+                        ...p,
+                        defaultCommandTimeout: parseInt(next),
+                      }))
+                    }
+                    value={String(localPreferences.defaultCommandTimeout)}
+                  >
+                    <SelectTrigger className="w-full" id="command-timeout">
+                      <SelectValue placeholder="Select timeout" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">15 minutes</SelectItem>
+                      <SelectItem value="60">1 hour</SelectItem>
+                      <SelectItem value="1440">24 hours</SelectItem>
+                      <SelectItem value="4320">3 days</SelectItem>
+                      <SelectItem value="10080">7 days</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FieldContent>
+                <FieldDescription>
+                  Commands will expire if not retrieved by devices within this period.
+                </FieldDescription>
+              </Field>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
   );
 }
-

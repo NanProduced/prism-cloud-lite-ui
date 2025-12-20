@@ -718,7 +718,6 @@ export default function DeviceDetailsPage() {
         open={showBatchCommand}
         onOpenChange={setShowBatchCommand}
         devices={mockDevices}
-        tags={mockTags}
         initialSelectedDeviceIds={device ? [device.id] : []}
         mode="single-device"
       />
