@@ -56,6 +56,8 @@ export function DialogContent({ children, className = "" }: { children: ReactNod
     <>
       <div className="fixed inset-0 z-50 bg-black/40" onClick={() => context.setOpen(false)} />
       <div
+        role="dialog"
+        aria-modal="true"
         className={cn(
           "fixed left-1/2 top-1/2 z-[51] w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-background shadow-lg",
           className,

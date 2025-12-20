@@ -8,7 +8,6 @@ import {
   Settings2, 
   ShieldCheck, 
   Search, 
-  Filter, 
   Loader2, 
   Power, 
   RotateCcw, 
@@ -19,16 +18,13 @@ import {
   Info, 
   BarChart3, 
   PlaySquare,
-  ArrowRight,
   Plus,
   Trash2,
   AlertCircle,
-  LayoutGrid,
   ChevronLeft,
   Server,
   CloudUpload,
-  ArrowUpRight,
-  ExternalLink
+  Moon
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -89,9 +85,10 @@ function formatActionParams(type: ActionType, params: any): string {
       return `Volume Level: ${params.value}/15`;
     case 'TIMEZONE':
       return `${params.timezone} ${params.sync ? '(NTP Sync On)' : ''}`;
-    case 'LANGUAGE':
+    case 'LANGUAGE': {
       const langs: any = { zh: 'Chinese', en: 'English', ja: 'Japanese' };
       return `Node Language: ${langs[params.language] || params.language}`;
+    }
     case 'DISPLAY_NAME':
     case 'MATERIAL_STATS':
     case 'PROGRAM_STATS':
@@ -107,7 +104,6 @@ export function BatchCommandDialog({
   open,
   onOpenChange,
   devices,
-  tags,
   initialSelectedDeviceIds = [],
   mode: rawMode = 'multi-device'
 }: BatchCommandDialogProps) {
@@ -120,6 +116,8 @@ export function BatchCommandDialog({
   const [actions, setActions] = useState<ActionConfig[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResults, setExecutionResults] = useState<Record<string, any>>({});
+  const [riskConfirmed, setRiskConfirmed] = useState(false);
+  const [includeOffline, setIncludeOffline] = useState(true);
 
   useEffect(() => {
     if (open) {
@@ -128,16 +126,21 @@ export function BatchCommandDialog({
       setActions([]);
       setIsExecuting(false);
       setExecutionResults({});
+      setRiskConfirmed(false);
+      setIncludeOffline(true);
     }
   }, [open, initialSelectedDeviceIds]);
 
   const close = () => onOpenChange(false);
 
+  const hasHighRisk = useMemo(() => actions.some(a => a.type === 'REBOOT' || a.type === 'WAKE_SLEEP'), [actions]);
+
   const canNext = useMemo(() => {
     if (step === 0) return selectedDeviceIds.size > 0;
     if (step === 1) return actions.length > 0;
+    if (step === 2 && hasHighRisk) return riskConfirmed;
     return true;
-  }, [step, selectedDeviceIds.size, actions.length]);
+  }, [step, selectedDeviceIds.size, actions.length, hasHighRisk, riskConfirmed]);
 
   const handleExecute = async () => {
     setIsExecuting(true);
@@ -186,10 +189,10 @@ export function BatchCommandDialog({
           <VerticalStepper 
             currentStep={step} 
             steps={[
-              { label: 'Nodes', description: mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? 'Select targets' : 'Target Locked' },
-              { label: 'Config', description: 'Action Payload' },
-              { label: 'Confirm', description: 'Manifest Review' },
-              { label: 'Deploy', description: 'Execution Stream' }
+              { label: '选择设备', description: mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? '选择目标节点' : '已锁定目标' },
+              { label: '选择指令', description: '配置指令参数' },
+              { label: '确认发布', description: '核对指令清单' },
+              { label: '执行', description: '实时执行状态' }
             ]} 
           />
 
@@ -253,6 +256,10 @@ export function BatchCommandDialog({
                 selectedDeviceIds={selectedDeviceIds}
                 devices={devices}
                 actions={actions}
+                riskConfirmed={riskConfirmed}
+                setRiskConfirmed={setRiskConfirmed}
+                includeOffline={includeOffline}
+                setIncludeOffline={setIncludeOffline}
               />
             )}
             {step === 3 && (
@@ -262,6 +269,7 @@ export function BatchCommandDialog({
                 devices={devices}
                 actions={actions}
                 results={executionResults}
+                includeOffline={includeOffline}
               />
             )}
           </div>
@@ -272,31 +280,31 @@ export function BatchCommandDialog({
               variant="ghost" 
               onClick={step === 0 ? close : () => setStep(s => s - 1)} 
               disabled={step === 3 && isExecuting}
-              className="px-8 font-black uppercase text-[10px] tracking-[0.25em] h-14 rounded-2xl gap-3 border hover:bg-background"
+              className="px-8 font-black uppercase text-[10px] tracking-[0.2em] h-14 rounded-2xl gap-3 border hover:bg-background"
             >
               <ChevronLeft className="h-4 w-4" />
-              {step === 0 ? 'Abort' : 'Back'}
+              {step === 0 ? '取消' : '上一步'}
             </Button>
             <div className="flex items-center gap-4">
               {step < 3 && (
                 <Button 
                   onClick={step === 2 ? handleExecute : () => setStep(s => s + 1)} 
                   disabled={!canNext}
-                  className="px-14 font-black uppercase text-[10px] tracking-[0.25em] h-14 rounded-2xl gap-4 shadow-2xl shadow-primary/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  className="px-14 font-black uppercase text-[10px] tracking-[0.2em] h-14 rounded-2xl gap-4 shadow-2xl shadow-primary/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
                   {step === 2 ? (
-                    <><CloudUpload className="h-4 w-4" /> Deploy Manifest</>
+                    <><CloudUpload className="h-4 w-4" /> 立即执行</>
                   ) : (
-                    <>Next Phase <ChevronRight className="h-4 w-4" /></>
+                    <>下一步 <ChevronRight className="h-4 w-4" /></>
                   )}
                 </Button>
               )}
               {step === 3 && (
                 <Button 
                    onClick={close} 
-                   className="px-14 font-black uppercase text-[10px] tracking-[0.25em] h-14 rounded-2xl bg-zinc-900 text-white hover:bg-zinc-800 shadow-xl"
+                   className="px-14 font-black uppercase text-[10px] tracking-[0.2em] h-14 rounded-2xl bg-zinc-900 text-white hover:bg-zinc-800 shadow-xl"
                 >
-                  Minimize Window
+                  关闭
                 </Button>
               )}
             </div>
@@ -429,14 +437,25 @@ function DeviceSelectStep({
                 key={d.id} 
                 className={cn(
                   "flex items-center gap-6 px-12 py-6 hover:bg-primary/[0.02] cursor-pointer transition-all relative group",
-                  selectedDeviceIds.has(d.id) ? "bg-primary/[0.04]" : "grayscale opacity-50 hover:grayscale-0 hover:opacity-100"
+                  selectedDeviceIds.has(d.id) ? "bg-primary/[0.04]" : "bg-transparent"
                 )}
                 onClick={() => toggle(d.id)}
               >
                 {selectedDeviceIds.has(d.id) && (
                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary shadow-[4px_0_20px_rgba(var(--primary),0.6)] rounded-r-full" />
                 )}
-                <Checkbox checked={selectedDeviceIds.has(d.id)} onCheckedChange={() => {}} className="rounded-lg h-6 w-6 border-2" />
+                <Checkbox 
+                  checked={selectedDeviceIds.has(d.id)} 
+                  onCheckedChange={(checked) => {
+                    // Prevent row click from firing again if we click the checkbox directly
+                    const next = new Set(selectedDeviceIds);
+                    if (checked) next.add(d.id);
+                    else next.delete(d.id);
+                    onSelectionChange(next);
+                  }} 
+                  onClick={(e) => e.stopPropagation()}
+                  className="rounded-lg h-6 w-6 border-2 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" 
+                />
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-black truncate tracking-tight uppercase">{d.deviceName}</p>
                   <p className="text-[10px] text-muted-foreground font-mono opacity-50 uppercase tracking-tighter mt-1">{d.id}</p>
@@ -495,7 +514,7 @@ function ActionConfigStep({
       onActionsChange([{ type, params: defaultParams }]);
     } else {
       if (actions.some(a => a.type === type)) {
-        toast.error('Instruction already in queue');
+        toast.error('该指令已在队列中');
         return;
       }
       onActionsChange([...actions, { type, params: defaultParams }]);
@@ -524,7 +543,7 @@ function ActionConfigStep({
                onClick={() => addAction(item.type)}
                className={cn(
                  "group flex flex-col items-center justify-center p-5 rounded-[2rem] border-2 transition-all gap-3 relative",
-                 isSelected ? "border-primary bg-primary/[0.05] shadow-2xl shadow-primary/10" : "border-muted bg-muted/5 hover:border-primary/40 hover:bg-muted/10 grayscale opacity-60 hover:grayscale-0 hover:opacity-100"
+                 isSelected ? "border-primary bg-primary/[0.05] shadow-2xl shadow-primary/10" : "border-muted bg-muted/5 hover:border-primary/40 hover:bg-muted/10"
                )}
              >
                <div className={cn(
@@ -548,7 +567,7 @@ function ActionConfigStep({
         <div className="flex items-center justify-between">
            <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground flex items-center gap-3">
              <Settings2 className="h-4 w-4 text-primary" />
-             Instruction Chain Setup
+             指令配置
            </h3>
            <Badge variant="outline" className="font-mono text-[10px] opacity-40 px-3 h-6 rounded-lg border-2 uppercase">{actions.length} Task(s)</Badge>
         </div>
@@ -564,7 +583,7 @@ function ActionConfigStep({
                     </div>
                     <div>
                        <span className="text-xl font-black uppercase tracking-tight">{formatActionType(action.type)}</span>
-                       <p className="text-[11px] font-bold text-muted-foreground uppercase opacity-40 tracking-widest mt-1">Payload Parameters</p>
+                       <p className="text-[11px] font-bold text-muted-foreground uppercase opacity-40 tracking-widest mt-1">指令参数</p>
                     </div>
                   </div>
                   <Button 
@@ -580,7 +599,7 @@ function ActionConfigStep({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                   {action.type === 'WAKE_SLEEP' && (
                     <div className="space-y-5 col-span-2">
-                      <p className="text-[11px] font-black uppercase text-muted-foreground tracking-widest ml-1">Target Power State</p>
+                      <p className="text-[11px] font-black uppercase text-muted-foreground tracking-widest ml-1">目标电源状态</p>
                       <div className="flex gap-6">
                         <button 
                           onClick={() => updateParam(index, 'state', 'wake')}
@@ -588,30 +607,30 @@ function ActionConfigStep({
                             "flex-1 h-20 rounded-3xl border-2 font-black uppercase text-sm tracking-widest transition-all shadow-sm flex items-center justify-center gap-3",
                             action.params.state === 'wake' ? "border-primary bg-primary/[0.03] text-primary shadow-xl shadow-primary/5" : "border-muted hover:border-primary/40 bg-muted/5"
                           )}
-                        ><Power className="h-4 w-4" /> Wake Terminal</button>
+                        ><Power className="h-4 w-4" /> 唤醒终端</button>
                         <button 
                           onClick={() => updateParam(index, 'state', 'sleep')}
                           className={cn(
                             "flex-1 h-20 rounded-3xl border-2 font-black uppercase text-sm tracking-widest transition-all shadow-sm flex items-center justify-center gap-3",
                             action.params.state === 'sleep' ? "border-primary bg-primary/[0.03] text-primary shadow-xl shadow-primary/5" : "border-muted hover:border-primary/40 bg-muted/5"
                           )}
-                        ><Moon className="h-4 w-4" /> Suspend Screen</button>
+                        ><Moon className="h-4 w-4" /> 屏幕休眠</button>
                       </div>
                     </div>
                   )}
                   {action.type === 'BRIGHTNESS' && (
                     <>
-                      <ControlItem label="Intelligent Logic">
+                      <ControlItem label="自动亮度">
                          <div className="flex items-center justify-between p-6 bg-muted/20 rounded-[1.5rem] border border-transparent hover:border-primary/20 transition-all">
                            <div>
-                              <span className="text-xs font-black uppercase tracking-wider text-foreground">Automatic Gain</span>
-                              <p className="text-[10px] text-muted-foreground font-medium uppercase mt-0.5 opacity-60">Adaptive sensor feedback</p>
+                              <span className="text-xs font-black uppercase tracking-wider text-foreground">自动增益控制</span>
+                              <p className="text-[10px] text-muted-foreground font-medium uppercase mt-0.5 opacity-60">基于传感器自动调节</p>
                            </div>
                            <Switch checked={action.params.auto} onCheckedChange={(v) => updateParam(index, 'auto', v)} />
                          </div>
                       </ControlItem>
                       {!action.params.auto && (
-                        <ControlItem label={`Manual Intensity: ${action.params.value}%`}>
+                        <ControlItem label={`手动亮度: ${action.params.value}%`}>
                            <div className="pt-4 px-2">
                               <Slider value={[action.params.value]} onValueChange={([v]) => updateParam(index, 'value', v)} max={100} step={1} />
                               <div className="flex justify-between mt-3 text-[9px] font-black uppercase text-muted-foreground/40 tracking-tighter">
@@ -625,7 +644,7 @@ function ActionConfigStep({
                     </>
                   )}
                   {action.type === 'VOLUME' && (
-                    <ControlItem label={`Acoustic Output Level: ${action.params.value}`} className="col-span-2">
+                    <ControlItem label={`音量等级: ${action.params.value}`} className="col-span-2">
                        <div className="pt-6 px-2 flex items-center gap-8 bg-muted/10 p-6 rounded-[1.5rem]">
                           <Volume2 className="h-6 w-6 text-primary animate-pulse" />
                           <Slider value={[action.params.value]} onValueChange={([v]) => updateParam(index, 'value', v)} max={15} step={1} className="flex-1" />
@@ -635,13 +654,13 @@ function ActionConfigStep({
                   )}
                   {action.type === 'TIMEZONE' && (
                     <>
-                      <ControlItem label="Chrono Sync Protocol">
+                      <ControlItem label="时区同步协议">
                          <div className="flex items-center justify-between p-6 bg-muted/20 rounded-[1.5rem]">
-                           <span className="text-xs font-black uppercase tracking-wider">Network Time Master</span>
+                           <span className="text-xs font-black uppercase tracking-wider">网络时间同步 (NTP)</span>
                            <Switch checked={action.params.sync} onCheckedChange={(v) => updateParam(index, 'sync', v)} />
                          </div>
                       </ControlItem>
-                      <ControlItem label="Geographic Reference">
+                      <ControlItem label="时区选择">
                         <Select value={action.params.timezone} onValueChange={(v) => updateParam(index, 'timezone', v)}>
                           <SelectTrigger className="h-16 rounded-[1.5rem] bg-muted/20 border-none font-black text-xs uppercase px-6">
                             <SelectValue placeholder="Select Timezone" />
@@ -656,13 +675,13 @@ function ActionConfigStep({
                     </>
                   )}
                   {action.type === 'LANGUAGE' && (
-                    <ControlItem label="Interface Core Dialect" className="col-span-2">
+                    <ControlItem label="系统核心语言" className="col-span-2">
                       <Select value={action.params.language} onValueChange={(v) => updateParam(index, 'language', v)}>
                         <SelectTrigger className="h-16 rounded-[1.5rem] bg-muted/20 border-none font-black text-xs uppercase px-6">
                           <SelectValue placeholder="Select Language" />
                         </SelectTrigger>
                         <SelectContent className="z-[101]">
-                          <SelectItem value="zh" className="font-black uppercase text-[10px] py-3">Simplified Chinese (zh-CN)</SelectItem>
+                          <SelectItem value="zh" className="font-black uppercase text-[10px] py-3">简体中文 (zh-CN)</SelectItem>
                           <SelectItem value="en" className="font-black uppercase text-[10px] py-3">Standard English (en-US)</SelectItem>
                           <SelectItem value="ja" className="font-black uppercase text-[10px] py-3">Japanese Nihongo (ja-JP)</SelectItem>
                         </SelectContent>
@@ -670,11 +689,11 @@ function ActionConfigStep({
                     </ControlItem>
                   )}
                   {['DISPLAY_NAME', 'MATERIAL_STATS', 'PROGRAM_STATS'].includes(action.type) && (
-                    <ControlItem label="Feedback Protocol" className="col-span-2">
+                    <ControlItem label="反馈协议" className="col-span-2">
                       <div className="flex items-center justify-between p-8 bg-primary/[0.02] border-2 border-dashed border-primary/20 rounded-[2rem]">
                         <div>
-                           <p className="text-sm font-black uppercase tracking-tight">{formatActionType(action.type)} Monitor</p>
-                           <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-50 mt-1 tracking-widest">Global telemetry override</p>
+                           <p className="text-sm font-black uppercase tracking-tight">{formatActionType(action.type)} 监控</p>
+                           <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-50 mt-1 tracking-widest">全局遥测覆盖</p>
                         </div>
                         <Switch checked={action.params.enabled} onCheckedChange={(v) => updateParam(index, 'enabled', v)} className="scale-125" />
                       </div>
@@ -683,7 +702,7 @@ function ActionConfigStep({
                   {action.type === 'REBOOT' && (
                     <div className="col-span-2 flex items-center gap-6 p-8 bg-rose-500/5 border-2 border-rose-500/10 rounded-[2rem]">
                        <div className="p-4 rounded-2xl bg-rose-500/10"><AlertCircle className="h-8 w-8 text-rose-600" /></div>
-                       <p className="text-xs text-rose-900/70 font-black uppercase leading-relaxed tracking-wider">Warning: Node will perform a full kernel restart. All active play tasks will be terminated until system recovery.</p>
+                       <p className="text-xs text-rose-900/70 font-black uppercase leading-relaxed tracking-wider">警告：终端将执行全系统重启。所有正在播放的任务将中断，直到系统恢复。</p>
                     </div>
                   )}
                 </div>
@@ -692,7 +711,7 @@ function ActionConfigStep({
             {actions.length === 0 && (
               <div className="h-80 flex flex-col items-center justify-center opacity-10 grayscale border-4 border-dashed rounded-[4rem] animate-pulse transition-all">
                 <div className="p-10 rounded-full border-4 border-dashed mb-6"><Plus className="h-20 w-20" /></div>
-                <p className="text-base font-black uppercase tracking-[0.5em]">Initialize Protocol</p>
+                <p className="text-base font-black uppercase tracking-[0.5em]">请添加指令</p>
               </div>
             )}
           </div>
@@ -715,68 +734,126 @@ function ReviewStep({
   mode,
   selectedDeviceIds, 
   devices, 
-  actions 
+  actions,
+  riskConfirmed,
+  setRiskConfirmed,
+  includeOffline,
+  setIncludeOffline
 }: { 
   mode: CommandMode,
   selectedDeviceIds: Set<string>, 
   devices: Device[], 
-  actions: ActionConfig[] 
+  actions: ActionConfig[],
+  riskConfirmed: boolean,
+  setRiskConfirmed: (v: boolean) => void,
+  includeOffline: boolean,
+  setIncludeOffline: (v: boolean) => void
 }) {
+  const selectedDevices = Array.from(selectedDeviceIds).map(id => devices.find(d => d.id === id)).filter(Boolean) as Device[];
+  const onlineCount = selectedDevices.filter(d => d.status === 'online').length;
+  const offlineCount = selectedDevices.length - onlineCount;
+  const hasHighRisk = actions.some(a => a.type === 'REBOOT' || a.type === 'WAKE_SLEEP');
+
   return (
-    <div className="h-full flex flex-col space-y-12 animate-in fade-in zoom-in-95 duration-700">
-       <div className="grid grid-cols-2 gap-8">
-         <div className="p-10 rounded-[3rem] bg-primary/[0.04] border-2 border-primary/20 relative overflow-hidden group hover:border-primary/40 transition-all">
+    <div className="h-full flex flex-col space-y-6 animate-in fade-in zoom-in-95 duration-700">
+       <div className="grid grid-cols-2 gap-6">
+         <div className="p-8 rounded-[2.5rem] bg-primary/[0.04] border-2 border-primary/20 relative overflow-hidden group hover:border-primary/40 transition-all">
            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:scale-110 transition-transform"><Monitor className="h-32 w-32" /></div>
-           <p className="text-[11px] font-black uppercase text-primary/60 mb-2 tracking-[0.3em]">Endpoints Verified</p>
-           <p className="text-6xl font-black tabular-nums tracking-tighter">{selectedDeviceIds.size}</p>
+           <p className="text-[11px] font-black uppercase text-primary/60 mb-2 tracking-[0.3em]">目标设备</p>
+           <div className="flex items-baseline gap-4">
+              <p className="text-5xl font-black tabular-nums tracking-tighter">{selectedDeviceIds.size}</p>
+              <div className="flex gap-2">
+                 <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-none text-[9px]">在线: {onlineCount}</Badge>
+                 <Badge variant="outline" className="bg-zinc-500/10 text-zinc-600 border-none text-[9px]">离线: {offlineCount}</Badge>
+              </div>
+           </div>
          </div>
-         <div className="p-10 rounded-[3rem] bg-emerald-500/[0.04] border-2 border-emerald-500/20 relative overflow-hidden group hover:border-emerald-500/40 transition-all">
+         <div className="p-8 rounded-[2.5rem] bg-emerald-500/[0.04] border-2 border-emerald-500/20 relative overflow-hidden group hover:border-emerald-500/40 transition-all">
            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:scale-110 transition-transform"><Zap className="h-32 w-32" /></div>
-           <p className="text-[11px] font-black uppercase text-emerald-600/60 mb-2 tracking-[0.3em]">Signals Pending</p>
-           <p className="text-6xl font-black tabular-nums tracking-tighter">{actions.length}</p>
+           <p className="text-[11px] font-black uppercase text-emerald-600/60 mb-2 tracking-[0.3em]">待发指令</p>
+           <p className="text-5xl font-black tabular-nums tracking-tighter">{actions.length}</p>
          </div>
+       </div>
+
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+         {hasHighRisk && (
+           <div className="p-5 bg-rose-500/10 border-2 border-rose-500/20 rounded-3xl flex items-center justify-between gap-4">
+             <div className="flex items-center gap-3">
+               <AlertCircle className="h-5 w-5 text-rose-600 shrink-0" />
+               <div className="min-w-0">
+                 <p className="text-[11px] font-black uppercase tracking-tight text-rose-900">高风险警告</p>
+                 <p className="text-[9px] font-bold text-rose-800/60 uppercase truncate">包含重启/电源操作</p>
+               </div>
+             </div>
+             <div className="flex items-center gap-2 bg-white/50 px-3 py-2 rounded-xl border border-rose-500/20 shrink-0">
+               <Checkbox id="risk-confirm" checked={riskConfirmed} onCheckedChange={(v) => setRiskConfirmed(!!v)} className="h-4 w-4" />
+               <label htmlFor="risk-confirm" className="text-[9px] font-black uppercase cursor-pointer">已知风险</label>
+             </div>
+           </div>
+         )}
+
+         {offlineCount > 0 && (
+           <div className="p-5 bg-amber-500/10 border-2 border-amber-500/20 rounded-3xl flex items-center justify-between gap-4">
+             <div className="flex items-center gap-3">
+               <Clock className="h-5 w-5 text-amber-600 shrink-0" />
+               <div className="min-w-0">
+                 <p className="text-[11px] font-black uppercase tracking-tight text-amber-900">离线设备处理</p>
+                 <p className="text-[9px] font-bold text-amber-800/60 uppercase truncate">指令将在设备上线后自动下发</p>
+               </div>
+             </div>
+             <div className="flex items-center gap-2 bg-white/50 px-3 py-2 rounded-xl border border-amber-500/20 shrink-0">
+               <Switch checked={includeOffline} onCheckedChange={setIncludeOffline} className="scale-75" />
+               <span className="text-[9px] font-black uppercase">包含离线</span>
+             </div>
+           </div>
+         )}
        </div>
 
        <div className="flex-1 border-2 border-muted rounded-[3.5rem] bg-muted/5 overflow-hidden flex flex-col shadow-inner">
           <div className="flex items-center gap-6 px-14 py-6 bg-muted/20 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 border-b">
-             <span className="flex-1">Object Identifier</span>
-             <span className="w-64 text-center">Config Summary</span>
-             <span className="w-32 text-right">Context</span>
+             <span className="flex-1">执行目标</span>
+             <span className="w-64 text-center">指令摘要</span>
+             <span className="w-32 text-right">验证状态</span>
           </div>
           <ScrollArea className="flex-1">
              <div className="divide-y divide-foreground/[0.04] px-8 py-4">
-                <div className="mb-12">
-                  <div className="flex flex-wrap gap-3 px-6">
-                    {Array.from(selectedDeviceIds).map(id => {
-                      const d = devices.find(x => x.id === id);
-                      return (
-                        <Badge key={id} variant="outline" className="text-[10px] font-black uppercase py-2.5 px-5 rounded-2xl border-2 bg-background shadow-sm hover:border-primary transition-colors">
-                          {d?.deviceName || id}
+                <div className="mb-8">
+                  <div className="flex flex-wrap gap-2 px-6">
+                    {selectedDevices.map(d => (
+                        <Badge key={d.id} variant="outline" className="text-[9px] font-black uppercase py-2 px-4 rounded-xl border-2 bg-background shadow-sm">
+                          {d.deviceName}
                         </Badge>
-                      );
-                    })}
+                    ))}
                   </div>
                 </div>
 
-                <div className="space-y-4 pt-10">
-                  <div className="space-y-4 px-6">
+                <div className="space-y-3 pt-6">
+                  <div className="space-y-3 px-6 pb-6">
                     {actions.map((a, i) => (
-                      <div key={i} className="flex items-center gap-8 p-8 bg-background rounded-[2.5rem] border-2 shadow-md group hover:border-primary/30 transition-all">
-                        <div className="p-5 rounded-2xl bg-muted text-foreground group-hover:bg-primary group-hover:text-white transition-all duration-500 shadow-inner group-hover:shadow-primary/30 group-hover:scale-110">
-                           <ActionIcon type={a.type} className="h-6 w-6" />
+                      <div key={i} className="flex items-center gap-6 p-6 bg-background rounded-[2rem] border-2 shadow-sm group hover:border-primary/30 transition-all">
+                        <div className="p-4 rounded-xl bg-muted text-foreground group-hover:bg-primary group-hover:text-white transition-all duration-500 shadow-inner group-hover:scale-110">
+                           <ActionIcon type={a.type} className="h-5 w-5" />
                         </div>
                         <div className="min-w-0 flex-1">
-                           <span className="text-sm font-black uppercase tracking-[0.2em] text-foreground/80">{formatActionType(a.type)}</span>
-                           <p className="text-[11px] font-bold text-muted-foreground mt-1.5 uppercase tracking-wider opacity-60">
+                           <span className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground/80">{formatActionType(a.type)}</span>
+                           <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-wider opacity-60">
                               {formatActionParams(a.type, a.params)}
                            </p>
                         </div>
                         <div className="flex flex-col items-end gap-1">
-                           <div className="flex items-center gap-2 text-primary">
-                              <span className="text-[10px] font-black uppercase tracking-widest">Validated</span>
-                              <Check className="h-3.5 w-3.5 stroke-[3]" />
-                           </div>
-                           <p className="text-[9px] font-mono opacity-30">P: {Math.random().toString(36).substring(7).toUpperCase()}</p>
+                           <TooltipProvider>
+                             <Tooltip>
+                               <TooltipTrigger asChild>
+                                 <div className="flex items-center gap-2 text-primary cursor-help">
+                                    <span className="text-[9px] font-black uppercase tracking-widest">已验证</span>
+                                    <Check className="h-3 w-3 stroke-[3]" />
+                                 </div>
+                               </TooltipTrigger>
+                               <TooltipContent>
+                                 <p className="text-[10px] font-bold uppercase">指令参数校验通过</p>
+                               </TooltipContent>
+                             </Tooltip>
+                           </TooltipProvider>
                         </div>
                       </div>
                     ))}
@@ -794,41 +871,38 @@ function ExecutionStep({
   selectedDeviceIds,
   devices,
   actions,
-  results
+  results,
+  includeOffline
 }: {
   mode: CommandMode,
   selectedDeviceIds: Set<string>,
   devices: Device[],
   actions: ActionConfig[],
-  results: Record<string, any>
+  results: Record<string, any>,
+  includeOffline: boolean
 }) {
-  const onlineDevices = useMemo(() => 
-    Array.from(selectedDeviceIds).map(id => devices.find(d => d.id === id)).filter(d => d?.status === 'online'),
-  [selectedDeviceIds, devices]);
-
-  const offlineDevices = useMemo(() => 
-    Array.from(selectedDeviceIds).map(id => devices.find(d => d.id === id)).filter(d => d?.status !== 'online'),
-  [selectedDeviceIds, devices]);
-
   const trackingData = mode === 'MULTI_DEVICE_SINGLE_COMMAND' 
-    ? Array.from(selectedDeviceIds).map(id => {
-        const d = devices.find(x => x.id === id);
-        return { 
-          id, 
-          label: d?.deviceName || id,
-          sub: id,
-          isDevice: true,
-          deviceStatus: d?.status,
-          isOffline: d?.status !== 'online'
-        }
-      })
+    ? Array.from(selectedDeviceIds)
+        .map(id => {
+          const d = devices.find(x => x.id === id);
+          if (!includeOffline && d?.status !== 'online') return null;
+          return { 
+            id, 
+            label: d?.deviceName || id,
+            sub: id,
+            isDevice: true,
+            deviceStatus: d?.status,
+            isOffline: d?.status !== 'online'
+          }
+        })
+        .filter(Boolean) as any[]
     : actions.map((a, idx) => ({
         id: `${Array.from(selectedDeviceIds)[0]}-action-${idx}`,
         label: formatActionType(a.type),
         sub: formatActionParams(a.type, a.params),
         isDevice: false,
         type: a.type,
-        isOffline: false // Single device mode only happens for online/local device usually
+        isOffline: false 
       }));
 
   // Grouped for display
@@ -847,7 +921,7 @@ function ExecutionStep({
             <h3 className="text-xl font-black tracking-tight text-white uppercase">Broadcast Signal Live</h3>
             <div className="flex items-center gap-3 mt-2">
                <Badge className="bg-emerald-500 text-white border-none text-[9px] font-black uppercase tracking-widest gap-2 h-6 px-3">
-                 <div className="h-2 w-2 rounded-full bg-white animate-pulse" /> SSE CONNECTED
+                 <div className="h-2 w-2 rounded-full bg-white animate-pulse" /> 实时状态 (演示)
                </Badge>
                <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Socket Bridge: RT-1029</span>
             </div>

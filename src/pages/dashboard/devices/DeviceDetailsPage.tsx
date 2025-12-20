@@ -3,45 +3,33 @@ import { useEffect, useState } from "react";
 import { 
   ArrowLeft, 
   Monitor, 
-  Activity, 
   Settings, 
   HardDrive, 
-  Globe, 
   Clock, 
   Zap,
   RefreshCw,
   Camera,
-  Power,
   Volume2,
   Sun,
   Layout,
-  Wifi,
-  RadioTower,
-  EthernetPort,
-  ChevronRight,
   Database,
   Search,
-  CheckCircle2,
-  AlertCircle,
   FileText,
   Copy,
   Maximize2,
   ShieldCheck,
   Cpu,
-  Smartphone,
   RotateCw,
   Play,
   Layers,
   Moon,
   ThermometerSnowflake,
-  Box,
   Network
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -83,6 +71,17 @@ export default function DeviceDetailsPage() {
   const [volumeLevel, setVolumeLevel] = useState(0);     // 0-15
   const [colorTemp, setColorTemp] = useState(6500);      // 2000-10000K
   const [inputMode, setInputMode] = useState("internal");
+
+  // Track original values to show "Apply/Reset"
+  const [originalValues, setOriginalValues] = useState({
+    brightness: 0,
+    volume: 0,
+    colorTemp: 6500
+  });
+
+  const hasChanges = brightnessPct !== originalValues.brightness || 
+                     volumeLevel !== originalValues.volume || 
+                     colorTemp !== originalValues.colorTemp;
   
   // Danger Action States
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean, type: 'sleep' | 'reboot' | null }>({ open: false, type: null });
@@ -174,21 +173,49 @@ export default function DeviceDetailsPage() {
           sync_program_mode: { sync_program_ntp_enable: 1, sync_program_ntp_server: "pool.ntp.org", sync_program_lan_role: "slave" }
         }
       };
+
+      const b = Math.round((enhancedDevice.deviceProperties?.brightnessandcolortemp?.brightness || 0) / 255 * 100);
+      const v = Math.round((enhancedDevice.deviceProperties?.volume?.musicvolume || 0) / 100 * 15);
+      const c = enhancedDevice.deviceProperties?.brightnessandcolortemp?.colortemperature || 6500;
+      
       setDevice(enhancedDevice);
       
       // Initialize interactive states from real props
-      setBrightnessPct(Math.round((enhancedDevice.deviceProperties?.brightnessandcolortemp?.brightness || 0) / 255 * 100));
-      setVolumeLevel(Math.round((enhancedDevice.deviceProperties?.volume?.musicvolume || 0) / 100 * 15));
-      setColorTemp(enhancedDevice.deviceProperties?.brightnessandcolortemp?.colortemperature || 6500);
+      setBrightnessPct(b);
+      setVolumeLevel(v);
+      setColorTemp(c);
       setInputMode(enhancedDevice.deviceProperties?.inputmode?.inputmode || "internal");
+
+      setOriginalValues({ brightness: b, volume: v, colorTemp: c });
     }
     const timer = setTimeout(() => setLoading(false), 300);
     return () => clearTimeout(timer);
   }, [deviceId]);
 
+  const handleApplyChanges = () => {
+    toast.promise(new Promise(r => setTimeout(r, 1000)), {
+      loading: 'Applying adjustments...',
+      success: () => {
+        setOriginalValues({ brightness: brightnessPct, volume: volumeLevel, colorTemp: colorTemp });
+        return 'Parameters applied successfully';
+      },
+      error: 'Failed to apply changes',
+    });
+  };
+
+  const handleResetChanges = () => {
+    setBrightnessPct(originalValues.brightness);
+    setVolumeLevel(originalValues.volume);
+    setColorTemp(originalValues.colorTemp);
+    toast.info('Adjustments reverted');
+  };
+
   const handleRefresh = () => {
     setIsRefreshing(true);
-    setTimeout(() => { setIsRefreshing(false); toast.success("Real-time data synchronized"); }, 1000);
+    setTimeout(() => { 
+      setIsRefreshing(false); 
+      toast.success("Real-time data synchronized"); 
+    }, 1000);
   };
 
   const executeDangerousAction = () => {
@@ -204,7 +231,7 @@ export default function DeviceDetailsPage() {
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-[70vh] gap-4">
       <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      <p className="font-black text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Initializing Command Bridge</p>
+      <p className="font-black text-[10px] uppercase tracking-[0.2em] text-muted-foreground">正在初始化指令通道</p>
     </div>
   );
 
@@ -323,7 +350,7 @@ export default function DeviceDetailsPage() {
            <Card className="shadow-xl border-none ring-1 ring-muted/60 h-full">
               <CardHeader className="pb-5 border-b bg-muted/5 px-6">
                  <CardTitle className="text-[11px] font-black flex items-center gap-2 uppercase tracking-[0.15em] text-slate-500">
-                    <Zap className="h-4 w-4 text-amber-500 fill-amber-500/10" /> Rapid Command Cockpit
+                    <Zap className="h-4 w-4 text-amber-500 fill-amber-500/10" /> 指令控制台
                  </CardTitle>
               </CardHeader>
               <CardContent className="space-y-8 pt-8 px-8">
@@ -363,7 +390,10 @@ export default function DeviceDetailsPage() {
                  <div className="space-y-9 px-1">
                     <div className="space-y-4">
                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                          <span className="flex items-center gap-2"><Sun className="h-4 w-4 text-amber-500" /> Luminance Gain</span>
+                          <span className="flex items-center gap-2">
+                             <Sun className="h-4 w-4 text-amber-500" /> Luminance Gain
+                             {brightnessPct !== originalValues.brightness && <Badge className="ml-2 bg-amber-500/10 text-amber-600 border-none text-[8px] h-4">待应用</Badge>}
+                          </span>
                           <span className="font-mono bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-md border border-amber-500/10">{brightnessPct}%</span>
                        </div>
                        <Slider value={[brightnessPct]} max={100} onValueChange={(v) => setBrightnessPct(v[0])} className="cursor-pointer" />
@@ -371,7 +401,10 @@ export default function DeviceDetailsPage() {
 
                     <div className="space-y-4">
                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                          <span className="flex items-center gap-2"><Volume2 className="h-4 w-4 text-blue-500" /> Audio Level</span>
+                          <span className="flex items-center gap-2">
+                             <Volume2 className="h-4 w-4 text-blue-500" /> Audio Level
+                             {volumeLevel !== originalValues.volume && <Badge className="ml-2 bg-blue-500/10 text-blue-600 border-none text-[8px] h-4">待应用</Badge>}
+                          </span>
                           <span className="font-mono bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded-md border border-blue-500/10">{volumeLevel} / 15</span>
                        </div>
                        <Slider value={[volumeLevel]} max={15} step={1} onValueChange={(v) => setVolumeLevel(v[0])} className="cursor-pointer" />
@@ -379,15 +412,25 @@ export default function DeviceDetailsPage() {
 
                     <div className="space-y-4">
                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                          <span className="flex items-center gap-2"><ThermometerSnowflake className="h-4 w-4 text-emerald-500" /> Color Rendering</span>
+                          <span className="flex items-center gap-2">
+                             <ThermometerSnowflake className="h-4 w-4 text-emerald-500" /> Color Rendering
+                             {colorTemp !== originalValues.colorTemp && <Badge className="ml-2 bg-emerald-500/10 text-emerald-600 border-none text-[8px] h-4">待应用</Badge>}
+                          </span>
                           <span className="font-mono bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-md border border-emerald-500/10">{colorTemp}K</span>
                        </div>
                        <Slider value={[colorTemp]} min={2000} max={10000} step={100} onValueChange={(v) => setColorTemp(v[0])} className="cursor-pointer" />
                     </div>
                  </div>
 
+                 {hasChanges && (
+                   <div className="flex gap-2 animate-in slide-in-from-bottom-2">
+                      <Button onClick={handleApplyChanges} className="flex-1 h-12 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20">应用更改</Button>
+                      <Button onClick={handleResetChanges} variant="outline" className="h-12 rounded-xl font-black text-[10px] uppercase tracking-[0.2em]">重置</Button>
+                   </div>
+                 )}
+
                  <p className="text-[9px] text-center text-muted-foreground mt-auto pt-10 font-bold uppercase tracking-[0.2em] opacity-30">
-                    Control Stack Ready 路 Encrypted Direct Access
+                    指令栈就绪 路 加密直连通道
                  </p>
               </CardContent>
            </Card>
@@ -461,8 +504,83 @@ export default function DeviceDetailsPage() {
       <Tabs defaultValue="assets" className="w-full">
          <TabsList className="bg-muted/40 p-1 rounded-2xl border h-11 mb-6 flex w-full md:w-auto">
             <TabsTrigger value="assets" className="rounded-xl flex-1 md:px-12 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Endpoint Storage</TabsTrigger>
+            <TabsTrigger value="schedule" className="rounded-xl flex-1 md:px-12 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Timeline Monitor</TabsTrigger>
             <TabsTrigger value="policy" className="rounded-xl flex-1 md:px-12 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">System Manifest</TabsTrigger>
          </TabsList>
+
+         <TabsContent value="schedule" className="mt-0">
+            <Card className="rounded-[3rem] border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
+               <CardHeader className="px-10 py-8 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
+                  <div className="space-y-1">
+                     <CardTitle className="text-xl font-black tracking-tight uppercase">Live Timeline Monitor</CardTitle>
+                     <CardDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Real-time terminal execution rules for today</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-3">
+                     <Button variant="outline" className="h-10 rounded-xl font-black text-xs gap-2 border-2 uppercase">
+                        <RotateCw className="h-4 w-4" /> Sync Node
+                     </Button>
+                     <Button className="h-10 rounded-xl font-black text-xs gap-2 bg-zinc-900 text-white uppercase px-6">
+                        Modify Schedule
+                     </Button>
+                  </div>
+               </CardHeader>
+               <CardContent className="p-10 space-y-12">
+                  <div className="relative h-64 bg-muted/20 border-2 border-dashed border-muted rounded-[2.5rem] overflow-hidden">
+                     {/* 24h Grid */}
+                     <div className="absolute inset-0 flex">
+                        {Array.from({ length: 24 }).map((_, i) => (
+                           <div key={i} className="flex-1 border-r border-muted/30 last:border-r-0 flex flex-col items-center justify-end pb-2">
+                              <span className="text-[8px] font-black text-muted-foreground/30 tabular-nums">{String(i).padStart(2, '0')}</span>
+                           </div>
+                        ))}
+                     </div>
+                     
+                     {/* Current Time Indicator */}
+                     <div className="absolute top-0 bottom-0 w-0.5 bg-rose-500 z-20 shadow-[0_0_10px_rgba(244,63,94,0.5)]" style={{ left: '65%' }}>
+                        <div className="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full bg-rose-500" />
+                        <div className="absolute top-4 left-2 px-2 py-1 bg-rose-500 text-white text-[8px] font-black rounded-md uppercase whitespace-nowrap">Current Time: 15:42</div>
+                     </div>
+
+                     {/* Active Program Blocks */}
+                     <div className="absolute top-12 left-[35%] right-[15%] h-12 bg-blue-500/10 border-2 border-blue-500/40 rounded-2xl flex items-center px-6 gap-3 shadow-lg">
+                        <Play className="h-4 w-4 text-blue-500 fill-blue-500/20" />
+                        <span className="text-[11px] font-black uppercase tracking-widest text-blue-700">Lobby Loop V4 (Active)</span>
+                        <Badge className="ml-auto bg-blue-500 text-white text-[8px]">08:30 - 20:00</Badge>
+                     </div>
+
+                     <div className="absolute top-32 left-[45%] right-[40%] h-12 bg-rose-500/10 border-2 border-rose-500/40 rounded-2xl flex items-center px-6 gap-3 shadow-lg">
+                        <Zap className="h-4 w-4 text-rose-500 fill-rose-500/20" />
+                        <span className="text-[11px] font-black uppercase tracking-widest text-rose-700">Flash Sale Promo</span>
+                        <Badge className="ml-auto bg-rose-500 text-white text-[8px]">11:00 - 13:00</Badge>
+                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                     <div className="p-6 rounded-3xl bg-muted/10 border-2 border-dashed border-muted space-y-4">
+                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Active Policy</p>
+                        <h4 className="text-lg font-black uppercase tracking-tighter">Retail Weekend Plan</h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed font-medium">Applied to this node since Dec 12, 2025.</p>
+                     </div>
+                     <div className="p-6 rounded-3xl bg-muted/10 border-2 border-dashed border-muted space-y-4">
+                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Storage Status</p>
+                        <div className="flex items-center gap-3">
+                           <HardDrive className="h-5 w-5 text-primary" />
+                           <span className="text-lg font-black tabular-nums">4.2 GB / 16 GB</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed font-medium">Schedule resources are fully cached on local storage.</p>
+                     </div>
+                     <div className="p-6 rounded-3xl bg-muted/10 border-2 border-dashed border-muted space-y-4">
+                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Next Action</p>
+                        <div className="flex items-center gap-3">
+                           <Clock className="h-5 w-5 text-amber-500" />
+                           <span className="text-lg font-black">20:00 - SLEEP</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed font-medium">Automatic suspend initiated by power policy.</p>
+                     </div>
+                  </div>
+               </CardContent>
+            </Card>
+         </TabsContent>
 
          <TabsContent value="assets" className="mt-0">
             <Card className="rounded-3xl border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
@@ -603,37 +721,6 @@ function PolicyData({ label, value, active = false }: { label: string, value: an
           {active && <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />}
        </div>
     </div>
-  );
-}
-
-function ControlBox({ label, children }: { label: string, children: React.ReactNode }) {
-  return (
-    <div className="space-y-3 bg-muted/30 p-4 rounded-2xl border border-dashed border-muted-foreground/20 hover:border-primary/40 transition-colors">
-       <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{label}</p>
-       {children}
-    </div>
-  );
-}
-
-function HealthCard({ icon: Icon, label, value, subtext, progress, color }: { icon: any, label: string, value: string, subtext: string, progress: number, color: string }) {
-  return (
-    <Card className="rounded-3xl border-none ring-1 ring-muted/60 shadow-sm p-6 bg-card hover:shadow-md transition-shadow">
-       <div className="flex items-start justify-between mb-4">
-          <div className={cn("p-2.5 rounded-2xl border shadow-sm", color.replace("bg-", "text-").replace("500", "500/20"), "bg-muted/10")}>
-             <Icon className={cn("h-4 w-4", color.replace("bg-", "text-"))} />
-          </div>
-          <div className="text-right space-y-0.5">
-             <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{label}</p>
-             <p className="text-xl font-black tracking-tighter text-slate-800 dark:text-white">{value}</p>
-          </div>
-       </div>
-       <div className="space-y-2.5">
-          <div className="h-1 bg-muted rounded-full overflow-hidden">
-             <div className={cn("h-full rounded-full transition-all duration-1000", color)} style={{width: `${progress}%`}} />
-          </div>
-          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{subtext}</p>
-       </div>
-    </Card>
   );
 }
 

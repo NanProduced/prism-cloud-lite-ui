@@ -13,11 +13,11 @@ import ProgramEditorPage from "@/pages/dashboard/programs/ProgramEditorPage";
 import SettingsPage from "@/pages/dashboard/settings/SettingsPage";
 import MapPage from "@/pages/dashboard/map/MapPage";
 import DeviceDetailsPage from "@/pages/dashboard/devices/DeviceDetailsPage";
+import SchedulePage from "@/pages/dashboard/schedule/SchedulePage";
 import {
   AnalyticsPage,
   MonitoringPage,
   LogsPage,
-  SchedulePage,
   MessagesPage,
 } from "@/pages/dashboard/PlaceholderPages";
 

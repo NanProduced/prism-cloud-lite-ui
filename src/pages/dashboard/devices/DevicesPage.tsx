@@ -9,6 +9,7 @@ import { DeviceFilters, type DeviceFilterState } from '@/components/devices/Devi
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Search, Grid3x3, LayoutGrid, Download, Loader2, Zap } from 'lucide-react';
 import { BatchCommandDialog } from '@/features/devices/commands/BatchCommandDialog';
 
@@ -236,15 +237,29 @@ export default function DevicesPage() {
               <LayoutGrid className="h-4 w-4" />
             </Button>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="gap-2"
-            onClick={() => setShowBatchCommandDialog(true)}
-          >
-            <Zap className="h-4 w-4" />
-            Batch Command
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2"
+                    onClick={() => setShowBatchCommandDialog(true)}
+                    disabled={selectedDeviceIds.size === 0}
+                  >
+                    <Zap className="h-4 w-4" />
+                    Batch Command {selectedDeviceIds.size > 0 && `(${selectedDeviceIds.size})`}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {selectedDeviceIds.size === 0 && (
+                <TooltipContent>
+                  <p>Select devices first to use batch commands</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
           {viewMode === 'card' && (
             <Button variant="outline" size="sm" className="gap-2">
               <Download className="h-4 w-4" />
