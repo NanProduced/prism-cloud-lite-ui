@@ -48,6 +48,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { DeviceScreenshot } from "@/components/devices/DeviceScreenshot";
 import { DeviceStatusBadge } from "@/components/devices/DeviceStatusBadge";
@@ -268,13 +274,22 @@ export default function DeviceDetailsPage() {
                <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard/devices")} className="rounded-xl border h-10 w-10">
                   <ArrowLeft className="h-4 w-4" />
                </Button>
-               <Button 
-                  variant="outline" 
-                  className="h-10 rounded-xl font-black text-xs gap-2" 
-                  onClick={() => setShowBatchCommand(true)}
-               >
-                  <Zap className="h-4 w-4 text-amber-500" /> BATCH
-               </Button>
+               <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                       <Button 
+                          variant="outline" 
+                          className="h-10 rounded-xl font-black text-xs gap-2" 
+                          onClick={() => setShowBatchCommand(true)}
+                       >
+                          <Zap className="h-4 w-4 text-amber-500" /> 高级指令
+                       </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                       <p>高级向导：可串联多条指令按序下发</p>
+                    </TooltipContent>
+                  </Tooltip>
+               </TooltipProvider>
                <Button variant="outline" className="h-10 rounded-xl font-black text-xs gap-2" onClick={handleRefresh} disabled={isRefreshing}>
                   <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} /> SYNC
                </Button>
@@ -430,7 +445,7 @@ export default function DeviceDetailsPage() {
                  )}
 
                  <p className="text-[9px] text-center text-muted-foreground mt-auto pt-10 font-bold uppercase tracking-[0.2em] opacity-30">
-                    指令栈就绪 路 加密直连通道
+                    指令通道已就绪 · 加密安全连接
                  </p>
               </CardContent>
            </Card>
