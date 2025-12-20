@@ -35,6 +35,11 @@ export interface Screenshot {
   timestamp: string;
 }
 
+export interface HistoricalScreenshot extends Screenshot {
+  id: string;
+  size: number; // bytes
+}
+
 export type LocationSource = 'reported' | 'manual';
 
 export interface DeviceLocation {
