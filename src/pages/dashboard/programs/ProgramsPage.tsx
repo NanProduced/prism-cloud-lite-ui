@@ -870,11 +870,13 @@ function pickLatestPublished(program: ProgramRecord): ProgramRecord['versions'][
 }
 
 function hasUnpublishedChanges(program: ProgramRecord): boolean {
-  const draft = pickLatestDraft(program);
-  if (!draft) return false;
   const published = pickLatestPublished(program);
-  if (!published) return true;
-  return draft.updatedAt > published.createdAt;
+  if (!published) return false;
+
+  const baselineDraft = program.drafts.find((d) => d.baseVersion === published.version) ?? null;
+  if (!baselineDraft) return false;
+
+  return baselineDraft.updatedAt > published.createdAt;
 }
 
 function pickProgramPreviewDoc(program: ProgramRecord): VsnDocument | null {

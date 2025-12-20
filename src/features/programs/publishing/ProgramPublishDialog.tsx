@@ -361,7 +361,7 @@ export function ProgramPublishDialog({
                                        <span className="text-[9px] font-black text-muted-foreground/60 uppercase tracking-tighter">{d.status}</span>
                                     </div>
                                     <div className="h-2.5 w-px bg-muted" />
-                                    <span className="text-[9px] font-mono text-muted-foreground/40">{d.id.slice(0, 8)}</span>
+                                    <span className="text-[9px] font-mono text-muted-foreground/40">{formatDeviceId(d.id)}</span>
                                  </div>
                                  <button 
                                     onClick={() => setSelectedDeviceIds(prev => {
@@ -586,7 +586,7 @@ function DeviceSelectStep({
                               )}
                            </div>
                            <div className="flex items-center gap-3 mt-1.5">
-                              <p className="text-[9px] text-muted-foreground font-mono opacity-50 tracking-tighter uppercase">{d.id.slice(0, 8)}</p>
+                              <p className="text-[9px] text-muted-foreground font-mono opacity-50 tracking-tighter uppercase">{formatDeviceId(d.id)}</p>
                               <div className="h-2 w-px bg-muted" />
                               <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">{d.resolution.width}×{d.resolution.height}</span>
                            </div>
@@ -664,15 +664,49 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
              <Badge variant="outline" className="font-mono text-[10px] opacity-30 border-dashed">VCS: ACTIVE</Badge>
           </div>
           <div className="grid grid-cols-2 gap-6">
-             <button onClick={() => onVersionModeChange('create')} className={cn("flex flex-col p-8 rounded-[2.5rem] border-2 text-left transition-all relative overflow-hidden group shadow-sm", versionMode === 'create' ? "border-primary bg-primary/[0.02] ring-8 ring-primary/5" : "bg-card hover:border-muted-foreground/30")}>
+             <div
+               role="button"
+               tabIndex={0}
+               aria-pressed={versionMode === 'create'}
+               onClick={() => onVersionModeChange('create')}
+               onKeyDown={(e) => {
+                 if (e.key !== 'Enter' && e.key !== ' ') return;
+                 e.preventDefault();
+                 onVersionModeChange('create');
+               }}
+               className={cn(
+                 "flex flex-col p-8 rounded-[2.5rem] border-2 text-left transition-all relative overflow-hidden group shadow-sm cursor-pointer select-none",
+                 versionMode === 'create' ? "border-primary bg-primary/[0.02] ring-8 ring-primary/5" : "bg-card hover:border-muted-foreground/30",
+               )}
+             >
                 {versionMode === 'create' && <div className="absolute top-5 right-5 h-7 w-7 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="h-4 w-4 text-white" /></div>}
                 <span className="text-lg font-black mb-1.5 tracking-tight group-hover:text-primary transition-colors">Issue Production Release</span>
                 <p className="text-[13px] text-muted-foreground leading-relaxed">Snapshot the current editor workspace as <span className="font-black text-foreground underline decoration-primary/30 underline-offset-2">v{predictedNewVersion}</span>. This release becomes the new baseline for global distribution.</p>
                 <div className="mt-8 flex items-center gap-2">
                    <div className="px-2.5 py-1 rounded-lg bg-primary text-white text-[9px] font-black uppercase tracking-widest shadow-md shadow-primary/20">Recommended Path</div>
                 </div>
-             </button>
-             <button disabled={program.versions.length === 0} onClick={() => onVersionModeChange('existing')} className={cn("flex flex-col p-8 rounded-[2.5rem] border-2 text-left transition-all relative overflow-hidden group shadow-sm", versionMode === 'existing' ? "border-primary bg-primary/[0.02] ring-8 ring-primary/5" : "bg-card hover:border-muted-foreground/30", program.versions.length === 0 && "opacity-40 grayscale cursor-not-allowed")}>
+             </div>
+             <div
+               role="button"
+               tabIndex={program.versions.length === 0 ? -1 : 0}
+               aria-disabled={program.versions.length === 0}
+               aria-pressed={versionMode === 'existing'}
+               onClick={() => {
+                 if (program.versions.length === 0) return;
+                 onVersionModeChange('existing');
+               }}
+               onKeyDown={(e) => {
+                 if (program.versions.length === 0) return;
+                 if (e.key !== 'Enter' && e.key !== ' ') return;
+                 e.preventDefault();
+                 onVersionModeChange('existing');
+               }}
+               className={cn(
+                 "flex flex-col p-8 rounded-[2.5rem] border-2 text-left transition-all relative overflow-hidden group shadow-sm select-none",
+                 program.versions.length === 0 ? "opacity-40 grayscale cursor-not-allowed" : "cursor-pointer",
+                 versionMode === 'existing' ? "border-primary bg-primary/[0.02] ring-8 ring-primary/5" : "bg-card hover:border-muted-foreground/30",
+               )}
+             >
                 {versionMode === 'existing' && <div className="absolute top-5 right-5 h-7 w-7 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="h-4 w-4 text-white" /></div>}
                 <span className="text-lg font-black mb-1.5 tracking-tight group-hover:text-primary transition-colors">Redeploy Stable Archive</span>
                 <p className="text-[13px] text-muted-foreground leading-relaxed mb-6">Access the version library to redistribute or roll back nodes to a previously validated and immutable release snapshot.</p>
@@ -695,7 +729,7 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
                       </SelectContent>
                    </Select>
                 </div>
-             </button>
+             </div>
           </div>
        </div>
 
@@ -828,4 +862,10 @@ function pickDraftForPublish(program: ProgramRecord, preferredDraftId?: string |
     if (hit) return hit;
   }
   return [...program.drafts].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0] || null;
+}
+
+function formatDeviceId(deviceId: string): string {
+  const id = deviceId.trim();
+  if (id.length <= 12) return id;
+  return `${id.slice(0, 8)}…${id.slice(-4)}`;
 }

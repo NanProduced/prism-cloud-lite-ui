@@ -58,6 +58,17 @@ export default function ProgramDetailsPage() {
     });
   }, [deployments, deviceQuery]);
 
+  const latestRelease = useMemo(() => {
+    if (!program) return null;
+    let best: ProgramRecord['versions'][number] | null = null;
+    for (const v of program.versions) {
+      if (!best || v.version > best.version) best = v;
+    }
+    return best;
+  }, [program]);
+  const maxVersion = latestRelease?.version ?? 0;
+  const hasRelease = maxVersion > 0;
+
   if (!program) return null;
 
   return (
@@ -71,7 +82,7 @@ export default function ProgramDetailsPage() {
           <div className="min-w-0">
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-black tracking-tight truncate">{program.name}</h1>
-              <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">v{program.versions.length || '0'}</Badge>
+              <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">v{maxVersion}</Badge>
             </div>
             <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground font-medium">
                <span>{program.width}×{program.height}</span>
@@ -254,7 +265,7 @@ export default function ProgramDetailsPage() {
                     </div>
                     <div className="p-3 rounded-xl bg-muted/20 border">
                        <p className="text-[9px] font-bold text-muted-foreground uppercase mb-1">Max Version</p>
-                       <p className="text-lg font-black">v{program.versions.length || '1'}</p>
+                       <p className="text-lg font-black">v{maxVersion}</p>
                     </div>
                  </div>
                  
@@ -275,14 +286,23 @@ export default function ProgramDetailsPage() {
 
            <Card className="border-0 shadow-sm ring-1 ring-foreground/5">
               <CardHeader className="pb-3">
-                 <CardTitle className="text-sm font-bold">Latest Release (v{program.versions.length || '1'})</CardTitle>
+                 <CardTitle className="text-sm font-bold">
+                   {hasRelease ? `Latest Release (v${maxVersion})` : 'No releases yet'}
+                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
                  <div className="rounded-xl border bg-muted/20 p-4 flex flex-col items-center gap-3 overflow-hidden">
                     <div className="aspect-video w-full bg-black rounded-lg flex items-center justify-center border shadow-inner">
                        <Layers className="h-8 w-8 text-white/20" />
                     </div>
-                    <p className="text-[10px] text-muted-foreground italic text-center">Preview of the most recently published snapshot.</p>
+                    <p className="text-[10px] text-muted-foreground italic text-center">
+                      {hasRelease ? 'Preview of the most recently published snapshot.' : 'Publish to create your first release (v1).'}
+                    </p>
+                    {!hasRelease ? (
+                      <Button size="sm" className="font-bold gap-2" onClick={() => setPublishOpen(true)}>
+                        <Send className="h-3.5 w-3.5" /> Publish
+                      </Button>
+                    ) : null}
                  </div>
               </CardContent>
            </Card>
