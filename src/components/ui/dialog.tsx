@@ -22,6 +22,16 @@ export function Dialog({ children, open: controlledOpen, onOpenChange }: { child
     }
   };
 
+  React.useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && open) {
+        setOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [open]);
+
   return <DialogContext.Provider value={{ open, setOpen }}>{children}</DialogContext.Provider>;
 }
 
@@ -46,7 +56,7 @@ export function DialogTrigger({ children, asChild }: { children: ReactNode; asCh
   );
 }
 
-export function DialogContent({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function DialogContent({ children, className = "", zIndex = 50 }: { children: ReactNode; className?: string; zIndex?: number }) {
   const context = React.useContext(DialogContext);
   if (!context) throw new Error("DialogContent must be used within Dialog");
 
@@ -54,14 +64,19 @@ export function DialogContent({ children, className = "" }: { children: ReactNod
 
   return createPortal(
     <>
-      <div className="fixed inset-0 z-50 bg-black/40" onClick={() => context.setOpen(false)} />
+      <div 
+        className="fixed inset-0 bg-black/40" 
+        style={{ zIndex: zIndex }} 
+        onClick={() => context.setOpen(false)} 
+      />
       <div
         role="dialog"
         aria-modal="true"
         className={cn(
-          "fixed left-1/2 top-1/2 z-[51] w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-background shadow-lg",
+          "fixed left-1/2 top-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-background shadow-lg",
           className,
         )}
+        style={{ zIndex: zIndex + 1 }}
       >
         {children}
       </div>

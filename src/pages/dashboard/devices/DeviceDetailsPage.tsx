@@ -29,7 +29,11 @@ import {
   Cable,
   Signal,
   Share2,
-  Info
+  Info,
+  ThermometerSun,
+  Thermometer,
+  Eye,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -79,6 +83,7 @@ export default function DeviceDetailsPage() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [showBatchCommand, setShowBatchCommand] = useState(false);
   const [showScreenshotManager, setShowScreenshotManager] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // Mock Historical Screenshots
   const [historicalScreenshots, setHistoricalScreenshots] = useState<HistoricalScreenshot[]>([
@@ -296,9 +301,10 @@ export default function DeviceDetailsPage() {
                   <div className="flex items-center gap-3">
                      <h1 className="text-2xl font-black tracking-tight">{device.deviceName}</h1>
                      <DeviceStatusBadge status={device.status} />
-                     <Badge variant="outline" className="bg-emerald-500/5 text-emerald-600 border-emerald-500/20 font-mono text-[10px]">
-                        WS: {realProps.WebSocketStatus?.status === 1 ? "CONNECTED" : "DISCONNECTED"}
-                     </Badge>
+                     <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                        <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[10px] font-mono font-bold">READY</span>
+                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
                      <span className="flex items-center gap-1.5"><Database className="h-3.5 w-3.5" /> SN: <span className="text-foreground font-mono">{realProps.info?.info.serialno}</span></span>
@@ -334,11 +340,11 @@ export default function DeviceDetailsPage() {
          </Card>
          
          <Card className="rounded-2xl border-none ring-1 ring-muted/60 bg-muted/20 p-5 flex flex-col justify-center">
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Last Heartbeat</p>
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Last Seen</p>
             <p className="text-lg font-black tracking-tight">{formatRelativeTime(device.lastReportTime)}</p>
             <div className="flex items-center gap-2 mt-2 opacity-50">
                <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-               <span className="text-[9px] font-bold uppercase tracking-tighter">Real-time Stream Connected</span>
+               <span className="text-[9px] font-bold uppercase tracking-tighter">Live Connection Active</span>
             </div>
          </Card>
       </header>
@@ -354,6 +360,9 @@ export default function DeviceDetailsPage() {
                   Live View
                 </CardTitle>
                 <div className="flex items-center gap-3">
+                   <Badge variant="outline" className="text-[9px] h-5 border-zinc-800 text-zinc-400 font-mono tracking-tighter">
+                      Captured: {device.latestScreenshot?.timestamp ? new Date(device.latestScreenshot.timestamp).toLocaleString() : 'N/A'}
+                   </Badge>
                    <Badge variant="outline" className="text-[9px] h-5 border-zinc-800 text-zinc-600 font-mono tracking-tighter">
                       {realProps.dimension?.real_width}x{realProps.dimension?.real_height}
                    </Badge>
@@ -363,7 +372,6 @@ export default function DeviceDetailsPage() {
                 <div className="relative w-full h-full group">
                   <DeviceScreenshot
                     src={device.latestScreenshot?.url}
-                    timestamp={device.latestScreenshot?.timestamp}
                     deviceName={device.deviceName}
                     className="w-full h-full object-contain"
                   />
@@ -387,6 +395,24 @@ export default function DeviceDetailsPage() {
                         <TooltipProvider>
                            <Tooltip>
                               <TooltipTrigger asChild>
+                                 <Button 
+                                    size="icon" 
+                                    variant="secondary" 
+                                    className="h-10 w-10 rounded-full shadow-2xl" 
+                                    onClick={() => setPreviewImage(device.latestScreenshot?.url || null)}
+                                 >
+                                    <Maximize2 className="h-5 w-5" />
+                                 </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="left">
+                                 <p className="text-xs font-bold">Full Screen View</p>
+                              </TooltipContent>
+                           </Tooltip>
+                        </TooltipProvider>
+
+                        <TooltipProvider>
+                           <Tooltip>
+                              <TooltipTrigger asChild>
                                  <Button size="icon" variant="secondary" className="h-10 w-10 rounded-full shadow-2xl" onClick={() => setShowScreenshotManager(true)}>
                                     <Layers className="h-5 w-5" />
                                  </Button>
@@ -396,9 +422,19 @@ export default function DeviceDetailsPage() {
                               </TooltipContent>
                            </Tooltip>
                         </TooltipProvider>
-                        <Button size="icon" variant="secondary" className="h-10 w-10 rounded-full shadow-2xl" onClick={() => setIsCapturing(true)}>
-                           <Camera className={cn("h-5 w-5", isCapturing && "animate-pulse text-primary")} />
-                        </Button>
+                        
+                        <TooltipProvider>
+                           <Tooltip>
+                              <TooltipTrigger asChild>
+                                 <Button size="icon" variant="secondary" className="h-10 w-10 rounded-full shadow-2xl" onClick={() => setIsCapturing(true)}>
+                                    <Camera className={cn("h-5 w-5", isCapturing && "animate-pulse text-primary")} />
+                                 </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="left">
+                                 <p className="text-xs font-bold">Capture Frame</p>
+                              </TooltipContent>
+                           </Tooltip>
+                        </TooltipProvider>
                      </div>
                   </div>
                 </div>
@@ -444,7 +480,7 @@ export default function DeviceDetailsPage() {
                           <SelectValue />
                        </SelectTrigger>
                        <SelectContent>
-                          <SelectItem value="internal" className="text-xs font-bold uppercase">Internal Engine</SelectItem>
+                          <SelectItem value="internal" className="text-xs font-bold uppercase">Built-in Player</SelectItem>
                           <SelectItem value="hdmi" className="text-xs font-bold uppercase">HDMI Input</SelectItem>
                        </SelectContent>
                     </Select>
@@ -481,7 +517,11 @@ export default function DeviceDetailsPage() {
                              <ThermometerSnowflake className="h-4 w-4 text-emerald-500" /> Color Temp
                              {colorTemp !== originalValues.colorTemp && <Badge className="ml-2 bg-emerald-500/10 text-emerald-600 border-none text-[8px] h-4">Pending</Badge>}
                           </span>
-                          <span className="font-mono bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-md border border-amber-500/10">{colorTemp}K</span>
+                          <div className="flex items-center gap-3">
+                             <span className="text-[8px] font-black opacity-30">WARM</span>
+                             <span className="font-mono bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-md border border-emerald-500/10">{colorTemp}K</span>
+                             <span className="text-[8px] font-black opacity-30">COOL</span>
+                          </div>
                        </div>
                        <Slider value={[colorTemp]} min={2000} max={10000} step={100} onValueChange={(v) => setColorTemp(v[0])} className="cursor-pointer" />
                     </div>
@@ -502,9 +542,9 @@ export default function DeviceDetailsPage() {
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
          {/* Hardware Information (8/12 - Shared with Network) */}
          <div className="xl:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InfoGroup title="Hardware Information" icon={Layers}>
+            <InfoGroup title="Device Information" icon={Layers}>
                <InfoItem label="Device Name" value={realProps.terminal?.name} />
-               <InfoItem label="Device Model" value={realProps.info?.info.model} highlight />
+               <InfoItem label="Hardware Model" value={realProps.info?.info.model} highlight />
                <InfoItem label="System Uptime" value={formatUptime(realProps.info?.info.up || 0)} highlight />
                <InfoItem label="Firmware Version" value={realProps.info?.info.vername} />
                <InfoGroupSeparator />
@@ -538,7 +578,7 @@ export default function DeviceDetailsPage() {
                                  "text-[8px] font-black h-4 border-none",
                                  iface.connected === 1 ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"
                               )}>
-                                 {iface.connected === 1 ? 'CONNECTED' : 'DISCONNECTED'}
+                                 {iface.connected === 1 ? 'ACTIVE' : 'INACTIVE'}
                               </Badge>
                            </div>
 
@@ -618,8 +658,8 @@ export default function DeviceDetailsPage() {
             <Card className="rounded-[3rem] border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
                <CardHeader className="px-10 py-8 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
                   <div className="space-y-1">
-                     <CardTitle className="text-xl font-black tracking-tight uppercase">Live Timeline Monitor</CardTitle>
-                     <CardDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Real-time terminal execution rules for today</CardDescription>
+                     <CardTitle className="text-xl font-black tracking-tight uppercase">Today's Schedule</CardTitle>
+                     <CardDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Scheduled playback rules for current device</CardDescription>
                   </div>
                   <div className="flex items-center gap-3">
                      <Button variant="outline" className="h-10 rounded-xl font-black text-xs gap-2 border-2 uppercase">
@@ -665,7 +705,7 @@ export default function DeviceDetailsPage() {
                      <div className="p-6 rounded-3xl bg-muted/10 border-2 border-dashed border-muted space-y-4">
                         <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Active Policy</p>
                         <h4 className="text-lg font-black uppercase tracking-tighter">Retail Weekend Plan</h4>
-                        <p className="text-xs text-muted-foreground leading-relaxed font-medium">Applied to this node since Dec 12, 2025.</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed font-medium">Applied since Dec 12, 2025.</p>
                      </div>
                      <div className="p-6 rounded-3xl bg-muted/10 border-2 border-dashed border-muted space-y-4">
                         <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Storage Status</p>
@@ -692,19 +732,19 @@ export default function DeviceDetailsPage() {
             <Card className="rounded-3xl border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
                <CardHeader className="px-8 py-6 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
                   <div className="space-y-1">
-                     <CardTitle className="text-lg font-black tracking-tighter uppercase">Local Resource Repository</CardTitle>
-                     <CardDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Localized vsn bundles in primary storage</CardDescription>
+                     <CardTitle className="text-lg font-black tracking-tighter uppercase">Local Storage</CardTitle>
+                     <CardDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Cached media resources on device partitions</CardDescription>
                   </div>
                   <div className="relative">
                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                     <Input placeholder="Filter terminal cache..." className="pl-10 h-11 w-64 bg-muted/30 border-none rounded-xl text-xs font-bold" />
+                     <Input placeholder="Filter files..." className="pl-10 h-11 w-64 bg-muted/30 border-none rounded-xl text-xs font-bold" />
                   </div>
                </CardHeader>
                <CardContent className="p-0">
                   <div className="grid grid-cols-12 px-8 py-5 bg-muted/20 text-[9px] font-black uppercase text-slate-500 tracking-widest border-b">
-                     <div className="col-span-7">Resource Bundle / Manifest MD5</div>
-                     <div className="col-span-2 text-center">Protocol</div>
-                     <div className="col-span-3 text-right">Disk Allocation</div>
+                     <div className="col-span-7">File Name</div>
+                     <div className="col-span-2 text-center">Type</div>
+                     <div className="col-span-3 text-right">Size</div>
                   </div>
                   <div className="divide-y divide-muted/40">
                      {realProps.vsns?.contents.map(group => group.content.map(vsn => (
@@ -715,7 +755,7 @@ export default function DeviceDetailsPage() {
                               </div>
                               <div className="min-w-0 space-y-0.5">
                                  <p className="font-black text-sm uppercase tracking-tight text-slate-800 dark:text-slate-100">{vsn.name}</p>
-                                 <p className="text-[10px] font-mono text-muted-foreground opacity-50 truncate max-w-[400px]">{vsn.md5}</p>
+                                 <p className="text-[10px] font-mono text-muted-foreground opacity-30 truncate max-w-[400px]">CRC32/MD5 ID</p>
                               </div>
                            </div>
                            <div className="col-span-2 text-center">
@@ -736,19 +776,19 @@ export default function DeviceDetailsPage() {
                <Card className="rounded-3xl border-none ring-1 ring-muted/60 shadow-sm overflow-hidden lg:col-span-1">
                   <CardHeader className="bg-muted/5 border-b py-6 px-8">
                      <CardTitle className="text-[10px] font-black uppercase tracking-widest flex items-center gap-3 text-slate-500">
-                        <Clock className="h-4 w-4 text-primary" /> Terminal Chronometer
+                        <Clock className="h-4 w-4 text-primary" /> System Clock
                      </CardTitle>
                   </CardHeader>
                   <CardContent className="p-10 space-y-10">
                      <div className="bg-primary/5 p-8 rounded-[2.5rem] border border-primary/10 text-center shadow-inner ring-1 ring-primary/5">
-                        <p className="text-[10px] font-black text-primary/60 uppercase tracking-[0.3em] mb-2">Internal RTC Output</p>
+                        <p className="text-[10px] font-black text-primary/60 uppercase tracking-[0.3em] mb-2">Current Time</p>
                         <p className="text-6xl font-black tracking-tighter text-primary tabular-nums drop-shadow-sm">{realProps.newrtc?.time.split(' ')[1]}</p>
                         <p className="text-xs font-black text-muted-foreground uppercase mt-4 tracking-widest opacity-60">{realProps.newrtc?.time.split(' ')[0]}</p>
                      </div>
                      <div className="space-y-5 px-4">
-                        <PolicyData label="Timezone ID" value={realProps.newrtc?.timezoneId} />
-                        <PolicyData label="Local Offset" value="GMT +8:00" />
-                        <PolicyData label="NTP Engine" value="pool.ntp.org" active />
+                        <PolicyData label="Timezone" value={realProps.newrtc?.timezoneId} />
+                        <PolicyData label="Offset" value="GMT +8:00" />
+                        <PolicyData label="Time Server" value="pool.ntp.org" active />
                      </div>
                   </CardContent>
                </Card>
@@ -756,14 +796,14 @@ export default function DeviceDetailsPage() {
                <Card className="rounded-3xl border-none ring-1 ring-muted/60 shadow-sm overflow-hidden lg:col-span-2">
                   <CardHeader className="bg-muted/5 border-b py-6 px-8">
                      <CardTitle className="text-[10px] font-black uppercase tracking-widest flex items-center gap-3 text-slate-500">
-                        <ShieldCheck className="h-4 w-4 text-emerald-500" /> Security & Logic Manifest
+                        <ShieldCheck className="h-4 w-4 text-emerald-500" /> Security Settings
                      </CardTitle>
                   </CardHeader>
                   <CardContent className="p-10 grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12">
                      <PolicyItem label="Inbound Firewall" desc="Reject unauthorized socket handshakes" active={realProps.inboundfirewall?.status === 'on'} />
-                     <PolicyItem label="OTA Autonomous" desc="Self-apply kernel security patches" active />
-                     <PolicyItem label="USB Physical Access" desc="Allow media ingestion via physical ports" active={false} />
-                     <PolicyItem label="Sync Program Mode" desc="NTP-based frame synchronization" active={realProps.sync_program_mode?.sync_program_ntp_enable === 1} />
+                     <PolicyItem label="Auto Update" desc="Self-apply security patches automatically" active />
+                     <PolicyItem label="USB Access" desc="Allow media ingestion via physical ports" active={false} />
+                     <PolicyItem label="Sync Mode" desc="Multi-screen frame synchronization" active={realProps.sync_program_mode?.sync_program_ntp_enable === 1} />
                   </CardContent>
                </Card>
             </div>
@@ -820,6 +860,36 @@ export default function DeviceDetailsPage() {
         onDelete={(ids) => setHistoricalScreenshots(prev => prev.filter(s => !ids.includes(s.id)))}
         onClearAll={() => setHistoricalScreenshots([])}
       />
+
+      {/* Full Size Preview Dialog */}
+      {previewImage && (
+         <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+            <DialogContent 
+               className="max-w-[98vw] w-auto h-auto p-0 bg-transparent border-none shadow-none flex items-center justify-center focus-visible:outline-none scale-100 transition-all"
+               zIndex={10100}
+            >
+               <div className="relative group animate-in zoom-in-95 duration-300 flex flex-col items-center">
+                  <img 
+                     src={previewImage} 
+                     className="max-w-full max-h-[95vh] rounded-[2.5rem] shadow-[0_0_150px_rgba(0,0,0,0.8)] border-8 border-white/10" 
+                     alt="Preview" 
+                  />
+                  <Button 
+                     size="icon" 
+                     variant="secondary" 
+                     className="absolute top-6 right-6 rounded-full h-12 w-12 shadow-2xl bg-black/50 text-white border-white/10 hover:bg-black/80 backdrop-blur-xl transition-all"
+                     onClick={() => setPreviewImage(null)}
+                  >
+                     <X className="h-6 w-6" />
+                  </Button>
+                  
+                  <div className="mt-6 px-8 py-3 bg-white/10 backdrop-blur-2xl rounded-full border border-white/10 text-white/90 text-xs font-black uppercase tracking-[0.3em] shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
+                     Press ESC or Click Outside to exit
+                  </div>
+               </div>
+            </DialogContent>
+         </Dialog>
+      )}
 
     </div>
   );
@@ -920,7 +990,7 @@ function ResourceProgress({ label, used, total, unit, color = "bg-primary" }: { 
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr);
   const diffMinutes = (Date.now() - date.getTime()) / (1000 * 60);
-  if (diffMinutes < 1) return 'ONLINE_NOW';
+  if (diffMinutes < 1) return 'ONLINE NOW';
   if (diffMinutes < 60) return `${Math.floor(diffMinutes)}M AGO`;
   if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}H AGO`;
   return date.toLocaleDateString();
