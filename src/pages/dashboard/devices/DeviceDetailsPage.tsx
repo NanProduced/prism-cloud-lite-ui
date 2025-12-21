@@ -24,7 +24,12 @@ import {
   Layers,
   Moon,
   ThermometerSnowflake,
-  Network
+  Network,
+  Wifi,
+  Cable,
+  Signal,
+  Share2,
+  Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -180,6 +185,25 @@ export default function DeviceDetailsPage() {
                 mac: "AA:BB:CC:DD:EE:FF",
                 SSID: "PRISM_OFFICE_IOT",
                 strength: 75
+              },
+              {
+                type: "ap",
+                enabled: 1,
+                connected: 1,
+                operstate: "up",
+                mode: "bridge",
+                mac: "BB:CC:DD:EE:FF:00",
+                SSID: "PRISM_HOTSPOT_001",
+                strength: 100
+              },
+              {
+                type: "4g",
+                enabled: 1,
+                connected: 0,
+                operstate: "down",
+                mode: "ppp",
+                mac: "CC:DD:EE:FF:00:11",
+                strength: 60
               }
             ]
           },
@@ -249,13 +273,14 @@ export default function DeviceDetailsPage() {
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-[70vh] gap-4">
       <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      <p className="font-black text-[10px] uppercase tracking-[0.2em] text-muted-foreground">正在初始化指令通道</p>
+      <p className="font-black text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Initializing Command Channel</p>
     </div>
   );
 
   if (!device) return <div>Terminal Missing</div>;
 
   const realProps = device.deviceProperties!;
+  const activeInterface = realProps.ifstatus?.types.find(i => i.connected === 1)?.type || 'eth';
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -294,11 +319,11 @@ export default function DeviceDetailsPage() {
                           className="h-10 rounded-xl font-black text-xs gap-2" 
                           onClick={() => setShowBatchCommand(true)}
                        >
-                          <Zap className="h-4 w-4 text-amber-500" /> 高级指令
+                          <Zap className="h-4 w-4 text-amber-500" /> Advanced Command
                        </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                       <p>高级向导：可串联多条指令按序下发</p>
+                       <p>Advanced Wizard: chain multiple commands sequentially</p>
                     </TooltipContent>
                   </Tooltip>
                </TooltipProvider>
@@ -309,28 +334,28 @@ export default function DeviceDetailsPage() {
          </Card>
          
          <Card className="rounded-2xl border-none ring-1 ring-muted/60 bg-muted/20 p-5 flex flex-col justify-center">
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">最后心跳时间</p>
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Last Heartbeat</p>
             <p className="text-lg font-black tracking-tight">{formatRelativeTime(device.lastReportTime)}</p>
             <div className="flex items-center gap-2 mt-2 opacity-50">
                <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-               <span className="text-[9px] font-bold uppercase tracking-tighter">设备状态流实时连接中</span>
+               <span className="text-[9px] font-bold uppercase tracking-tighter">Real-time Stream Connected</span>
             </div>
          </Card>
       </header>
 
       {/* SECTION 2: COCKPIT (SCREEN + CONTROLS) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Display Buffer (8/12) */}
+        {/* Left: Monitor & Player (8/12) */}
         <div className="lg:col-span-8">
            <Card className="overflow-hidden border-none shadow-2xl bg-black h-full flex flex-col ring-1 ring-white/10">
               <CardHeader className="p-4 flex flex-row items-center justify-between space-y-0 bg-zinc-950/80 border-b border-white/5">
                 <CardTitle className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
                   <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  当前画面实时监控
+                  Live View
                 </CardTitle>
                 <div className="flex items-center gap-3">
                    <Badge variant="outline" className="text-[9px] h-5 border-zinc-800 text-zinc-600 font-mono tracking-tighter">
-                      {realProps.dimension?.real_width}x{realProps.dimension?.real_height} @ {realProps.dimension?.fps}FPS
+                      {realProps.dimension?.real_width}x{realProps.dimension?.real_height}
                    </Badge>
                 </div>
               </CardHeader>
@@ -351,10 +376,10 @@ export default function DeviceDetailsPage() {
                            <Play className="h-6 w-6 text-white fill-white/10" />
                         </div>
                         <div className="text-white min-w-0">
-                           <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-0.5">正在运行: {realProps.vsns?.playing.type === 'rotation' ? '轮播节目' : '插播节目'}</p>
+                           <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-0.5">Now Playing: {realProps.vsns?.playing.type === 'rotation' ? 'Rotation' : 'Spot'}</p>
                            <p className="text-lg font-black tracking-tight truncate max-w-[300px]">{realProps.vsns?.playing.name}</p>
                            <div className="flex items-center gap-3 mt-1">
-                              <Badge className="bg-white/10 text-white border-none text-[9px] h-4 font-bold">来源: {realProps.vsns?.playing.source === 'internet' ? '云端下发' : '本地资源'}</Badge>
+                              <Badge className="bg-white/10 text-white border-none text-[9px] h-4 font-bold">Source: {realProps.vsns?.playing.source === 'internet' ? 'Cloud' : 'Local'}</Badge>
                            </div>
                         </div>
                      </div>
@@ -367,7 +392,7 @@ export default function DeviceDetailsPage() {
                                  </Button>
                               </TooltipTrigger>
                               <TooltipContent side="left">
-                                 <p className="text-xs font-bold">管理历史截图</p>
+                                 <p className="text-xs font-bold">Manage History</p>
                               </TooltipContent>
                            </Tooltip>
                         </TooltipProvider>
@@ -381,54 +406,58 @@ export default function DeviceDetailsPage() {
            </Card>
         </div>
 
-        {/* Right: Rapid Operations (4/12) */}
+        {/* Right: Command Center (4/12) */}
         <div className="lg:col-span-4 flex flex-col gap-6">
            <Card className="shadow-xl border-none ring-1 ring-muted/60 h-full">
               <CardHeader className="pb-5 border-b bg-muted/5 px-6">
                  <CardTitle className="text-[11px] font-black flex items-center gap-2 uppercase tracking-[0.15em] text-slate-500">
-                    <Zap className="h-4 w-4 text-amber-500 fill-amber-500/10" /> 快捷指令中心
+                    <Zap className="h-4 w-4 text-amber-500 fill-amber-500/10" /> Command Center
                  </CardTitle>
               </CardHeader>
               <CardContent className="space-y-8 pt-8 px-8">
-                 {/* Safety Level 1 Actions */}
-                 <div className="grid grid-cols-2 gap-3">
-                    <Button 
-                       variant="outline" 
-                       className="h-14 rounded-2xl font-black text-[10px] uppercase tracking-widest gap-2 border-amber-500/20 bg-amber-500/[0.03] hover:bg-amber-500/10 text-amber-700"
-                       onClick={() => setConfirmDialog({ open: true, type: 'sleep' })}
-                    >
-                       <Moon className="h-4 w-4" /> 远程休眠
-                    </Button>
-                    <Button 
-                       variant="outline" 
-                       className="h-14 rounded-2xl font-black text-[10px] uppercase tracking-widest gap-2 border-rose-500/20 bg-rose-500/[0.03] hover:bg-rose-500/10 text-rose-700"
-                       onClick={() => setConfirmDialog({ open: true, type: 'reboot' })}
-                    >
-                       <RotateCw className="h-4 w-4" /> 强制重启
-                    </Button>
+                 {/* Quick Actions */}
+                 <div className="space-y-4">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Quick Actions</p>
+                    <div className="grid grid-cols-2 gap-3">
+                       <Button 
+                          variant="outline" 
+                          className="h-14 rounded-2xl font-black text-[10px] uppercase tracking-widest gap-2 border-amber-500/20 bg-amber-500/[0.03] hover:bg-amber-500/10 text-amber-700"
+                          onClick={() => setConfirmDialog({ open: true, type: 'sleep' })}
+                       >
+                          <Moon className="h-4 w-4" /> Sleep
+                       </Button>
+                       <Button 
+                          variant="outline" 
+                          className="h-14 rounded-2xl font-black text-[10px] uppercase tracking-widest gap-2 border-rose-500/20 bg-rose-500/[0.03] hover:bg-rose-500/10 text-rose-700"
+                          onClick={() => setConfirmDialog({ open: true, type: 'reboot' })}
+                       >
+                          <RotateCw className="h-4 w-4" /> Reboot
+                       </Button>
+                    </div>
                  </div>
 
-                 {/* Logic Signal Source */}
+                 {/* Signal Source Selection */}
                  <div className="space-y-4 bg-muted/30 p-5 rounded-2xl border border-dashed hover:border-primary/30 transition-colors">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">信号源切换</p>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Input Source Selection</p>
                     <Select value={inputMode} onValueChange={setInputMode}>
                        <SelectTrigger className="h-6 text-xs font-black uppercase bg-transparent border-none p-0 focus:ring-0 shadow-none">
                           <SelectValue />
                        </SelectTrigger>
                        <SelectContent>
-                          <SelectItem value="internal" className="text-xs font-bold uppercase">内部播放引擎</SelectItem>
-                          <SelectItem value="hdmi" className="text-xs font-bold uppercase">HDMI 信号输入</SelectItem>
+                          <SelectItem value="internal" className="text-xs font-bold uppercase">Internal Engine</SelectItem>
+                          <SelectItem value="hdmi" className="text-xs font-bold uppercase">HDMI Input</SelectItem>
                        </SelectContent>
                     </Select>
                  </div>
 
-                 {/* Real-time Sliders (Instruct the node directly) */}
+                 {/* Display Adjustments */}
                  <div className="space-y-9 px-1">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Display Adjustments</p>
                     <div className="space-y-4">
                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                           <span className="flex items-center gap-2">
-                             <Sun className="h-4 w-4 text-amber-500" /> 屏幕亮度
-                             {brightnessPct !== originalValues.brightness && <Badge className="ml-2 bg-amber-500/10 text-amber-600 border-none text-[8px] h-4">待应用</Badge>}
+                             <Sun className="h-4 w-4 text-amber-500" /> Brightness
+                             {brightnessPct !== originalValues.brightness && <Badge className="ml-2 bg-amber-500/10 text-amber-600 border-none text-[8px] h-4">Pending</Badge>}
                           </span>
                           <span className="font-mono bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-md border border-amber-500/10">{brightnessPct}%</span>
                        </div>
@@ -438,8 +467,8 @@ export default function DeviceDetailsPage() {
                     <div className="space-y-4">
                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                           <span className="flex items-center gap-2">
-                             <Volume2 className="h-4 w-4 text-blue-500" /> 系统音量
-                             {volumeLevel !== originalValues.volume && <Badge className="ml-2 bg-blue-500/10 text-blue-600 border-none text-[8px] h-4">待应用</Badge>}
+                             <Volume2 className="h-4 w-4 text-blue-500" /> Volume
+                             {volumeLevel !== originalValues.volume && <Badge className="ml-2 bg-blue-500/10 text-blue-600 border-none text-[8px] h-4">Pending</Badge>}
                           </span>
                           <span className="font-mono bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded-md border border-blue-500/10">{volumeLevel} / 15</span>
                        </div>
@@ -449,10 +478,10 @@ export default function DeviceDetailsPage() {
                     <div className="space-y-4">
                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                           <span className="flex items-center gap-2">
-                             <ThermometerSnowflake className="h-4 w-4 text-emerald-500" /> 屏幕色温
-                             {colorTemp !== originalValues.colorTemp && <Badge className="ml-2 bg-emerald-500/10 text-emerald-600 border-none text-[8px] h-4">待应用</Badge>}
+                             <ThermometerSnowflake className="h-4 w-4 text-emerald-500" /> Color Temp
+                             {colorTemp !== originalValues.colorTemp && <Badge className="ml-2 bg-emerald-500/10 text-emerald-600 border-none text-[8px] h-4">Pending</Badge>}
                           </span>
-                          <span className="font-mono bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-md border border-emerald-500/10">{colorTemp}K</span>
+                          <span className="font-mono bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-md border border-amber-500/10">{colorTemp}K</span>
                        </div>
                        <Slider value={[colorTemp]} min={2000} max={10000} step={100} onValueChange={(v) => setColorTemp(v[0])} className="cursor-pointer" />
                     </div>
@@ -460,76 +489,117 @@ export default function DeviceDetailsPage() {
 
                  {hasChanges && (
                    <div className="flex gap-2 animate-in slide-in-from-bottom-2">
-                      <Button onClick={handleApplyChanges} className="flex-1 h-12 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20">下发指令</Button>
-                      <Button onClick={handleResetChanges} variant="outline" className="h-12 rounded-xl font-black text-[10px] uppercase tracking-[0.2em]">取消</Button>
+                      <Button onClick={handleApplyChanges} className="flex-1 h-12 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20">Apply Changes</Button>
+                      <Button onClick={handleResetChanges} variant="outline" className="h-12 rounded-xl font-black text-[10px] uppercase tracking-[0.2em]">Cancel</Button>
                    </div>
                  )}
-
-                 <p className="text-[9px] text-center text-muted-foreground mt-auto pt-10 font-bold uppercase tracking-[0.2em] opacity-30">
-                    指令通道已就绪 · 加密安全连接
-                 </p>
               </CardContent>
            </Card>
         </div>
       </div>
 
-      {/* SECTION 3: SYSTEM OVERVIEW & TELEMETRY (ACCURATE DATA ONLY) */}
+      {/* SECTION 3: SYSTEM OVERVIEW & NETWORK */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-         {/* Detailed Overview (8/12) */}
+         {/* Hardware Information (8/12 - Shared with Network) */}
          <div className="xl:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InfoGroup title="硬件详细信息" icon={Layers}>
-               <InfoItem label="设备别名" value={realProps.terminal?.name} />
-               <InfoItem label="硬件型号" value={realProps.info?.info.model} highlight />
-               <InfoItem label="连续运行时间" value={formatUptime(realProps.info?.info.up || 0)} highlight />
-               <InfoItem label="固件版本" value={realProps.info?.info.vername} />
+            <InfoGroup title="Hardware Information" icon={Layers}>
+               <InfoItem label="Device Name" value={realProps.terminal?.name} />
+               <InfoItem label="Device Model" value={realProps.info?.info.model} highlight />
+               <InfoItem label="System Uptime" value={formatUptime(realProps.info?.info.up || 0)} highlight />
+               <InfoItem label="Firmware Version" value={realProps.info?.info.vername} />
                <InfoGroupSeparator />
-               <InfoItem label="屏幕显示方向" value={realProps.screen_orientation?.orientation === 'landscape' ? '横屏' : '竖屏'} />
-               <InfoItem label="点时钟频率" value={`${realProps.dimension?.real_dclk} KHz`} />
-               <InfoItem label="同步 H-脉冲" value={`${realProps.dimension?.hsync} px`} />
+               <InfoItem label="Orientation" value={realProps.screen_orientation?.orientation === 'landscape' ? 'Landscape' : 'Portrait'} />
+               <InfoItem label="Frame Rate" value={`${realProps.dimension?.fps} FPS`} />
             </InfoGroup>
             
-            <InfoGroup title="网络连接详情" icon={Network}>
-               <InfoItem label="当前活动端口" value={realProps.ifstatus?.types.find(i => i.connected === 1)?.type.toUpperCase()} highlight />
-               <InfoItem label="局域网 IP" value={realProps.ifstatus?.types.find(i => i.connected === 1)?.ips?.ip} fontMono highlight />
-               <InfoItem label="网关地址" value={realProps.ifstatus?.types.find(i => i.connected === 1)?.ips?.gateway} fontMono />
-               <InfoItem label="DNS 解析服务器" value={realProps.ifstatus?.types.find(i => i.connected === 1)?.ips?.dns1} fontMono />
-               <InfoGroupSeparator />
-               <InfoItem label="移动网络运营商" value={realProps["4ginfo"]?.operator} />
-               <InfoItem label="信号强度 (RSSI)" value={`${realProps["4ginfo"]?.signal} dBm`} highlight />
-               <InfoItem label="模组 IMEI" value={realProps["4ginfo"]?.imei} fontMono />
+            <InfoGroup title="Network Status" icon={Network}>
+               <Tabs defaultValue={activeInterface} className="w-full">
+                  <TabsList className="grid grid-cols-4 h-8 bg-muted/50 p-1 rounded-xl mb-6">
+                     <TabsTrigger value="eth" className="rounded-lg text-[9px] font-black uppercase tracking-tighter data-[state=active]:bg-background data-[state=active]:shadow-sm">LAN</TabsTrigger>
+                     <TabsTrigger value="wifi" className="rounded-lg text-[9px] font-black uppercase tracking-tighter data-[state=active]:bg-background data-[state=active]:shadow-sm">WiFi</TabsTrigger>
+                     <TabsTrigger value="ap" className="rounded-lg text-[9px] font-black uppercase tracking-tighter data-[state=active]:bg-background data-[state=active]:shadow-sm">AP</TabsTrigger>
+                     <TabsTrigger value="4g" className="rounded-lg text-[9px] font-black uppercase tracking-tighter data-[state=active]:bg-background data-[state=active]:shadow-sm">4G</TabsTrigger>
+                  </TabsList>
+
+                  {realProps.ifstatus?.types.map((iface) => (
+                     <TabsContent key={iface.type} value={iface.type} className="mt-0 focus-visible:ring-0">
+                        <div className="space-y-4">
+                           <div className="flex justify-between items-center mb-2">
+                              <div className="flex items-center gap-2">
+                                 {iface.type === 'eth' && <Cable className="h-3 w-3 text-primary" />}
+                                 {iface.type === 'wifi' && <Wifi className="h-3 w-3 text-primary" />}
+                                 {iface.type === 'ap' && <Share2 className="h-3 w-3 text-primary" />}
+                                 {iface.type === '4g' && <Signal className="h-3 w-3 text-primary" />}
+                                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                    {iface.type === 'eth' ? 'Ethernet Port' : iface.type === 'ap' ? 'WiFi Hotspot' : iface.type.toUpperCase() + ' Module'}
+                                 </span>
+                              </div>
+                              <Badge variant="outline" className={cn(
+                                 "text-[8px] font-black h-4 border-none",
+                                 iface.connected === 1 ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"
+                              )}>
+                                 {iface.connected === 1 ? 'CONNECTED' : 'DISCONNECTED'}
+                              </Badge>
+                           </div>
+
+                           {iface.connected === 1 ? (
+                              <div className="space-y-3 pl-1">
+                                 {iface.SSID && <InfoItem label="SSID" value={iface.SSID} fontMono />}
+                                 {iface.ips?.ip && <InfoItem label="IPv4 Address" value={iface.ips.ip} fontMono highlight />}
+                                 <InfoItem label="MAC Address" value={iface.mac} fontMono />
+                                 {iface.strength !== undefined && <InfoItem label="Signal Strength" value={`${iface.strength}%`} highlight />}
+                                 
+                                 {iface.type === '4g' && (
+                                    <>
+                                       <Separator className="my-2 opacity-30" />
+                                       <InfoItem label="Operator" value={realProps["4ginfo"]?.operator} />
+                                       <InfoItem label="RSSI" value={`${realProps["4ginfo"]?.signal} dBm`} highlight />
+                                       <InfoItem label="Modem IMEI" value={realProps["4ginfo"]?.imei} fontMono />
+                                    </>
+                                 )}
+                              </div>
+                           ) : (
+                              <div className="py-8 flex flex-col items-center justify-center gap-2 opacity-20">
+                                 <Network className="h-8 w-8" />
+                                 <p className="text-[8px] font-black uppercase tracking-[0.2em]">Interface Inactive</p>
+                              </div>
+                           )}
+                        </div>
+                     </TabsContent>
+                  ))}
+               </Tabs>
             </InfoGroup>
          </div>
 
-         {/* Resource Analytics (4/12) */}
+         {/* System Resources (4/12) */}
          <Card className="xl:col-span-4 rounded-3xl border-none ring-1 ring-muted/60 bg-slate-50 dark:bg-slate-900/50 p-6 flex flex-col justify-between">
             <CardHeader className="p-0 pb-6">
                <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
-                  <Cpu className="h-4 w-4 text-primary" /> 存储与资源状态
+                  <Cpu className="h-4 w-4 text-primary" /> System Resources
                </CardTitle>
             </CardHeader>
             <CardContent className="p-0 space-y-8 flex-1">
                <ResourceProgress 
-                  label="内置存储空间" 
+                  label="Storage Space" 
                   used={realProps.info?.info.storage.total! - realProps.info?.info.storage.free!} 
                   total={realProps.info?.info.storage.total!} 
                   unit="GB" 
                   color="bg-emerald-500"
                />
                <ResourceProgress 
-                  label="系统运行内存 (RAM)" 
+                  label="System Memory" 
                   used={realProps.info?.info.mem.total! - realProps.info?.info.mem.free!} 
                   total={realProps.info?.info.mem.total!} 
                   unit="MB"
                   color="bg-blue-500"
                />
-               <div className="pt-4 grid grid-cols-2 gap-4">
-                  <div className="bg-card p-5 rounded-2xl border shadow-sm text-center">
-                     <p className="text-[9px] font-black text-muted-foreground uppercase mb-1">点时钟频率</p>
-                     <p className="text-xl font-black text-slate-800 dark:text-white">{realProps.dimension?.real_dclk} <span className="text-[10px] opacity-40">KHz</span></p>
+               <div className="pt-4 p-5 bg-card rounded-2xl border shadow-sm flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                     <Info className="h-5 w-5 text-primary" />
                   </div>
-                  <div className="bg-card p-5 rounded-2xl border shadow-sm text-center">
-                     <p className="text-[9px] font-black text-muted-foreground uppercase mb-1">画面帧率 (FPS)</p>
-                     <p className="text-xl font-black text-primary">{realProps.dimension?.fps}</p>
+                  <div>
+                     <p className="text-[9px] font-black text-muted-foreground uppercase">Status Note</p>
+                     <p className="text-xs font-bold text-slate-700 dark:text-slate-300">All modules functioning within normal parameters.</p>
                   </div>
                </div>
             </CardContent>
@@ -539,24 +609,24 @@ export default function DeviceDetailsPage() {
       {/* SECTION 4: DEEP ASSETS & SYSTEM POLICIES */}
       <Tabs defaultValue="assets" className="w-full">
          <TabsList className="bg-muted/40 p-1 rounded-2xl border h-11 mb-6 flex w-full md:w-auto">
-            <TabsTrigger value="assets" className="rounded-xl flex-1 md:px-12 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">存储资源清单</TabsTrigger>
-            <TabsTrigger value="schedule" className="rounded-xl flex-1 md:px-12 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">播放日程监控</TabsTrigger>
-            <TabsTrigger value="policy" className="rounded-xl flex-1 md:px-12 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">系统运行配置</TabsTrigger>
+            <TabsTrigger value="assets" className="rounded-xl flex-1 md:px-12 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Storage Content</TabsTrigger>
+            <TabsTrigger value="schedule" className="rounded-xl flex-1 md:px-12 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Playback Plan</TabsTrigger>
+            <TabsTrigger value="policy" className="rounded-xl flex-1 md:px-12 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Device Policy</TabsTrigger>
          </TabsList>
 
          <TabsContent value="schedule" className="mt-0">
             <Card className="rounded-[3rem] border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
                <CardHeader className="px-10 py-8 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
                   <div className="space-y-1">
-                     <CardTitle className="text-xl font-black tracking-tight uppercase">今日播放日程监控</CardTitle>
-                     <CardDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">实时监测终端正在执行的播放规则</CardDescription>
+                     <CardTitle className="text-xl font-black tracking-tight uppercase">Live Timeline Monitor</CardTitle>
+                     <CardDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Real-time terminal execution rules for today</CardDescription>
                   </div>
                   <div className="flex items-center gap-3">
                      <Button variant="outline" className="h-10 rounded-xl font-black text-xs gap-2 border-2 uppercase">
-                        <RotateCw className="h-4 w-4" /> 刷新日程
+                        <RotateCw className="h-4 w-4" /> Sync Schedule
                      </Button>
                      <Button className="h-10 rounded-xl font-black text-xs gap-2 bg-zinc-900 text-white uppercase px-6">
-                        调整排期
+                        Adjust Schedule
                      </Button>
                   </div>
                </CardHeader>
@@ -574,44 +644,44 @@ export default function DeviceDetailsPage() {
                      {/* Current Time Indicator */}
                      <div className="absolute top-0 bottom-0 w-0.5 bg-rose-500 z-20 shadow-[0_0_10px_rgba(244,63,94,0.5)]" style={{ left: '65%' }}>
                         <div className="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full bg-rose-500" />
-                        <div className="absolute top-4 left-2 px-2 py-1 bg-rose-500 text-white text-[8px] font-black rounded-md uppercase whitespace-nowrap">当前时间: 15:42</div>
+                        <div className="absolute top-4 left-2 px-2 py-1 bg-rose-500 text-white text-[8px] font-black rounded-md uppercase whitespace-nowrap">Current Time: 15:42</div>
                      </div>
 
                      {/* Active Program Blocks */}
                      <div className="absolute top-12 left-[35%] right-[15%] h-12 bg-blue-500/10 border-2 border-blue-500/40 rounded-2xl flex items-center px-6 gap-3 shadow-lg">
                         <Play className="h-4 w-4 text-blue-500 fill-blue-500/20" />
-                        <span className="text-[11px] font-black uppercase tracking-widest text-blue-700">大堂循环播放 V4 (活动中)</span>
+                        <span className="text-[11px] font-black uppercase tracking-widest text-blue-700">Lobby Loop V4 (Active)</span>
                         <Badge className="ml-auto bg-blue-500 text-white text-[8px]">08:30 - 20:00</Badge>
                      </div>
 
                      <div className="absolute top-32 left-[45%] right-[40%] h-12 bg-rose-500/10 border-2 border-rose-500/40 rounded-2xl flex items-center px-6 gap-3 shadow-lg">
                         <Zap className="h-4 w-4 text-rose-500 fill-rose-500/20" />
-                        <span className="text-[11px] font-black uppercase tracking-widest text-rose-700">限时促销推广</span>
+                        <span className="text-[11px] font-black uppercase tracking-widest text-rose-700">Flash Sale Promo</span>
                         <Badge className="ml-auto bg-rose-500 text-white text-[8px]">11:00 - 13:00</Badge>
                      </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                      <div className="p-6 rounded-3xl bg-muted/10 border-2 border-dashed border-muted space-y-4">
-                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">生效策略</p>
-                        <h4 className="text-lg font-black uppercase tracking-tighter">零售周末运营方案</h4>
-                        <p className="text-xs text-muted-foreground leading-relaxed font-medium">该策略已于 2025年12月12日 下发至此终端。</p>
+                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Active Policy</p>
+                        <h4 className="text-lg font-black uppercase tracking-tighter">Retail Weekend Plan</h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed font-medium">Applied to this node since Dec 12, 2025.</p>
                      </div>
                      <div className="p-6 rounded-3xl bg-muted/10 border-2 border-dashed border-muted space-y-4">
-                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">资源存储状态</p>
+                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Storage Status</p>
                         <div className="flex items-center gap-3">
                            <HardDrive className="h-5 w-5 text-primary" />
                            <span className="text-lg font-black tabular-nums">4.2 GB / 16 GB</span>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed font-medium">所有播放日程所需资源已完全缓存至本地。</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed font-medium">Schedule resources are fully cached on local storage.</p>
                      </div>
                      <div className="p-6 rounded-3xl bg-muted/10 border-2 border-dashed border-muted space-y-4">
-                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">下一项动作</p>
+                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Next Action</p>
                         <div className="flex items-center gap-3">
                            <Clock className="h-5 w-5 text-amber-500" />
-                           <span className="text-lg font-black">20:00 - 进入休眠</span>
+                           <span className="text-lg font-black">20:00 - SLEEP</span>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed font-medium">系统将根据电源策略自动执行挂起动作。</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed font-medium">Automatic suspend initiated by power policy.</p>
                      </div>
                   </div>
                </CardContent>
@@ -622,19 +692,19 @@ export default function DeviceDetailsPage() {
             <Card className="rounded-3xl border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
                <CardHeader className="px-8 py-6 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
                   <div className="space-y-1">
-                     <CardTitle className="text-lg font-black tracking-tighter uppercase">本地资源库清单</CardTitle>
-                     <CardDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">存储在终端主分区中的离线内容包</CardDescription>
+                     <CardTitle className="text-lg font-black tracking-tighter uppercase">Local Resource Repository</CardTitle>
+                     <CardDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Localized vsn bundles in primary storage</CardDescription>
                   </div>
                   <div className="relative">
                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                     <Input placeholder="搜索本地缓存..." className="pl-10 h-11 w-64 bg-muted/30 border-none rounded-xl text-xs font-bold" />
+                     <Input placeholder="Filter terminal cache..." className="pl-10 h-11 w-64 bg-muted/30 border-none rounded-xl text-xs font-bold" />
                   </div>
                </CardHeader>
                <CardContent className="p-0">
                   <div className="grid grid-cols-12 px-8 py-5 bg-muted/20 text-[9px] font-black uppercase text-slate-500 tracking-widest border-b">
-                     <div className="col-span-7">资源包名称 / 校验 MD5</div>
-                     <div className="col-span-2 text-center">分发协议</div>
-                     <div className="col-span-3 text-right">占用空间</div>
+                     <div className="col-span-7">Resource Bundle / Manifest MD5</div>
+                     <div className="col-span-2 text-center">Protocol</div>
+                     <div className="col-span-3 text-right">Disk Allocation</div>
                   </div>
                   <div className="divide-y divide-muted/40">
                      {realProps.vsns?.contents.map(group => group.content.map(vsn => (
@@ -666,19 +736,19 @@ export default function DeviceDetailsPage() {
                <Card className="rounded-3xl border-none ring-1 ring-muted/60 shadow-sm overflow-hidden lg:col-span-1">
                   <CardHeader className="bg-muted/5 border-b py-6 px-8">
                      <CardTitle className="text-[10px] font-black uppercase tracking-widest flex items-center gap-3 text-slate-500">
-                        <Clock className="h-4 w-4 text-primary" /> 终端系统时钟
+                        <Clock className="h-4 w-4 text-primary" /> Terminal Chronometer
                      </CardTitle>
                   </CardHeader>
                   <CardContent className="p-10 space-y-10">
                      <div className="bg-primary/5 p-8 rounded-[2.5rem] border border-primary/10 text-center shadow-inner ring-1 ring-primary/5">
-                        <p className="text-[10px] font-black text-primary/60 uppercase tracking-[0.3em] mb-2">终端 RTC 输出</p>
+                        <p className="text-[10px] font-black text-primary/60 uppercase tracking-[0.3em] mb-2">Internal RTC Output</p>
                         <p className="text-6xl font-black tracking-tighter text-primary tabular-nums drop-shadow-sm">{realProps.newrtc?.time.split(' ')[1]}</p>
                         <p className="text-xs font-black text-muted-foreground uppercase mt-4 tracking-widest opacity-60">{realProps.newrtc?.time.split(' ')[0]}</p>
                      </div>
                      <div className="space-y-5 px-4">
-                        <PolicyData label="时区 ID" value={realProps.newrtc?.timezoneId} />
-                        <PolicyData label="本地偏移" value="GMT +8:00" />
-                        <PolicyData label="NTP 同步地址" value="pool.ntp.org" active />
+                        <PolicyData label="Timezone ID" value={realProps.newrtc?.timezoneId} />
+                        <PolicyData label="Local Offset" value="GMT +8:00" />
+                        <PolicyData label="NTP Engine" value="pool.ntp.org" active />
                      </div>
                   </CardContent>
                </Card>
@@ -686,14 +756,14 @@ export default function DeviceDetailsPage() {
                <Card className="rounded-3xl border-none ring-1 ring-muted/60 shadow-sm overflow-hidden lg:col-span-2">
                   <CardHeader className="bg-muted/5 border-b py-6 px-8">
                      <CardTitle className="text-[10px] font-black uppercase tracking-widest flex items-center gap-3 text-slate-500">
-                        <ShieldCheck className="h-4 w-4 text-emerald-500" /> 安全与运行配置清单
+                        <ShieldCheck className="h-4 w-4 text-emerald-500" /> Security & Logic Manifest
                      </CardTitle>
                   </CardHeader>
                   <CardContent className="p-10 grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12">
-                     <PolicyItem label="入站防火墙" desc="拒绝未经授权的 Socket 握手请求" active={realProps.inboundfirewall?.status === 'on'} />
-                     <PolicyItem label="OTA 自主更新" desc="自动下载并应用内核安全补丁" active />
-                     <PolicyItem label="USB 物理访问" desc="允许通过物理接口导入媒体资源" active={false} />
-                     <PolicyItem label="节目同步播放" desc="基于 NTP 的多屏帧级同步播放" active={realProps.sync_program_mode?.sync_program_ntp_enable === 1} />
+                     <PolicyItem label="Inbound Firewall" desc="Reject unauthorized socket handshakes" active={realProps.inboundfirewall?.status === 'on'} />
+                     <PolicyItem label="OTA Autonomous" desc="Self-apply kernel security patches" active />
+                     <PolicyItem label="USB Physical Access" desc="Allow media ingestion via physical ports" active={false} />
+                     <PolicyItem label="Sync Program Mode" desc="NTP-based frame synchronization" active={realProps.sync_program_mode?.sync_program_ntp_enable === 1} />
                   </CardContent>
                </Card>
             </div>
@@ -714,22 +784,22 @@ export default function DeviceDetailsPage() {
                 {confirmDialog.type === 'sleep' ? <Moon className="h-10 w-10" /> : <RotateCw className="h-10 w-10" />}
              </div>
             <DialogTitle className="text-3xl font-black tracking-tighter uppercase leading-none">
-               {confirmDialog.type === 'sleep' ? "确认进入休眠" : "确认重启系统"}
+               {confirmDialog.type === 'sleep' ? "Confirm Standby" : "Confirm Reboot"}
             </DialogTitle>
             <DialogDescription className="text-sm font-bold leading-relaxed text-slate-500">
                {confirmDialog.type === 'sleep' 
-                  ? "此操作将使屏幕立即黑屏并进入低功耗待机状态。" 
-                  : "此操作将强制硬件重启，终端将在约 90 秒内无法访问。"}
+                  ? "This will put the display into low-power standby mode. Content rendering will stop immediately." 
+                  : "This will force a full hardware power cycle. Terminal will be inaccessible for roughly 90 seconds."}
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-10 flex flex-col items-center gap-6 relative z-10">
              <SlideToUnlock 
                 onUnlock={executeDangerousAction} 
-                label={confirmDialog.type === 'sleep' ? "向右滑动进入休眠" : "向右滑动强制重启"} 
+                label={confirmDialog.type === 'sleep' ? "Slide to suspend" : "Slide to hard reset"} 
              />
              <Button variant="ghost" className="font-black text-[10px] uppercase tracking-widest text-muted-foreground/60 hover:text-foreground" onClick={() => setConfirmDialog({ open: false, type: null })}>
-                放弃操作
+                Abort Operation
              </Button>
           </div>
         </DialogContent>
@@ -746,7 +816,6 @@ export default function DeviceDetailsPage() {
       <ScreenshotManagerDialog
         open={showScreenshotManager}
         onOpenChange={setShowScreenshotManager}
-        deviceName={device.deviceName}
         screenshots={historicalScreenshots}
         onDelete={(ids) => setHistoricalScreenshots(prev => prev.filter(s => !ids.includes(s.id)))}
         onClearAll={() => setHistoricalScreenshots([])}
@@ -797,7 +866,7 @@ function InfoItem({ label, value, copyable = false, highlight = false, fontMono 
           {value || "N/A"}
         </span>
         {copyable && value && (
-          <button onClick={() => { navigator.clipboard.writeText(String(value)); toast.info("已复制到剪贴板"); }} 
+          <button onClick={() => { navigator.clipboard.writeText(String(value)); toast.info("Copied to clipboard"); }} 
             className="p-1 opacity-0 group-hover/item:opacity-100 hover:bg-muted rounded text-primary transition-all">
             <Copy className="h-3 w-3" />
           </button>
@@ -841,8 +910,8 @@ function ResourceProgress({ label, used, total, unit, color = "bg-primary" }: { 
          <div className={cn("absolute inset-y-0 left-0 rounded-full transition-all duration-700 shadow-[0_0_8px_rgba(var(--primary),0.5)]", color, isHigh && "bg-rose-500")} style={{ width: `${percentage}%` }} />
       </div>
       <div className="flex justify-between text-[9px] font-bold text-muted-foreground/60 uppercase tracking-tighter">
-        <span>已用: {formattedUsed} {unit}</span>
-        <span>总容量: {formattedTotal} {unit}</span>
+        <span>Mapped: {formattedUsed} {unit}</span>
+        <span>Capacity: {formattedTotal} {unit}</span>
       </div>
     </div>
   );
