@@ -123,7 +123,7 @@ export default function SettingsPage() {
     return {
       name: stored?.name ?? 'Prism Admin',
       email: stored?.email ?? 'admin@prismcloud.dev',
-      avatarPreset: stored?.avatarPreset ?? 'prism',
+      avatarPreset: stored?.avatarPreset ?? 'm-1',
     };
   });
 
@@ -176,6 +176,7 @@ export default function SettingsPage() {
             onSave={async (next) => {
               setProfile(next);
               safeWriteJson(STORAGE_KEYS.profile, next);
+              window.dispatchEvent(new Event('prism-profile-updated'));
               toast.success('Profile updated');
             }}
           />

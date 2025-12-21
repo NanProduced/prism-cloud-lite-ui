@@ -1,4 +1,4 @@
-import { type ComponentType, type PropsWithChildren, useState } from "react";
+import { type ComponentType, type PropsWithChildren, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Activity,
@@ -49,6 +49,7 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { PrismIcon } from "@/components/shared/logo";
+import { getAvatarById } from "@/lib/avatars";
 
 type NavItem = {
   label: string;
@@ -132,6 +133,34 @@ export function DashboardShell({ children }: PropsWithChildren) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
   const location = useLocation();
+
+  const [profile, setProfile] = useState(() => {
+    try {
+      const stored = window.localStorage.getItem('prism.settings.profile');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    const handleStorage = () => {
+      try {
+        const stored = window.localStorage.getItem('prism.settings.profile');
+        setProfile(stored ? JSON.parse(stored) : null);
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('prism-profile-updated', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('prism-profile-updated', handleStorage);
+    };
+  }, []);
+
+  const selectedAvatar = getAvatarById(profile?.avatarPreset || 'm-1');
 
   const toggleExpanded = (label: string) => {
     const newSet = new Set(expandedItems);
@@ -275,12 +304,12 @@ export function DashboardShell({ children }: PropsWithChildren) {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="flex items-center gap-3 rounded-lg px-2 h-9">
                     <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage src="https://github.com/shadcn.png" alt="User avatar" />
-                      <AvatarFallback>PC</AvatarFallback>
+                      <AvatarImage src={selectedAvatar?.url} alt="User avatar" />
+                      <AvatarFallback>{profile?.name?.slice(0, 2).toUpperCase() || 'PC'}</AvatarFallback>
                     </Avatar>
                     <div className="hidden flex-col text-left text-sm font-semibold leading-tight sm:flex">
-                      Prism Admin
-                      <span className="text-xs font-normal text-muted-foreground">admin@prismcloud.dev</span>
+                      {profile?.name || 'Prism Admin'}
+                      <span className="text-xs font-normal text-muted-foreground">{profile?.email || 'admin@prismcloud.dev'}</span>
                     </div>
                   </Button>
                 </DropdownMenuTrigger>

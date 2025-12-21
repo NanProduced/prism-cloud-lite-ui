@@ -1,7 +1,7 @@
 "use client";
 
-import { Check, Loader2, Save } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Check, ChevronDown, ChevronUp, Loader2, Save } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/registry/new-york/ui/button";
 import {
@@ -14,6 +14,7 @@ import {
 import { Field, FieldContent, FieldError, FieldLabel } from "@/registry/new-york/ui/field";
 import { InputGroup, InputGroupInput } from "@/registry/new-york/ui/input-group";
 import { Separator } from "@/registry/new-york/ui/separator";
+import { ALL_AVATARS, getAvatarById } from "@/lib/avatars";
 
 export interface ProfileData {
   name: string;
@@ -27,67 +28,19 @@ export interface SettingsProfileProps {
   className?: string;
 }
 
-type AvatarPreset = {
-  id: string;
-  label: string;
-  initials: string;
-  swatchClassName: string;
-};
-
 export default function SettingsProfile({
   profile,
   onSave,
   className,
 }: SettingsProfileProps) {
-  const presets = useMemo<AvatarPreset[]>(
-    () => [
-      {
-        id: "prism",
-        label: "Prism",
-        initials: "P",
-        swatchClassName: "bg-gradient-to-br from-indigo-500 to-purple-500",
-      },
-      {
-        id: "aurora",
-        label: "Aurora",
-        initials: "A",
-        swatchClassName: "bg-gradient-to-br from-emerald-500 to-cyan-500",
-      },
-      {
-        id: "ember",
-        label: "Ember",
-        initials: "E",
-        swatchClassName: "bg-gradient-to-br from-rose-500 to-orange-500",
-      },
-      {
-        id: "nebula",
-        label: "Nebula",
-        initials: "N",
-        swatchClassName: "bg-gradient-to-br from-slate-700 to-slate-950",
-      },
-      {
-        id: "mint",
-        label: "Mint",
-        initials: "M",
-        swatchClassName: "bg-gradient-to-br from-teal-500 to-emerald-600",
-      },
-      {
-        id: "sky",
-        label: "Sky",
-        initials: "S",
-        swatchClassName: "bg-gradient-to-br from-sky-500 to-blue-600",
-      },
-    ],
-    []
-  );
-
   const [isSaving, setIsSaving] = useState(false);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState<ProfileData>({
     name: profile?.name || "",
     email: profile?.email || "",
-    avatarPreset: profile?.avatarPreset || presets[0]?.id || "prism",
+    avatarPreset: profile?.avatarPreset || ALL_AVATARS[0]?.id || "m-1",
   });
 
   const handleSave = async () => {
@@ -110,7 +63,7 @@ export default function SettingsProfile({
     }
   };
 
-  const selectedPreset = presets.find((p) => p.id === formData.avatarPreset) ?? presets[0];
+  const selectedAvatar = getAvatarById(formData.avatarPreset) || ALL_AVATARS[0];
 
   return (
     <Card className={cn("w-full shadow-xs", className)}>
@@ -157,64 +110,88 @@ export default function SettingsProfile({
           <Field>
             <FieldLabel>Avatar</FieldLabel>
             <FieldContent>
-              <div className="flex items-center gap-4">
-                <div
-                  aria-label="Selected avatar"
-                  className={cn(
-                    "flex size-14 items-center justify-center rounded-full text-white shadow-sm",
-                    selectedPreset?.swatchClassName
-                  )}
+              <div className="flex items-center justify-between gap-4 rounded-lg border bg-muted/30 p-4">
+                <div className="flex items-center gap-4">
+                  <div
+                    aria-label="Selected avatar"
+                    className="flex size-14 items-center justify-center overflow-hidden rounded-full border bg-background shadow-sm"
+                  >
+                    {selectedAvatar ? (
+                      <img
+                        alt="Current avatar"
+                        className="size-full object-cover"
+                        src={selectedAvatar.url}
+                      />
+                    ) : (
+                      <div className="size-full bg-gradient-to-br from-indigo-500 to-purple-500" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">
+                      Profile Picture
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Click "Change" to pick a new one.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => setShowAvatarPicker(!showAvatarPicker)}
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5"
                 >
-                  <span className="text-lg font-semibold">
-                    {selectedPreset?.initials}
-                  </span>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{selectedPreset?.label}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Custom uploads are disabled. Choose from presets.
-                  </p>
-                </div>
+                  {showAvatarPicker ? (
+                    <>
+                      <ChevronUp className="size-4" />
+                      <span>Hide</span>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="size-4" />
+                      <span>Change</span>
+                    </>
+                  )}
+                </Button>
               </div>
 
-              <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-6">
-                {presets.map((preset) => {
-                  const selected = formData.avatarPreset === preset.id;
-                  return (
-                    <button
-                      aria-label={`Select avatar ${preset.label}`}
-                      className={cn(
-                        "group relative flex aspect-square items-center justify-center rounded-lg border bg-background p-2 transition-colors hover:bg-muted/40",
-                        selected && "border-primary ring-2 ring-ring/50"
-                      )}
-                      key={preset.id}
-                      onClick={() =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          avatarPreset: preset.id,
-                        }))
-                      }
-                      type="button"
-                    >
-                      <div
-                        className={cn(
-                          "flex size-10 items-center justify-center rounded-full text-white",
-                          preset.swatchClassName
-                        )}
-                      >
-                        <span className="text-sm font-semibold">
-                          {preset.initials}
-                        </span>
-                      </div>
-                      {selected && (
-                        <span className="absolute right-2 top-2 inline-flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
-                          <Check className="size-3" />
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+              {showAvatarPicker && (
+                <div className="mt-4 rounded-lg border bg-card p-4 shadow-sm animate-in fade-in zoom-in-95 duration-200">
+                  <div className="grid grid-cols-4 gap-3 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
+                    {ALL_AVATARS.map((avatar) => {
+                      const selected = formData.avatarPreset === avatar.id;
+                      return (
+                        <button
+                          aria-label="Select avatar"
+                          className={cn(
+                            "group relative flex aspect-square items-center justify-center overflow-hidden rounded-lg border bg-background p-1 transition-all hover:scale-105 hover:shadow-md",
+                            selected && "border-primary ring-2 ring-ring/50"
+                          )}
+                          key={avatar.id}
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              avatarPreset: avatar.id,
+                            }))
+                          }
+                          type="button"
+                        >
+                          <img
+                            alt=""
+                            className="size-full rounded-md object-cover"
+                            src={avatar.url}
+                          />
+                          {selected && (
+                            <span className="absolute right-1 top-1 inline-flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+                              <Check className="size-2.5" />
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </FieldContent>
           </Field>
 
