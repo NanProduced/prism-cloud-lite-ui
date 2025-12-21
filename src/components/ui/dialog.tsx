@@ -85,14 +85,14 @@ export function DialogContent({ children, className = "", zIndex = 50 }: { child
   );
 }
 
-export function DialogHeader({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`flex flex-col space-y-2 mb-4 ${className}`}>{children}</div>;
+export function DialogHeader({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn("flex flex-col space-y-2 mb-4 text-left", className)}>{children}</div>;
 }
 
-export function DialogTitle({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <h2 className={`text-lg font-semibold ${className}`}>{children}</h2>;
+export function DialogTitle({ children, className }: { children: ReactNode; className?: string }) {
+  return <h2 className={cn("text-lg font-semibold text-left", className)}>{children}</h2>;
 }
 
-export function DialogDescription({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <p className={`text-sm text-gray-400 ${className}`}>{children}</p>;
+export function DialogDescription({ children, className }: { children: ReactNode; className?: string }) {
+  return <p className={cn("text-sm text-muted-foreground text-left", className)}>{children}</p>;
 }
