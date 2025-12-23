@@ -4,11 +4,17 @@ import { Container } from "./Container";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { ChevronRight, Terminal } from "lucide-react";
+import Prism from "@/components/Prism";
 
 export const Hero: React.FC = () => {
   const { t } = useTranslation();
   return (
     <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden bg-black selection:bg-indigo-500/30">
+      {/* Prism Background Effect */}
+      <div className="absolute inset-0 w-full h-full opacity-60 pointer-events-none z-0">
+        <Prism />
+      </div>
+
       {/* Raycast-style Top Spotlight/Aurora */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[100%] h-[600px] opacity-40 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/30 via-purple-900/10 to-transparent blur-[100px]" />
