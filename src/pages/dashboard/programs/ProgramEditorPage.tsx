@@ -132,9 +132,21 @@ export default function ProgramEditorPage() {
     }
   };
 
-  const persistWorkingCopy = useCallback((options?: { toast?: boolean }) => {
+  const persistWorkingCopy = useCallback(async (options?: { toast?: boolean; screenshot?: boolean }) => {
     if (!program || !draft || !vsn) return null;
-    const saved = saveDraft(program.id, draft.id, vsn);
+
+    let thumbnail: string | undefined = undefined;
+    if (options?.screenshot) {
+      try {
+        // Here we could use html2canvas(document.querySelector('[data-testid="program-stage"]'))
+        // For now we use a placeholder or a simple schematic capture if desired.
+        // thumbnail = await captureStageAsDataUrl();
+      } catch (e) {
+        console.error('Failed to capture screenshot', e);
+      }
+    }
+
+    const saved = saveDraft(program.id, draft.id, vsn, thumbnail);
     if (saved) {
       setDraft(saved);
       addProgramAuditLog({

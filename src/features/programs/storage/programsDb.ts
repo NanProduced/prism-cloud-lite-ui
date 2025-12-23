@@ -9,6 +9,7 @@ export type ProgramDraftRecord = {
   createdAt: string;
   updatedAt: string;
   vsn: VsnDocument;
+  thumbnail?: string | null;
 };
 
 export type ProgramVersionRecord = {
@@ -16,6 +17,7 @@ export type ProgramVersionRecord = {
   createdAt: string;
   sourceDraftId: string;
   vsn: VsnDocument;
+  thumbnail?: string | null;
 };
 
 export type ProgramRecord = {
@@ -191,7 +193,12 @@ export function deleteDraft(programId: string, draftId: string): ProgramRecord |
   return program;
 }
 
-export function saveDraft(programId: string, draftId: string, vsn: VsnDocument): ProgramDraftRecord | null {
+export function saveDraft(
+  programId: string,
+  draftId: string,
+  vsn: VsnDocument,
+  thumbnail?: string | null,
+): ProgramDraftRecord | null {
   const db = loadDb();
   const program = db.programs.find((p) => p.id === programId);
   if (!program) return null;
@@ -202,6 +209,9 @@ export function saveDraft(programId: string, draftId: string, vsn: VsnDocument):
   const nowIso = new Date().toISOString();
   draft.vsn = deepClone(vsn);
   draft.updatedAt = nowIso;
+  if (thumbnail !== undefined) {
+    draft.thumbnail = thumbnail;
+  }
   program.updatedAt = nowIso;
   saveDb(db);
   return draft;
@@ -227,6 +237,7 @@ export function publishDraft(programId: string, draftId: string): { program: Pro
     createdAt: nowIso,
     sourceDraftId: draft.id,
     vsn: deepClone(draft.vsn),
+    thumbnail: draft.thumbnail,
   };
 
   program.versions.push(version);

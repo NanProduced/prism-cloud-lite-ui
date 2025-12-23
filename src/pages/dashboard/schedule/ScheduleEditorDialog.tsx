@@ -1,322 +1,1101 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { Reorder } from 'framer-motion';
 import { 
   X, 
   Save, 
   Plus, 
-  Trash2, 
   Clock, 
   Zap, 
-  Monitor, 
-  Calendar as CalendarIcon,
-  ChevronLeft,
-  ChevronRight,
-  Info,
   Layers,
-  ArrowRight,
   Play,
-  CalendarDays
+  CalendarDays,
+  Settings2,
+  Monitor,
+  ArrowRight,
+  Calendar,
+  Trash2,
+  ChevronRight,
+  GripVertical,
+  Send,
+  AlertTriangle,
+  Info,
+  Globe
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
-import type { SchedulePolicy, ContentsSchedule, CommandSchedule, WeekDay } from '@/types/schedule';
+import { mockDevices } from '@/lib/mock/devices';
+import type { 
+  ScheduleRecord, 
+  ProgramScheduleRule, 
+  CommandScheduleRule, 
+  WeekDay,
+  ContentsScheduleType
+} from '@/types/schedule';
+import { listPrograms, type ProgramRecord } from '@/features/programs/storage/programsDb';
+import { toast } from 'sonner';
 
 const WEEKDAYS: { key: WeekDay, label: string }[] = [
-  { key: 'MON', label: 'M' },
-  { key: 'TUE', label: 'T' },
-  { key: 'WED', label: 'W' },
-  { key: 'THU', label: 'T' },
-  { key: 'FRI', label: 'F' },
-  { key: 'SAT', label: 'S' },
-  { key: 'SUN', label: 'S' },
+  { key: 'MON', label: 'Mon' },
+  { key: 'TUE', label: 'Tue' },
+  { key: 'WED', label: 'Wed' },
+  { key: 'THU', label: 'Thu' },
+  { key: 'FRI', label: 'Fri' },
+  { key: 'SAT', label: 'Sat' },
+  { key: 'SUN', label: 'Sun' },
 ];
 
 interface ScheduleEditorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  policy: SchedulePolicy | null;
+  schedule: ScheduleRecord | null;
+  onSave?: (next: ScheduleRecord) => void;
 }
 
-export function ScheduleEditorDialog({ open, onOpenChange, policy: initialPolicy }: ScheduleEditorDialogProps) {
-  const [policy, setPolicy] = useState<SchedulePolicy | null>(initialPolicy);
+export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSchedule, onSave }: ScheduleEditorDialogProps) {
+  const [draft, setDraft] = useState<ScheduleRecord | null>(null);
+  const [activeTab, setActiveTab] = useState<'programs' | 'commands' | 'devices' | 'preview'>('programs');
+  const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
+  const [availablePrograms, setAvailablePrograms] = useState<ProgramRecord[]>([]);
 
-  // Update local state when initialPolicy changes (e.g. from null to a real policy)
-  useMemo(() => {
-    setPolicy(initialPolicy);
-  }, [initialPolicy]);
+  // Load programs from DB
+  useEffect(() => {
+    if (open) {
+      setAvailablePrograms(listPrograms());
+    }
+  }, [open]);
 
-  const close = () => onOpenChange(false);
+  // Sync draft with initialSchedule
+  useEffect(() => {
+    if (initialSchedule) {
+      setDraft(JSON.parse(JSON.stringify(initialSchedule)));
+      if (initialSchedule.programRules.length) {
+        setSelectedRuleId(initialSchedule.programRules[0].id);
+      } else if (initialSchedule.commandRules.length) {
+        setSelectedRuleId(initialSchedule.commandRules[0].id);
+      } else {
+        setSelectedRuleId(null);
+      }
+    } else {
+      // New Schedule Boilerplate
+      setDraft({
+        id: `sch-${Date.now()}`,
+        name: 'New Playback Plan',
+        description: '',
+        enabled: true,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        programRules: [],
+        commandRules: [],
+        boundDeviceCount: 0
+      });
+      setSelectedRuleId(null);
+    }
+  }, [initialSchedule, open]);
+
+  const handleAddProgramRule = () => {
+    if (!draft) return;
+    const newRule: ProgramScheduleRule = {
+      id: `rule-${Date.now()}`,
+      type: 'rotation',
+      priority: draft.programRules.length + 1,
+      releaseProgramId: 0,
+      programId: '',
+      programName: 'Select Program',
+      version: 0,
+      ifLimitTime: false,
+      ifLimitDate: false,
+      ifLimitWeekday: false,
+    };
+    const next = { ...draft, programRules: [...draft.programRules, newRule] };
+    setDraft(next);
+    setSelectedRuleId(newRule.id);
+    setActiveTab('programs');
+  };
+
+  const handleAddCommandRule = () => {
+    if (!draft) return;
+    const newRule: CommandScheduleRule = {
+      id: `cmd-${Date.now()}`,
+      name: 'Brightness_Control',
+      operation: 'Brightness_Control',
+      payloadJson: '{"type":"Brightness_Control", "brightness": 100}',
+      ifLimitTime: true,
+      limitTime: { start: '08:00:00', end: '08:00:05' },
+      ifLimitDate: false,
+      ifLimitWeekday: false,
+    };
+    const next = { ...draft, commandRules: [...draft.commandRules, newRule] };
+    setDraft(next);
+    setSelectedRuleId(newRule.id);
+    setActiveTab('commands');
+  };
+
+  const handleDeleteRule = (id: string) => {
+    if (!draft) return;
+    const next = {
+      ...draft,
+      programRules: draft.programRules.filter(r => r.id !== id),
+      commandRules: draft.commandRules.filter(r => r.id !== id)
+    };
+    setDraft(next);
+    if (selectedRuleId === id) setSelectedRuleId(null);
+  };
+
+  const updateProgramRule = (id: string, patch: Partial<ProgramScheduleRule>) => {
+    if (!draft) return;
+    setDraft({
+      ...draft,
+      programRules: draft.programRules.map(r => r.id === id ? { ...r, ...patch } : r)
+    });
+  };
+
+  const updateCommandRule = (id: string, patch: Partial<CommandScheduleRule>) => {
+    if (!draft) return;
+    setDraft({
+      ...draft,
+      commandRules: draft.commandRules.map(r => r.id === id ? { ...r, ...patch } : r)
+    });
+  };
+
+  const handleSave = () => {
+    if (!draft) return;
+    if (!draft.name.trim()) {
+      toast.error('Please enter a plan name');
+      return;
+    }
+    const final = { ...draft, updatedAt: new Date().toISOString() };
+    onSave?.(final);
+    toast.success('Plan saved successfully');
+    onOpenChange(false);
+  };
+
+  const handleReorderPrograms = (newOrder: ProgramScheduleRule[]) => {
+    if (!draft) return;
+    // Re-assign priorities based on new index: Highest at top = Highest priority
+    const updated = newOrder.map((rule, index) => ({
+      ...rule,
+      priority: newOrder.length - index
+    }));
+    setDraft({ ...draft, programRules: updated });
+  };
+
+  const handleReorderCommands = (newOrder: CommandScheduleRule[]) => {
+    if (!draft) return;
+    setDraft({ ...draft, commandRules: newOrder });
+  };
+
+  const selectedProgramRule = draft?.programRules.find(r => r.id === selectedRuleId);
+  const selectedCommandRule = draft?.commandRules.find(r => r.id === selectedRuleId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] w-[1400px] h-[90vh] p-0 overflow-hidden border-0 shadow-2xl rounded-[3rem] bg-background flex flex-col">
+      <DialogContent className="max-w-[95vw] w-[1400px] h-[90vh] p-0 overflow-hidden border-0 shadow-2xl rounded-[2.5rem] bg-background flex flex-col">
         {/* Header */}
-        <header className="px-10 py-6 border-b flex items-center justify-between bg-muted/5">
-           <div className="flex items-center gap-5">
-              <div className="p-3 rounded-2xl bg-zinc-900 text-white shadow-xl">
-                 <Layers className="h-6 w-6" />
+        <header className="px-8 py-5 border-b flex items-center justify-between bg-muted/5">
+           <div className="flex items-center gap-6">
+              <div className="p-2.5 rounded-2xl bg-zinc-900 text-white shadow-lg">
+                 <CalendarDays className="h-5 w-5" />
               </div>
-              <div>
-                 <DialogTitle className="text-2xl font-black tracking-tighter uppercase">{policy?.name || 'New Schedule Policy'}</DialogTitle>
-                 <div className="flex items-center gap-3 mt-1">
-                    <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-primary/20 text-primary bg-primary/5 px-2 h-5">Timeline Editor</Badge>
-                    <Separator orientation="vertical" className="h-3" />
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-40">Draft ID: {policy?.id || 'UNSAVED'}</span>
+              <div className="min-w-[200px]">
+                 <Input 
+                   value={draft?.name || ''} 
+                   onChange={(e) => setDraft(prev => prev ? { ...prev, name: e.target.value } : null)}
+                   className="text-xl font-black tracking-tight uppercase border-none bg-transparent p-0 h-auto focus-visible:ring-0 shadow-none placeholder:text-muted-foreground/30"
+                   placeholder="Enter Plan Name..."
+                 />
+                 <div className="flex items-center gap-4 mt-1">
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 border">
+                        <Globe className="h-3 w-3 text-muted-foreground" />
+                        <select 
+                           value={draft?.timezone || 'Asia/Shanghai'}
+                           onChange={(e) => setDraft(prev => prev ? { ...prev, timezone: e.target.value } : null)}
+                           className="bg-transparent border-none text-[10px] font-bold uppercase text-muted-foreground focus:ring-0 cursor-pointer"
+                        >
+                           <option value="Asia/Shanghai">Asia/Shanghai (GMT+8)</option>
+                           <option value="UTC">UTC (GMT+0)</option>
+                           <option value="America/New_York">New York (GMT-5)</option>
+                           <option value="Europe/London">London (GMT+0)</option>
+                        </select>
+                    </div>
+                    <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-primary/20 text-primary bg-primary/5 px-2 h-4.5">Rule-Based Plan</Badge>
                  </div>
               </div>
            </div>
 
            <div className="flex items-center gap-3">
-              <Button variant="ghost" className="rounded-xl font-black uppercase text-[10px] tracking-widest px-6 h-11 border">Discard</Button>
-              <Button className="rounded-xl font-black uppercase text-[10px] tracking-widest px-8 h-11 shadow-xl shadow-primary/20 gap-2">
-                 <Save className="h-4 w-4" /> Save Strategy
+              <div className="flex bg-muted/40 p-1 rounded-xl border mr-4">
+                 <TabButton active={activeTab === 'programs'} onClick={() => setActiveTab('programs')} icon={<Play className="h-3 w-3" />}>Content Rules</TabButton>
+                 <TabButton active={activeTab === 'commands'} onClick={() => setActiveTab('commands')} icon={<Zap className="h-3 w-3" />}>Device Actions</TabButton>
+                 <TabButton active={activeTab === 'devices'} onClick={() => setActiveTab('devices')} icon={<Monitor className="h-3 w-3" />}>Bind & Sync</TabButton>
+                 <TabButton active={activeTab === 'preview'} onClick={() => setActiveTab('preview')} icon={<Layers className="h-3 w-3" />}>Verify</TabButton>
+              </div>
+              <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl font-black uppercase text-[10px] tracking-widest px-6 h-10 border">Discard</Button>
+              <Button onClick={handleSave} className="rounded-xl font-black uppercase text-[10px] tracking-widest px-8 h-10 shadow-xl shadow-primary/20 gap-2">
+                 <Save className="h-4 w-4" /> Save Plan
               </Button>
-              <Separator orientation="vertical" className="h-6 mx-2" />
-              <Button variant="ghost" size="icon" onClick={close} className="rounded-xl h-11 w-11 border hover:bg-muted/50">
+              <Separator orientation="vertical" className="h-6 mx-1" />
+              <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="rounded-xl h-10 w-10 border hover:bg-muted/50">
                  <X className="h-5 w-5" />
               </Button>
            </div>
         </header>
 
         <div className="flex-1 flex overflow-hidden">
-           {/* Left Sidebar: Controls & Rules */}
-           <div className="w-[380px] border-r bg-muted/10 flex flex-col shrink-0 overflow-hidden">
-              <div className="p-8 border-b bg-background/50">
-                 <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-3">
-                    <div className="h-1 w-6 bg-primary rounded-full" /> Rule Inventory
-                 </h3>
-                 <div className="grid grid-cols-2 gap-3 mt-6">
-                    <Button variant="outline" className="h-14 rounded-2xl border-2 flex-col gap-1 items-start px-5 hover:bg-primary/5 hover:border-primary/20 group">
-                       <Play className="h-3.5 w-3.5 text-blue-500 group-hover:scale-110 transition-transform" />
-                       <span className="text-[9px] font-black uppercase tracking-widest">Add Program</span>
-                    </Button>
-                    <Button variant="outline" className="h-14 rounded-2xl border-2 flex-col gap-1 items-start px-5 hover:bg-amber-500/5 hover:border-amber-500/20 group">
-                       <Zap className="h-3.5 w-3.5 text-amber-500 group-hover:scale-110 transition-transform" />
-                       <span className="text-[9px] font-black uppercase tracking-widest">Add Command</span>
-                    </Button>
-                 </div>
-              </div>
+           {activeTab === 'programs' || activeTab === 'commands' ? (
+             <>
+               {/* Left: Rule List */}
+               <div className="w-[340px] border-r bg-muted/10 flex flex-col shrink-0">
+                  <div className="p-6 border-b flex items-center justify-between">
+                     <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                        {activeTab === 'programs' ? 'Program Rules' : 'Command Rules'}
+                     </h3>
+                     <Button 
+                       variant="ghost" 
+                       size="icon" 
+                       onClick={activeTab === 'programs' ? handleAddProgramRule : handleAddCommandRule}
+                       className="h-7 w-7 rounded-lg border bg-background shadow-sm hover:text-primary transition-colors"
+                     >
+                        <Plus className="h-3.5 w-3.5" />
+                     </Button>
+                  </div>
+                  <ScrollArea className="flex-1">
+                     <div className="p-4 space-y-2">
+                        {activeTab === 'programs' && (
+                          <Reorder.Group axis="y" values={draft?.programRules || []} onReorder={handleReorderPrograms} className="space-y-2">
+                            {draft?.programRules.map(rule => (
+                              <Reorder.Item key={rule.id} value={rule}>
+                                <RuleListItem 
+                                  title={rule.programName}
+                                  subtitle={`Priority: ${rule.priority}`}
+                                  badge={rule.type}
+                                  badgeColor={rule.type === 'spot' ? 'bg-rose-500' : 'bg-blue-500'}
+                                  active={selectedRuleId === rule.id}
+                                  onClick={() => setSelectedRuleId(rule.id)}
+                                  onDelete={() => handleDeleteRule(rule.id)}
+                                />
+                              </Reorder.Item>
+                            ))}
+                          </Reorder.Group>
+                        )}
+                        {activeTab === 'commands' && (
+                          <Reorder.Group axis="y" values={draft?.commandRules || []} onReorder={handleReorderCommands} className="space-y-2">
+                            {draft?.commandRules.map(rule => (
+                              <Reorder.Item key={rule.id} value={rule}>
+                                <RuleListItem 
+                                  title={rule.name.replace('_', ' ')}
+                                  subtitle={rule.ifLimitTime ? rule.limitTime?.start : 'Always'}
+                                  icon={<Zap className="h-3 w-3" />}
+                                  active={selectedRuleId === rule.id}
+                                  onClick={() => setSelectedRuleId(rule.id)}
+                                  onDelete={() => handleDeleteRule(rule.id)}
+                                />
+                              </Reorder.Item>
+                            ))}
+                          </Reorder.Group>
+                        )}
+                        {((activeTab === 'programs' && !draft?.programRules.length) || 
+                          (activeTab === 'commands' && !draft?.commandRules.length)) && (
+                          <div className="py-20 px-6 text-center">
+                             <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
+                                <Plus className="h-6 w-6 text-muted-foreground/40" />
+                             </div>
+                             <p className="text-[10px] font-black uppercase text-muted-foreground/40 tracking-widest">No Rules Defined</p>
+                             <Button 
+                               variant="link" 
+                               className="text-[10px] font-bold uppercase mt-2" 
+                               onClick={activeTab === 'programs' ? handleAddProgramRule : handleAddCommandRule}
+                             >
+                                Create First Rule
+                             </Button>
+                          </div>
+                        )}
+                     </div>
+                  </ScrollArea>
+               </div>
 
-              <ScrollArea className="flex-1">
-                 <div className="p-8 space-y-8">
-                    {/* Contents Section */}
-                    <div className="space-y-4">
-                       <div className="flex items-center justify-between px-1">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Active Programs</span>
-                          <Badge variant="secondary" className="h-4 text-[9px] font-black">{policy?.contents.length || 0}</Badge>
-                       </div>
-                       <div className="space-y-3">
-                          {policy?.contents.map(c => (
-                            <div key={c.id} className="p-5 rounded-3xl bg-background border-2 shadow-sm hover:border-primary/30 transition-all group">
-                               <div className="flex items-start justify-between mb-3">
-                                  <Badge className={cn("text-[8px] font-black uppercase tracking-tighter px-1.5 h-4.5 border-none", c.type === 'spot' ? "bg-rose-500" : "bg-blue-500")}>
-                                     {c.type}
-                                  </Badge>
-                                  <button className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all">
-                                     <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
+               {/* Middle/Main: Rule Editor */}
+               <div className="flex-1 bg-background flex flex-col overflow-hidden">
+                  {selectedRuleId ? (
+                    <ScrollArea className="flex-1">
+                       <div className="max-w-[800px] mx-auto p-12 space-y-12">
+                          {/* Program Specific Editor */}
+                          {activeTab === 'programs' && selectedProgramRule && (
+                            <section className="space-y-6">
+                               <div className="flex items-center gap-4">
+                                  <div className="h-8 w-1 bg-primary rounded-full" />
+                                  <h2 className="text-xl font-black uppercase tracking-tight">Content Assignment</h2>
                                </div>
-                               <p className="text-sm font-black tracking-tight uppercase truncate">{c.programName}</p>
                                
-                               {/* Weekday Selector Mini */}
-                               <div className="flex gap-1 mt-3">
-                                 {WEEKDAYS.map(w => (
-                                   <div 
-                                      key={w.key} 
-                                      className={cn(
-                                        "w-5 h-5 rounded-md flex items-center justify-center text-[8px] font-black border transition-colors",
-                                        c.weekDays.includes(w.key) ? "bg-primary border-primary text-white" : "bg-muted/50 border-transparent text-muted-foreground/30"
-                                      )}
-                                   >
-                                      {w.label}
+                               <div className="grid grid-cols-2 gap-8">
+                                  <div className="col-span-2 space-y-2">
+                                     <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Target Program & Version</Label>
+                                     <Select 
+                                       value={`${selectedProgramRule.programId}|${selectedProgramRule.version}`} 
+                                       onValueChange={(val) => {
+                                          const [pId, ver] = val.split('|');
+                                          const prog = availablePrograms.find(p => p.id === pId);
+                                          if (prog) {
+                                             updateProgramRule(selectedProgramRule.id, {
+                                                programId: pId,
+                                                programName: prog.name,
+                                                version: Number(ver),
+                                                // In real app, releaseProgramId would come from a real version record
+                                                releaseProgramId: 1000 + Math.floor(Math.random() * 9000) 
+                                             });
+                                          }
+                                       }}
+                                     >
+                                        <SelectTrigger className="h-14 rounded-xl font-bold border-2">
+                                           <SelectValue placeholder="Pick a program version..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                           {availablePrograms.map(p => (
+                                              <SelectItem key={p.id} value={`${p.id}|${p.versions[0]?.version || 0}`}>
+                                                 {p.name} (v{p.versions[0]?.version || 'Draft'})
+                                              </SelectItem>
+                                           ))}
+                                        </SelectContent>
+                                     </Select>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                     <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Playback Type</Label>
+                                     <Select 
+                                       value={selectedProgramRule.type} 
+                                       onValueChange={(v) => updateProgramRule(selectedProgramRule.id, { type: v as ContentsScheduleType })}
+                                     >
+                                        <SelectTrigger className="h-12 rounded-xl font-bold border-2">
+                                           <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                           <SelectItem value="rotation">Rotation (Loop)</SelectItem>
+                                           <SelectItem value="spot">Spot (Timed Insert)</SelectItem>
+                                        </SelectContent>
+                                     </Select>
+                                  </div>
+                                  <div className="space-y-2">
+                                     <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Priority Index</Label>
+                                     <Input 
+                                       type="number" 
+                                       value={selectedProgramRule.priority} 
+                                       onChange={(e) => updateProgramRule(selectedProgramRule.id, { priority: Number(e.target.value) })}
+                                       className="h-12 rounded-xl font-bold border-2" 
+                                     />
+                                     <p className="text-[9px] font-bold text-muted-foreground italic opacity-60">Higher values override lower priorities for Spot content.</p>
+                                  </div>
+                               </div>
+                            </section>
+                          )}
+
+                          {/* Command Specific Editor */}
+                          {activeTab === 'commands' && selectedCommandRule && (
+                             <section className="space-y-6">
+                                <div className="flex items-center gap-4">
+                                   <div className="h-8 w-1 bg-amber-500 rounded-full" />
+                                   <h2 className="text-xl font-black uppercase tracking-tight">Command Action</h2>
+                                </div>
+                                <div className="grid grid-cols-2 gap-8">
+                                   <div className="space-y-4">
+                                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Action Type</Label>
+                                      <Select 
+                                        value={selectedCommandRule.name} 
+                                        onValueChange={(v) => {
+                                          let payload = selectedCommandRule.payloadJson;
+                                          if (v === 'Brightness_Control') payload = '{"type":"Brightness_Control", "brightness": 80}';
+                                          if (v === 'Volume_Control') payload = '{"type":"Volume_Control", "volume": 10}';
+                                          if (v === 'Sleep') payload = '{"type":"Sleep"}';
+                                          if (v === 'Wakeup') payload = '{"type":"Wakeup"}';
+                                          updateCommandRule(selectedCommandRule.id, { name: v, payloadJson: payload });
+                                        }}
+                                      >
+                                         <SelectTrigger className="h-12 rounded-xl font-bold border-2">
+                                            <SelectValue />
+                                         </SelectTrigger>
+                                         <SelectContent>
+                                            <SelectItem value="Brightness_Control">Brightness Adjustment</SelectItem>
+                                            <SelectItem value="Volume_Control">Volume Adjustment</SelectItem>
+                                            <SelectItem value="Sleep">Power Standby (Sleep)</SelectItem>
+                                            <SelectItem value="Wakeup">Power Wakeup</SelectItem>
+                                            <SelectItem value="Reboot">System Reboot</SelectItem>
+                                         </SelectContent>
+                                      </Select>
                                    </div>
-                                 ))}
-                               </div>
 
-                               <div className="flex items-center gap-4 mt-3 opacity-40">
-                                  <div className="flex items-center gap-1.5">
-                                     <Clock className="h-3 w-3" />
-                                     <span className="text-[9px] font-bold tabular-nums">{c.timeRange.start.slice(0, 5)} - {c.timeRange.end.slice(0, 5)}</span>
-                                  </div>
-                               </div>
-                            </div>
-                          ))}
-                       </div>
-                    </div>
-
-                    {/* Commands Section */}
-                    <div className="space-y-4">
-                       <div className="flex items-center justify-between px-1">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Timed Actions</span>
-                          <Badge variant="secondary" className="h-4 text-[9px] font-black">{policy?.commands.length || 0}</Badge>
-                       </div>
-                       <div className="space-y-3">
-                          {policy?.commands.map(cmd => (
-                            <div key={cmd.id} className="p-5 rounded-3xl bg-background border-2 shadow-sm hover:border-amber-500/30 transition-all group">
-                               <div className="flex items-center gap-3 mb-3">
-                                  <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600">
-                                     <Zap className="h-3.5 w-3.5" />
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                     <p className="text-xs font-black uppercase truncate tracking-tight">{cmd.name.replace('_', ' ')}</p>
-                                     <p className="text-[9px] font-bold text-muted-foreground tabular-nums mt-0.5">{cmd.timeRange.start.slice(0, 5)}</p>
-                                  </div>
-                                  <button className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all">
-                                     <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
-                               </div>
-                               <div className="flex gap-1">
-                                 {WEEKDAYS.map(w => (
-                                   <div 
-                                      key={w.key} 
-                                      className={cn(
-                                        "w-5 h-5 rounded-md flex items-center justify-center text-[8px] font-black border transition-colors",
-                                        cmd.weekDays.includes(w.key) ? "bg-amber-500 border-amber-500 text-white" : "bg-muted/50 border-transparent text-muted-foreground/30"
+                                   {/* Template Form Fields */}
+                                   <div className="bg-muted/20 p-6 rounded-2xl border-2 border-dashed">
+                                      {selectedCommandRule.name === 'Brightness_Control' && (
+                                         <div className="space-y-4">
+                                            <div className="flex justify-between items-center text-[10px] font-black uppercase">
+                                               <span>Target Brightness</span>
+                                               <span className="text-primary font-mono bg-background px-2 py-1 rounded border">
+                                                  {JSON.parse(selectedCommandRule.payloadJson).brightness || 0}%
+                                               </span>
+                                            </div>
+                                            <Slider 
+                                               value={[JSON.parse(selectedCommandRule.payloadJson).brightness || 0]} 
+                                               max={100} 
+                                               onValueChange={(v) => {
+                                                  const payload = JSON.stringify({ type: 'Brightness_Control', brightness: v[0] });
+                                                  updateCommandRule(selectedCommandRule.id, { payloadJson: payload });
+                                               }}
+                                            />
+                                         </div>
                                       )}
-                                   >
-                                      {w.label}
+                                      {selectedCommandRule.name === 'Volume_Control' && (
+                                         <div className="space-y-4">
+                                            <div className="flex justify-between items-center text-[10px] font-black uppercase">
+                                               <span>Target Volume</span>
+                                               <span className="text-primary font-mono bg-background px-2 py-1 rounded border">
+                                                  {JSON.parse(selectedCommandRule.payloadJson).volume || 0} / 15
+                                               </span>
+                                            </div>
+                                            <Slider 
+                                               value={[JSON.parse(selectedCommandRule.payloadJson).volume || 0]} 
+                                               max={15} 
+                                               onValueChange={(v) => {
+                                                  const payload = JSON.stringify({ type: 'Volume_Control', volume: v[0] });
+                                                  updateCommandRule(selectedCommandRule.id, { payloadJson: payload });
+                                               }}
+                                            />
+                                         </div>
+                                      )}
+                                      {(selectedCommandRule.name === 'Sleep' || selectedCommandRule.name === 'Wakeup' || selectedCommandRule.name === 'Reboot') && (
+                                         <div className="flex items-center gap-3 text-muted-foreground italic">
+                                            <Info className="h-4 w-4" />
+                                            <p className="text-[10px] font-bold uppercase tracking-tighter">No parameters required for this action.</p>
+                                         </div>
+                                      )}
                                    </div>
-                                 ))}
-                               </div>
-                            </div>
-                          ))}
+
+                                   <div className="col-span-2 space-y-2 pt-4">
+                                      <div className="flex items-center justify-between">
+                                         <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Raw Terminal Payload (JSON)</Label>
+                                         <Badge variant="outline" className="text-[8px] font-black uppercase opacity-40">Advanced Mode</Badge>
+                                      </div>
+                                      <textarea 
+                                        value={selectedCommandRule.payloadJson}
+                                        onChange={(e) => updateCommandRule(selectedCommandRule.id, { payloadJson: e.target.value })}
+                                        className="w-full h-24 p-4 rounded-xl border-2 font-mono text-xs bg-muted/10 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                      />
+                                   </div>
+                                </div>
+                             </section>
+                          )}
+
+                          <Separator />
+
+                          {/* Temporal Constraints - Shared between Programs and Commands */}
+                          <section className="space-y-8">
+                             <div className="flex items-center gap-4">
+                                <div className="h-8 w-1 bg-zinc-900 rounded-full" />
+                                <h2 className="text-xl font-black uppercase tracking-tight">Temporal Execution Rules</h2>
+                             </div>
+
+                             <div className="space-y-10">
+                                {/* Time Limit */}
+                                <ConstraintGroup 
+                                  label="Daily Time Window" 
+                                  icon={<Clock className="h-4 w-4" />}
+                                  enabled={selectedProgramRule?.ifLimitTime || selectedCommandRule?.ifLimitTime || false}
+                                  onToggle={(checked) => {
+                                     const patch = { ifLimitTime: checked, limitTime: checked ? { start: '09:00:00', end: '18:00:00' } : null };
+                                     if (activeTab === 'programs' && selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
+                                     else if (activeTab === 'commands' && selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
+                                  }}
+                                >
+                                   <div className="flex items-center gap-4">
+                                      <Input 
+                                        type="time" 
+                                        step="1"
+                                        value={selectedProgramRule?.limitTime?.start || selectedCommandRule?.limitTime?.start || '00:00:00'} 
+                                        onChange={(e) => {
+                                          const patch = { limitTime: { ...((selectedProgramRule?.limitTime || selectedCommandRule?.limitTime) as any), start: e.target.value } };
+                                          if (activeTab === 'programs' && selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
+                                          else if (activeTab === 'commands' && selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
+                                        }}
+                                        className="h-12 rounded-xl font-bold border-2 w-48" 
+                                      />
+                                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                                      <Input 
+                                        type="time" 
+                                        step="1"
+                                        value={selectedProgramRule?.limitTime?.end || selectedCommandRule?.limitTime?.end || '23:59:59'} 
+                                        onChange={(e) => {
+                                          const patch = { limitTime: { ...((selectedProgramRule?.limitTime || selectedCommandRule?.limitTime) as any), end: e.target.value } };
+                                          if (activeTab === 'programs' && selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
+                                          else if (activeTab === 'commands' && selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
+                                        }}
+                                        className="h-12 rounded-xl font-bold border-2 w-48" 
+                                      />
+                                   </div>
+                                </ConstraintGroup>
+
+                                {/* Weekday Limit */}
+                                <ConstraintGroup 
+                                  label="Weekly Recurrence" 
+                                  icon={<CalendarDays className="h-4 w-4" />}
+                                  enabled={selectedProgramRule?.ifLimitWeekday || selectedCommandRule?.ifLimitWeekday || false}
+                                  onToggle={(checked) => {
+                                     const patch = { ifLimitWeekday: checked, limitWeekday: checked ? ['MON', 'TUE', 'WED', 'THU', 'FRI'] : null };
+                                     if (activeTab === 'programs' && selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
+                                     else if (activeTab === 'commands' && selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
+                                  }}
+                                >
+                                   <div className="flex flex-wrap gap-2">
+                                      {WEEKDAYS.map(day => {
+                                        const currentDays = selectedProgramRule?.limitWeekday || selectedCommandRule?.limitWeekday || [];
+                                        const isSelected = currentDays.includes(day.key);
+                                        return (
+                                          <button 
+                                            key={day.key}
+                                            onClick={() => {
+                                              const nextDays = isSelected ? currentDays.filter(d => d !== day.key) : [...currentDays, day.key];
+                                              const patch = { limitWeekday: nextDays };
+                                              if (activeTab === 'programs' && selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
+                                              else if (activeTab === 'commands' && selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
+                                            }}
+                                            className={cn(
+                                              "px-4 py-2.5 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest transition-all",
+                                              isSelected
+                                                ? "bg-primary border-primary text-white shadow-lg shadow-primary/10"
+                                                : "bg-background hover:bg-muted/50 border-muted opacity-40 hover:opacity-100"
+                                            )}
+                                          >
+                                             {day.label}
+                                          </button>
+                                        );
+                                      })}
+                                   </div>
+                                </ConstraintGroup>
+
+                                {/* Date Limit */}
+                                <ConstraintGroup 
+                                  label="Effective Date Span" 
+                                  icon={<Calendar className="h-4 w-4" />}
+                                  enabled={selectedProgramRule?.ifLimitDate || selectedCommandRule?.ifLimitDate || false}
+                                  onToggle={(checked) => {
+                                     const patch = { ifLimitDate: checked, limitDate: checked ? { start: '2025-01-01', end: '2025-12-31' } : null };
+                                     if (activeTab === 'programs' && selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
+                                     else if (activeTab === 'commands' && selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
+                                  }}
+                                >
+                                   <div className="flex items-center gap-4">
+                                      <Input 
+                                        type="date" 
+                                        value={selectedProgramRule?.limitDate?.start || selectedCommandRule?.limitDate?.start || ''} 
+                                        onChange={(e) => {
+                                          const patch = { limitDate: { ...((selectedProgramRule?.limitDate || selectedCommandRule?.limitDate) as any), start: e.target.value } };
+                                          if (activeTab === 'programs' && selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
+                                          else if (activeTab === 'commands' && selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
+                                        }}
+                                        className="h-12 rounded-xl font-bold border-2 w-48" 
+                                      />
+                                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                                      <Input 
+                                        type="date" 
+                                        value={selectedProgramRule?.limitDate?.end || selectedCommandRule?.limitDate?.end || ''} 
+                                        onChange={(e) => {
+                                          const patch = { limitDate: { ...((selectedProgramRule?.limitDate || selectedCommandRule?.limitDate) as any), end: e.target.value } };
+                                          if (activeTab === 'programs' && selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
+                                          else if (activeTab === 'commands' && selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
+                                        }}
+                                        className="h-12 rounded-xl font-bold border-2 w-48" 
+                                      />
+                                   </div>
+                                </ConstraintGroup>
+                             </div>
+                          </section>
+                          
+                          <div className="h-20" /> {/* Spacer */}
                        </div>
+                    </ScrollArea>
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground/30">
+                       <Settings2 className="h-16 w-16 mb-6 opacity-10" />
+                       <p className="text-sm font-black uppercase tracking-widest">Select a rule or create one to begin</p>
                     </div>
-                 </div>
-              </ScrollArea>
-           </div>
-
-           {/* Main Area: Timeline Canvas */}
-           <div className="flex-1 bg-muted/5 flex flex-col overflow-hidden">
-              {/* Day Context Switcher */}
-              <div className="px-10 py-4 bg-background border-b flex items-center justify-between">
-                 <div className="flex items-center gap-4">
-                    <CalendarDays className="h-4 w-4 text-primary" />
-                    <span className="text-[11px] font-black uppercase tracking-widest text-foreground/60">Schedule Mapping Mode</span>
-                 </div>
-                 <div className="flex bg-muted/40 p-1 rounded-xl border shadow-inner">
-                    <button className="px-4 py-1.5 rounded-lg text-[9px] font-black bg-background shadow-sm border border-foreground/5 uppercase tracking-widest">24H View</button>
-                    <button className="px-4 py-1.5 rounded-lg text-[9px] font-black text-muted-foreground/40 hover:text-muted-foreground uppercase tracking-widest">Weekly Grid</button>
-                 </div>
-              </div>
-
-              {/* Timeline Header (Hours) */}
-              <div className="h-16 border-b bg-background/50 backdrop-blur-sm flex items-center shrink-0">
-                 <div className="w-32 border-r h-full flex items-center justify-center">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                 </div>
-                 <div className="flex-1 flex h-full">
-                    {Array.from({ length: 24 }).map((_, i) => (
-                      <div key={i} className="flex-1 border-r last:border-r-0 h-full flex flex-col items-center justify-center gap-1 opacity-40">
-                         <span className="text-[9px] font-black tabular-nums">{String(i).padStart(2, '0')}:00</span>
-                         <div className="flex gap-1">
-                            <div className="w-px h-1 bg-foreground/20" />
-                            <div className="w-px h-1 bg-foreground/20" />
-                            <div className="w-px h-1 bg-foreground/20" />
-                         </div>
-                      </div>
-                    ))}
-                 </div>
-              </div>
-
-              {/* Timeline Body */}
-              <ScrollArea className="flex-1">
-                 <div className="p-10 space-y-12 pb-32">
-                    {/* Spot Channel */}
-                    <TimelineChannel label="Spot Rules" subLabel="Highest Priority" color="border-rose-500">
-                       <div className="absolute top-1/2 -translate-y-1/2 left-[41.6%] right-[50%] h-12 bg-rose-500/10 border-2 border-rose-500/40 rounded-xl flex items-center px-4 gap-3 group cursor-pointer hover:bg-rose-500/20 transition-all shadow-lg shadow-rose-500/5">
-                          <div className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-rose-700 truncate">Flash Sale Alert</span>
-                          <div className="ml-auto opacity-0 group-hover:opacity-100 flex items-center gap-2">
-                             <div className="h-4 w-px bg-rose-500/20" />
-                             <span className="text-[9px] font-bold text-rose-700">10:00 - 12:00</span>
-                          </div>
-                       </div>
-                    </TimelineChannel>
-
-                    {/* Rotation Channel */}
-                    <TimelineChannel label="Rotation" subLabel="Default Cycle" color="border-blue-500">
-                       {/* 24/7 Long Rule Example */}
-                       <div className="absolute top-1/2 -translate-y-1/2 left-[0%] right-[0%] h-12 bg-blue-500/[0.03] border-2 border-dashed border-blue-500/20 rounded-xl flex items-center px-6 gap-3 group cursor-pointer hover:bg-blue-500/[0.08] transition-all">
-                          <div className="h-2 w-2 rounded-full bg-blue-500/40" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-blue-900/40 truncate">Master Loop (Global 24H Override)</span>
-                       </div>
-                       
-                       <div className="absolute top-1/2 -translate-y-1/2 left-[35.4%] right-[16.6%] h-12 bg-blue-500/10 border-2 border-blue-500/40 rounded-xl flex items-center px-4 gap-3 group cursor-pointer hover:bg-blue-500/20 transition-all shadow-lg shadow-blue-500/5">
-                          <div className="h-2 w-2 rounded-full bg-blue-500" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-blue-700 truncate">Standard Lobby Loop V4</span>
-                          <div className="ml-auto opacity-0 group-hover:opacity-100 flex items-center gap-2">
-                             <div className="h-4 w-px bg-blue-500/20" />
-                             <span className="text-[9px] font-bold text-blue-700">08:30 - 20:00</span>
-                          </div>
-                       </div>
-                    </TimelineChannel>
-
-                    {/* Command Channel */}
-                    <TimelineChannel label="Commands" subLabel="Hardware Control" color="border-amber-500">
-                       <CommandMarker pos="33.3%" label="Wake (08:00)" />
-                       <CommandMarker pos="41.6%" label="Bright 100 (10:00)" />
-                       <CommandMarker pos="91.6%" label="Sleep (22:00)" />
-                    </TimelineChannel>
-                 </div>
-              </ScrollArea>
-
-              {/* Legend & Help Footer */}
-              <footer className="px-10 py-5 bg-background border-t flex items-center justify-between shrink-0">
-                 <div className="flex items-center gap-8">
-                    <LegendItem color="bg-rose-500" label="Spot (Override)" />
-                    <LegendItem color="bg-blue-500" label="Rotation (Loop)" />
-                    <LegendItem color="bg-amber-500" label="Hard Command" />
-                 </div>
-                 <div className="flex items-center gap-3 text-muted-foreground opacity-40">
-                    <Info className="h-3.5 w-3.5" />
-                    <span className="text-[9px] font-bold uppercase tracking-[0.2em]">Drag blocks to adjust duration 路 Double click to edit parameters</span>
-                 </div>
-              </footer>
-           </div>
+                  )}
+               </div>
+             </>
+           ) : activeTab === 'devices' ? (
+              <DeviceBindingTab boundCount={draft?.boundDeviceCount || 0} scheduleId={draft?.id || 'Draft'} />
+           ) : (
+              <ExecutionPreviewTab schedule={draft} />
+           )}
         </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-function TimelineChannel({ label, subLabel, color, children }: { label: string, subLabel: string, color: string, children: React.ReactNode }) {
+function TabButton({ active, onClick, icon, children }: { active: boolean, onClick: () => void, icon: React.ReactNode, children: React.ReactNode }) {
   return (
-    <div className="space-y-4">
-       <div className="flex items-center gap-3">
-          <Badge variant="outline" className={cn("px-2.5 h-6 rounded-lg font-black uppercase text-[9px] tracking-widest border-2", color)}>{label}</Badge>
-          <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">{subLabel}</span>
+    <button 
+       onClick={onClick}
+       className={cn(
+         "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-all",
+         active ? "bg-background text-primary shadow-sm border border-foreground/5" : "text-muted-foreground/40 hover:text-muted-foreground"
+       )}
+    >
+       {icon}
+       {children}
+    </button>
+  );
+}
+
+function RuleListItem({ title, subtitle, badge, badgeColor, icon, active, onClick, onDelete }: { 
+  title: string, subtitle: string, badge?: string, badgeColor?: string, icon?: React.ReactNode, active: boolean, onClick: () => void, onDelete: () => void
+}) {
+  return (
+    <div 
+       onClick={onClick}
+       className={cn(
+         "p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-4 group",
+         active ? "bg-background border-primary shadow-lg shadow-primary/5 -translate-y-0.5" : "bg-transparent border-transparent hover:bg-background/50 hover:border-muted-foreground/10"
+       )}
+    >
+       <GripVertical className="h-4 w-4 text-muted-foreground/20 group-hover:text-muted-foreground/50 transition-colors shrink-0 cursor-grab active:cursor-grabbing" />
+       {icon ? (
+         <div className={cn("p-2 rounded-xl bg-muted/50", active && "bg-primary/10 text-primary")}>
+            {icon}
+         </div>
+       ) : (
+         <div className={cn("h-10 w-10 rounded-xl bg-muted/50 border-2 flex items-center justify-center font-black text-xs", active && "border-primary/20 text-primary")}>
+            {title.charAt(0)}
+         </div>
+       )}
+       <div className="flex-1 min-w-0">
+          <p className={cn("text-xs font-black uppercase truncate tracking-tight", active ? "text-primary" : "text-foreground/80")}>{title}</p>
+          <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest mt-0.5">{subtitle}</p>
        </div>
-       <div className="relative h-24 w-full bg-muted/20 border-2 border-dashed border-muted rounded-[2rem] overflow-hidden">
-          {/* Hour Grid Lines */}
-          <div className="absolute inset-0 flex">
-             {Array.from({ length: 24 }).map((_, i) => (
-               <div key={i} className="flex-1 border-r border-muted/30 last:border-r-0" />
-             ))}
+       <div className="flex flex-col items-end gap-1 shrink-0">
+          {badge && (
+            <Badge className={cn("h-4 text-[8px] font-black uppercase px-1.5 border-none", badgeColor)}>
+               {badge}
+            </Badge>
+          )}
+          <button 
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-all"
+          >
+             <Trash2 className="h-3 w-3" />
+          </button>
+       </div>
+    </div>
+  );
+}
+
+function ConstraintGroup({ label, icon, enabled, onToggle, children }: { label: string, icon: React.ReactNode, enabled: boolean, onToggle: (val: boolean) => void, children: React.ReactNode }) {
+  return (
+    <div className={cn("space-y-4 transition-all duration-500", !enabled && "opacity-40 grayscale")}>
+       <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+             <div className="p-2 rounded-xl bg-muted/50 border">
+                {icon}
+             </div>
+             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">{label}</span>
           </div>
+          <div className="flex items-center gap-3">
+             <span className="text-[9px] font-black uppercase text-muted-foreground/40">{enabled ? 'Constraint Active' : 'No Limit'}</span>
+             <Checkbox 
+               checked={enabled} 
+               onCheckedChange={(val) => onToggle(!!val)}
+               className="h-5 w-5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+             />
+          </div>
+       </div>
+       <div className={cn("pl-12", !enabled && "pointer-events-none")}>
           {children}
        </div>
     </div>
   );
 }
 
-function CommandMarker({ pos, label }: { pos: string, label: string }) {
+function DeviceBindingTab({ boundCount, scheduleId }: { boundCount: number, scheduleId: string }) {
+  const [isPushing, setIsPushing] = useState(false);
+  const [pushResults, setPushResults] = useState<any[]>([]);
+  
+  const handlePush = () => {
+    setIsPushing(true);
+    setPushResults([]); // Clear previous
+    
+    // Mock API Push
+    setTimeout(() => {
+      const results = mockDevices.slice(0, 4).map(d => ({
+        deviceId: d.id,
+        deviceName: d.deviceName,
+        status: Math.random() > 0.2 ? 'success' : 'failed',
+        message: Math.random() > 0.2 ? 'Sync command accepted' : 'Timeout: Device unreachable',
+        timestamp: new Date().toLocaleTimeString()
+      }));
+      setPushResults(results);
+      setIsPushing(false);
+      toast.success(`Sync completed with ${results.filter(r => r.status === 'success').length} successes`);
+    }, 2000);
+  };
+
   return (
-    <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 flex flex-col items-center gap-2 group cursor-pointer" style={{ left: pos }}>
-       <div className="px-2 py-1 rounded-lg bg-amber-500 text-white text-[8px] font-black uppercase tracking-tighter shadow-lg shadow-amber-500/20 group-hover:scale-110 transition-transform">{label}</div>
-       <div className="w-0.5 h-10 bg-gradient-to-b from-amber-500 to-transparent" />
+    <div className="flex-1 flex flex-col overflow-hidden animate-in fade-in duration-500">
+       <div className="p-8 border-b bg-muted/5 flex items-center justify-between">
+          <div>
+             <h2 className="text-xl font-black uppercase tracking-tight">Node Association & Sync</h2>
+             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Manage hardware linking & push updates</p>
+          </div>
+          <Button 
+            disabled={boundCount === 0 || isPushing} 
+            onClick={handlePush}
+            className="h-12 px-10 rounded-2xl font-black uppercase text-[11px] tracking-widest gap-3 shadow-xl shadow-primary/20"
+          >
+             <Send className={cn("h-4 w-4", isPushing && "animate-pulse")} />
+             {isPushing ? 'Syncing...' : `Push to ${boundCount} Devices`}
+          </Button>
+       </div>
+
+       <div className="flex-1 grid grid-cols-12 overflow-hidden">
+          {/* Linked Devices List / Results */}
+          <div className="col-span-8 border-r bg-background overflow-hidden flex flex-col">
+             {pushResults.length > 0 ? (
+                <div className="flex flex-col h-full">
+                   <div className="p-4 bg-muted/30 border-b flex items-center justify-between">
+                      <h3 className="text-[10px] font-black uppercase tracking-widest">Sync Execution Report</h3>
+                      <Button variant="ghost" size="sm" onClick={() => setPushResults([])} className="h-6 text-[9px] uppercase font-bold">Close Report</Button>
+                   </div>
+                   <ScrollArea className="flex-1">
+                      <div className="p-4 space-y-2">
+                         {pushResults.map((res, i) => (
+                            <div key={i} className={cn("p-4 rounded-xl border flex items-center justify-between", res.status === 'success' ? "bg-emerald-500/5 border-emerald-500/20" : "bg-red-500/5 border-red-500/20")}>
+                               <div className="flex items-center gap-4">
+                                  <div className={cn("h-8 w-8 rounded-full flex items-center justify-center border", res.status === 'success' ? "bg-emerald-500 text-white border-emerald-600" : "bg-red-500 text-white border-red-600")}>
+                                     {res.status === 'success' ? <Monitor className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                                  </div>
+                                  <div>
+                                     <p className="text-xs font-black uppercase">{res.deviceName}</p>
+                                     <p className="text-[10px] font-bold opacity-60">{res.message}</p>
+                                  </div>
+                               </div>
+                               <span className="text-[10px] font-mono font-bold opacity-40">{res.timestamp}</span>
+                            </div>
+                         ))}
+                      </div>
+                   </ScrollArea>
+                </div>
+             ) : (
+                <>
+                   <div className="p-4 border-b bg-muted/30 flex items-center justify-between text-[9px] font-black uppercase text-muted-foreground tracking-widest px-8">
+                      <span>Associated Terminal</span>
+                      <div className="flex gap-20">
+                         <span className="w-24">Resolution</span>
+                         <span className="w-24">Last Sync</span>
+                      </div>
+                   </div>
+                   <ScrollArea className="flex-1">
+                      <div className="p-4 space-y-2 px-8">
+                         {mockDevices.slice(0, 4).map((d, i) => (
+                            <div key={d.id} className="p-5 rounded-[1.5rem] border-2 border-transparent hover:border-muted-foreground/10 hover:bg-muted/10 transition-all flex items-center justify-between group">
+                               <div className="flex items-center gap-4">
+                                  <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center border shadow-inner">
+                                     <Monitor className="h-5 w-5 text-muted-foreground" />
+                                  </div>
+                                  <div>
+                                     <p className="text-sm font-black uppercase tracking-tight">{d.deviceName}</p>
+                                     <div className="flex items-center gap-2 mt-0.5">
+                                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                        <span className="text-[9px] font-bold text-muted-foreground uppercase">Linked to this plan</span>
+                                     </div>
+                                  </div>
+                               </div>
+                               <div className="flex items-center gap-20">
+                                  <span className="w-24 font-mono text-[10px] font-bold">{d.resolution.width}x{d.resolution.height}</span>
+                                  <span className="w-24 text-[10px] font-black text-muted-foreground/40 italic">JUST NOW</span>
+                               </div>
+                            </div>
+                         ))}
+                      </div>
+                   </ScrollArea>
+                </>
+             )}
+          </div>
+
+          {/* Conflict / Meta Panel */}
+          <div className="col-span-4 bg-muted/10 p-8 space-y-8">
+             <div className="p-6 rounded-3xl bg-amber-500/5 border-2 border-dashed border-amber-500/20 space-y-4">
+                <div className="flex items-center gap-3 text-amber-600">
+                   <AlertTriangle className="h-5 w-5" />
+                   <h3 className="text-xs font-black uppercase tracking-widest">Binding Constraints</h3>
+                </div>
+                <p className="text-[10px] font-bold text-amber-700/60 leading-relaxed uppercase">
+                   Devices listed here are exclusively locked to <span className="underline font-black">{scheduleId}</span>. 
+                   Linking them to a different plan will automatically terminate this association.
+                </p>
+             </div>
+
+             <div className="space-y-4">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-2">Network Health</h3>
+                <div className="space-y-3">
+                   <div className="flex items-center justify-between p-4 rounded-2xl bg-background border shadow-sm">
+                      <span className="text-[10px] font-bold uppercase tracking-tighter">Sync Success Rate</span>
+                      <span className="text-xs font-black text-emerald-600">100%</span>
+                   </div>
+                   <div className="flex items-center justify-between p-4 rounded-2xl bg-background border shadow-sm">
+                      <span className="text-[10px] font-bold uppercase tracking-tighter">Average Latency</span>
+                      <span className="text-xs font-black">24ms</span>
+                   </div>
+                </div>
+             </div>
+
+             <Button variant="outline" className="w-full h-14 rounded-2xl border-2 font-black uppercase text-[11px] tracking-widest gap-3 hover:bg-primary/5 hover:text-primary transition-all">
+                <Plus className="h-4 w-4" /> Link New Terminals
+             </Button>
+          </div>
+       </div>
     </div>
   );
 }
 
-function LegendItem({ color, label }: { color: string, label: string }) {
+function ExecutionPreviewTab({ schedule }: { schedule: ScheduleRecord | null }) {
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  // Helper: Check if rule is active on specific date
+  const isRuleActive = (rule: ProgramScheduleRule | CommandScheduleRule, dateStr: string) => {
+    const d = new Date(dateStr);
+    
+    // Date Range Check
+    if (rule.ifLimitDate && rule.limitDate) {
+      const start = new Date(rule.limitDate.start);
+      const end = new Date(rule.limitDate.end);
+      if (d < start || d > end) return false;
+    }
+    
+    // Weekday Check
+    if (rule.ifLimitWeekday && rule.limitWeekday) {
+      const dayMap: Record<number, WeekDay> = { 0: 'SUN', 1: 'MON', 2: 'TUE', 3: 'WED', 4: 'THU', 5: 'FRI', 6: 'SAT' };
+      const currentDay = dayMap[d.getUTCDay()]; // Use UTC or Local based on timezone, simplified to UTC for now
+      if (!rule.limitWeekday.includes(currentDay)) return false;
+    }
+    
+    return true;
+  };
+
+  const { spotRules, rotationRules, commandRules, timelineEvents } = useMemo(() => {
+    if (!schedule) return { spotRules: [], rotationRules: [], commandRules: [], timelineEvents: [] };
+
+    const activePrograms = schedule.programRules.filter(r => isRuleActive(r, selectedDate));
+    const activeCommands = schedule.commandRules.filter(r => isRuleActive(r, selectedDate));
+
+    const spots = activePrograms.filter(r => r.type === 'spot').sort((a, b) => b.priority - a.priority);
+    const rotations = activePrograms.filter(r => r.type === 'rotation').sort((a, b) => b.priority - a.priority);
+    
+    // Build Timeline Events for Agenda
+    const events: any[] = [];
+    
+    // Add Content Start/End events
+    activePrograms.forEach(r => {
+       const start = r.ifLimitTime && r.limitTime ? r.limitTime.start : '00:00:00';
+       const end = r.ifLimitTime && r.limitTime ? r.limitTime.end : '23:59:59';
+       events.push({ time: start, type: 'content_start', rule: r });
+       events.push({ time: end, type: 'content_end', rule: r });
+    });
+    
+    // Add Command events
+    activeCommands.forEach(r => {
+       const time = r.ifLimitTime && r.limitTime ? r.limitTime.start : '00:00:00';
+       events.push({ time, type: 'command', rule: r });
+    });
+
+    return { 
+      spotRules: spots, 
+      rotationRules: rotations, 
+      commandRules: activeCommands,
+      timelineEvents: events.sort((a, b) => a.time.localeCompare(b.time))
+    };
+  }, [schedule, selectedDate]);
+
+  const getTimePos = (timeStr: string) => {
+     const [h, m, s] = timeStr.split(':').map(Number);
+     return ((h * 3600 + m * 60 + s) / 86400) * 100;
+  };
+
   return (
-    <div className="flex items-center gap-2.5">
-       <div className={cn("h-2.5 w-2.5 rounded-full shadow-sm", color)} />
-       <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{label}</span>
+    <div className="flex-1 flex flex-col overflow-hidden animate-in fade-in duration-500">
+       <div className="p-4 border-b bg-background flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20">
+                <Play className="h-4 w-4" />
+                <span className="text-xs font-black uppercase tracking-widest">Rule Simulation</span>
+             </div>
+             <div className="h-4 w-px bg-muted" />
+             <div className="flex items-center gap-2 text-muted-foreground/60">
+                 <Globe className="h-3.5 w-3.5" />
+                 <span className="text-[10px] font-bold uppercase tracking-widest">Zone: {schedule?.timezone || 'Auto'}</span>
+             </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+             <span className="text-[10px] font-bold uppercase text-muted-foreground">Simulation Date:</span>
+             <Input 
+               type="date" 
+               value={selectedDate} 
+               onChange={(e) => setSelectedDate(e.target.value)}
+               className="h-9 w-36 font-bold text-xs rounded-lg border-2 bg-background focus:ring-primary/20" 
+             />
+          </div>
+       </div>
+
+       {schedule?.programRules.length === 0 && schedule?.commandRules.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center opacity-30">
+             <Layers className="h-16 w-16 mb-4" />
+             <p className="text-sm font-black uppercase tracking-widest">No Rules to Simulate</p>
+          </div>
+       ) : (
+       <ScrollArea className="flex-1 bg-muted/5">
+          <div className="p-8 space-y-12">
+             
+             {/* 3-Lane Timeline */}
+             <div className="space-y-6">
+                <div className="flex items-center justify-between px-2">
+                   <h3 className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em]">Execution Lanes (24H)</h3>
+                   {spotRules.length === 0 && rotationRules.length === 0 && commandRules.length === 0 && (
+                      <span className="text-[10px] font-bold text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded uppercase">No Active Rules on this date</span>
+                   )}
+                </div>
+                
+                <div className="relative border rounded-[1.5rem] bg-background shadow-sm overflow-hidden">
+                   {/* Grid Background */}
+                   <div className="absolute inset-0 flex pointer-events-none z-0">
+                      {Array.from({ length: 24 }).map((_, i) => (
+                         <div key={i} className="flex-1 border-r border-muted/20 last:border-r-0 flex items-end justify-center pb-2">
+                            <span className="text-[7px] font-black text-muted-foreground/20">{i}H</span>
+                         </div>
+                      ))}
+                   </div>
+
+                   <div className="relative z-10 py-6 space-y-6">
+                      {/* Lane A: Spot */}
+                      <div className="h-12 relative w-full">
+                         <div className="absolute left-0 -top-4 text-[8px] font-black text-rose-500/40 uppercase px-4 tracking-widest">Lane A: Priority Spots</div>
+                         {spotRules.map((r, i) => {
+                            const start = r.ifLimitTime && r.limitTime ? getTimePos(r.limitTime.start) : 0;
+                            const end = r.ifLimitTime && r.limitTime ? getTimePos(r.limitTime.end) : 100;
+                            return (
+                               <div 
+                                 key={r.id} 
+                                 className="absolute h-10 top-1 rounded-lg bg-rose-500/10 border-2 border-rose-500/30 text-rose-700 flex items-center px-2 overflow-hidden hover:z-20 hover:scale-[1.02] transition-all cursor-help"
+                                 style={{ left: `${start}%`, width: `${Math.max(end - start, 0.5)}%`, zIndex: r.priority }}
+                                 title={`${r.programName} (Priority: ${r.priority})`}
+                               >
+                                  <div className="h-1.5 w-1.5 rounded-full bg-rose-500 shrink-0 mr-2" />
+                                  <span className="text-[8px] font-black uppercase truncate">{r.programName}</span>
+                               </div>
+                            );
+                         })}
+                         {spotRules.length === 0 && <div className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-muted-foreground/10 uppercase tracking-widest">No Active Spot Rules</div>}
+                      </div>
+
+                      {/* Lane B: Rotation */}
+                      <div className="h-12 relative w-full bg-muted/5">
+                         <div className="absolute left-0 -top-4 text-[8px] font-black text-blue-500/40 uppercase px-4 tracking-widest">Lane B: Standard Rotation</div>
+                         {rotationRules.map((r, i) => {
+                            const start = r.ifLimitTime && r.limitTime ? getTimePos(r.limitTime.start) : 0;
+                            const end = r.ifLimitTime && r.limitTime ? getTimePos(r.limitTime.end) : 100;
+                            return (
+                               <div 
+                                 key={r.id} 
+                                 className="absolute h-10 top-1 rounded-lg bg-blue-500/10 border-2 border-blue-500/30 text-blue-700 flex items-center px-2 overflow-hidden opacity-90"
+                                 style={{ left: `${start}%`, width: `${Math.max(end - start, 0.5)}%`, top: `${i * 2}px` }}
+                               >
+                                  <div className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0 mr-2" />
+                                  <span className="text-[8px] font-black uppercase truncate">{r.programName}</span>
+                               </div>
+                            );
+                         })}
+                         {rotationRules.length === 0 && <div className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-muted-foreground/10 uppercase tracking-widest">No Active Rotation Rules</div>}
+                      </div>
+
+                      {/* Lane C: Commands */}
+                      <div className="h-8 relative w-full border-t border-dashed border-muted/30 pt-2">
+                         <div className="absolute left-0 -top-4 text-[8px] font-black text-amber-500/40 uppercase px-4 tracking-widest">Lane C: Commands</div>
+                         {commandRules.map((r, i) => {
+                            const start = r.ifLimitTime && r.limitTime ? getTimePos(r.limitTime.start) : 0;
+                            return (
+                               <div 
+                                 key={r.id} 
+                                 className="absolute top-1 -ml-2 group cursor-pointer"
+                                 style={{ left: `${start}%` }}
+                               >
+                                  <div className="h-4 w-4 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-sm z-10 relative group-hover:scale-125 transition-transform">
+                                     <Zap className="h-2.5 w-2.5" />
+                                  </div>
+                                  <div className="absolute top-6 left-1/2 -translate-x-1/2 whitespace-nowrap bg-zinc-900 text-white text-[8px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 uppercase">
+                                     {r.name.replace('_', ' ')}
+                                  </div>
+                               </div>
+                            );
+                         })}
+                      </div>
+                   </div>
+                </div>
+                <div className="flex items-center gap-2 justify-end">
+                   <AlertTriangle className="h-3 w-3 text-amber-500" />
+                   <p className="text-[9px] font-bold text-muted-foreground uppercase">
+                      Preview based on active rules. Final output on device may vary slightly due to network latency.
+                   </p>
+                </div>
+             </div>
+
+             {/* Unified Agenda */}
+             <div className="space-y-4">
+                <h3 className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] px-2">Sequential Agenda</h3>
+                <div className="border rounded-2xl bg-background divide-y">
+                   {timelineEvents.length === 0 ? (
+                      <div className="p-8 text-center text-xs font-bold text-muted-foreground/40 uppercase">No events scheduled for this day</div>
+                   ) : (
+                      timelineEvents.map((evt, idx) => (
+                         <div key={idx} className="p-4 flex items-center gap-6 hover:bg-muted/5 transition-colors">
+                            <div className="w-16 font-mono text-xs font-black text-muted-foreground">{evt.time.slice(0, 5)}</div>
+                            <div className="flex-1 flex items-center gap-4">
+                               {evt.type === 'command' ? (
+                                  <Badge className="bg-amber-500 text-white border-none h-5 px-2 text-[9px] uppercase font-black tracking-wider">Command</Badge>
+                               ) : evt.type === 'content_start' ? (
+                                  <Badge className={cn("border-none h-5 px-2 text-[9px] uppercase font-black tracking-wider", evt.rule.type === 'spot' ? "bg-rose-500" : "bg-blue-500")}>
+                                     {evt.rule.type === 'spot' ? 'Spot Start' : 'Loop Start'}
+                                  </Badge>
+                               ) : (
+                                  <Badge variant="outline" className="h-5 px-2 text-[9px] uppercase font-black tracking-wider opacity-50">End</Badge>
+                               )}
+                               
+                               <span className="text-xs font-black uppercase tracking-tight">
+                                  {evt.type === 'command' ? evt.rule.name.replace('_', ' ') : evt.rule.programName}
+                               </span>
+                            </div>
+                            {evt.type === 'command' && (
+                               <div className="text-[9px] font-mono bg-muted px-2 py-1 rounded">
+                                  {evt.rule.payloadJson.slice(0, 30)}...
+                               </div>
+                            )}
+                         </div>
+                      ))
+                   )}
+                </div>
+             </div>
+          </div>
+       </ScrollArea>
+       )}
     </div>
   );
 }

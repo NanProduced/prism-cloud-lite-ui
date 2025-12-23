@@ -1,57 +1,120 @@
 // Schedule Type Definitions for Prism Cloud Lite
+// Aligned with backend business logic (pc_schedule, pc_schedule_contents_rule, etc.)
 
 export type WeekDay = 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI' | 'SAT' | 'SUN';
 
-export interface TimeRange {
+export interface ScheduleLimitTime {
   start: string; // HH:mm:ss
   end: string;   // HH:mm:ss
 }
 
-export interface DateRange {
+export interface ScheduleLimitDate {
   start: string; // YYYY-MM-DD
   end: string;   // YYYY-MM-DD
 }
 
 export type ContentsScheduleType = 'rotation' | 'spot';
 
-export interface ContentsSchedule {
+/**
+ * Represents a single rule for a program within a schedule.
+ * Maps to pc_schedule_contents_rule
+ */
+export interface ProgramScheduleRule {
   id: string;
-  programId: string;
-  programName: string;
   type: ContentsScheduleType;
   priority: number;
-  dateRange: DateRange;
-  weekDays: WeekDay[];
-  timeRange: TimeRange;
+  
+  // Link to a specific release (program version)
+  // On device side, this is the integer 'programId'
+  releaseProgramId: number; 
+  programId: string; // UUID of the program
+  programName: string;
+  version: number;
+
+  // Limits
+  ifLimitTime: boolean;
+  limitTime?: ScheduleLimitTime | null;
+  
+  ifLimitDate: boolean;
+  limitDate?: ScheduleLimitDate | null;
+  
+  ifLimitWeekday: boolean;
+  limitWeekday?: WeekDay[] | null;
 }
 
-export type CommandScheduleAction = 
-  | 'Brightness_Control'
-  | 'Volume_Control'
-  | 'Colortemp_Control'
-  | 'Sleep'
-  | 'Wakeup'
-  | 'Reboot'
-  | 'Clear_Cache'
-  | 'Switch_Signal_Source'
-  | 'Relay'
-  | 'Board_Relay';
-
-export interface CommandSchedule {
+/**
+ * Represents a single command rule within a schedule.
+ * Maps to pc_schedule_command_rule
+ */
+export interface CommandScheduleRule {
   id: string;
-  name: CommandScheduleAction;
-  params: Record<string, any>;
-  dateRange: DateRange;
-  weekDays: WeekDay[];
-  timeRange: TimeRange;
+  name: string; // Action name like 'Brightness_Control'
+  operation?: string; // Backend DTO alignment (DeviceActionBase)
+  payloadJson: string; // Raw JSON string for terminal
+  
+  // Limits
+  ifLimitTime: boolean;
+  limitTime?: ScheduleLimitTime | null;
+  
+  ifLimitDate: boolean;
+  limitDate?: ScheduleLimitDate | null;
+  
+  ifLimitWeekday: boolean;
+  limitWeekday?: WeekDay[] | null;
 }
 
-export interface SchedulePolicy {
+/**
+ * A Schedule is a collection of program and command rules.
+ * Maps to pc_schedule
+ */
+export interface ScheduleRecord {
   id: string;
-  name: string;
+  name: string; // "Playback Plan Name"
   description?: string;
+  enabled: boolean;
+  timezone: string; // e.g., 'Asia/Shanghai', 'UTC'
+  createdAt: string;
   updatedAt: string;
-  deviceCount: number;
-  contents: ContentsSchedule[];
-  commands: CommandSchedule[];
+  
+  // Observability
+  lastPushedAt?: string;
+  syncStatus?: 'synced' | 'pending' | 'failed' | 'partial';
+
+  // Rules
+  programRules: ProgramScheduleRule[];
+  commandRules: CommandScheduleRule[];
+  
+  // Stats for list view
+  boundDeviceCount: number;
+}
+
+/**
+ * Represents the link between a device and a schedule.
+ * Maps to pc_device_schedule_binding
+ */
+export interface ScheduleBinding {
+  deviceId: string;
+  scheduleId: string;
+  boundAt: string;
+  syncStatus?: 'synced' | 'pending' | 'failed';
+  lastSyncedAt?: string;
+  errorMessage?: string;
+}
+
+/**
+ * Combined data for device visibility (AllowList)
+ * Used in Device Details -> Playback Plan
+ */
+export interface DeviceProgramVisibility {
+  programId: string;
+  programName: string;
+  version: number;
+  releaseProgramId: number;
+  source: 'direct' | 'schedule';
+  scheduleId?: string;
+  scheduleName?: string;
+  
+  // Fact: is it actually on the device?
+  status: 'unknown' | 'downloading' | 'downloaded';
+  progress?: number;
 }

@@ -155,7 +155,7 @@ export default function ProgramsPage() {
 
   const handleSaveAsTemplate = () => {
     if (!saveAsTemplateTarget) return;
-    const vsn = pickProgramPreviewDoc(saveAsTemplateTarget);
+    const { vsn } = pickProgramPreviewDoc(saveAsTemplateTarget);
     if (!vsn) {
       toast.error('No content to save as template');
       return;
@@ -341,7 +341,7 @@ export default function ProgramsPage() {
             <div className="divide-y">
               {filteredPrograms.map((program) => {
                 const unpublishedChanges = hasUnpublishedChanges(program);
-                const previewDoc = pickProgramPreviewDoc(program);
+                const { vsn: previewDoc, thumbnail } = pickProgramPreviewDoc(program);
                 const summary = summarizeVsn(previewDoc);
                 const materialBytes = sumMaterialBytesForDoc(previewDoc, materialSizeIndex);
                 const latestPublished = pickLatestPublished(program);
@@ -362,7 +362,7 @@ export default function ProgramsPage() {
                   >
                     <div className="flex min-w-0 flex-1 items-start gap-5">
                       <div className="relative shrink-0">
-                        <ProgramListThumbnail doc={previewDoc} />
+                        <ProgramListThumbnail doc={previewDoc} thumbnail={thumbnail} />
                         <div className="absolute inset-0 rounded-lg ring-1 ring-inset ring-foreground/5 shadow-sm" />
                       </div>
                       
@@ -879,17 +879,27 @@ function hasUnpublishedChanges(program: ProgramRecord): boolean {
   return baselineDraft.updatedAt > published.createdAt;
 }
 
-function pickProgramPreviewDoc(program: ProgramRecord): VsnDocument | null {
+function pickProgramPreviewDoc(program: ProgramRecord): { vsn: VsnDocument | null; thumbnail?: string | null } {
   if (program.defaultVersion) {
-    const def = program.versions.find((v) => v.version === program.defaultVersion)?.vsn ?? null;
-    if (def) return def;
+    const def = program.versions.find((v) => v.version === program.defaultVersion);
+    if (def) return { vsn: def.vsn, thumbnail: def.thumbnail };
   }
-  const latest = pickLatestPublished(program)?.vsn ?? null;
-  if (latest) return latest;
-  return pickLatestDraft(program)?.vsn ?? null;
+  const latest = pickLatestPublished(program);
+  if (latest) return { vsn: latest.vsn, thumbnail: latest.thumbnail };
+  
+  const draft = pickLatestDraft(program);
+  return { vsn: draft?.vsn ?? null, thumbnail: draft?.thumbnail };
 }
 
-function ProgramListThumbnail({ doc }: { doc: VsnDocument | null }) {
+function ProgramListThumbnail({ doc, thumbnail }: { doc: VsnDocument | null; thumbnail?: string | null }) {
+  if (thumbnail) {
+    return (
+      <div className="relative overflow-hidden rounded-lg border bg-black/70 w-[120px] h-[72px]">
+        <img src={thumbnail} className="h-full w-full object-cover" alt="Preview" />
+      </div>
+    );
+  }
+
   const info = doc?.Programs?.Program?.Information;
   const w = Number.parseInt(info?.Width ?? '0', 10) || 1920;
   const h = Number.parseInt(info?.Height ?? '0', 10) || 1080;

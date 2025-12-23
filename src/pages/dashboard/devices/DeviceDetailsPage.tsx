@@ -4,7 +4,6 @@ import {
   ArrowLeft, 
   Monitor, 
   Settings, 
-  HardDrive, 
   Clock, 
   Zap,
   RefreshCw,
@@ -30,10 +29,9 @@ import {
   Signal,
   Share2,
   Info,
-  ThermometerSun,
-  Thermometer,
-  Eye,
-  X
+  X,
+  CalendarDays,
+  Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -87,11 +85,11 @@ export default function DeviceDetailsPage() {
 
   // Mock Historical Screenshots
   const [historicalScreenshots, setHistoricalScreenshots] = useState<HistoricalScreenshot[]>([
-    { id: "s1", url: "https://picsum.photos/seed/s1/800/450", timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(), size: 245000 },
-    { id: "s2", url: "https://picsum.photos/seed/s2/800/450", timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(), size: 280000 },
-    { id: "s3", url: "https://picsum.photos/seed/s3/800/450", timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(), size: 210000 },
-    { id: "s4", url: "https://picsum.photos/seed/s4/800/450", timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(), size: 310000 },
-    { id: "s5", url: "https://picsum.photos/seed/s5/800/450", timestamp: new Date(Date.now() - 1000 * 60 * 300).toISOString(), size: 255000 },
+    { id: "s1", url: "https://picsum.photos/seed/s1/800/450", timestamp: "2025-12-22T10:00:00Z", size: 245000 },
+    { id: "s2", url: "https://picsum.photos/seed/s2/800/450", timestamp: "2025-12-22T09:45:00Z", size: 280000 },
+    { id: "s3", url: "https://picsum.photos/seed/s3/800/450", timestamp: "2025-12-22T09:00:00Z", size: 210000 },
+    { id: "s4", url: "https://picsum.photos/seed/s4/800/450", timestamp: "2025-12-22T08:00:00Z", size: 310000 },
+    { id: "s5", url: "https://picsum.photos/seed/s5/800/450", timestamp: "2025-12-22T05:00:00Z", size: 255000 },
   ]);
 
   // Interactive States (Mapped to UI requirements)
@@ -658,70 +656,107 @@ export default function DeviceDetailsPage() {
             <Card className="rounded-[3rem] border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
                <CardHeader className="px-10 py-8 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
                   <div className="space-y-1">
-                     <CardTitle className="text-xl font-black tracking-tight uppercase">Today's Schedule</CardTitle>
-                     <CardDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Scheduled playback rules for current device</CardDescription>
+                     <CardTitle className="text-xl font-black tracking-tight uppercase">Current Playback Plan</CardTitle>
+                     <CardDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Active schedule & device visibility rules</CardDescription>
                   </div>
                   <div className="flex items-center gap-3">
                      <Button variant="outline" className="h-10 rounded-xl font-black text-xs gap-2 border-2 uppercase">
-                        <RotateCw className="h-4 w-4" /> Sync Schedule
+                        <RotateCw className="h-4 w-4" /> Sync Rules
                      </Button>
-                     <Button className="h-10 rounded-xl font-black text-xs gap-2 bg-zinc-900 text-white uppercase px-6">
-                        Adjust Schedule
+                     <Button className="h-10 rounded-xl font-black text-xs gap-2 bg-zinc-900 text-white uppercase px-6" onClick={() => navigate('/dashboard/schedule')}>
+                        Manage Schedules
                      </Button>
                   </div>
                </CardHeader>
-               <CardContent className="p-10 space-y-12">
-                  <div className="relative h-64 bg-muted/20 border-2 border-dashed border-muted rounded-[2.5rem] overflow-hidden">
-                     {/* 24h Grid */}
-                     <div className="absolute inset-0 flex">
-                        {Array.from({ length: 24 }).map((_, i) => (
-                           <div key={i} className="flex-1 border-r border-muted/30 last:border-r-0 flex flex-col items-center justify-end pb-2">
-                              <span className="text-[8px] font-black text-muted-foreground/30 tabular-nums">{String(i).padStart(2, '0')}</span>
+               <CardContent className="p-10 space-y-10">
+                  {/* Schedule Binding Info */}
+                  <div className="flex flex-col md:flex-row gap-6">
+                     <div className="flex-1 p-8 rounded-[2rem] bg-muted/20 border-2 border-dashed border-muted flex flex-col gap-4">
+                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Bound Schedule</p>
+                        <div className="flex items-center gap-4">
+                           <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20">
+                              <CalendarDays className="h-6 w-6" />
                            </div>
-                        ))}
+                           <div>
+                              <h4 className="text-xl font-black uppercase tracking-tighter">Standard Business Day</h4>
+                              <p className="text-xs text-muted-foreground font-medium mt-1">Status: <span className="text-emerald-600 font-bold">ENABLED & SYNCED</span></p>
+                           </div>
+                        </div>
                      </div>
-                     
-                     {/* Current Time Indicator */}
-                     <div className="absolute top-0 bottom-0 w-0.5 bg-rose-500 z-20 shadow-[0_0_10px_rgba(244,63,94,0.5)]" style={{ left: '65%' }}>
-                        <div className="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full bg-rose-500" />
-                        <div className="absolute top-4 left-2 px-2 py-1 bg-rose-500 text-white text-[8px] font-black rounded-md uppercase whitespace-nowrap">Current Time: 15:42</div>
-                     </div>
-
-                     {/* Active Program Blocks */}
-                     <div className="absolute top-12 left-[35%] right-[15%] h-12 bg-blue-500/10 border-2 border-blue-500/40 rounded-2xl flex items-center px-6 gap-3 shadow-lg">
-                        <Play className="h-4 w-4 text-blue-500 fill-blue-500/20" />
-                        <span className="text-[11px] font-black uppercase tracking-widest text-blue-700">Lobby Loop V4 (Active)</span>
-                        <Badge className="ml-auto bg-blue-500 text-white text-[8px]">08:30 - 20:00</Badge>
-                     </div>
-
-                     <div className="absolute top-32 left-[45%] right-[40%] h-12 bg-rose-500/10 border-2 border-rose-500/40 rounded-2xl flex items-center px-6 gap-3 shadow-lg">
-                        <Zap className="h-4 w-4 text-rose-500 fill-rose-500/20" />
-                        <span className="text-[11px] font-black uppercase tracking-widest text-rose-700">Flash Sale Promo</span>
-                        <Badge className="ml-auto bg-rose-500 text-white text-[8px]">11:00 - 13:00</Badge>
+                     <div className="md:w-64 p-8 rounded-[2rem] bg-muted/20 border-2 border-dashed border-muted flex flex-col justify-center gap-1">
+                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Rule Summary</p>
+                        <div className="flex items-center justify-between mt-2">
+                           <span className="text-xs font-bold">Programs</span>
+                           <Badge variant="secondary" className="font-black text-[10px]">2 Rules</Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                           <span className="text-xs font-bold">Commands</span>
+                           <Badge variant="secondary" className="font-black text-[10px]">3 Actions</Badge>
+                        </div>
                      </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                     <div className="p-6 rounded-3xl bg-muted/10 border-2 border-dashed border-muted space-y-4">
-                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Active Policy</p>
-                        <h4 className="text-lg font-black uppercase tracking-tighter">Retail Weekend Plan</h4>
-                        <p className="text-xs text-muted-foreground leading-relaxed font-medium">Applied since Dec 12, 2025.</p>
-                     </div>
-                     <div className="p-6 rounded-3xl bg-muted/10 border-2 border-dashed border-muted space-y-4">
-                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Storage Status</p>
-                        <div className="flex items-center gap-3">
-                           <HardDrive className="h-5 w-5 text-primary" />
-                           <span className="text-lg font-black tabular-nums">4.2 GB / 16 GB</span>
+                  {/* Device Visibility (AllowList) */}
+                  <div className="space-y-6">
+                     <div className="flex items-center justify-between px-2">
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">Device Visibility (AllowList)</h3>
+                        <div className="flex items-center gap-4 text-[9px] font-bold text-muted-foreground/40 uppercase">
+                           <span className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-blue-500/20 border border-blue-500/40" /> From Schedule</span>
+                           <span className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-emerald-500/20 border border-emerald-500/40" /> Direct Publish</span>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed font-medium">Schedule resources are fully cached on local storage.</p>
                      </div>
-                     <div className="p-6 rounded-3xl bg-muted/10 border-2 border-dashed border-muted space-y-4">
-                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Next Action</p>
-                        <div className="flex items-center gap-3">
-                           <Clock className="h-5 w-5 text-amber-500" />
-                           <span className="text-lg font-black">20:00 - SLEEP</span>
+                     
+                     <div className="rounded-[2rem] border overflow-hidden">
+                        <table className="w-full text-left border-collapse">
+                           <thead>
+                              <tr className="bg-muted/30 border-b text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                 <th className="px-6 py-4">Release Program</th>
+                                 <th className="px-4 py-4 text-center">ID</th>
+                                 <th className="px-4 py-4">Source</th>
+                                 <th className="px-4 py-4">Status</th>
+                                 <th className="px-6 py-4 text-right">Progress</th>
+                              </tr>
+                           </thead>
+                           <tbody className="divide-y">
+                              <VisibilityRow 
+                                 name="Lobby Loop V4" 
+                                 id={1001} 
+                                 source="schedule" 
+                                 status="downloaded" 
+                                 progress={100} 
+                              />
+                              <VisibilityRow 
+                                 name="Summer Sale Campaign" 
+                                 id={205} 
+                                 source="direct" 
+                                 status="downloading" 
+                                 progress={74} 
+                              />
+                              <VisibilityRow 
+                                 name="Flash Sale Alert" 
+                                 id={1002} 
+                                 source="schedule" 
+                                 status="downloaded" 
+                                 progress={100} 
+                              />
+                           </tbody>
+                        </table>
+                     </div>
+                  </div>
+
+                  {/* Visual Timeline (Simplified Preview) */}
+                  <div className="space-y-4">
+                     <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest px-2">Execution Timeline (Today)</p>
+                     <div className="relative h-24 bg-muted/10 border-2 border-dashed border-muted rounded-[2rem] overflow-hidden">
+                        <div className="absolute inset-0 flex">
+                           {Array.from({ length: 24 }).map((_, i) => (
+                              <div key={i} className="flex-1 border-r border-muted/30 last:border-r-0" />
+                           ))}
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed font-medium">Automatic suspend initiated by power policy.</p>
+                        <div className="absolute top-1/2 -translate-y-1/2 left-[35%] right-[15%] h-8 bg-blue-500/10 border-2 border-blue-500/30 rounded-xl flex items-center px-4">
+                           <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 truncate">Lobby Loop (Active)</span>
+                        </div>
+                        <div className="absolute top-0 bottom-0 w-0.5 bg-rose-500 z-10" style={{ left: '65%' }} />
                      </div>
                   </div>
                </CardContent>
@@ -985,6 +1020,38 @@ function ResourceProgress({ label, used, total, unit, color = "bg-primary" }: { 
       </div>
     </div>
   );
+}
+
+function VisibilityRow({ name, id, source, status, progress }: { name: string, id: number, source: 'direct' | 'schedule', status: string, progress: number }) {
+   return (
+      <tr className="hover:bg-muted/5 transition-colors group">
+         <td className="px-6 py-4">
+            <div className="flex items-center gap-3">
+               <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center border shadow-sm", source === 'schedule' ? "bg-blue-500/5 text-blue-600 border-blue-500/10" : "bg-emerald-500/5 text-emerald-600 border-emerald-500/10")}>
+                  {source === 'schedule' ? <CalendarDays className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+               </div>
+               <span className="text-xs font-black uppercase tracking-tight">{name}</span>
+            </div>
+         </td>
+         <td className="px-4 py-4 text-center">
+            <code className="text-[10px] font-mono font-bold bg-muted px-1.5 py-0.5 rounded">{id}</code>
+         </td>
+         <td className="px-4 py-4">
+            <Badge variant="outline" className={cn("text-[9px] font-black uppercase tracking-widest border-none", source === 'schedule' ? "bg-blue-500/10 text-blue-600" : "bg-emerald-500/10 text-emerald-600")}>
+               {source}
+            </Badge>
+         </td>
+         <td className="px-4 py-4">
+            <div className="flex items-center gap-2">
+               <div className={cn("h-1.5 w-1.5 rounded-full", status === 'downloaded' ? "bg-emerald-500" : "bg-amber-500 animate-pulse")} />
+               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{status}</span>
+            </div>
+         </td>
+         <td className="px-6 py-4 text-right">
+            <span className="text-xs font-black tabular-nums">{progress}%</span>
+         </td>
+      </tr>
+   );
 }
 
 function formatRelativeTime(dateStr: string): string {
