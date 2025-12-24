@@ -13,7 +13,7 @@ import type {
 
 // API base URL - defaults to auth service directly in development
 // In production, requests should go through the gateway
-const API_BASE_URL = import.meta.env.VITE_AUTH_API_URL || 'http://localhost:8081';
+const API_BASE_URL = import.meta.env.VITE_AUTH_API_URL || '/auth';
 
 const authApiClient = axios.create({
   baseURL: API_BASE_URL,

@@ -16,7 +16,7 @@ export default defineConfig({
       // Auth Service: User registration, OIDC endpoints, JWK sets
       // Match /auth/api/* or /auth/oauth2/* but not /auth-form (our UI route)
       '/auth/': {
-        target: 'http://localhost:8081',
+        target: 'http://localhost:8082',
         changeOrigin: true,
         secure: false,
         bypass: (req) => {
