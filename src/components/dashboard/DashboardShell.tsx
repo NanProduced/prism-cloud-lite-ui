@@ -66,6 +66,7 @@ type NavGroup = {
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { BreadcrumbNav } from "@/components/dashboard/BreadcrumbNav";
 import { CommandSearch } from "@/components/ui/command-search";
+import { AIChatBubble, AIChatWindow } from "@/features/ai-assistant";
 
 const NAV_GROUPS: NavGroup[] = [
   {
@@ -131,6 +132,7 @@ const notifications = [
 
 export function DashboardShell({ children }: PropsWithChildren) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -330,6 +332,9 @@ export function DashboardShell({ children }: PropsWithChildren) {
           <div className="mx-auto max-w-[1600px]">{children}</div>
         </main>
       </SidebarInset>
+
+      <AIChatWindow isOpen={isChatOpen} />
+      <AIChatBubble isOpen={isChatOpen} onClick={() => setIsChatOpen(!isChatOpen)} />
     </SidebarProvider>
   );
 }
