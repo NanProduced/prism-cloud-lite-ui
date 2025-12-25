@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosResponse } from 'axios';
+import apiClient from './apiClient';
 import type {
   BffResponse,
   LoginRequest,
@@ -13,7 +14,7 @@ import type {
 
 // API base URL - defaults to auth service directly in development
 // In production, requests should go through the gateway
-const API_BASE_URL = import.meta.env.VITE_AUTH_API_URL || '/auth';
+const API_BASE_URL = '/auth';
 
 const authApiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -41,7 +42,7 @@ authApiClient.interceptors.response.use(
 
 // --- MOCK HELPER ---
 const MOCK_DELAY = 800;
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 const mockResponse = <T>(data?: T): Promise<BffResponse<T>> => {
   return new Promise((resolve) => {
@@ -83,8 +84,38 @@ export async function login(request: LoginRequest): Promise<BffResponse<LoginRes
     });
   }
 
+  // Ensure we only send defined fields
+  const payload = JSON.parse(JSON.stringify({
+    authType: request.authType,
+    email: request.email,
+    phone: request.phone,
+    password: request.password,
+    authCode: request.authCode,
+    continueUrl: request.continueUrl,
+    rememberMe: request.rememberMe,
+  }));
+
   return handleBffRequest<LoginResponse>(
-    authApiClient.post<BffResponse<LoginResponse>>('/login', request)
+    authApiClient.post<BffResponse<LoginResponse>>('/login', payload)
+  );
+}
+
+/**
+ * Login API - Google Login
+ */
+export async function googleLogin(request: {
+  idToken: string;
+  continueUrl: string;
+  rememberMe?: boolean;
+}): Promise<BffResponse<LoginResponse>> {
+  if (USE_MOCK) {
+    return mockResponse<LoginResponse>({
+      redirectUrl: request.continueUrl || '/',
+    });
+  }
+
+  return handleBffRequest<LoginResponse>(
+    authApiClient.post<BffResponse<LoginResponse>>('/login/google', request)
   );
 }
 
@@ -140,6 +171,30 @@ export async function registerComplete(
   );
 }
 
+/**
+ * Get current authenticated user info from Core Service
+ */
+export async function getUserInfo(): Promise<BffResponse<{
+  publicId: string;
+  email: string;
+  displayName?: string;
+  avatarId?: string;
+  phone?: string;
+  subscriptionTier?: string;
+  subscriptionExpiresAt?: string;
+}>> {
+  if (USE_MOCK) {
+    return mockResponse({
+      publicId: 'mock-user-id',
+      email: 'mock-user@prism.com',
+      displayName: 'Mock User',
+    });
+  }
+
+  // Use apiClient which has /api/v1 as baseURL
+  return handleBffRequest(apiClient.get('/user/me'));
+}
+
 async function handleBffRequest<T>(
   requestPromise: Promise<AxiosResponse<BffResponse<T>>>
 ): Promise<BffResponse<T>> {
@@ -170,9 +225,9 @@ export function getErrorCode(response: BffResponse): string | undefined {
 }
 
 /**
- * Helper to check if error is retryable
+ * Logout - Invalidate session on backend
  */
-export function isRetryable(response: BffResponse): boolean {
-  return response.error?.retryable || false;
+export async function logout(): Promise<void> {
+  await authApiClient.post('/logout');
 }
 

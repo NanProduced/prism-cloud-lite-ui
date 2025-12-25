@@ -5,11 +5,28 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, Globe } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PrismIcon } from "@/components/shared/logo/PrismIcon";
+import { useAuthStore } from "@/store/authStore";
+import { useNavigate, Link } from "react-router-dom";
+import { User, LogOut } from "lucide-react";
+import { logout as logoutApi } from "@/services/authApi";
 
 export const Navbar: React.FC = () => {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const { isAuthenticated, user, clearAuth } = useAuthStore();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await logoutApi();
+    } catch (error) {
+      console.error('Logout failed', error);
+    } finally {
+      clearAuth();
+      navigate("/");
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -78,18 +95,46 @@ export const Navbar: React.FC = () => {
               <span>{i18n.language === "en" ? "EN" : "中"}</span>
             </button>
 
-            <a
-              href="/login"
-              className="text-[13px] font-medium text-gray-400 hover:text-white transition-colors"
-            >
-              {t("nav.login")}
-            </a>
-            <Button
-              size="sm"
-              className="bg-white text-black hover:bg-gray-200 border-none h-8 px-4 text-xs shadow-none rounded-full font-semibold"
-            >
-              {t("nav.getStarted")}
-            </Button>
+            {isAuthenticated ? (
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+                  <User size={14} className="text-indigo-400" />
+                  <span className="text-[12px] text-gray-300 font-medium max-w-[120px] truncate">
+                    {user?.email}
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => navigate("/dashboard")}
+                  className="bg-white text-black hover:bg-gray-200 border-none h-8 px-4 text-xs shadow-none rounded-full font-semibold"
+                >
+                  {t("nav.dashboard", "Dashboard")}
+                </Button>
+                <button 
+                  onClick={handleLogout}
+                  className="p-1.5 text-gray-500 hover:text-red-400 transition-colors"
+                  title="Log out"
+                >
+                  <LogOut size={16} />
+                </button>
+              </div>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="text-[13px] font-medium text-gray-400 hover:text-white transition-colors"
+                >
+                  {t("nav.login")}
+                </Link>
+                <Button
+                  size="sm"
+                  onClick={() => navigate("/register")}
+                  className="bg-white text-black hover:bg-gray-200 border-none h-8 px-4 text-xs shadow-none rounded-full font-semibold"
+                >
+                  {t("nav.getStarted")}
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Actions */}
@@ -135,15 +180,36 @@ export const Navbar: React.FC = () => {
                 </a>
               ))}
               <div className="pt-4 border-t border-white/5 flex flex-col gap-3">
-                <a
-                  href="#"
-                  className="text-sm font-medium text-gray-300 hover:text-white block text-center"
-                >
-                  {t("nav.login")}
-                </a>
-                <Button className="w-full bg-white text-black hover:bg-gray-200 border-none">
-                  {t("nav.getStarted")}
-                </Button>
+                {isAuthenticated ? (
+                  <Button 
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      navigate("/dashboard");
+                    }}
+                    className="w-full bg-white text-black hover:bg-gray-200 border-none"
+                  >
+                    {t("nav.dashboard", "Dashboard")}
+                  </Button>
+                ) : (
+                  <>
+                    <Link
+                      to="/login"
+                      className="text-sm font-medium text-gray-300 hover:text-white block text-center"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      {t("nav.login")}
+                    </Link>
+                    <Button 
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        navigate("/register");
+                      }}
+                      className="w-full bg-white text-black hover:bg-gray-200 border-none"
+                    >
+                      {t("nav.getStarted")}
+                    </Button>
+                  </>
+                )}
               </div>
             </Container>
           </motion.div>

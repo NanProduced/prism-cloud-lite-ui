@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DesignerCardSplash } from '@/components/landing/DesignerCardSplash';
 import { Navbar } from '@/components/landing/Navbar';
@@ -14,24 +14,30 @@ import { CTA } from '@/components/landing/CTA';
 import { Footer } from '@/components/landing/Footer';
 
 export default function LandingPage() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    // Only show splash if it hasn't been shown in this session
+    return !window.sessionStorage.getItem('landing_splash_shown');
+  });
+
+  const handleSplashComplete = () => {
+    window.sessionStorage.setItem('landing_splash_shown', 'true');
+    setShowSplash(false);
+  };
 
   return (
     <AnimatePresence mode="wait">
-      {showSplash && (
+      {showSplash ? (
         <DesignerCardSplash
           key="designer-splash"
           duration={2500}
-          onComplete={() => setShowSplash(false)}
+          onComplete={handleSplashComplete}
         />
-      )}
-
-      {!showSplash && (
+      ) : (
         <motion.div
           key="landing-content"
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, ease: 'easeOut' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
           className="min-h-screen bg-black text-slate-50 overflow-x-hidden selection:bg-indigo-500/30 selection:text-indigo-200"
         >
           <Navbar />

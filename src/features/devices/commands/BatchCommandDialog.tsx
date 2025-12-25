@@ -37,6 +37,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { Device } from '@/types/device';
+import { executeBatchActions } from '@/services/deviceApi';
 
 // --- Types ---
 
@@ -111,6 +112,7 @@ export function BatchCommandDialog({
   const [executionResults, setExecutionResults] = useState<Record<string, any>>({});
   const [riskConfirmed, setRiskConfirmed] = useState(false);
   const [onlineOnly, setOnlineOnly] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Determine if we should hide the back button at Step 2
   const isPreSelected = initialSelectedDeviceIds.length > 0;
@@ -124,6 +126,7 @@ export function BatchCommandDialog({
       setExecutionResults({});
       setRiskConfirmed(false);
       setOnlineOnly(false);
+      setIsLoading(false);
     }
   }, [open, initialSelectedDeviceIds, isPreSelected]);
 
@@ -139,28 +142,44 @@ export function BatchCommandDialog({
   }, [step, selectedDeviceIds.size, actions.length, hasHighRisk, riskConfirmed]);
 
   const handleExecute = async () => {
+    setIsLoading(true);
     setStep(3);
     
-    const targets = mode === 'MULTI_DEVICE_SINGLE_COMMAND' 
-      ? Array.from(selectedDeviceIds) 
-      : actions.map((_, i) => `${Array.from(selectedDeviceIds)[0]}-action-${i}`);
+    try {
+      const batchActions = mode === 'MULTI_DEVICE_SINGLE_COMMAND' 
+        ? Array.from(selectedDeviceIds).map(id => ({
+            targetDeviceId: parseInt(id),
+            type: actions[0].type,
+            body: actions[0].params
+          }))
+        : actions.map(action => ({
+            targetDeviceId: parseInt(Array.from(selectedDeviceIds)[0]),
+            type: action.type,
+            body: action.params
+          }));
 
-    for (const targetId of targets) {
-      simulateStatusUpdate(targetId);
+      const response = await executeBatchActions({ actions: batchActions });
+      
+      if (response.success) {
+        toast.success('Commands dispatched');
+        const results: Record<string, any> = {};
+        batchActions.forEach((a, i) => {
+          const key = mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? String(a.targetDeviceId) : `${a.targetDeviceId}-action-${i}`;
+          results[key] = { status: 'SUCCEEDED' };
+        });
+        setExecutionResults(results);
+      } else {
+        toast.error('Failed to dispatch commands');
+      }
+    } catch (error) {
+      toast.error('Network error during dispatch');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const simulateStatusUpdate = async (id: string) => {
-    setExecutionResults(prev => ({ ...prev, [id]: { status: 'DISPATCHED' } }));
-    await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
-    setExecutionResults(prev => ({ ...prev, [id]: { status: 'ACKED' } }));
-    await new Promise(r => setTimeout(r, 1500 + Math.random() * 2000));
-    const success = Math.random() > 0.1;
-    setExecutionResults(prev => ({ ...prev, [id]: { status: success ? 'SUCCEEDED' : 'FAILED' } }));
-  };
-
   const selectedDevicesCount = selectedDeviceIds.size;
-  const currentDeviceName = devices.find(d => d.id === Array.from(selectedDeviceIds)[0])?.deviceName;
+  const currentDeviceName = devices.find(d => String(d.deviceId) === Array.from(selectedDeviceIds)[0])?.deviceName;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -387,11 +406,11 @@ function DeviceSelectStep({
         <div className="flex items-center gap-6 px-6 py-4 bg-muted/20 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b">
           {!locked && (
             <Checkbox 
-              checked={filtered.length > 0 && filtered.every(d => selectedDeviceIds.has(d.id))}
+              checked={filtered.length > 0 && filtered.every(d => selectedDeviceIds.has(String(d.deviceId)))}
               onCheckedChange={(checked) => {
                 const next = new Set(selectedDeviceIds);
-                if (checked) filtered.forEach(d => next.add(d.id));
-                else filtered.forEach(d => next.delete(d.id));
+                if (checked) filtered.forEach(d => next.add(String(d.deviceId)));
+                else filtered.forEach(d => next.delete(String(d.deviceId)));
                 onSelectionChange(next);
               }}
             />
@@ -408,25 +427,25 @@ function DeviceSelectStep({
                     <Monitor className="h-8 w-8 text-muted-foreground" />
                  </div>
                  <div>
-                    <p className="text-xl font-bold">{devices.find(d => d.id === Array.from(selectedDeviceIds)[0])?.deviceName}</p>
+                    <p className="text-xl font-bold">{devices.find(d => String(d.deviceId) === Array.from(selectedDeviceIds)[0])?.deviceName}</p>
                     <Badge variant="secondary" className="mt-2 font-normal">Target Locked</Badge>
                  </div>
               </div>
             ) : filtered.map(d => (
               <div 
-                key={d.id} 
+                key={d.deviceId} 
                 className={cn(
                   "flex items-center gap-6 px-6 py-4 hover:bg-primary/[0.02] cursor-pointer transition-all relative group",
-                  selectedDeviceIds.has(d.id) ? "bg-primary/[0.04]" : "bg-transparent"
+                  selectedDeviceIds.has(String(d.deviceId)) ? "bg-primary/[0.04]" : "bg-transparent"
                 )}
-                onClick={() => toggle(d.id)}
+                onClick={() => toggle(String(d.deviceId))}
               >
                 <Checkbox 
-                  checked={selectedDeviceIds.has(d.id)} 
+                  checked={selectedDeviceIds.has(String(d.deviceId))} 
                   onCheckedChange={(checked) => {
                     const next = new Set(selectedDeviceIds);
-                    if (checked) next.add(d.id);
-                    else next.delete(d.id);
+                    if (checked) next.add(String(d.deviceId));
+                    else next.delete(String(d.deviceId));
                     onSelectionChange(next);
                   }} 
                   onClick={(e) => e.stopPropagation()}
@@ -441,17 +460,13 @@ function DeviceSelectStep({
                       <Sun className="h-3 w-3 text-amber-500" />
                       <span className="text-[10px] font-bold tabular-nums">{d.brightness}%</span>
                    </div>
-                   <div className="flex items-center gap-2 opacity-50">
-                      <Volume2 className="h-3 w-3 text-blue-500" />
-                      <span className="text-[10px] font-bold tabular-nums">{d.volume}</span>
-                   </div>
                 </div>
                 <div className="w-24 text-right">
                    <Badge variant="outline" className={cn(
                      "text-[9px] uppercase h-5 border-none shadow-none px-2",
-                     d.status === 'online' ? "bg-emerald-500/10 text-emerald-600" : "bg-zinc-500/10 text-zinc-500"
+                     d.onlineStatus === 1 ? "bg-emerald-500/10 text-emerald-600" : "bg-zinc-500/10 text-zinc-500"
                    )}>
-                     {d.status}
+                     {d.onlineStatus === 1 ? 'online' : 'offline'}
                    </Badge>
                 </div>
               </div>
@@ -619,26 +634,27 @@ function ActionConfigStep({
                              <Switch checked={action.params.sync} onCheckedChange={(v) => updateParam(index, 'sync', v)} className="scale-75 origin-right" />
                            </div>
                         </ControlItem>
-                                                                        <ControlItem label="Select Timezone">
-                                                                          <Select 
-                                                                            value={action.params.timezone} 
-                                                                            onValueChange={(v) => updateParam(index, 'timezone', v)}
-                                                                            modal={false}
-                                                                          >
-                                                                            <SelectTrigger className="h-9 rounded-md bg-muted/30 border border-transparent focus:border-primary/40 focus:ring-0 focus-visible:ring-0 outline-none px-3 text-xs transition-all shadow-none">
-                                                                              <SelectValue placeholder="Select" />
-                                                                            </SelectTrigger>                                                    <SelectContent 
-                                                      position="popper" 
-                                                      sideOffset={4} 
-                                                      className="z-[101] min-w-[var(--radix-select-trigger-width)]"
-                                                      onCloseAutoFocus={(e) => e.preventDefault()}
-                                                    >
-                                                      <SelectItem value="UTC+8" className="text-xs">Shanghai (UTC+8)</SelectItem>
-                                                      <SelectItem value="UTC+0" className="text-xs">London (UTC+0)</SelectItem>
-                                                      <SelectItem value="UTC-5" className="text-xs">New York (UTC-5)</SelectItem>
-                                                    </SelectContent>
-                                                  </Select>
-                                                </ControlItem>
+                        <ControlItem label="Select Timezone">
+                          <Select 
+                            value={action.params.timezone} 
+                            onValueChange={(v) => updateParam(index, 'timezone', v)}
+                            modal={false}
+                          >
+                            <SelectTrigger className="h-9 rounded-md bg-muted/30 border border-transparent focus:border-primary/40 focus:ring-0 focus-visible:ring-0 outline-none px-3 text-xs transition-all shadow-none">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent 
+                              position="popper" 
+                              sideOffset={4} 
+                              className="z-[101] min-w-[var(--radix-select-trigger-width)]"
+                              onCloseAutoFocus={(e) => e.preventDefault()}
+                            >
+                              <SelectItem value="UTC+8" className="text-xs">Shanghai (UTC+8)</SelectItem>
+                              <SelectItem value="UTC+0" className="text-xs">London (UTC+0)</SelectItem>
+                              <SelectItem value="UTC-5" className="text-xs">New York (UTC-5)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </ControlItem>
                       </>
                     )}
                     {action.type === 'LANGUAGE' && (
@@ -734,8 +750,8 @@ function ReviewStep({
   onlineOnly: boolean,
   setOnlineOnly: (v: boolean) => void
 }) {
-  const selectedDevices = Array.from(selectedDeviceIds).map(id => devices.find(d => d.id === id)).filter(Boolean) as Device[];
-  const onlineCount = selectedDevices.filter(d => d.status === 'online').length;
+  const selectedDevices = Array.from(selectedDeviceIds).map(id => devices.find(d => String(d.deviceId) === id)).filter(Boolean) as Device[];
+  const onlineCount = selectedDevices.filter(d => d.onlineStatus === 1).length;
   const offlineCount = selectedDevices.length - onlineCount;
   const hasHighRisk = actions.some(a => a.type === 'REBOOT' || a.type === 'WAKE_SLEEP');
 
@@ -808,7 +824,7 @@ function ReviewStep({
                 <div className="py-4">
                   <div className="flex flex-wrap gap-1.5">
                     {selectedDevices.map(d => (
-                        <Badge key={d.id} variant="outline" className="text-[10px] font-medium bg-background px-2 py-0 h-5">
+                        <Badge key={d.deviceId} variant="outline" className="text-[10px] font-medium bg-background px-2 py-0 h-5">
                           {d.deviceName}
                         </Badge>
                     ))}
@@ -879,14 +895,15 @@ function ExecutionStep({
   const trackingData = mode === 'MULTI_DEVICE_SINGLE_COMMAND' 
     ? Array.from(selectedDeviceIds)
         .map(id => {
-          const d = devices.find(x => x.id === id);
-          if (onlineOnly && d?.status !== 'online') return null;
+          const d = devices.find(x => String(x.deviceId) === id);
+          const isOnline = d?.onlineStatus === 1;
+          if (onlineOnly && !isOnline) return null;
           return { 
             id, 
             label: d?.deviceName || id,
-            sub: d?.status === 'online' ? 'Real-time sync' : 'Pending: push on next heartbeat',
+            sub: isOnline ? 'Real-time sync' : 'Pending: push on next heartbeat',
             isDevice: true,
-            isOffline: d?.status !== 'online'
+            isOffline: !isOnline
           }
         })
         .filter(Boolean) as any[]

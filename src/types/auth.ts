@@ -24,6 +24,7 @@ export interface LoginRequest {
   password?: string;
   authCode?: string;
   continueUrl: string;
+  rememberMe?: boolean;
 }
 
 // Login response

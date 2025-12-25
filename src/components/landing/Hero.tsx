@@ -5,9 +5,14 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { ChevronRight, Terminal } from "lucide-react";
 import Prism from "@/components/Prism";
+import { useAuthStore } from "@/store/authStore";
+import { useNavigate } from "react-router-dom";
 
 export const Hero: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuthStore();
+
   return (
     <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden bg-black selection:bg-indigo-500/30">
       {/* Prism Background Effect */}
@@ -70,8 +75,12 @@ export const Hero: React.FC = () => {
           className="flex flex-col sm:flex-row items-center gap-4 mb-20"
         >
           {/* Primary CTA Button */}
-          <Button size="lg" className="h-12 px-8 rounded-full bg-white text-black hover:bg-gray-100 border-none font-semibold shadow-[0_0_20px_rgba(255,255,255,0.15)]">
-            {t("hero.primaryBtn")}
+          <Button 
+            size="lg" 
+            onClick={() => navigate(isAuthenticated ? "/dashboard" : "/register")}
+            className="h-12 px-8 rounded-full bg-white text-black hover:bg-gray-100 border-none font-semibold shadow-[0_0_20px_rgba(255,255,255,0.15)]"
+          >
+            {isAuthenticated ? t("nav.dashboard", "Go to Dashboard") : t("hero.primaryBtn")}
           </Button>
 
           {/* Secondary Demo Button */}

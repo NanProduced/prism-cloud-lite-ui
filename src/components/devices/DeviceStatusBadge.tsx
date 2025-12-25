@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { Circle } from 'lucide-react';
 
 interface DeviceStatusBadgeProps {
-  status: DeviceStatus;
+  status?: DeviceStatus | number;
   offlineDuration?: number; // seconds
   className?: string;
 }
@@ -15,36 +15,36 @@ export function DeviceStatusBadge({
   className,
 }: DeviceStatusBadgeProps) {
   const getStatusConfig = () => {
-    switch (status) {
-      case 'online':
-        return {
-          label: 'Online',
-          color: 'text-emerald-500',
-          bgColor: 'bg-emerald-50 dark:bg-emerald-950',
-          borderColor: 'border-emerald-200 dark:border-emerald-800',
-        };
-      case 'offline':
-        return {
-          label: offlineDuration ? `Offline (${formatDuration(offlineDuration)})` : 'Offline',
-          color: 'text-gray-500',
-          bgColor: 'bg-gray-50 dark:bg-gray-950',
-          borderColor: 'border-gray-200 dark:border-gray-800',
-        };
-      case 'pending':
-        return {
-          label: 'Pending',
-          color: 'text-amber-500',
-          bgColor: 'bg-amber-50 dark:bg-amber-950',
-          borderColor: 'border-amber-200 dark:border-amber-800',
-        };
-      default:
-        return {
-          label: 'Unknown',
-          color: 'text-gray-500',
-          bgColor: 'bg-gray-50 dark:bg-gray-950',
-          borderColor: 'border-gray-200 dark:border-gray-800',
-        };
+    if (status === 'online' || status === 1) {
+      return {
+        label: 'Online',
+        color: 'text-emerald-500',
+        bgColor: 'bg-emerald-50 dark:bg-emerald-950',
+        borderColor: 'border-emerald-200 dark:border-emerald-800',
+      };
     }
+    if (status === 'offline' || status === 0) {
+      return {
+        label: offlineDuration ? `Offline (${formatDuration(offlineDuration)})` : 'Offline',
+        color: 'text-gray-500',
+        bgColor: 'bg-gray-50 dark:bg-gray-950',
+        borderColor: 'border-gray-200 dark:border-gray-800',
+      };
+    }
+    if (status === 'pending') {
+      return {
+        label: 'Pending',
+        color: 'text-amber-500',
+        bgColor: 'bg-amber-50 dark:bg-amber-950',
+        borderColor: 'border-amber-200 dark:border-amber-800',
+      };
+    }
+    return {
+      label: 'Unknown',
+      color: 'text-gray-500',
+      bgColor: 'bg-gray-50 dark:bg-gray-950',
+      borderColor: 'border-gray-200 dark:border-gray-800',
+    };
   };
 
   const config = getStatusConfig();

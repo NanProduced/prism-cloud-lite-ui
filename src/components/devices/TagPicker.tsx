@@ -44,15 +44,15 @@ export function TagPicker({
   const filteredTags = useMemo(() => {
     if (!normalizedQuery) return allTags;
     return allTags.filter((tag) => {
-      const name = tag.name.toLowerCase();
-      const slug = tag.slug.toLowerCase();
+      const name = tag.tagName.toLowerCase();
+      const slug = tag.tagSlug.toLowerCase();
       return name.includes(normalizedQuery) || slug.includes(normalizedQuery);
     });
   }, [allTags, normalizedQuery]);
 
   const hasExactMatch = useMemo(() => {
     if (!normalizedQuery) return false;
-    return allTags.some((tag) => tag.name.toLowerCase() === normalizedQuery);
+    return allTags.some((tag) => tag.tagName.toLowerCase() === normalizedQuery);
   }, [allTags, normalizedQuery]);
 
   const canCreate = Boolean(normalizedQuery) && !hasExactMatch;
@@ -91,12 +91,10 @@ export function TagPicker({
   };
 
   const previewTag: Tag = {
-    id: 'preview',
-    name: draftName.trim() || 'New tag',
-    slug: '',
+    tagName: draftName.trim() || 'New tag',
+    tagSlug: '',
     color: draftColor,
     icon: draftIcon,
-    isSystem: false,
   };
 
   const customColorValue = isHexColor(draftColor) ? draftColor : '#64748b';
@@ -148,11 +146,11 @@ export function TagPicker({
                   )}
 
                       {filteredTags.map((tag) => {
-                    const selected = selectedTagIds.includes(tag.id);
+                    const selected = selectedTagIds.includes(tag.tagSlug);
                     return (
                       <CommandItem
-                        key={tag.id}
-                        value={`${tag.name} ${tag.slug}`}
+                        key={tag.tagSlug}
+                        value={`${tag.tagName} ${tag.tagSlug}`}
                         onSelect={() => onToggleTag(tag)}
                         className="gap-2"
                       >

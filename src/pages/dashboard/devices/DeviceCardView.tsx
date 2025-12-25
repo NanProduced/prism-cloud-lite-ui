@@ -57,14 +57,14 @@ export function DeviceCardView({
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
       {devices.map((device) => (
         <DeviceCard
-          key={device.id}
+          key={device.deviceId}
           device={device}
           tags={tags}
-          isSelected={selectedDeviceIds.has(device.id)}
-          onToggleSelection={() => handleToggleSelection(device.id)}
+          isSelected={selectedDeviceIds.has(String(device.deviceId))}
+          onToggleSelection={() => handleToggleSelection(String(device.deviceId))}
           onToggleDeviceTag={onToggleDeviceTag}
           onCreateTag={onCreateTag}
-          onNavigate={() => navigate(`/dashboard/devices/${device.id}`)}
+          onNavigate={() => navigate(`/dashboard/devices/${device.deviceId}`)}
         />
       ))}
     </div>
@@ -94,10 +94,11 @@ function DeviceCard({
   const isOutdated = diffMinutes > 60;
 
   const NetworkIcon =
-    device.networkType === 'WiFi' ? Wifi : device.networkType === '4G' ? RadioTower : EthernetPort;
+    device.networkType === 'WIFI' || device.networkType === 'WiFi' ? Wifi : 
+    (device.networkType === 'FOUR_G' || device.networkType === '4G') ? RadioTower : EthernetPort;
 
   const lastReportLabel = formatRelativeTime(diffMinutes);
-  const showOutdatedWarn = device.status === 'online' && isOutdated;
+  const showOutdatedWarn = device.onlineStatus === 1 && isOutdated;
 
   const displayedTags = device.tags.slice(0, 2);
   const remainingTagCount = Math.max(0, device.tags.length - displayedTags.length);
@@ -107,14 +108,14 @@ function DeviceCard({
       <div className="relative">
         <div className="cursor-pointer" onClick={onNavigate}>
           <DeviceScreenshot
-            src={device.latestScreenshot?.url}
-            timestamp={device.latestScreenshot?.timestamp}
+            src={device.lastScreenshotUrl}
+            timestamp={device.lastReportTime}
             deviceName={device.deviceName}
             className="h-24 w-full rounded-none transition-transform duration-300 group-hover:scale-105"
           />
         </div>
         <div className="absolute top-2 left-2">
-          <StatusPill status={device.status} offlineDuration={device.offlineDuration} />
+          <StatusPill status={device.onlineStatus} />
         </div>
         <div className="absolute top-2 right-2">
           <Checkbox
@@ -138,18 +139,15 @@ function DeviceCard({
               {device.model}
             </Badge>
           </div>
-          {device.alias && (
-            <p className="text-xs text-muted-foreground truncate">{device.alias}</p>
+          {device.description && (
+            <p className="text-xs text-muted-foreground truncate">{device.description}</p>
           )}
         </div>
         <div className="flex items-center gap-2 text-sm min-w-0">
           <Play className="h-4 w-4 text-muted-foreground shrink-0" />
-          {device.currentProgram ? (
+          {device.playingProgram ? (
             <div className="min-w-0 flex items-center gap-2">
-              <span className="truncate">{device.currentProgram.name}</span>
-              <span className="text-xs text-muted-foreground shrink-0">
-                {device.currentProgram.version}
-              </span>
+              <span className="truncate">{device.playingProgram}</span>
             </div>
           ) : (
             <span className="text-muted-foreground">No program</span>
@@ -160,8 +158,8 @@ function DeviceCard({
           <div className="flex items-center gap-1">
             <NetworkIcon className="h-3.5 w-3.5" />
             <span className="font-medium text-foreground/80">{device.networkType}</span>
-            {device.signalStrength !== undefined && (
-              <span className="text-muted-foreground">{device.signalStrength}%</span>
+            {device.networkStrength !== undefined && (
+              <span className="text-muted-foreground">{device.networkStrength}%</span>
             )}
           </div>
 
@@ -181,8 +179,8 @@ function DeviceCard({
 
         <TagPicker
           allTags={tags}
-          selectedTagIds={device.tags.map((t) => t.id)}
-          onToggleTag={(tag) => onToggleDeviceTag(device.id, tag)}
+          selectedTagIds={device.tags.map((t) => t.tagSlug)}
+          onToggleTag={(tag) => onToggleDeviceTag(String(device.deviceId), tag)}
           onCreateTag={onCreateTag}
         >
           <button
@@ -197,7 +195,7 @@ function DeviceCard({
               {displayedTags.length > 0 ? (
                 <>
                   {displayedTags.map((tag) => (
-                    <TagChip key={tag.id} tag={tag} className="max-w-[120px]" />
+                    <TagChip key={tag.tagSlug} tag={tag} className="max-w-[120px]" />
                   ))}
                   {remainingTagCount > 0 && (
                     <Badge variant="outline" className="text-xs">
@@ -219,18 +217,15 @@ function DeviceCard({
 
 function StatusPill({
   status,
-  offlineDuration,
 }: {
-  status: Device['status'];
-  offlineDuration?: number;
+  status: Device['onlineStatus'];
 }) {
   const { label, className } = (() => {
-    if (status === 'online') {
+    if (status === 1) {
       return { label: 'Online', className: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-200 border-emerald-500/30' };
     }
-    if (status === 'offline') {
-      const duration = offlineDuration ? formatDuration(offlineDuration) : undefined;
-      return { label: duration ? `Offline · ${duration}` : 'Offline', className: 'bg-muted/50 text-muted-foreground border-border' };
+    if (status === 0) {
+      return { label: 'Offline', className: 'bg-muted/50 text-muted-foreground border-border' };
     }
     return { label: 'Pending', className: 'bg-amber-500/15 text-amber-700 dark:text-amber-200 border-amber-500/30' };
   })();

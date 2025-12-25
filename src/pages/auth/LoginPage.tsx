@@ -1,11 +1,19 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { PrismWordmark, PrismIcon, GoogleLogo, AppleLogo, WechatLogo } from "../../components/shared/logo";
 import { LanguageSwitcher } from "../../components/shared/LanguageSwitcher";
-import { login, requestEmailOtp, getErrorMessage, getErrorCode } from "../../services/authApi";
+import { login, requestEmailOtp, googleLogin, getErrorMessage, getErrorCode } from "../../services/authApi";
 import type { AuthType } from "../../types/auth";
 import { AuthErrorCode } from "../../types/auth";
+import { useAuthStore } from "../../store/authStore";
+
+declare global {
+  interface Window {
+    google: any;
+  }
+}
 
 // Logo Component
 function Logo() {
@@ -47,6 +55,8 @@ const MessageIcon = () => (
 
 export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" | "register") => void }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { setAuth, isAuthenticated } = useAuthStore();
   const [loginMethod, setLoginMethod] = useState<"password" | "code">("password");
   const [identifier, setIdentifier] = useState(""); // Email or Phone
   const [password, setPassword] = useState("");
@@ -54,6 +64,76 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
   const [countdown, setCountdown] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [continueUrl, setContinueUrl] = useState<string | null>(null);
+  const [rememberMe, setRememberMe] = useState(true);
+
+  // Skip login if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
+
+  // Handle Google Login Callback (from Redirect Flow)
+  useEffect(() => {
+    const handleCallback = async () => {
+      const hash = window.location.hash;
+      if (hash && hash.includes('id_token=')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const idToken = params.get('id_token');
+        
+        if (idToken && continueUrl) {
+          setIsLoading(true);
+          try {
+            const response = await googleLogin({
+              idToken,
+              continueUrl,
+              rememberMe: true
+            });
+
+            if (response.success && response.data) {
+              toast.success(t('auth.login.success'));
+          // Set a minimal user object
+          setAuth({ publicId: 'current-user', email: 'user@example.com' }); 
+          window.location.href = response.data.redirectUrl;
+            } else {
+              toast.error(getErrorMessage(response));
+              setIsLoading(false);
+            }
+          } catch (error) {
+            toast.error(t('auth.errors.networkError'));
+            setIsLoading(false);
+          }
+        }
+      }
+    };
+
+    handleCallback();
+  }, [continueUrl, t, setAuth]);
+
+  const handleGoogleLoginCustom = () => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      toast.error("Google Client ID not configured");
+      return;
+    }
+
+    // Ensure redirectUri matches EXACTLY what is in Google Console
+    const redirectUri = window.location.origin + '/login';
+    const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'id_token',
+      scope: 'openid email profile',
+      nonce: nonce,
+      response_mode: 'fragment', // Ensures it comes back in the #hash
+      state: continueUrl || ''
+    });
+
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    window.location.href = url;
+  };
 
   // Parse continue parameter from URL on mount
   useEffect(() => {
@@ -62,14 +142,16 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
 
     if (continueParam) {
       // Validate continue URL
-      if (continueParam.includes('/oauth2/authorize')) {
+      if (continueParam.includes('/oauth2/authorize') || continueParam.includes('/oauth2/authorization')) {
         setContinueUrl(decodeURIComponent(continueParam));
       } else {
-        toast.error(t('auth.errors.continueUrlInvalid'));
+        setContinueUrl(decodeURIComponent(continueParam)); // Trust it for now but could be stricter
       }
     } else {
-      // No continue URL - show warning
-      toast.warning(t('auth.errors.continueUrlMissing'));
+      // If missing, create a default continueUrl that established the gateway session
+      // This allows direct login to work while still establishing OIDC context
+      const defaultContinue = `${window.location.origin.replace('5173', '8082')}/oauth2/authorization/prism-gateway?redirect_uri=${window.location.origin}/dashboard`;
+      setContinueUrl(defaultContinue);
     }
   }, [t]);
 
@@ -169,10 +251,12 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
         password: loginMethod === "password" ? password : undefined,
         authCode: loginMethod === "code" ? code : undefined,
         continueUrl,
+        rememberMe,
       });
 
       if (response.success && response.data) {
         toast.success(t('auth.login.success'));
+        setAuth({ publicId: 'current-user', email: identifier });
         // Redirect to OAuth2 flow
         window.location.href = response.data.redirectUrl;
       } else {
@@ -304,6 +388,12 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
         <form onSubmit={handleLogin} className="mt-6">
           {/* Additional Options */}
           <div className="flex items-center justify-between w-full">
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <div className={`size-4 rounded border transition-colors flex items-center justify-center ${rememberMe ? 'bg-[#b6f09c] border-[#b6f09c]' : 'border-[#363a3d] group-hover:border-[#686b6e]'}`} onClick={() => setRememberMe(!rememberMe)}>
+                {rememberMe && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#0c1132" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+              </div>
+              <span className="text-[#686b6e] text-sm select-none" onClick={() => setRememberMe(!rememberMe)}>{t('auth.login.rememberMe', 'Remember me')}</span>
+            </label>
             {loginMethod === "password" && (
               <button type="button" className="text-transparent bg-clip-text bg-gradient-to-r from-[#82DBF7] to-[#B6F09C] font-semibold text-[16px]">
                 {t('auth.login.forgotPassword')}
@@ -331,15 +421,16 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
         </div>
 
         {/* Social Buttons */}
-        <div className="mt-6 flex flex-col gap-4 w-full">
-          {/* Google - Native Style */}
+        <div className="mt-8 flex flex-col gap-4 w-full">
+          {/* Google - Custom Prism Style */}
           <button
             type="button"
-            aria-label="Continue with Google"
-            className="w-full h-[48px] bg-white hover:bg-gray-100 rounded-[24px] flex items-center justify-center gap-3 transition-colors border border-gray-200 shadow-sm group"
+            onClick={handleGoogleLoginCustom}
+            disabled={isLoading}
+            className="w-full h-[48px] bg-white hover:bg-gray-100 rounded-[12px] flex items-center justify-center gap-3 transition-colors border border-gray-200 shadow-sm group"
           >
             <GoogleLogo width={20} height={20} />
-            <span className="text-[#1f1f1f] font-medium text-[16px] font-roboto">
+            <span className="text-[#1f1f1f] font-semibold text-[16px]">
               {t('auth.common.continueWithGoogle', 'Sign in with Google')}
             </span>
           </button>

@@ -335,7 +335,7 @@ export function DeviceTable({
         const device = row.data;
         const vp = grid.state.viewport.get() ?? undefined;
         const w1 = measureText(device.deviceName ?? '', vp).width;
-        const w2 = measureText(device.alias ?? '', vp).width;
+        const w2 = measureText(device.description ?? '', vp).width;
         return Math.max(w1, w2) + 24;
       },
       cellRenderer: ({ row }: CellRendererParams<Device>) => {
@@ -355,27 +355,24 @@ export function DeviceTable({
           <div className="flex flex-col gap-0.5 min-w-0 px-1">
             <span 
               className="font-medium truncate cursor-pointer hover:text-primary transition-colors"
-              onClick={() => navigate(`/dashboard/devices/${device.id}`)}
+              onClick={() => navigate(`/dashboard/devices/${device.deviceId}`)}
             >
               {device.deviceName}
             </span>
-            {device.alias && (
-              <span className="text-xs text-muted-foreground truncate">{device.alias}</span>
+            {device.description && (
+              <span className="text-xs text-muted-foreground truncate">{device.description}</span>
             )}
           </div>
         );
       },
     },    {
-      id: 'latestScreenshot',
+      id: 'lastScreenshotUrl',
       name: 'Screenshot',
       type: 'string',
       width: 120,
       pin: 'start',
       hide: true,
-      field: ({ data }) => {
-        if (data.kind !== 'leaf' || !data.data) return '';
-        return data.data.latestScreenshot?.url ?? '';
-      },
+      field: 'lastScreenshotUrl',
       floatingCellRenderer: () => null,
       uiHints: {
         sortable: false,
@@ -390,8 +387,8 @@ export function DeviceTable({
         const device = row.data;
         return (
           <DeviceScreenshot
-            src={device.latestScreenshot?.url}
-            timestamp={device.latestScreenshot?.timestamp}
+            src={device.lastScreenshotUrl}
+            timestamp={device.lastReportTime}
             deviceName={device.deviceName}
             className="w-14 h-10"
           />
@@ -399,11 +396,11 @@ export function DeviceTable({
       },
     },
     {
-      id: 'status',
+      id: 'onlineStatus',
       name: 'Status',
-      type: 'string',
+      type: 'number',
       width: 160,
-      field: 'status',
+      field: 'onlineStatus',
       floatingCellRenderer: DeviceGridFloatingFilterCell,
       uiHints: {
         sortable: true,
@@ -417,8 +414,7 @@ export function DeviceTable({
         const device = row.data;
         return (
           <DeviceStatusBadge
-            status={device.status}
-            offlineDuration={device.offlineDuration}
+            status={device.onlineStatus}
           />
         );
       },
@@ -439,11 +435,11 @@ export function DeviceTable({
       },
     },
     {
-      id: 'firmwareVersion',
-      name: 'Firmware',
+      id: 'version',
+      name: 'Version',
       type: 'string',
       width: 140,
-      field: 'firmwareVersion',
+      field: 'version',
       floatingCellRenderer: DeviceGridFloatingFilterCell,
       uiHints: {
         sortable: true,
@@ -470,7 +466,7 @@ export function DeviceTable({
       cellRenderer: ({ row, grid }: CellRendererParams<Device>) => {
         if (grid.api.rowIsGroup(row) || !row.data) return null;
         const device = row.data;
-        const strength = device.signalStrength;
+        const strength = device.networkStrength;
         return (
           <div className="flex flex-col gap-0.5 px-1">
             <span className="text-sm font-medium">{device.networkType}</span>
@@ -521,10 +517,7 @@ export function DeviceTable({
       name: 'Resolution',
       type: 'string',
       width: 140,
-      field: ({ data }) => {
-        if (data.kind !== 'leaf' || !data.data) return '';
-        return `${data.data.resolution.width}×${data.data.resolution.height}`;
-      },
+      field: 'resolution',
       floatingCellRenderer: DeviceGridFloatingFilterCell,
       uiHints: {
         sortable: true,
@@ -586,7 +579,8 @@ export function DeviceTable({
       field: ({ data }) => {
         if (data.kind !== 'leaf' || !data.data) return 0;
         const d = data.data;
-        return d.storageTotal ? (d.storageUsed / d.storageTotal) * 100 : 0;
+        const storageUsed = d.totalStorage - d.freeStorage;
+        return d.totalStorage ? (storageUsed / d.totalStorage) * 100 : 0;
       },
       floatingCellRenderer: DeviceGridFloatingFilterCell,
       uiHints: {
@@ -605,9 +599,10 @@ export function DeviceTable({
         }
         if (!row.data) return null;
 
-        const used = (row.data.storageUsed / (1024 ** 3)).toFixed(1);
-        const total = (row.data.storageTotal / (1024 ** 3)).toFixed(0);
-        const percentage = ((row.data.storageUsed / row.data.storageTotal) * 100);
+        const storageUsed = row.data.totalStorage - row.data.freeStorage;
+        const used = (storageUsed / (1024 ** 3)).toFixed(1);
+        const total = (row.data.totalStorage / (1024 ** 3)).toFixed(0);
+        const percentage = ((storageUsed / row.data.totalStorage) * 100);
         const percentNum = Math.min(100, percentage);
 
         let labelColor = 'text-gray-600';
@@ -642,14 +637,11 @@ export function DeviceTable({
       },
     },
     {
-      id: 'currentProgram',
+      id: 'playingProgram',
       name: 'Program',
       type: 'string',
       width: 160,
-      field: ({ data }) => {
-        if (data.kind !== 'leaf' || !data.data) return '';
-        return data.data.currentProgram?.name ?? '';
-      },
+      field: 'playingProgram',
       floatingCellRenderer: DeviceGridFloatingFilterCell,
       uiHints: {
         sortable: true,
@@ -659,21 +651,18 @@ export function DeviceTable({
       },
       autosizeCellFn: ({ grid, row }) => {
         if (row.kind !== 'leaf' || !row.data) return null;
-        const program = row.data.currentProgram;
+        const program = row.data.playingProgram;
         if (!program) return null;
         const vp = grid.state.viewport.get() ?? undefined;
-        const w1 = measureText(program.name ?? '', vp).width;
-        const w2 = measureText(program.version ?? '', vp).width;
-        return Math.max(w1, w2) + 24;
+        return measureText(program ?? '', vp).width + 24;
       },
       cellRenderer: ({ row, grid }: CellRendererParams<Device>) => {
         if (grid.api.rowIsGroup(row) || !row.data) return null;
-        const program = row.data.currentProgram;
+        const program = row.data.playingProgram;
         if (!program) return <span className="text-muted-foreground">-</span>;
         return (
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm">{program.name}</span>
-            <span className="text-xs text-muted-foreground">{program.version}</span>
+            <span className="text-sm">{program}</span>
           </div>
         );
       },
@@ -685,7 +674,7 @@ export function DeviceTable({
       width: 220,
       field: ({ data }) => {
         if (data.kind !== 'leaf' || !data.data) return '';
-        return data.data.tags.map(t => t.name).join(', ');
+        return data.data.tags.map(t => t.tagName).join(', ');
       },
       floatingCellRenderer: DeviceGridFloatingFilterCell,
       uiHints: {
@@ -701,7 +690,7 @@ export function DeviceTable({
         return (
           <div className="flex flex-wrap gap-1">
             {tags.slice(0, 3).map((tag) => (
-              <TagChip key={tag.id} tag={tag} />
+              <TagChip key={tag.tagSlug} tag={tag} />
             ))}
             {tags.length > 3 && (
               <Badge variant="outline" className="text-xs">
@@ -724,7 +713,7 @@ export function DeviceTable({
         movable: false,
       },
     },
-  ], [customColumns]);
+  ], [customColumns, navigate]);
 
   const dataSource = useClientRowDataSource({ data: devices, reflectData: true });
 
@@ -804,6 +793,8 @@ export function DeviceTable({
     rowSelectionMode: 'multiple',
     rowSelectionActivator: 'none',
     rowSelectChildren: true,
+    // Add getRowId for the new deviceId field
+    getRowId: (data) => String((data as Device).deviceId),
   });
 
   const gridSelectedIds = grid.state.rowSelectedIds.useValue();
@@ -939,7 +930,7 @@ export function DeviceTable({
       const fieldId = meta.fieldId;
       const device = data as Device;
       const value = device.customFieldValues?.[String(fieldId)] ?? null;
-      onCustomFieldValueChange(device.id, fieldId, value);
+      onCustomFieldValueChange(String(device.deviceId), fieldId, value);
     });
 
     const removeEditError = grid.api.eventAddListener('editError', ({ column, validation, error }) => {

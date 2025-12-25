@@ -3,101 +3,36 @@
 import type { DeviceCustomFieldValues } from './device-custom-field';
 
 export type DeviceStatus = 'pending' | 'online' | 'offline';
-export type NetworkType = 'WiFi' | '4G' | 'Ethernet';
+export type NetworkType = 'WiFi' | '4G' | 'Ethernet' | 'FOUR_G' | 'WIFI' | 'ETHERNET';
 
 export interface Tag {
-  id: string;
-  name: string;
-  slug: string;
-  // Either a hex color like "#3b82f6" or a preset key like "slate"/"sky".
+  tagName: string;
+  tagSlug: string;
   color: string;
-  // Optional lucide icon name (e.g. "MapPin", "Store"). Not all tags need an icon.
   icon?: string;
   description?: string;
-  // Reserved for future: system auto-tags vs user-defined tags.
-  // Lite UI currently treats all tags as user-defined.
-  isSystem: boolean;
-}
-
-export interface Resolution {
-  width: number;
-  height: number;
-}
-
-export interface CurrentProgram {
-  id: string;
-  name: string;
-  version: string;
-}
-
-export interface Screenshot {
-  url: string;
-  timestamp: string;
-}
-
-export interface HistoricalScreenshot extends Screenshot {
-  id: string;
-  size: number; // bytes
-}
-
-export type LocationSource = 'reported' | 'manual';
-
-export interface DeviceLocation {
-  lat: number;
-  lng: number;
-  source: LocationSource;
-  timestamp: string;
-  accuracyM?: number;
 }
 
 export interface Device {
-  id: string;
+  deviceId: number;
   deviceName: string;
-  alias?: string;
-  serialNumber?: string;
-
-  // Status
-  status: DeviceStatus;
-  lastReportTime: string;
+  description?: string;
+  onlineStatus: number; // 1 for online, 0 for offline, etc.
   onboardingTime: string;
-  offlineDuration?: number; // seconds
-
-  // Hardware Info
+  lastReportTime: string;
+  createTime: string;
   model: string;
-  firmwareVersion: string;
-  resolution: Resolution;
-
-  // Network
+  version: string;
+  brightness: number;
   networkType: NetworkType;
-  websocketStatus: 'connected' | 'disconnected';
-  ipAddress?: string;
-  macAddress?: string;
-  signalStrength?: number; // 0-100
-
-  // Display Control
-  brightness: number; // 0-100
-  colorTemperature?: number; // 2000-6500K
-  volume: number; // 0-100
-
-  // Storage
-  storageUsed: number; // bytes
-  storageTotal: number; // bytes
-
-  // Current Program
-  currentProgram?: CurrentProgram;
-
-  // Tags
+  networkStrength?: number;
+  playingProgram?: string;
+  resolution: string;
+  totalStorage: number;
+  freeStorage: number;
+  lastScreenshotUrl?: string;
   tags: Tag[];
-
-  // Custom Fields (user-defined columns)
-  customFieldValues?: DeviceCustomFieldValues;
-
-  // Screenshot
-  latestScreenshot?: Screenshot;
-
-  // Location (WGS84)
-  reportedLocation?: DeviceLocation;
-  manualLocation?: DeviceLocation;
+  customFieldValues?: Record<string, any>;
 }
 
 // Filter Condition Types

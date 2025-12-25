@@ -85,9 +85,64 @@ const publishedPrograms = [
   { name: "Emergency Override", version: "v1.0", devices: 0, status: "inactive" },
 ];
 
+import { useEffect, useState, useMemo, type ComponentType } from "react";
+import { useQuery } from '@tanstack/react-query';
+import { getDevices } from '@/services/deviceApi';
+import { useAuthStore } from '@/store/authStore';
+import {
+  Area,
+  AreaChart,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Activity,
+  AlertCircle,
+  HardDrive,
+  Layers,
+  MonitorPlay,
+  MoreVertical,
+  PlayCircle,
+  Upload,
+  Wifi,
+  Zap,
+  History,
+  FileText,
+  ExternalLink,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
+
+// ... existing storageData, onlineTrendData, playbackData, pendingTasks, recentAlerts, offlineDevices, publishedPrograms ...
+
 export function DashboardOverview() {
   const [isMounted, setIsMounted] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+
+  const { data: bffResponse } = useQuery({
+    queryKey: ['devices'],
+    queryFn: () => getDevices(),
+  });
+
+  const devices = useMemo(() => bffResponse?.data || [], [bffResponse]);
+  const onlineCount = useMemo(() => devices.filter(d => d.onlineStatus === 1).length, [devices]);
+  const totalCount = devices.length;
+  const onlinePercentage = totalCount > 0 ? Math.round((onlineCount / totalCount) * 100) : 0;
 
   useEffect(() => {
     const timer = setTimeout(() => setIsMounted(true), 100);
@@ -100,16 +155,16 @@ export function DashboardOverview() {
         <Card className="flex-1 min-w-[280px] border-l-4 border-l-indigo-500">
           <CardContent className="p-6 flex items-center gap-4">
             <Avatar className="h-12 w-12 border-2 border-indigo-100">
-              <AvatarImage src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&h=80&fit=crop" />
-              <AvatarFallback>JD</AvatarFallback>
+              <AvatarImage src={user?.avatarId ? `/api/v1/assets/${user.avatarId}` : undefined} />
+              <AvatarFallback>{user?.displayName?.slice(0, 2).toUpperCase() || '??'}</AvatarFallback>
             </Avatar>
             <div>
-              <h3 className="font-semibold text-lg">Prism Cloud Admin</h3>
+              <h3 className="font-semibold text-lg">{user?.displayName || 'Prism User'}</h3>
               <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
                 <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
                   Pro Plan
                 </Badge>
-                <span>Exp: Dec 31, 2025</span>
+                <span className="truncate max-w-[150px]">{user?.email}</span>
               </div>
             </div>
           </CardContent>
@@ -118,9 +173,9 @@ export function DashboardOverview() {
         <div className="flex-[2] grid grid-cols-1 md:grid-cols-3 gap-4">
           <MetricCard
             title="Online Devices"
-            value="15"
-            total="/ 16"
-            percentage={94}
+            value={String(onlineCount)}
+            total={`/ ${totalCount}`}
+            percentage={onlinePercentage}
             color="bg-emerald-500"
             icon={Wifi}
             onClick={() => navigate("/dashboard/devices")}

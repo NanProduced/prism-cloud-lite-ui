@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { DeviceTable } from './DeviceTable';
 import { DeviceCardView } from './DeviceCardView';
-import { mockDevices, mockTags } from '@/lib/mock/devices';
+import { getDevices } from '@/services/deviceApi';
 import type { Device, Tag } from '@/types/device';
 import { mockDeviceCustomFieldDefs } from '@/lib/mock/device-custom-fields';
 import type { DeviceCustomFieldDef, DeviceCustomFieldValue } from '@/types/device-custom-field';
@@ -16,8 +17,14 @@ import { BatchCommandDialog } from '@/features/devices/commands/BatchCommandDial
 type ViewMode = 'grid' | 'card';
 
 export default function DevicesPage() {
-  const [tags, setTags] = useState<Tag[]>(() => mockTags);
-  const [devices, setDevices] = useState<Device[]>(() => mockDevices);
+  const { data: bffResponse, isLoading: isQueryLoading } = useQuery({
+    queryKey: ['devices'],
+    queryFn: () => getDevices(),
+  });
+
+  const devices = useMemo(() => bffResponse?.data || [], [bffResponse]);
+
+  const [tags, setTags] = useState<Tag[]>([]);
   const [customFieldDefs, setCustomFieldDefs] = useState<DeviceCustomFieldDef[]>(() => mockDeviceCustomFieldDefs);
   const [isProActive, setIsProActive] = useState(() => {
     const stored = window.localStorage.getItem('devices.planProActive');
@@ -40,6 +47,19 @@ export default function DevicesPage() {
     return window.localStorage.getItem('devices.gridConfirmDismissed') === 'true';
   });
 
+  // Extract all unique tags from devices
+  useEffect(() => {
+    if (devices.length > 0) {
+      const allTags = new Map<string, Tag>();
+      devices.forEach(d => {
+        d.tags?.forEach(t => {
+          allTags.set(t.tagSlug, t);
+        });
+      });
+      setTags(Array.from(allTags.values()));
+    }
+  }, [devices]);
+
   useEffect(() => {
     window.localStorage.setItem('devices.viewMode', viewMode);
   }, [viewMode]);
@@ -48,87 +68,33 @@ export default function DevicesPage() {
     window.localStorage.setItem('devices.planProActive', String(isProActive));
   }, [isProActive]);
 
-  useEffect(() => {
-    if (fullDevices.length > 0) setFullDevices(devices);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [devices]);
-
   const createTag = (draft: { name: string; color: string; icon?: string }): Tag => {
-    const rawName = draft.name.trim();
-    const randomPart =
-      globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    const id = `tag-${randomPart}`;
-
-    const baseSlug = slugify(rawName) || `tag-${randomPart.slice(-6)}`;
-    let slug = baseSlug;
-    let i = 2;
-    while (tags.some((t) => t.slug === slug)) {
-      slug = `${baseSlug}-${i++}`;
-    }
-
     const newTag: Tag = {
-      id,
-      name: rawName,
-      slug,
+      tagName: draft.name.trim(),
+      tagSlug: slugify(draft.name.trim()),
       color: draft.color,
       icon: draft.icon,
-      isSystem: false,
     };
     setTags((prev) => [newTag, ...prev]);
     return newTag;
   };
 
   const toggleDeviceTag = (deviceId: string, tag: Tag) => {
-    setDevices((prev) =>
-      prev.map((d) => {
-        if (d.id !== deviceId) return d;
-        const has = d.tags.some((t) => t.id === tag.id);
-        const nextTags = has ? d.tags.filter((t) => t.id !== tag.id) : [tag, ...d.tags];
-        return { ...d, tags: nextTags };
-      }),
-    );
+    // This now only affects local state or would need an API call
+    console.log('Toggle tag', deviceId, tag);
   };
 
   const updateDeviceCustomFieldValue = (deviceId: string, fieldId: number, value: DeviceCustomFieldValue) => {
-    setDevices((prev) =>
-      prev.map((d) => {
-        if (d.id !== deviceId) return d;
-        const current = d.customFieldValues ?? {};
-        return {
-          ...d,
-          customFieldValues: {
-            ...current,
-            [String(fieldId)]: value,
-          },
-        };
-      }),
-    );
+    // This would need a PATCH call to /api/v1/devices/{deviceId}/custom-fields
+    console.log('Update custom field', deviceId, fieldId, value);
   };
 
   const addCustomFieldDef = (def: DeviceCustomFieldDef) => {
     setCustomFieldDefs((prev) => [...prev, def].sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0)));
-    setDevices((prev) =>
-      prev.map((d) => ({
-        ...d,
-        customFieldValues: {
-          ...(d.customFieldValues ?? {}),
-          [String(def.fieldId)]: null,
-        },
-      })),
-    );
   };
 
   const deleteCustomFieldDef = (fieldId: number) => {
     setCustomFieldDefs((prev) => prev.filter((d) => d.fieldId !== fieldId));
-    setDevices((prev) =>
-      prev.map((d) => {
-        const current = d.customFieldValues;
-        if (!current) return d;
-        const next = { ...current };
-        delete next[String(fieldId)];
-        return { ...d, customFieldValues: next };
-      }),
-    );
   };
 
   const filteredDevices = useMemo(() => {
@@ -138,24 +104,26 @@ export default function DevicesPage() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((device) => (
         device.deviceName.toLowerCase().includes(query) ||
-        device.alias?.toLowerCase().includes(query) ||
+        device.description?.toLowerCase().includes(query) ||
         device.model.toLowerCase().includes(query) ||
-        device.serialNumber?.toLowerCase().includes(query) ||
-        device.tags.some((t) => t.name.toLowerCase().includes(query))
+        device.tags.some((t) => t.tagName.toLowerCase().includes(query))
       ));
     }
 
     if (filters.status && filters.status.length > 0) {
-      filtered = filtered.filter(d => filters.status!.includes(d.status));
+      filtered = filtered.filter(d => {
+        const statusStr = d.onlineStatus === 1 ? 'online' : 'offline';
+        return filters.status!.includes(statusStr as any);
+      });
     }
 
     if (filters.networkType && filters.networkType.length > 0) {
-      filtered = filtered.filter(d => filters.networkType!.includes(d.networkType));
+      filtered = filtered.filter(d => filters.networkType!.includes(d.networkType as any));
     }
 
     if (filters.signalStrength) {
       filtered = filtered.filter(d => {
-        const strength = d.signalStrength || 0;
+        const strength = d.networkStrength || 0;
         if (filters.signalStrength === 'strong') return strength >= 70;
         if (filters.signalStrength === 'fair') return strength >= 40 && strength < 70;
         if (filters.signalStrength === 'weak') return strength < 40;
@@ -190,13 +158,19 @@ export default function DevicesPage() {
     setShowGridDialog(false);
     setGridLoading(true);
 
-    // Lite/mock: full dataset is already available locally.
-    // Future: replace with backend full-load request.
     await new Promise((r) => setTimeout(r, 400));
     setFullDevices(devices);
     setGridLoading(false);
     setViewMode('grid');
   };
+
+  if (isQueryLoading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4 p-6">
@@ -206,7 +180,7 @@ export default function DevicesPage() {
           <div className="relative flex-1 max-w-md min-w-[220px]">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search by name, alias, model, or serial number..."
+              placeholder="Search by name, description, or model..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -283,19 +257,13 @@ export default function DevicesPage() {
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Online:</span>
           <span className="font-medium text-emerald-600">
-            {devices.filter((d) => d.status === 'online').length}
+            {devices.filter((d) => d.onlineStatus === 1).length}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Offline:</span>
           <span className="font-medium text-gray-600">
-            {devices.filter((d) => d.status === 'offline').length}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Pending:</span>
-          <span className="font-medium text-amber-600">
-            {devices.filter((d) => d.status === 'pending').length}
+            {devices.filter((d) => d.onlineStatus === 0).length}
           </span>
         </div>
         {viewMode === 'card' && (searchQuery || hasAdvancedFilters) && (
@@ -375,6 +343,14 @@ export default function DevicesPage() {
       </Dialog>
     </div>
   );
+}
+
+function slugify(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
 }
 
 function slugify(value: string): string {

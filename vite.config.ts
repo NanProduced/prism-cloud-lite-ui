@@ -13,40 +13,32 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // Auth Service: User registration, OIDC endpoints, JWK sets
-      // Match /auth/api/* or /auth/oauth2/* but not /auth-form (our UI route)
-      '/auth/': {
-        target: 'http://localhost:8082',
+      // Auth Service API
+      '/auth': {
+        target: 'http://127.0.0.1:8082',
         changeOrigin: true,
         secure: false,
-        bypass: (req) => {
-          // Don't proxy if it's our auth UI route
-          if (req.url && (req.url === '/auth' || req.url.startsWith('/auth/'))) {
-            return false;
-          }
-          return undefined;
-        },
       },
+      // OAuth2 endpoints
       '/oauth2': {
-        target: 'http://localhost:8082',
+        target: 'http://127.0.0.1:8082',
         changeOrigin: true,
         secure: false,
       },
-      // Gateway Service: OAuth2 login callback (API endpoint, not UI)
-      '/login/': {
-        target: 'http://localhost:8082',
+      // Gateway Service endpoints (callback, logout)
+      '/login': {
+        target: 'http://127.0.0.1:8082',
         changeOrigin: true,
         secure: false,
       },
-      // Gateway Service: User logout
       '/logout': {
-        target: 'http://localhost:8082',
+        target: 'http://127.0.0.1:8082',
         changeOrigin: true,
         secure: false,
       },
-      // Gateway Service: Business API (/api/v1/*)
+      // Business API
       '/api': {
-        target: 'http://localhost:8082',
+        target: 'http://127.0.0.1:8082',
         changeOrigin: true,
         secure: false,
       },

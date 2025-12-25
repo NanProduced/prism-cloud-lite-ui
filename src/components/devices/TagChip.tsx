@@ -34,7 +34,7 @@ export function TagChip({ tag, className, textClassName, iconClassName }: TagChi
       }
     >
       {Icon && <Icon className={cn('h-3 w-3', iconClassName)} />}
-      <span className={cn('truncate', textClassName)}>{tag.name}</span>
+      <span className={cn('truncate', textClassName)}>{tag.tagName}</span>
     </Badge>
   );
 }
