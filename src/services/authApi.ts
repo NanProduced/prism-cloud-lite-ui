@@ -39,12 +39,32 @@ authApiClient.interceptors.response.use(
   }
 );
 
+// --- MOCK HELPER ---
+const MOCK_DELAY = 800;
+const USE_MOCK = true;
+
+const mockResponse = <T>(data?: T): Promise<BffResponse<T>> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        success: true,
+        data: data as T,
+        requestId: 'mock-req-id-' + Date.now(),
+        timestamp: new Date().toISOString(),
+      });
+    }, MOCK_DELAY);
+  });
+};
+// -------------------
+
 /**
  * Login API - Request email OTP
  */
 export async function requestEmailOtp(
   request: RequestEmailOtpRequest
 ): Promise<BffResponse<void>> {
+  if (USE_MOCK) return mockResponse<void>();
+  
   return handleBffRequest<void>(
     authApiClient.post<BffResponse<void>>(
       '/login/request-email-otp',
@@ -57,6 +77,12 @@ export async function requestEmailOtp(
  * Login API - Submit login
  */
 export async function login(request: LoginRequest): Promise<BffResponse<LoginResponse>> {
+  if (USE_MOCK) {
+    return mockResponse<LoginResponse>({
+      redirectUrl: request.continueUrl || '/',
+    });
+  }
+
   return handleBffRequest<LoginResponse>(
     authApiClient.post<BffResponse<LoginResponse>>('/login', request)
   );
@@ -68,6 +94,8 @@ export async function login(request: LoginRequest): Promise<BffResponse<LoginRes
 export async function registerRequestOtp(
   request: RegisterRequestOtpRequest
 ): Promise<BffResponse<void>> {
+  if (USE_MOCK) return mockResponse<void>();
+
   return handleBffRequest<void>(
     authApiClient.post<BffResponse<void>>(
       '/register/request-otp',
@@ -82,6 +110,12 @@ export async function registerRequestOtp(
 export async function registerVerifyOtp(
   request: RegisterVerifyOtpRequest
 ): Promise<BffResponse<RegisterVerifyOtpResponse>> {
+  if (USE_MOCK) {
+    return mockResponse<RegisterVerifyOtpResponse>({
+      verificationToken: 'mock-verification-token-' + Date.now(),
+    });
+  }
+
   return handleBffRequest<RegisterVerifyOtpResponse>(
     authApiClient.post<BffResponse<RegisterVerifyOtpResponse>>(
       '/register/verify-otp',
@@ -96,6 +130,8 @@ export async function registerVerifyOtp(
 export async function registerComplete(
   request: RegisterCompleteRequest
 ): Promise<BffResponse<void>> {
+  if (USE_MOCK) return mockResponse<void>();
+
   return handleBffRequest<void>(
     authApiClient.post<BffResponse<void>>(
       '/register/complete',

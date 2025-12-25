@@ -80,7 +80,7 @@ export default function RegisterPage({ onNavigate }: { onNavigate: (page: "login
 
   // Constants
   const COOLDOWN_SECONDS = 60;
-  const CODE_VALIDITY_MS = 10 * 60 * 1000; // 10 minutes as per backend spec
+  const CODE_VALIDITY_MS = 5 * 60 * 1000; // 5 minutes as per backend spec
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;

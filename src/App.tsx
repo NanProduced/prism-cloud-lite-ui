@@ -27,9 +27,9 @@ const router = createBrowserRouter([
     element: <PublicLayout />,
     children: [
       { index: true, element: <LandingPage /> },
-      { path: "auth-form", element: <AuthPage /> },
-      { path: "login", element: <Navigate to="/auth-form" replace /> },
-      { path: "register", element: <Navigate to="/auth-form" replace /> },
+      { path: "auth", element: <Navigate to="/login" replace /> },
+      { path: "login", element: <AuthPage page="login" /> },
+      { path: "register", element: <AuthPage page="register" /> },
       { path: "logo", element: <LogoShowcase /> },
     ],
   },

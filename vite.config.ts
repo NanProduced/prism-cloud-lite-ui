@@ -20,8 +20,8 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         bypass: (req) => {
-          // Don't proxy if it's our auth-form UI route
-          if (req.url && (req.url === '/auth-form' || req.url.startsWith('/auth-form/'))) {
+          // Don't proxy if it's our auth UI route
+          if (req.url && (req.url === '/auth' || req.url.startsWith('/auth/'))) {
             return false;
           }
           return undefined;

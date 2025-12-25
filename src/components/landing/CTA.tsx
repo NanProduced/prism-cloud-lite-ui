@@ -1,50 +1,19 @@
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { useState } from "react";
-
-/**
- * 优雅的滑动开关按钮组件
- * 点击后有 spring 动画，动画完成后跳转页面
- */
-const ToggleSwitchBall = ({ onSlideComplete }: { onSlideComplete: () => void }) => {
-  const [isOn, setIsOn] = useState(false);
-
-  const handleClick = () => {
-    setIsOn(true);
-    // 等待 spring 动画完成后再调用回调（约 600ms）
-    setTimeout(() => {
-      onSlideComplete();
-    }, 600);
-  };
-
-  return (
-    <button
-      className="group relative h-32 w-60 shrink-0 cursor-pointer rounded-full border border-white/10 bg-white/5 p-3.5 shadow-inner backdrop-blur-md transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-      onClick={handleClick}
-      disabled={isOn}
-      role="switch"
-      aria-checked={isOn}
-      aria-label="Slide to switch"
-    >
-      {/* Knob - 白色滑块 */}
-      <motion.div
-        className="relative h-full aspect-square rounded-full bg-gradient-to-b from-white to-neutral-200 shadow-[0_4px_20px_0_rgba(0,0,0,0.3)] ring-1 ring-black/5"
-        initial={false}
-        animate={{ x: isOn ? 114 : 0 }}
-        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-      >
-        {/* 高光效果 */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/80 to-transparent" />
-      </motion.div>
-    </button>
-  );
-};
+import { Switch } from "@/components/ui/switch";
 
 export const CTA = () => {
   const { t } = useTranslation();
+  const [checked, setChecked] = useState(false);
 
-  const handleSlideComplete = () => {
-    window.location.href = "/signup";
+  const handleCheckedChange = (checked: boolean) => {
+    setChecked(checked);
+    if (checked) {
+      setTimeout(() => {
+        window.location.href = "/register";
+      }, 300);
+    }
   };
 
   return (
@@ -70,8 +39,8 @@ export const CTA = () => {
             It's time to make
           </h2>
 
-          {/* 第二行：the [滑动按钮] switch */}
-          <div className="flex items-center justify-center gap-3 md:gap-5 lg:gap-8 flex-wrap">
+          {/* 第二行：the [Switch] switch */}
+          <div className="flex items-center justify-center gap-6 md:gap-8 lg:gap-10 flex-wrap">
             <motion.span
               className="text-6xl md:text-7xl lg:text-8xl font-bold text-white text-center leading-tight tracking-tight"
               animate={{
@@ -82,8 +51,14 @@ export const CTA = () => {
               the
             </motion.span>
 
-            {/* 滑动按钮 - 这是实际的CTA! */}
-            <ToggleSwitchBall onSlideComplete={handleSlideComplete} />
+            {/* Shadcn Switch */}
+            <div className="flex items-center">
+                <Switch 
+                    checked={checked}
+                    onCheckedChange={handleCheckedChange}
+                    className="scale-[2.5] md:scale-[3] bg-white/10 data-[state=checked]:bg-[#B6F09C] border-2 border-white/20"
+                />
+            </div>
 
             <motion.span
               className="text-6xl md:text-7xl lg:text-8xl font-bold text-white text-center leading-tight tracking-tight"

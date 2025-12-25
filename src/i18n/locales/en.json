@@ -90,7 +90,7 @@
     "login": {
       "title": "Log in to your account",
       "subtitle": "Welcome back! Please enter your details.",
-      "emailPlaceholder": "Enter your email",
+      "emailPlaceholder": "Enter your email or phone",
       "passwordPlaceholder": "Enter your password",
       "codePlaceholder": "Enter verification code",
       "loginWithPassword": "Log in with Password",
@@ -102,8 +102,6 @@
       "noAccount": "Don't have an account?",
       "orLoginWith": "Or log in with",
       "google": "Google",
-      "apple": "Apple",
-      "wechat": "WeChat",
       "loggingIn": "Logging in...",
       "success": "Login successful!",
       "failed": "Login failed"

@@ -48,7 +48,7 @@ const MessageIcon = () => (
 export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" | "register") => void }) {
   const { t } = useTranslation();
   const [loginMethod, setLoginMethod] = useState<"password" | "code">("password");
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState(""); // Email or Phone
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [countdown, setCountdown] = useState(0);
@@ -81,14 +81,35 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
     }
   }, [countdown]);
 
+  const isEmail = (input: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
+  const isPhone = (input: string) => /^\+?[\d\s-]{8,}$/.test(input);
+
   const handleSendCode = async () => {
-    if (!email) {
-      toast.error(t('auth.errors.invalidEmail'));
+    if (!identifier) {
+      toast.error(t('auth.errors.invalidIdentifier', 'Please enter your email or phone number'));
       return;
     }
 
+    if (!isEmail(identifier) && !isPhone(identifier)) {
+        toast.error(t('auth.errors.invalidFormat', 'Invalid email or phone number format'));
+        return;
+    }
+
     try {
-      const response = await requestEmailOtp({ email });
+      // Determine if it's email or phone and call appropriate API
+      // Note: Backend support for phone OTP request needs to be confirmed/implemented
+      // For now, using requestEmailOtp if it looks like an email, otherwise assume phone support exists or fallback
+      
+      let response;
+      if (isEmail(identifier)) {
+          response = await requestEmailOtp({ email: identifier });
+      } else {
+          // TODO: Implement phone OTP request when backend is ready
+          // For now, mock it or use email endpoint if it handles both (unlikely for strict types)
+           toast.error("Phone OTP not yet implemented in frontend");
+           return;
+      }
+
       if (response.success) {
         toast.success(t('auth.login.success'));
         setCountdown(60);
@@ -102,7 +123,7 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
       }
     } catch (error) {
       toast.error(t('auth.errors.networkError'));
-      console.error('Request email OTP error:', error);
+      console.error('Request OTP error:', error);
     }
   };
 
@@ -114,8 +135,8 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
       return;
     }
 
-    if (!email) {
-      toast.error(t('auth.errors.invalidEmail'));
+    if (!identifier) {
+      toast.error(t('auth.errors.invalidIdentifier', 'Please enter your email or phone number'));
       return;
     }
 
@@ -132,10 +153,19 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
     setIsLoading(true);
 
     try {
-      const authType: AuthType = loginMethod === "password" ? "EMAIL_PWD" : "EMAIL_OTP";
+      const isEmailAuth = isEmail(identifier);
+      let authType: AuthType;
+
+      if (loginMethod === "password") {
+          authType = isEmailAuth ? "EMAIL_PWD" : "PHONE_PWD";
+      } else {
+          authType = isEmailAuth ? "EMAIL_OTP" : "PHONE_OTP";
+      }
+
       const response = await login({
         authType,
-        email,
+        email: isEmailAuth ? identifier : undefined,
+        phone: !isEmailAuth ? identifier : undefined, // Assuming login API supports 'phone' field
         password: loginMethod === "password" ? password : undefined,
         authCode: loginMethod === "code" ? code : undefined,
         continueUrl,
@@ -206,16 +236,16 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
         {/* Form Fields */}
         <div className="flex flex-col gap-6 w-full">
 
-          {/* Email Input */}
+          {/* Identifier Input (Email or Phone) */}
           <div className="bg-[#1a1d21] h-[48px] relative rounded-[8px] w-full group focus-within:ring-2 ring-[#82dbf7]/20 transition-all">
             <div className="absolute border border-[#363a3d] group-focus-within:border-[#82dbf7] inset-[-1px] pointer-events-none rounded-[9px] transition-colors" />
             <div className="flex items-center px-[16px] h-full gap-[12px]">
               <UserIcon />
               <input
-                type="email"
-                placeholder={t('auth.login.emailPlaceholder')}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                placeholder={t('auth.login.emailPlaceholder', 'Email or Phone Number')}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 className="bg-transparent border-none outline-none text-[#cdcecf] text-[16px] placeholder-[#686b6e] w-full h-full font-['Plus_Jakarta_Sans',sans-serif]"
                 required
               />
@@ -301,32 +331,17 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
         </div>
 
         {/* Social Buttons */}
-        <div className="mt-6 flex gap-4 w-full">
-          {/* Google */}
+        <div className="mt-6 flex flex-col gap-4 w-full">
+          {/* Google - Native Style */}
           <button
             type="button"
             aria-label="Continue with Google"
-            className="flex-1 h-[48px] bg-[#1a1d21] hover:bg-[#23262a] rounded-[12px] flex items-center justify-center gap-3 transition-colors border border-transparent hover:border-[#363a3d]"
+            className="w-full h-[48px] bg-white hover:bg-gray-100 rounded-[24px] flex items-center justify-center gap-3 transition-colors border border-gray-200 shadow-sm group"
           >
             <GoogleLogo width={20} height={20} />
-          </button>
-
-          {/* Apple */}
-          <button
-            type="button"
-            aria-label="Continue with Apple"
-            className="flex-1 h-[48px] bg-[#1a1d21] hover:bg-[#23262a] rounded-[12px] flex items-center justify-center gap-3 transition-colors border border-transparent hover:border-[#363a3d]"
-          >
-            <AppleLogo className="text-white" width={24} height={24} />
-          </button>
-
-          {/* WeChat */}
-          <button
-            type="button"
-            aria-label="Continue with WeChat"
-            className="flex-1 h-[48px] bg-[#1a1d21] hover:bg-[#23262a] rounded-[12px] flex items-center justify-center gap-3 transition-colors border border-transparent hover:border-[#363a3d] group"
-          >
-            <WechatLogo className="text-[#686b6e] group-hover:text-[#07C160] transition-colors" width={24} height={24} />
+            <span className="text-[#1f1f1f] font-medium text-[16px] font-roboto">
+              {t('auth.common.continueWithGoogle', 'Sign in with Google')}
+            </span>
           </button>
         </div>
 

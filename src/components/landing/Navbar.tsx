@@ -79,7 +79,7 @@ export const Navbar: React.FC = () => {
             </button>
 
             <a
-              href="#"
+              href="/login"
               className="text-[13px] font-medium text-gray-400 hover:text-white transition-colors"
             >
               {t("nav.login")}
