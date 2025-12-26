@@ -1,4 +1,4 @@
-import { type ComponentType, type PropsWithChildren, useState, useEffect } from "react";
+import { type ComponentType, type PropsWithChildren, useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Activity,
@@ -6,15 +6,19 @@ import {
   Bell,
   CalendarClock,
   ChevronDown,
+  CreditCard,
   FileText,
+  HelpCircle,
   Image,
   Layers,
   LayoutDashboard,
+  LogOut,
   Map as MapIcon,
   Menu,
   MessageSquare,
   Monitor,
   Settings,
+  User as UserIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -50,6 +55,9 @@ import {
 import { cn } from "@/lib/utils";
 import { PrismIcon } from "@/components/shared/logo";
 import { getAvatarById } from "@/lib/avatars";
+import { useAuthStore } from "@/store/authStore";
+import { logout } from "@/services/authApi";
+import { toast } from "sonner";
 
 type NavItem = {
   label: string;
@@ -135,34 +143,12 @@ export function DashboardShell({ children }: PropsWithChildren) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, clearAuth } = useAuthStore();
 
-  const [profile, setProfile] = useState(() => {
-    try {
-      const stored = window.localStorage.getItem('prism.settings.profile');
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  });
-
-  useEffect(() => {
-    const handleStorage = () => {
-      try {
-        const stored = window.localStorage.getItem('prism.settings.profile');
-        setProfile(stored ? JSON.parse(stored) : null);
-      } catch {
-        // ignore
-      }
-    };
-    window.addEventListener('storage', handleStorage);
-    window.addEventListener('prism-profile-updated', handleStorage);
-    return () => {
-      window.removeEventListener('storage', handleStorage);
-      window.removeEventListener('prism-profile-updated', handleStorage);
-    };
-  }, []);
-
-  const selectedAvatar = getAvatarById(profile?.avatarPreset || 'm-1');
+  const selectedAvatar = useMemo(() => 
+    getAvatarById(user?.avatarId || 'm-1'), 
+    [user?.avatarId]
+  );
 
   const toggleExpanded = (label: string) => {
     const newSet = new Set(expandedItems);
@@ -176,6 +162,18 @@ export function DashboardShell({ children }: PropsWithChildren) {
 
   const isNavActive = (href: string): boolean => {
     return location.pathname === href;
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      clearAuth();
+      navigate("/auth/login");
+      toast.success("Logged out successfully");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      toast.error("Logout failed");
+    }
   };
 
   return (
@@ -280,7 +278,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-          <StoragePanel />
+          <StoragePanel tier={user?.subscriptionTier} />
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
@@ -307,21 +305,51 @@ export function DashboardShell({ children }: PropsWithChildren) {
                   <Button variant="outline" className="flex items-center gap-3 rounded-lg px-2 h-9">
                     <Avatar className="h-8 w-8 rounded-lg">
                       <AvatarImage src={selectedAvatar?.url} alt="User avatar" />
-                      <AvatarFallback>{profile?.name?.slice(0, 2).toUpperCase() || 'PC'}</AvatarFallback>
+                      <AvatarFallback className="rounded-lg bg-primary/10 text-primary">
+                        {user?.displayName?.slice(0, 2).toUpperCase() || user?.email?.slice(0, 2).toUpperCase() || 'PC'}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="hidden flex-col text-left text-sm font-semibold leading-tight sm:flex">
-                      {profile?.name || 'Prism Admin'}
-                      <span className="text-xs font-normal text-muted-foreground">{profile?.email || 'admin@prismcloud.dev'}</span>
+                      <span className="truncate max-w-[120px]">{user?.displayName || 'Prism Admin'}</span>
+                      <span className="text-[10px] font-normal text-muted-foreground truncate max-w-[120px]">
+                        {user?.email || 'admin@prismcloud.dev'}
+                      </span>
                     </div>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuContent align="end" className="w-56" sideOffset={8}>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user?.displayName || 'User'}</p>
+                      <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                    </div>
+                  </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>Profile</DropdownMenuItem>
-                  <DropdownMenuItem>Settings</DropdownMenuItem>
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem onClick={() => navigate("/dashboard/settings?tab=profile")}>
+                      <UserIcon className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/dashboard/settings")}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/dashboard/settings?tab=billing")}>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      <span>Billing</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>Log out</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => window.open("https://docs.prismcloud.dev", "_blank")}>
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    <span>Documentation</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-red-600 focus:bg-red-50 focus:text-red-600" onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -339,10 +367,10 @@ export function DashboardShell({ children }: PropsWithChildren) {
   );
 }
 
-function StoragePanel() {
+function StoragePanel({ tier = "Lite" }: { tier?: string }) {
   // Mock data - will fetch from API in the future
   const usedSpace = 1.2; // GB
-  const totalSpace = 2;  // GB
+  const totalSpace = tier === "Pro" ? 10 : 2;  // GB
   const percentage = (usedSpace / totalSpace) * 100;
   const isWarning = percentage > 85;
 
@@ -351,7 +379,7 @@ function StoragePanel() {
       {/* Title + Subscription Level */}
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-sm font-semibold">Storage Space</h4>
-        <Badge variant="outline" className="text-xs">Lite</Badge>
+        <Badge variant="outline" className="text-xs capitalize">{tier || "Lite"}</Badge>
       </div>
 
       {/* Progress Bar */}
@@ -368,9 +396,11 @@ function StoragePanel() {
       </p>
 
       {/* Upgrade Button */}
-      <Button className="w-full h-9 text-xs rounded-lg">
-        Upgrade for More Space
-      </Button>
+      {tier !== "Pro" && (
+        <Button className="w-full h-9 text-xs rounded-lg">
+          Upgrade for More Space
+        </Button>
+      )}
     </div>
   );
 }

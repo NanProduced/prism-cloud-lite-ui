@@ -1,0 +1,59 @@
+export interface UserProfile {
+  publicId: string;
+  email: string;
+  displayName?: string;
+  avatarId?: string;
+  subscriptionTier?: string;
+  subscriptionExpiresAt?: string;
+  phone?: string;
+}
+
+export interface UserSettingsOverrides {
+  settings?: Record<string, any>;
+  ui?: Record<string, any>;
+}
+
+export interface UserSession {
+  series: string;
+  deviceName?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: string;
+  lastUsedAt: string;
+  expiresAt: string;
+  current: boolean;
+}
+
+export interface UserSecurityEvent {
+  id: number;
+  type: string;
+  success: boolean;
+  ipAddress?: string;
+  deviceName?: string;
+  userAgent?: string;
+  metadata?: string;
+  createdAt: string;
+}
+
+export interface UserApiKey {
+  id: string;
+  name: string;
+  clientId: string;
+  clientSecret?: string; // Only returned on creation/regeneration
+  createdAt: string;
+  lastUsedAt?: string;
+}
+
+export interface CreateApiKeyRequest {
+  name: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword?: string;
+  newPassword?: string;
+}
+
+export interface UpdateProfileRequest {
+  displayName?: string;
+  avatarId?: string;
+}

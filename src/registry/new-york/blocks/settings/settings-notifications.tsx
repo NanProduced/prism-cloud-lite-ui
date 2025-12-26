@@ -86,7 +86,7 @@ const defaultCategories: NotificationCategory[] = [
   },
 ];
 
-const defaultPreferences: NotificationPreferences = {
+export const defaultPreferences: NotificationPreferences = {
   categories: defaultCategories,
   quietHoursEnabled: false,
   quietHoursStart: "22:00",
@@ -100,7 +100,10 @@ export default function SettingsNotifications({
 }: SettingsNotificationsProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [localPreferences, setLocalPreferences] =
-    useState<NotificationPreferences>(preferences);
+    useState<NotificationPreferences>({
+      ...defaultPreferences,
+      ...preferences,
+    });
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -118,7 +121,7 @@ export default function SettingsNotifications({
   ) => {
     setLocalPreferences((prev) => ({
       ...prev,
-      categories: prev.categories.map((cat) =>
+      categories: (prev.categories || []).map((cat) =>
         cat.id === categoryId
           ? {
               ...cat,
@@ -135,7 +138,7 @@ export default function SettingsNotifications({
   ) => {
     setLocalPreferences((prev) => ({
       ...prev,
-      categories: prev.categories.map((cat) =>
+      categories: (prev.categories || []).map((cat) =>
         cat.id === categoryId ? { ...cat, frequency } : cat
       ),
     }));
@@ -196,7 +199,7 @@ export default function SettingsNotifications({
       <CardContent>
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-4">
-            {localPreferences.categories.map((category) => (
+            {(localPreferences.categories || []).map((category) => (
               <div
                 className="rounded-lg border bg-muted/30 p-4"
                 key={category.id}

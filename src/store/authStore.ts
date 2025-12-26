@@ -6,6 +6,9 @@ interface User {
   email: string;
   displayName?: string;
   avatarId?: string;
+  phone?: string;
+  subscriptionTier?: string;
+  subscriptionExpiresAt?: string;
 }
 
 interface AuthState {

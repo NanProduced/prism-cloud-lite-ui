@@ -1,7 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { CreditCard } from 'lucide-react';
 
-import SettingsNotifications, { type NotificationPreferences } from '@/registry/new-york/blocks/settings/settings-notifications';
+import SettingsNotifications, { 
+  type NotificationPreferences, 
+  defaultPreferences as defaultNotificationPreferences 
+} from '@/registry/new-york/blocks/settings/settings-notifications';
 import SettingsPreferences, { type PreferencesData } from '@/registry/new-york/blocks/settings/settings-preferences';
 import SettingsProfile, { type ProfileData } from '@/registry/new-york/blocks/settings/settings-profile';
 import SettingsSecurity, { type SecurityEvent, type SecuritySession } from '@/registry/new-york/blocks/settings/settings-security';
@@ -11,14 +17,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/registry/new-york/ui
 import { DeviceDefaultsCard, type DeviceDefaults } from './DeviceDefaultsCard';
 import { ProgramDraftPolicyCard } from './ProgramDraftPolicyCard';
 import { getProgramDraftSavePolicy, setProgramDraftSavePolicy, type ProgramDraftSavePolicy } from '@/features/programs/storage/draftPolicyDb';
-
-const STORAGE_KEYS = {
-  profile: 'prism.settings.profile',
-  preferences: 'prism.settings.preferences',
-  notifications: 'prism.settings.notifications',
-  deviceDefaults: 'prism.settings.deviceDefaults',
-  activeTab: 'prism.settings.activeTab',
-};
+import {
+  getUserProfile,
+  updateUserProfile,
+  getUserSettings,
+  updateUserSettings,
+  getActiveSessions,
+  revokeSession,
+  revokeAllSessions,
+  getSecurityHistory,
+  changePassword,
+  getApiKeys,
+  createApiKey,
+  revokeApiKey,
+  regenerateApiKey,
+} from '@/services/userApi';
+import { getErrorMessage } from '@/services/authApi';
 
 const TAB_ITEMS = [
   { value: 'profile', label: 'Profile' },
@@ -27,6 +41,7 @@ const TAB_ITEMS = [
   { value: 'device-defaults', label: 'Device Defaults' },
   { value: 'security', label: 'Security' },
   { value: 'api-keys', label: 'API Keys' },
+  { value: 'billing', label: 'Billing' },
 ] as const;
 
 type SettingsTab = (typeof TAB_ITEMS)[number]['value'];
@@ -35,112 +50,210 @@ function isSettingsTab(value: unknown): value is SettingsTab {
   return typeof value === 'string' && TAB_ITEMS.some((tab) => tab.value === value);
 }
 
-const MOCK_NOW_MS = Date.parse('2025-12-17T12:00:00Z');
-
-const DEFAULT_API_KEYS: APIKey[] = [
-  {
-    id: 'key-prod',
-    name: 'Production API Key',
-    key: 'prism_live_1234xxxxxxxxxxxxxxxxxxxx5678',
-    createdAt: new Date(MOCK_NOW_MS - 1000 * 60 * 60 * 24 * 12),
-    lastUsed: new Date(MOCK_NOW_MS - 1000 * 60 * 35),
-    scopes: ['read', 'write'],
-    usageCount: 1204,
-    rateLimit: {
-      limit: 10000,
-      remaining: 8421,
-      resetAt: new Date(MOCK_NOW_MS + 1000 * 60 * 60 * 12),
-    },
-  },
-];
-
-const DEFAULT_SESSIONS: SecuritySession[] = [
-  {
-    id: 'session-current',
-    device: 'Chrome · Windows',
-    location: 'Shanghai, CN',
-    ipAddress: '10.0.0.23',
-    lastActive: new Date(MOCK_NOW_MS - 1000 * 60 * 2),
-    current: true,
-  },
-  {
-    id: 'session-2',
-    device: 'Safari · iOS',
-    location: 'Hangzhou, CN',
-    ipAddress: '10.0.0.88',
-    lastActive: new Date(MOCK_NOW_MS - 1000 * 60 * 60 * 14),
-    current: false,
-  },
-];
-
-const DEFAULT_SECURITY_HISTORY: SecurityEvent[] = [
-  {
-    id: 'evt-1',
-    type: 'login',
-    description: 'Successful sign-in',
-    ipAddress: '10.0.0.23',
-    location: 'Shanghai, CN',
-    timestamp: new Date(MOCK_NOW_MS - 1000 * 60 * 50),
-    status: 'success',
-  },
-  {
-    id: 'evt-2',
-    type: 'password_change',
-    description: 'Password updated',
-    ipAddress: '10.0.0.23',
-    location: 'Shanghai, CN',
-    timestamp: new Date(MOCK_NOW_MS - 1000 * 60 * 60 * 24 * 8),
-    status: 'success',
-  },
-];
-
-function safeReadJson<T>(key: string): T | null {
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) return null;
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-}
-
-function safeWriteJson(key: string, value: unknown) {
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // ignore
-  }
-}
-
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
-    const stored = safeReadJson<unknown>(STORAGE_KEYS.activeTab);
-    return isSettingsTab(stored) ? stored : 'profile';
-  });
+  const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const initialTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<SettingsTab>(
+    isSettingsTab(initialTab) ? initialTab : 'profile'
+  );
 
-  const [profile, setProfile] = useState<ProfileData>(() => {
-    const stored = safeReadJson<Partial<ProfileData>>(STORAGE_KEYS.profile);
-    return {
-      name: stored?.name ?? 'Prism Admin',
-      email: stored?.email ?? 'admin@prismcloud.dev',
-      avatarPreset: stored?.avatarPreset ?? 'm-1',
-    };
-  });
+  // Sync state with search params if they change externally (e.g. browser back/forward)
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (isSettingsTab(tab) && tab !== activeTab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams, activeTab]);
 
-  const [preferences, setPreferences] = useState<PreferencesData | undefined>(() => (
-    safeReadJson<PreferencesData>(STORAGE_KEYS.preferences) ?? undefined
-  ));
-
-  const [notifications, setNotifications] = useState<NotificationPreferences | undefined>(() => (
-    safeReadJson<NotificationPreferences>(STORAGE_KEYS.notifications) ?? undefined
-  ));
-
-  const [deviceDefaults, setDeviceDefaults] = useState<DeviceDefaults | undefined>(() => (
-    safeReadJson<DeviceDefaults>(STORAGE_KEYS.deviceDefaults) ?? undefined
-  ));
-
-  const [apiKeys, setApiKeys] = useState<APIKey[]>(() => DEFAULT_API_KEYS);
   const [programDraftPolicy, setProgramDraftPolicyState] = useState<ProgramDraftSavePolicy>(() => getProgramDraftSavePolicy());
+
+  // --- Queries ---
+
+  const { data: profileData, isLoading: isProfileLoading } = useQuery({
+    queryKey: ['user', 'profile'],
+    queryFn: getUserProfile,
+  });
+
+  const { data: settingsData, isLoading: isSettingsLoading } = useQuery({
+    queryKey: ['user', 'settings'],
+    queryFn: getUserSettings,
+  });
+
+  const { data: sessionsData, isLoading: isSessionsLoading } = useQuery({
+    queryKey: ['user', 'sessions'],
+    queryFn: getActiveSessions,
+    enabled: activeTab === 'security',
+  });
+
+  const { data: securityHistoryData, isLoading: isHistoryLoading } = useQuery({
+    queryKey: ['user', 'security-history'],
+    queryFn: () => getSecurityHistory({ page: 0, size: 20 }),
+    enabled: activeTab === 'security',
+  });
+
+  const { data: apiKeysData, isLoading: isApiKeysLoading } = useQuery({
+    queryKey: ['user', 'api-keys'],
+    queryFn: getApiKeys,
+    enabled: activeTab === 'api-keys',
+  });
+
+  // --- Mutations ---
+
+  const updateProfileMutation = useMutation({
+    mutationFn: updateUserProfile,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', 'profile'] });
+      window.dispatchEvent(new Event('prism-profile-updated')); // Notify other components if needed
+      toast.success('Profile updated');
+    },
+    onError: (error: any) => {
+      toast.error(getErrorMessage(error));
+    },
+  });
+
+  const updateSettingsMutation = useMutation({
+    mutationFn: updateUserSettings,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', 'settings'] });
+      toast.success('Settings saved');
+    },
+    onError: (error: any) => {
+      toast.error(getErrorMessage(error));
+    },
+  });
+
+  const changePasswordMutation = useMutation({
+    mutationFn: changePassword,
+    onSuccess: () => {
+      toast.success('Password updated');
+    },
+    onError: (error: any) => {
+      toast.error(getErrorMessage(error));
+    },
+  });
+
+  const revokeSessionMutation = useMutation({
+    mutationFn: revokeSession,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', 'sessions'] });
+      toast.success('Session revoked');
+    },
+    onError: (error: any) => {
+      toast.error(getErrorMessage(error));
+    },
+  });
+
+  const revokeAllSessionsMutation = useMutation({
+    mutationFn: revokeAllSessions,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', 'sessions'] });
+      toast.success('All sessions revoked');
+    },
+    onError: (error: any) => {
+      toast.error(getErrorMessage(error));
+    },
+  });
+
+  const createApiKeyMutation = useMutation({
+    mutationFn: createApiKey,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', 'api-keys'] });
+      toast.success('API key created');
+    },
+    onError: (error: any) => {
+      toast.error(getErrorMessage(error));
+    },
+  });
+
+  const revokeApiKeyMutation = useMutation({
+    mutationFn: revokeApiKey,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', 'api-keys'] });
+      toast.success('API key revoked');
+    },
+    onError: (error: any) => {
+      toast.error(getErrorMessage(error));
+    },
+  });
+
+  const regenerateApiKeyMutation = useMutation({
+    mutationFn: regenerateApiKey,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', 'api-keys'] });
+      toast.success('API key regenerated');
+    },
+    onError: (error: any) => {
+      toast.error(getErrorMessage(error));
+    },
+  });
+
+  // --- Data Mapping ---
+
+  const userProfile: ProfileData = {
+    name: profileData?.data?.displayName || 'User',
+    email: profileData?.data?.email || '',
+    avatarPreset: profileData?.data?.avatarId || 'm-1',
+  };
+
+  // Map backend settings to UI preferences
+  // Backend stores arbitrary JSON in `settings` and `ui`. 
+  // We'll use `ui.preferences` for SettingsPreferences component.
+  const uiSettings = settingsData?.data?.ui || {};
+  
+  const preferences: PreferencesData = uiSettings.preferences || {
+    theme: 'system',
+    language: 'en',
+    timezone: 'UTC',
+    dashboard: {
+      refreshRate: 30,
+      widgets: ['stats', 'activity'],
+    },
+  };
+
+  const notifications: NotificationPreferences = uiSettings.notifications?.categories 
+    ? uiSettings.notifications 
+    : defaultNotificationPreferences;
+
+  const deviceDefaults: DeviceDefaults = uiSettings.deviceDefaults || {
+    brightness: 80,
+    volume: 50,
+    rebootTime: '03:00',
+  };
+
+  const sessions: SecuritySession[] = (sessionsData?.data || []).map(s => ({
+    id: s.series,
+    device: s.userAgent || 'Unknown Device', // Simple mapping, ideally parse UA
+    location: s.ipAddress || 'Unknown', // No location data in API yet
+    ipAddress: s.ipAddress || '',
+    lastActive: new Date(s.lastUsedAt),
+    current: s.current,
+  }));
+
+  const securityHistory: SecurityEvent[] = (securityHistoryData?.data?.items || []).map(e => ({
+    id: e.id.toString(),
+    type: e.type,
+    description: e.type, // Map type to description if needed
+    ipAddress: e.ipAddress || '',
+    location: 'Unknown',
+    timestamp: new Date(e.createdAt),
+    status: e.success ? 'success' : 'failed',
+  }));
+
+  const apiKeysList: APIKey[] = (apiKeysData?.data || []).map(k => ({
+    id: k.id,
+    name: k.name,
+    key: k.clientId + '...', // Don't have full key/secret in list, just clientID
+    createdAt: new Date(k.createdAt),
+    lastUsed: k.lastUsedAt ? new Date(k.lastUsedAt) : new Date(),
+    scopes: ['read', 'write'], // Backend doesn't return scopes in list yet
+    usageCount: 0, // Not available
+  }));
+
+  if (isProfileLoading && !profileData) {
+    return <div className="flex justify-center p-12">Loading settings...</div>;
+  }
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6">
@@ -158,7 +271,7 @@ export default function SettingsPage() {
         onValueChange={(next) => {
           if (!isSettingsTab(next)) return;
           setActiveTab(next);
-          safeWriteJson(STORAGE_KEYS.activeTab, next);
+          setSearchParams({ tab: next });
         }}
         value={activeTab}
       >
@@ -172,12 +285,12 @@ export default function SettingsPage() {
 
         <TabsContent className="mt-0" forceMount value="profile">
           <SettingsProfile
-            profile={profile}
+            profile={userProfile}
             onSave={async (next) => {
-              setProfile(next);
-              safeWriteJson(STORAGE_KEYS.profile, next);
-              window.dispatchEvent(new Event('prism-profile-updated'));
-              toast.success('Profile updated');
+              updateProfileMutation.mutateAsync({
+                displayName: next.name,
+                avatarId: next.avatarPreset,
+              });
             }}
           />
         </TabsContent>
@@ -187,9 +300,8 @@ export default function SettingsPage() {
             <SettingsPreferences
               preferences={preferences}
               onSave={async (next) => {
-                setPreferences(next);
-                safeWriteJson(STORAGE_KEYS.preferences, next);
-                toast.success('Preferences saved');
+                const newUi = { ...uiSettings, preferences: next };
+                updateSettingsMutation.mutateAsync({ ui: newUi });
               }}
             />
 
@@ -208,9 +320,8 @@ export default function SettingsPage() {
           <SettingsNotifications
             preferences={notifications}
             onSave={async (next) => {
-              setNotifications(next);
-              safeWriteJson(STORAGE_KEYS.notifications, next);
-              toast.success('Notification preferences saved');
+              const newUi = { ...uiSettings, notifications: next };
+              updateSettingsMutation.mutateAsync({ ui: newUi });
             }}
           />
         </TabsContent>
@@ -218,9 +329,8 @@ export default function SettingsPage() {
         <TabsContent className="mt-0" forceMount value="device-defaults">
           <DeviceDefaultsCard
             onSave={async (next) => {
-              setDeviceDefaults(next);
-              safeWriteJson(STORAGE_KEYS.deviceDefaults, next);
-              toast.success('Device defaults saved');
+              const newUi = { ...uiSettings, deviceDefaults: next };
+              updateSettingsMutation.mutateAsync({ ui: newUi });
             }}
             value={deviceDefaults}
           />
@@ -229,68 +339,82 @@ export default function SettingsPage() {
         <TabsContent className="mt-0" forceMount value="security">
           <SettingsSecurity
             onDisable2FA={async () => {
-              toast.success('2FA disabled (mock)');
+              toast.info('2FA configuration not supported yet');
             }}
             onEnable2FA={async () => {
-              toast.success('2FA enabled (mock)');
+              toast.info('2FA configuration not supported yet');
             }}
             onGenerateBackupCodes={async () => {
-              return Array.from({ length: 10 }).map(
-                (_, i) => `PRISM-${i}${Math.random().toString(16).slice(2, 6).toUpperCase()}`
-              );
+              return [];
             }}
-            onPasswordChange={async () => {
-              toast.success('Password updated (mock)');
+            onPasswordChange={async (current, next) => {
+              await changePasswordMutation.mutateAsync({
+                currentPassword: current,
+                newPassword: next
+              });
             }}
             onRevokeAllSessions={async () => {
-              toast.success('All sessions revoked (mock)');
+              await revokeAllSessionsMutation.mutateAsync();
             }}
-            onRevokeSession={async () => {
-              toast.success('Session revoked (mock)');
+            onRevokeSession={async (sessionId) => {
+              await revokeSessionMutation.mutateAsync(sessionId);
             }}
-            securityHistory={DEFAULT_SECURITY_HISTORY}
-            sessions={DEFAULT_SESSIONS}
+            securityHistory={securityHistory}
+            sessions={sessions}
             twoFactorEnabled={false}
           />
         </TabsContent>
 
         <TabsContent className="mt-0" forceMount value="api-keys">
           <SettingsAPIKeys
-            apiKeys={apiKeys}
+            apiKeys={apiKeysList}
             onCreate={async (data) => {
-              const id = `key-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`;
-              const nextKey: APIKey = {
-                id,
-                name: data.name,
-                key: `prism_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`,
-                createdAt: new Date(),
-                scopes: data.scopes,
-                expiresAt: data.expiresAt,
-              };
-              setApiKeys((prev) => [nextKey, ...prev]);
-              toast.success('API key created (mock)');
-              return nextKey;
+              const res = await createApiKeyMutation.mutateAsync({ name: data.name });
+              if (res.success && res.data) {
+                 return {
+                    id: res.data.id,
+                    name: res.data.name,
+                    key: res.data.clientSecret || '', // Show secret once
+                    createdAt: new Date(res.data.createdAt),
+                    lastUsed: new Date(),
+                    scopes: ['read', 'write'],
+                 } as APIKey;
+              }
+              throw new Error("Failed to create key");
             }}
             onRegenerate={async (keyId) => {
-              let updated: APIKey | null = null;
-              setApiKeys((prev) =>
-                prev.map((k) => {
-                  if (k.id !== keyId) return k;
-                  updated = {
-                    ...k,
-                    key: `prism_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`,
-                  };
-                  return updated;
-                })
-              );
-              toast.success('API key regenerated (mock)');
-              return updated ?? apiKeys.find((k) => k.id === keyId)!;
+              const res = await regenerateApiKeyMutation.mutateAsync(keyId);
+              if (res.success && res.data) {
+                 // Find existing to merge
+                 const existing = apiKeysList.find(k => k.id === keyId);
+                 return {
+                    ...existing,
+                    id: res.data.id,
+                    name: res.data.name,
+                    key: res.data.clientSecret || '', // Show new secret
+                 } as APIKey;
+              }
+              throw new Error("Failed to regenerate key");
             }}
             onRevoke={async (keyId) => {
-              setApiKeys((prev) => prev.filter((k) => k.id !== keyId));
-              toast.success('API key revoked (mock)');
+              await revokeApiKeyMutation.mutateAsync(keyId);
             }}
           />
+        </TabsContent>
+
+        <TabsContent className="mt-0" forceMount value="billing">
+          <div className="flex flex-col items-center justify-center space-y-4 rounded-xl border bg-card p-12 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <CreditCard className="h-6 w-6 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Billing & Subscription</h3>
+              <p className="text-sm text-muted-foreground">
+                Manage your subscription plans and billing history. 
+                This feature is currently under development.
+              </p>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

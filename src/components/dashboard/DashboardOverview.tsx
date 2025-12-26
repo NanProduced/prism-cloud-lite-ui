@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, type ComponentType } from "react";
 import { useQuery } from '@tanstack/react-query';
 import { getDevices } from '@/services/deviceApi';
 import { useAuthStore } from '@/store/authStore';
+import { getAvatarById } from "@/lib/avatars";
 import {
   Area,
   AreaChart,
@@ -93,6 +94,11 @@ export function DashboardOverview() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
 
+  const selectedAvatar = useMemo(() => 
+    getAvatarById(user?.avatarId || 'm-1'), 
+    [user?.avatarId]
+  );
+
   const { data: bffResponse } = useQuery({
     queryKey: ['devices'],
     queryFn: () => getDevices(),
@@ -114,14 +120,14 @@ export function DashboardOverview() {
         <Card className="flex-1 min-w-[280px] border-l-4 border-l-indigo-500">
           <CardContent className="p-6 flex items-center gap-4">
             <Avatar className="h-12 w-12 border-2 border-indigo-100">
-              <AvatarImage src={user?.avatarId ? `/api/v1/assets/${user.avatarId}` : undefined} />
+              <AvatarImage src={selectedAvatar?.url} />
               <AvatarFallback>{user?.displayName?.slice(0, 2).toUpperCase() || '??'}</AvatarFallback>
             </Avatar>
             <div>
               <h3 className="font-semibold text-lg">{user?.displayName || 'Prism User'}</h3>
               <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
-                  Pro Plan
+                <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 capitalize">
+                  {user?.subscriptionTier || 'Lite'} Plan
                 </Badge>
                 <span className="truncate max-w-[150px]">{user?.email}</span>
               </div>
