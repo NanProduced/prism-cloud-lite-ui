@@ -56,22 +56,44 @@ const MessageIcon = () => (
 export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" | "register") => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { setAuth, isAuthenticated } = useAuthStore();
+  const { setAuth, clearAuth, isAuthenticated } = useAuthStore();
+  
+  const [continueUrl, setContinueUrl] = useState<string | null>(null);
   const [loginMethod, setLoginMethod] = useState<"password" | "code">("password");
   const [identifier, setIdentifier] = useState(""); // Email or Phone
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [countdown, setCountdown] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [continueUrl, setContinueUrl] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(true);
 
-  // Skip login if already authenticated
+  // Parse continue parameter from URL on mount
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
+    const params = new URLSearchParams(window.location.search);
+    const continueParam = params.get('continue');
+    
+    if (continueParam) {
+      // 1. 如果有 continue 参数，说明正在进行 OAuth2 流程，保存它
+      setContinueUrl(continueParam);
+      
+      // 进入登录页意味着后端 Session 已失效，强制同步前端状态
+      if (isAuthenticated) {
+        clearAuth();
+      }
+    } else {
+      // 2. 没有 continue 参数的情况
+      if (isAuthenticated) {
+        navigate('/dashboard');
+      } else {
+        // 既没有登录也没有授权流程，说明是直接访问，发起跳转
+        // 严格按照文档建议：直接跳转到网关 8082 端口，确保启动正确的 OAuth2 流程
+        const gatewayUrl = import.meta.env.VITE_GATEWAY_URL || "http://localhost:8082";
+        const redirectUri = encodeURIComponent(`${window.location.origin}/dashboard`);
+        window.location.href = `${gatewayUrl}/oauth2/authorization/prism-gateway?redirect_uri=${redirectUri}`;
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, clearAuth, navigate]);
+
 
   // Handle Google Login Callback (from Redirect Flow)
   useEffect(() => {
@@ -92,9 +114,7 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
 
             if (response.success && response.data) {
               toast.success(t('auth.login.success'));
-          // Set a minimal user object
-          setAuth({ publicId: 'current-user', email: 'user@example.com' }); 
-          window.location.href = response.data.redirectUrl;
+              window.location.href = response.data.redirectUrl;
             } else {
               toast.error(getErrorMessage(response));
               setIsLoading(false);
@@ -108,7 +128,7 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
     };
 
     handleCallback();
-  }, [continueUrl, t, setAuth]);
+  }, [continueUrl, t]);
 
   const handleGoogleLoginCustom = () => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -134,26 +154,6 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
     const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
     window.location.href = url;
   };
-
-  // Parse continue parameter from URL on mount
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const continueParam = params.get('continue');
-
-    if (continueParam) {
-      // Validate continue URL
-      if (continueParam.includes('/oauth2/authorize') || continueParam.includes('/oauth2/authorization')) {
-        setContinueUrl(decodeURIComponent(continueParam));
-      } else {
-        setContinueUrl(decodeURIComponent(continueParam)); // Trust it for now but could be stricter
-      }
-    } else {
-      // If missing, create a default continueUrl that established the gateway session
-      // This allows direct login to work while still establishing OIDC context
-      const defaultContinue = `${window.location.origin.replace('5173', '8082')}/oauth2/authorization/prism-gateway?redirect_uri=${window.location.origin}/dashboard`;
-      setContinueUrl(defaultContinue);
-    }
-  }, [t]);
 
   // Countdown timer for code resend
   useEffect(() => {
@@ -256,8 +256,9 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
 
       if (response.success && response.data) {
         toast.success(t('auth.login.success'));
-        setAuth({ publicId: 'current-user', email: identifier });
-        // Redirect to OAuth2 flow
+        // 登录成功后直接跳转到后端返回的 redirectUrl。
+        // 由于登录 API 也是直连 8082 的，Session Cookie 已经保存在 8082 域名下，
+        // 随后的授权流程（跳到 8081 再跳回 8082）可以正确携带 Cookie。
         window.location.href = response.data.redirectUrl;
       } else {
         const errorCode = getErrorCode(response);
@@ -395,7 +396,11 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
               <span className="text-[#686b6e] text-sm select-none" onClick={() => setRememberMe(!rememberMe)}>{t('auth.login.rememberMe', 'Remember me')}</span>
             </label>
             {loginMethod === "password" && (
-              <button type="button" className="text-transparent bg-clip-text bg-gradient-to-r from-[#82DBF7] to-[#B6F09C] font-semibold text-[16px]">
+              <button 
+                type="button" 
+                onClick={() => onNavigate("forgot-password")}
+                className="text-transparent bg-clip-text bg-gradient-to-r from-[#82DBF7] to-[#B6F09C] font-semibold text-[16px]"
+              >
                 {t('auth.login.forgotPassword')}
               </button>
             )}

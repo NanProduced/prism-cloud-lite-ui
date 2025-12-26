@@ -1,5 +1,6 @@
-import apiClient, { handleRequest, BffResponse } from './apiClient';
-import type { MediaNode } from '../types/media-library';
+import apiClient, { handleRequest } from './apiClient';
+import type { BffResponse } from '@/types/auth';
+import type { MediaNode } from '@/types/media-library';
 
 /**
  * Get media library items

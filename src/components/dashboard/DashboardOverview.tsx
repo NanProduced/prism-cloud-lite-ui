@@ -1,4 +1,7 @@
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useState, useMemo, type ComponentType } from "react";
+import { useQuery } from '@tanstack/react-query';
+import { getDevices } from '@/services/deviceApi';
+import { useAuthStore } from '@/store/authStore';
 import {
   Area,
   AreaChart,
@@ -84,50 +87,6 @@ const publishedPrograms = [
   { name: "Daily Notices", version: "v2.0", devices: 4, status: "draft_changes" },
   { name: "Emergency Override", version: "v1.0", devices: 0, status: "inactive" },
 ];
-
-import { useEffect, useState, useMemo, type ComponentType } from "react";
-import { useQuery } from '@tanstack/react-query';
-import { getDevices } from '@/services/deviceApi';
-import { useAuthStore } from '@/store/authStore';
-import {
-  Area,
-  AreaChart,
-  ResponsiveContainer,
-  Tooltip as RechartsTooltip,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Activity,
-  AlertCircle,
-  HardDrive,
-  Layers,
-  MonitorPlay,
-  MoreVertical,
-  PlayCircle,
-  Upload,
-  Wifi,
-  Zap,
-  History,
-  FileText,
-  ExternalLink,
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
-
-// ... existing storageData, onlineTrendData, playbackData, pendingTasks, recentAlerts, offlineDevices, publishedPrograms ...
 
 export function DashboardOverview() {
   const [isMounted, setIsMounted] = useState(false);

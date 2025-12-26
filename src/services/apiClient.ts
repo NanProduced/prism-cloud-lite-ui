@@ -1,23 +1,10 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosResponse } from 'axios';
+import type { BffResponse } from '@/types/auth';
 
 // API base URL for core business logic
 // Proximity through Vite proxy to http://localhost:8082
 const API_BASE_URL = '/api/v1';
-
-export interface BffResponse<T = any> {
-  success: boolean;
-  data: T | null;
-  error: {
-    code: string;
-    message: string;
-    displayMessage?: string;
-    retryable?: boolean;
-  } | null;
-  traceId: string;
-  timestamp: string;
-  requestId?: string;
-}
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

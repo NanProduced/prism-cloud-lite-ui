@@ -1,4 +1,5 @@
 import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PublicLayout, ProtectedLayout } from "@/components/layout/AppLayout";
 import LandingPage from "@/pages/LandingPage";
 import LogoShowcase from "@/pages/LogoShowcase";
@@ -21,6 +22,15 @@ import {
   MessagesPage,
 } from "@/pages/dashboard/PlaceholderPages";
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -30,6 +40,7 @@ const router = createBrowserRouter([
       { path: "auth", element: <Navigate to="/login" replace /> },
       { path: "login", element: <AuthPage page="login" /> },
       { path: "register", element: <AuthPage page="register" /> },
+      { path: "forgot-password", element: <AuthPage page="forgot-password" /> },
       { path: "logo", element: <LogoShowcase /> },
     ],
   },
@@ -61,5 +72,9 @@ const router = createBrowserRouter([
 ]);
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  );
 }

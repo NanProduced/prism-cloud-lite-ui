@@ -10,6 +10,8 @@ import type {
   RegisterVerifyOtpRequest,
   RegisterVerifyOtpResponse,
   RegisterCompleteRequest,
+  RequestPasswordResetRequest,
+  ConfirmPasswordResetRequest,
 } from '../types/auth';
 
 // API base URL - defaults to auth service directly in development
@@ -85,7 +87,7 @@ export async function login(request: LoginRequest): Promise<BffResponse<LoginRes
   }
 
   // Ensure we only send defined fields
-  const payload = JSON.parse(JSON.stringify({
+  const payload = {
     authType: request.authType,
     email: request.email,
     phone: request.phone,
@@ -93,7 +95,9 @@ export async function login(request: LoginRequest): Promise<BffResponse<LoginRes
     authCode: request.authCode,
     continueUrl: request.continueUrl,
     rememberMe: request.rememberMe,
-  }));
+  };
+
+  console.log('[Auth Service] Login request:', payload);
 
   return handleBffRequest<LoginResponse>(
     authApiClient.post<BffResponse<LoginResponse>>('/login', payload)
@@ -172,6 +176,34 @@ export async function registerComplete(
 }
 
 /**
+ * Password Reset - Request OTP
+ */
+export async function requestPasswordReset(
+  request: RequestPasswordResetRequest
+): Promise<BffResponse<void>> {
+  return handleBffRequest<void>(
+    authApiClient.post<BffResponse<void>>(
+      '/login/request-password-reset',
+      request
+    )
+  );
+}
+
+/**
+ * Password Reset - Confirm
+ */
+export async function confirmPasswordReset(
+  request: ConfirmPasswordResetRequest
+): Promise<BffResponse<void>> {
+  return handleBffRequest<void>(
+    authApiClient.post<BffResponse<void>>(
+      '/login/confirm-password-reset',
+      request
+    )
+  );
+}
+
+/**
  * Get current authenticated user info from Core Service
  */
 export async function getUserInfo(): Promise<BffResponse<{
@@ -191,8 +223,9 @@ export async function getUserInfo(): Promise<BffResponse<{
     });
   }
 
-  // Use apiClient which has /api/v1 as baseURL
-  return handleBffRequest(apiClient.get('/user/me'));
+  // In dev, use direct 8082 to ensure cookie sharing across ports
+  const url = '/user/me';
+  return handleBffRequest(apiClient.get(url));
 }
 
 async function handleBffRequest<T>(
@@ -228,6 +261,8 @@ export function getErrorCode(response: BffResponse): string | undefined {
  * Logout - Invalidate session on backend
  */
 export async function logout(): Promise<void> {
-  await authApiClient.post('/logout');
+  // Use a fresh instance to avoid the '/auth' baseURL prefix
+  // This ensures we hit /logout on the Gateway (proxied via Vite)
+  await axios.post('/logout');
 }
 

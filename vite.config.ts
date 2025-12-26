@@ -15,32 +15,31 @@ export default defineConfig({
     proxy: {
       // Auth Service API
       '/auth': {
-        target: 'http://127.0.0.1:8082',
+        target: 'http://localhost:8082',
         changeOrigin: true,
         secure: false,
+        xfwd: true,
       },
       // OAuth2 endpoints
       '/oauth2': {
-        target: 'http://127.0.0.1:8082',
+        target: 'http://localhost:8082',
         changeOrigin: true,
         secure: false,
+        xfwd: true,
       },
-      // Gateway Service endpoints (callback, logout)
-      '/login': {
-        target: 'http://127.0.0.1:8082',
-        changeOrigin: true,
-        secure: false,
-      },
+      // Gateway Service logout
       '/logout': {
-        target: 'http://127.0.0.1:8082',
+        target: 'http://localhost:8082',
         changeOrigin: true,
         secure: false,
+        xfwd: true,
       },
       // Business API
       '/api': {
-        target: 'http://127.0.0.1:8082',
-        changeOrigin: true,
+        target: 'http://localhost:8082',
+        changeOrigin: false,
         secure: false,
+        xfwd: true,
       },
     },
   },

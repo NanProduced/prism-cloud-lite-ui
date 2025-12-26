@@ -60,6 +60,19 @@ export interface RegisterCompleteRequest {
   verificationToken: string;
 }
 
+// Password reset
+export interface RequestPasswordResetRequest {
+  email?: string;
+  phone?: string;
+}
+
+export interface ConfirmPasswordResetRequest {
+  email?: string;
+  phone?: string;
+  authCode: string;
+  newPassword: string;
+}
+
 // Error codes
 export const AuthErrorCode = {
   EMAIL_EXISTS: 'AUTH-1001',

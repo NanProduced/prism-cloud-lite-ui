@@ -106,6 +106,16 @@
       "success": "登录成功!",
       "failed": "登录失败"
     },
+    "forgotPassword": {
+      "subtitle": "请输入您的邮箱或手机号以获取找回密码验证码",
+      "otpSent": "验证码已发送",
+      "sendCode": "获取验证码",
+      "resetTitle": "重置密码",
+      "resetSubtitle": "请输入验证码并设置新密码",
+      "resetButton": "重置密码",
+      "resetSuccess": "密码重置成功，请重新登录",
+      "backToLogin": "返回登录"
+    },
     "register": {
       "title": "创建您的账号",
       "subtitle": "立即加入 Prism Cloud Lite",
@@ -158,7 +168,8 @@
       "networkError": "网络错误，请重试",
       "unknownError": "发生错误，请重试",
       "continueUrlMissing": "登录会话无效，请从登录入口重新进入",
-      "continueUrlInvalid": "无效的重定向地址"
+      "continueUrlInvalid": "无效的重定向地址",
+      "allFieldsRequired": "请填写所有必填字段"
     }
   }
 }

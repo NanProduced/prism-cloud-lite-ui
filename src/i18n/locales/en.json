@@ -106,6 +106,16 @@
       "success": "Login successful!",
       "failed": "Login failed"
     },
+    "forgotPassword": {
+      "subtitle": "Enter your email or phone to receive a reset code",
+      "otpSent": "Reset code sent",
+      "sendCode": "Get Reset Code",
+      "resetTitle": "Reset Password",
+      "resetSubtitle": "Enter the code and your new password",
+      "resetButton": "Reset Password",
+      "resetSuccess": "Password reset successfully, please log in",
+      "backToLogin": "Back to Login"
+    },
     "register": {
       "title": "Create your account",
       "subtitle": "Join Prism Cloud Lite today",
@@ -158,7 +168,8 @@
       "networkError": "Network error. Please try again",
       "unknownError": "An error occurred. Please try again",
       "continueUrlMissing": "Invalid login session. Please restart from the login entry",
-      "continueUrlInvalid": "Invalid redirect URL"
+      "continueUrlInvalid": "Invalid redirect URL",
+      "allFieldsRequired": "All fields are required"
     }
   }
 }

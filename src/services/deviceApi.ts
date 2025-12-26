@@ -1,5 +1,6 @@
-import apiClient, { handleRequest, BffResponse } from './apiClient';
-import type { Device } from '../types/device';
+import apiClient, { handleRequest } from './apiClient';
+import type { BffResponse } from '@/types/auth';
+import type { Device } from '@/types/device';
 
 /**
  * Get all devices for the current user
