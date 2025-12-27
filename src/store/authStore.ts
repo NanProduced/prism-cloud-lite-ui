@@ -16,6 +16,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isInitializing: boolean;
   setAuth: (user: User) => void;
+  updateUser: (user: Partial<User>) => void;
   clearAuth: () => void;
   checkAuth: () => Promise<void>;
 }
@@ -27,6 +28,9 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isInitializing: true,
       setAuth: (user) => set({ user, isAuthenticated: true, isInitializing: false }),
+      updateUser: (userData) => set((state) => ({
+        user: state.user ? { ...state.user, ...userData } : null
+      })),
       clearAuth: () => set({ user: null, isAuthenticated: false, isInitializing: false }),
       checkAuth: async () => {
         try {

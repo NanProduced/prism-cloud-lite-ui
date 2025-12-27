@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, 
   Monitor, Info, CheckCircle2, AlertCircle,
   Database, Layers, XCircle, Search, Pencil, MoreHorizontal, History as HistoryIcon
-} from 'lucide-react';import { toast } from 'sonner';
+} from 'lucide-react';import { toast } from '@/store/notificationStore';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

@@ -47,7 +47,7 @@ import type {
   ContentsScheduleType
 } from '@/types/schedule';
 import { listPrograms, type ProgramRecord } from '@/features/programs/storage/programsDb';
-import { toast } from 'sonner';
+import { toast } from '@/store/notificationStore';
 
 const WEEKDAYS: { key: WeekDay, label: string }[] = [
   { key: 'MON', label: 'Mon' },

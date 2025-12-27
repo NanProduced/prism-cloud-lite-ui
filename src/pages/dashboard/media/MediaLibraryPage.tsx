@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/store/notificationStore';
 
 import { mockMediaLibraryNodes } from '@/lib/mock/media-library';
 import type { MediaNode } from '@/types/media-library';

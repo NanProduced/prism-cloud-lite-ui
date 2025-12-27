@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { formatBytes } from '@better-upload/client/helpers';
 import { AlertTriangle, CheckCircle2, FileText, Image as ImageIcon, Loader2, Video, X } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/store/notificationStore';
 
 import { Button } from '@/components/ui/button';
 import { StorageCard } from '@/components/ui/dashboard';

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useBlocker } from 'react-router';
 import { ArrowLeft, ChevronDown, Code2, Copy, Layers, ListChecks, Play, Redo2, Save, Send, SlidersHorizontal, Trash2, TriangleAlert, Undo2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/store/notificationStore';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

@@ -6,7 +6,9 @@ import type { DeviceCustomFieldDef } from '@/types/device-custom-field';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { toast } from '@/store/notificationStore';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   DropdownMenu,
   DropdownMenuContent,

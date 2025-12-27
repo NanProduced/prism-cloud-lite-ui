@@ -16,7 +16,7 @@ import {
   Upload,
   Video,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/store/notificationStore';
 
 import { ReactBitsFolder } from '@/components/react-bits/Folder';
 import { Button } from '@/components/ui/button';

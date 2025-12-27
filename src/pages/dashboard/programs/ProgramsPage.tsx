@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertCircle, Copy, FilePlus2, History, LayoutPanelTop, MoreHorizontal, Pencil, Plus, Search, Send, Sparkles, Trash2, XCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/store/notificationStore';
 import { formatBytes } from '@better-upload/client/helpers';
 
 import { Badge } from '@/components/ui/badge';

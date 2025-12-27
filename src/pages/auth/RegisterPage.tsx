@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
-import { PrismWordmark, PrismIcon } from "../../components/shared/logo";
+import { toast } from "@/store/notificationStore";
+import { PrismWordmark, PrismIcon, GoogleLogo, AppleLogo, WechatLogo } from "../../components/shared/logo";
 import { LanguageSwitcher } from "../../components/shared/LanguageSwitcher";
 import { registerRequestOtp, registerVerifyOtp, registerComplete, getErrorMessage, getErrorCode } from "../../services/authApi";
 import { AuthErrorCode } from "../../types/auth";

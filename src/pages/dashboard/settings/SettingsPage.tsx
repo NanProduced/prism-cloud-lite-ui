@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { toast } from 'sonner';
+import { toast } from '@/store/notificationStore';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CreditCard } from 'lucide-react';
 
@@ -33,6 +33,7 @@ import {
   regenerateApiKey,
 } from '@/services/userApi';
 import { getErrorMessage } from '@/services/authApi';
+import { useAuthStore } from '@/store/authStore';
 
 const TAB_ITEMS = [
   { value: 'profile', label: 'Profile' },
@@ -53,6 +54,7 @@ function isSettingsTab(value: unknown): value is SettingsTab {
 export default function SettingsPage() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { updateUser } = useAuthStore();
   
   const initialTab = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState<SettingsTab>(
@@ -103,8 +105,15 @@ export default function SettingsPage() {
 
   const updateProfileMutation = useMutation({
     mutationFn: updateUserProfile,
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['user', 'profile'] });
+      
+      // Sync global store
+      updateUser({
+        displayName: variables.displayName,
+        avatarId: variables.avatarId,
+      });
+
       window.dispatchEvent(new Event('prism-profile-updated')); // Notify other components if needed
       toast.success('Profile updated');
     },

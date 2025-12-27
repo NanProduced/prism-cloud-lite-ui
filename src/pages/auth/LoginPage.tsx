@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { toast } from "@/store/notificationStore";
 import { PrismWordmark, PrismIcon, GoogleLogo, AppleLogo, WechatLogo } from "../../components/shared/logo";
 import { LanguageSwitcher } from "../../components/shared/LanguageSwitcher";
 import { login, requestEmailOtp, googleLogin, getErrorMessage, getErrorCode } from "../../services/authApi";
@@ -85,8 +85,8 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
       if (isAuthenticated) {
         navigate('/dashboard');
       } else {
-        // 既没有登录也没有授权流程，说明是直接访问，发起跳转
         // 严格按照文档建议：直接跳转到网关 8082 端口，确保启动正确的 OAuth2 流程
+        // 这样后端会生成一个包含授权请求的 continue 参数并跳回本页
         const gatewayUrl = import.meta.env.VITE_GATEWAY_URL || "http://localhost:8082";
         const redirectUri = encodeURIComponent(`${window.location.origin}/dashboard`);
         window.location.href = `${gatewayUrl}/oauth2/authorization/prism-gateway?redirect_uri=${redirectUri}`;
@@ -94,6 +94,12 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
     }
   }, [isAuthenticated, clearAuth, navigate]);
 
+  // If already authenticated and no continue param, we are about to redirect to dashboard.
+  // Don't render the form to avoid flash.
+  const params = new URLSearchParams(window.location.search);
+  if (isAuthenticated && !params.get('continue')) {
+    return null;
+  }
 
   // Handle Google Login Callback (from Redirect Flow)
   useEffect(() => {
@@ -178,16 +184,10 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
     }
 
     try {
-      // Determine if it's email or phone and call appropriate API
-      // Note: Backend support for phone OTP request needs to be confirmed/implemented
-      // For now, using requestEmailOtp if it looks like an email, otherwise assume phone support exists or fallback
-      
       let response;
       if (isEmail(identifier)) {
           response = await requestEmailOtp({ email: identifier });
       } else {
-          // TODO: Implement phone OTP request when backend is ready
-          // For now, mock it or use email endpoint if it handles both (unlikely for strict types)
            toast.error("Phone OTP not yet implemented in frontend");
            return;
       }
@@ -247,7 +247,7 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
       const response = await login({
         authType,
         email: isEmailAuth ? identifier : undefined,
-        phone: !isEmailAuth ? identifier : undefined, // Assuming login API supports 'phone' field
+        phone: !isEmailAuth ? identifier : undefined,
         password: loginMethod === "password" ? password : undefined,
         authCode: loginMethod === "code" ? code : undefined,
         continueUrl,
@@ -256,9 +256,6 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
 
       if (response.success && response.data) {
         toast.success(t('auth.login.success'));
-        // 登录成功后直接跳转到后端返回的 redirectUrl。
-        // 由于登录 API 也是直连 8082 的，Session Cookie 已经保存在 8082 域名下，
-        // 随后的授权流程（跳到 8081 再跳回 8082）可以正确携带 Cookie。
         window.location.href = response.data.redirectUrl;
       } else {
         const errorCode = getErrorCode(response);
@@ -455,4 +452,3 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
     </div>
   );
 }
-

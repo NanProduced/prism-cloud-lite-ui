@@ -258,11 +258,11 @@ export function getErrorCode(response: BffResponse): string | undefined {
 }
 
 /**
- * Logout - Invalidate session on backend
+ * Logout - Invalidate session on backend via SLO (Single Logout)
  */
-export async function logout(): Promise<void> {
-  // Use a fresh instance to avoid the '/auth' baseURL prefix
-  // This ensures we hit /logout on the Gateway (proxied via Vite)
-  await axios.post('/logout');
+export function logout(): void {
+  // 必须使用整页跳转，因为登出包含多次 302 重定向
+  // 跳转到 Gateway 的 /logout 接口触发 OIDC RP-Initiated Logout
+  window.location.assign('/logout');
 }
 

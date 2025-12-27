@@ -61,7 +61,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { toast } from "sonner";
+import { toast } from "@/store/notificationStore";
 import { DeviceScreenshot } from "@/components/devices/DeviceScreenshot";
 import { DeviceStatusBadge } from "@/components/devices/DeviceStatusBadge";
 import { SlideToUnlock } from "@/components/ui/slide-to-unlock";

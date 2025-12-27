@@ -57,7 +57,7 @@ import { PrismIcon } from "@/components/shared/logo";
 import { getAvatarById } from "@/lib/avatars";
 import { useAuthStore } from "@/store/authStore";
 import { logout } from "@/services/authApi";
-import { toast } from "sonner";
+import { toast } from "@/store/notificationStore";
 
 type NavItem = {
   label: string;
@@ -164,16 +164,13 @@ export function DashboardShell({ children }: PropsWithChildren) {
     return location.pathname === href;
   };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      clearAuth();
-      navigate("/auth/login");
-      toast.success("Logged out successfully");
-    } catch (error) {
-      console.error("Logout failed:", error);
-      toast.error("Logout failed");
-    }
+  const handleLogout = () => {
+    // 1. 清理前端本地存储
+    clearAuth();
+    sessionStorage.clear();
+    
+    // 2. 触发后端登出流程 (OIDC RP-Initiated Logout)
+    logout();
   };
 
   return (

@@ -1,9 +1,10 @@
 import { Outlet, Navigate, useLocation, useOutlet } from "react-router-dom";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
-import { Toaster } from "sonner";
 import { useAuthStore } from "@/store/authStore";
 import { motion, AnimatePresence } from "framer-motion";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { WelcomeScreen } from "@/components/shared/WelcomeScreen";
+import { NotificationCenter } from "@/components/uitripled/notification-center";
 
 // Loading Screen Component
 const FullPageLoader = () => (
@@ -25,6 +26,7 @@ export const PublicLayout = () => {
 
   return (
     <div className="min-h-screen bg-black">
+      <NotificationCenter />
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={location.pathname}
@@ -45,11 +47,25 @@ export const PublicLayout = () => {
 };
 
 export const ProtectedLayout = () => {
-    const { isAuthenticated, isInitializing, checkAuth } = useAuthStore();
+    const { isAuthenticated, isInitializing, checkAuth, user } = useAuthStore();
+    const [showWelcome, setShowWelcome] = useState(false);
     
     useEffect(() => {
       checkAuth();
     }, [checkAuth]);
+
+    useEffect(() => {
+      // Show welcome screen only if authenticated and haven't seen it this session
+      const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
+      if (isAuthenticated && !hasSeenWelcome && !isInitializing) {
+        setShowWelcome(true);
+      }
+    }, [isAuthenticated, isInitializing]);
+
+    const handleWelcomeComplete = () => {
+      setShowWelcome(false);
+      sessionStorage.setItem('hasSeenWelcome', 'true');
+    };
 
     if (isInitializing) return <FullPageLoader />;
     
@@ -59,10 +75,18 @@ export const ProtectedLayout = () => {
 
     return (
         <>
+            <NotificationCenter />
+            <AnimatePresence>
+              {showWelcome && (
+                <WelcomeScreen 
+                  title={user?.displayName ? `Welcome back, ${user.displayName}` : "Welcome back"} 
+                  onComplete={handleWelcomeComplete} 
+                />
+              )}
+            </AnimatePresence>
             <DashboardShell>
                 <Outlet />
             </DashboardShell>
-            <Toaster position="top-right" richColors />
         </>
     );
 };

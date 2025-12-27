@@ -15,10 +15,21 @@ const apiClient = axios.create({
   withCredentials: true,
 });
 
-// Response interceptor to handle BffResponse format
+// Response interceptor to handle BffResponse format and Auth errors
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<BffResponse>) => {
+  async (error: AxiosError<BffResponse>) => {
+    // Check for 401 Unauthorized or specific Auth error codes
+    // Skip logout redirect for auth check endpoint to avoid infinite loop
+    const isAuthCheck = error.config?.url?.includes('/user/me');
+
+    if (error.response?.status === 401 && !isAuthCheck) {
+      console.warn('[API] Unauthorized access detected, redirecting to logout...');
+      const { logout } = await import('./authApi');
+      logout();
+      return Promise.reject(error);
+    }
+
     if (error.response?.data?.traceId) {
       console.error('[API Error]', {
         traceId: error.response.data.traceId,

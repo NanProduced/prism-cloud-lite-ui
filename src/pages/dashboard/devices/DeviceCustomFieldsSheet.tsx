@@ -16,8 +16,25 @@ import {
   TAG_COLOR_PRESETS,
   TAG_ICON_OPTIONS,
 } from '@/components/devices/tagging';
-import { toast } from 'sonner';
-import { ArrowDown, ArrowUp, Lock, Plus, Settings2, Trash2, X } from 'lucide-react';
+import { 
+  Plus, 
+  X, 
+  GripVertical, 
+  Type, 
+  CheckSquare, 
+  Calendar as CalendarIcon, 
+  Hash, 
+  List, 
+  Trash2,
+  Save,
+  AlertCircle,
+  ArrowDown,
+  ArrowUp,
+  Lock,
+  Settings2
+} from 'lucide-react';
+import { toast } from '@/store/notificationStore';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 
 const FIELD_TYPES: Array<{ value: DeviceCustomFieldType; label: string }> = [
