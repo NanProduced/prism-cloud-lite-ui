@@ -5,9 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 interface WelcomeScreenProps {
   onComplete?: () => void;
   title?: string;
+  userName?: string;
 }
 
-export const WelcomeScreen = ({ onComplete, title = "Welcome back" }: WelcomeScreenProps) => {
+export const WelcomeScreen = ({ onComplete, title = "Welcome back", userName }: WelcomeScreenProps) => {
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
@@ -44,14 +45,19 @@ export const WelcomeScreen = ({ onComplete, title = "Welcome back" }: WelcomeScr
               className="h-32 md:h-48 text-white" 
               onAnimationComplete={handleAnimationComplete}
             />
-            <motion.p
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1, duration: 1 }}
-              className="mt-8 text-white/50 text-sm tracking-[0.2em] uppercase font-light"
+              className="mt-8 flex items-center gap-2 text-sm tracking-[0.2em] font-light"
             >
-              {title}
-            </motion.p>
+              <span className="text-white/50 uppercase">{title}</span>
+              {userName && (
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#82DBF7] to-[#B6F09C] font-bold tracking-normal normal-case">
+                  {userName}
+                </span>
+              )}
+            </motion.div>
           </div>
         </motion.div>
       )}

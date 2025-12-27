@@ -15,10 +15,12 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isInitializing: boolean;
+  isLogoutPending: boolean;
   setAuth: (user: User) => void;
   updateUser: (user: Partial<User>) => void;
   clearAuth: () => void;
   checkAuth: () => Promise<void>;
+  resetLogoutFlag: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -27,19 +29,26 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isInitializing: true,
-      setAuth: (user) => set({ user, isAuthenticated: true, isInitializing: false }),
+      isLogoutPending: false,
+      setAuth: (user) => set({ user, isAuthenticated: true, isInitializing: false, isLogoutPending: false }),
       updateUser: (userData) => set((state) => ({
         user: state.user ? { ...state.user, ...userData } : null
       })),
-      clearAuth: () => set({ user: null, isAuthenticated: false, isInitializing: false }),
+      clearAuth: () => set({ user: null, isAuthenticated: false, isInitializing: false, isLogoutPending: true }),
+      resetLogoutFlag: () => set({ isLogoutPending: false }),
       checkAuth: async () => {
+        // If we just logged out, don't try to re-auth immediately
+        if (get().isLogoutPending) {
+          set({ isInitializing: false });
+          return;
+        }
+
         try {
           const { getUserInfo } = await import('@/services/authApi');
           const response = await getUserInfo();
           if (response.success && response.data) {
             set({ user: response.data, isAuthenticated: true, isInitializing: false });
           } else {
-            // If failed but not network error, it means not logged in
             set({ user: null, isAuthenticated: false, isInitializing: false });
           }
         } catch (error) {

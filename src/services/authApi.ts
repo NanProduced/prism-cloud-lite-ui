@@ -261,8 +261,21 @@ export function getErrorCode(response: BffResponse): string | undefined {
  * Logout - Invalidate session on backend via SLO (Single Logout)
  */
 export function logout(): void {
+  // 物理锁：防止并发调用导致重定向冲突（解决 500 页面问题）
+  if (sessionStorage.getItem('prism_logout_in_progress')) {
+    return;
+  }
+  
+  console.log('[Auth] Global logout initiated. Locking state and redirecting...');
+  
+  // 设置双重标记
+  sessionStorage.setItem('prism_logout_in_progress', 'true');
+  sessionStorage.setItem('prism_just_logged_out', 'true');
+  
+  // 清理本地持久化状态
+  localStorage.removeItem('prism-auth-storage');
+  
   // 必须使用整页跳转，因为登出包含多次 302 重定向
-  // 跳转到 Gateway 的 /logout 接口触发 OIDC RP-Initiated Logout
   window.location.assign('/logout');
 }
 

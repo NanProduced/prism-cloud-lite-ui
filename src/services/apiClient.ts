@@ -24,6 +24,11 @@ apiClient.interceptors.response.use(
     const isAuthCheck = error.config?.url?.includes('/user/me');
 
     if (error.response?.status === 401 && !isAuthCheck) {
+      // 检查是否已经在登出中，如果是，则忽略该错误，不再重复触发登出
+      if (sessionStorage.getItem('prism_logout_in_progress')) {
+        return Promise.reject(error);
+      }
+
       console.warn('[API] Unauthorized access detected, redirecting to logout...');
       const { logout } = await import('./authApi');
       logout();

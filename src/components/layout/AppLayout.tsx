@@ -79,7 +79,8 @@ export const ProtectedLayout = () => {
             <AnimatePresence>
               {showWelcome && (
                 <WelcomeScreen 
-                  title={user?.displayName ? `Welcome back, ${user.displayName}` : "Welcome back"} 
+                  title="Welcome back," 
+                  userName={user?.displayName || "Guest"}
                   onComplete={handleWelcomeComplete} 
                 />
               )}
