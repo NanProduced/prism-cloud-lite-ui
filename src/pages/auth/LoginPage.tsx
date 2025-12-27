@@ -67,6 +67,15 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
+  // Helper to initiate OIDC flow via Gateway
+  const initiateSecureLogin = () => {
+    const gatewayUrl = import.meta.env.VITE_GATEWAY_URL || "http://localhost:8082";
+    const redirectUri = encodeURIComponent(`${window.location.origin}/dashboard`);
+    const target = `${gatewayUrl}/oauth2/authorization/prism-gateway?redirect_uri=${redirectUri}`;
+    console.log('[Auth] Initiating secure login flow via Gateway:', target);
+    window.location.href = target;
+  };
+
   // Parse continue parameter from URL on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -83,22 +92,31 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
     } else {
       // 2. 没有 continue 参数的情况
       if (isAuthenticated) {
+        // 如果已经登录，直接去后台
         navigate('/dashboard');
       } else {
-        // 严格按照文档建议：直接跳转到网关 8082 端口，确保启动正确的 OAuth2 流程
-        // 这样后端会生成一个包含授权请求的 continue 参数并跳回本页
-        const gatewayUrl = import.meta.env.VITE_GATEWAY_URL || "http://localhost:8082";
-        const redirectUri = encodeURIComponent(`${window.location.origin}/dashboard`);
-        window.location.href = `${gatewayUrl}/oauth2/authorization/prism-gateway?redirect_uri=${redirectUri}`;
+        // 如果未登录且缺失 continue，说明是直接访问 /login。
+        // 为了确保第一次登录就能成功（不报错 AUTH-1014），必须立即跳转网关获取上下文。
+        // 这会触发一次整页跳转，回来的 URL 会带上正确的 continue 参数。
+        console.log('[Auth] Missing continue parameter, redirecting to Gateway to initialize OIDC context...');
+        initiateSecureLogin();
       }
     }
   }, [isAuthenticated, clearAuth, navigate]);
 
   // If already authenticated and no continue param, we are about to redirect to dashboard.
-  // Don't render the form to avoid flash.
+  // Or if no continue param and not authenticated, we are about to redirect to Gateway.
+  // Don't render the form to avoid flash and unnecessary interactions.
   const params = new URLSearchParams(window.location.search);
-  if (isAuthenticated && !params.get('continue')) {
-    return null;
+  if (!params.get('continue')) {
+    return (
+      <div className="min-h-screen bg-[#131619] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <PrismIcon size={48} variant="gradient" className="animate-pulse" />
+          <p className="text-white/40 text-sm font-medium animate-pulse">Initializing secure session...</p>
+        </div>
+      </div>
+    );
   }
 
   // Handle Google Login Callback (from Redirect Flow)
@@ -262,7 +280,9 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
         if (errorCode === AuthErrorCode.ACCOUNT_OR_CREDENTIAL_ERROR) {
           toast.error(t('auth.errors.accountOrCredentialError'));
         } else if (errorCode === AuthErrorCode.INVALID_CONTINUE_URL) {
-          toast.error(t('auth.errors.continueUrlInvalid'));
+          // 如果 continueUrl 被后端拒绝，说明必须走网关授权流程来刷新 OIDC Context
+          toast.error(t('auth.errors.continueUrlInvalid', 'Invalid session context, redirecting to secure login...'));
+          setTimeout(() => initiateSecureLogin(), 1500);
         } else {
           toast.error(getErrorMessage(response));
         }
