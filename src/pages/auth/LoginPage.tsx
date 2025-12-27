@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/store/notificationStore";
@@ -211,8 +211,22 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
   const isJustLoggedOut = sessionStorage.getItem('prism_just_logged_out') === 'true';
   if (!searchParams.get('continue') && !isJustLoggedOut && !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <PrismIcon size={48} variant="gradient" className="animate-pulse" />
+      <div className="min-h-screen bg-[#131619] flex items-center justify-center overflow-hidden">
+        <div className="relative">
+          <div className="absolute inset-0 bg-[#82dbf7]/10 blur-[100px] rounded-full animate-pulse" />
+          <div className="relative z-10 flex flex-col items-center gap-4">
+            <PrismIcon size={64} variant="gradient" className="animate-pulse" />
+            <div className="flex gap-1.5 mt-2">
+               {[0, 1, 2].map((i) => (
+                 <div
+                   key={i}
+                   className="size-1.5 rounded-full bg-[#b6f09c] animate-pulse"
+                   style={{ animationDelay: `${i * 0.2}s` }}
+                 />
+               ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

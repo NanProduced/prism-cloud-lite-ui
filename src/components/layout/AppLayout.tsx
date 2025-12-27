@@ -6,10 +6,55 @@ import React, { useEffect, useState } from "react";
 import { WelcomeScreen } from "@/components/shared/WelcomeScreen";
 import { NotificationCenter } from "@/components/uitripled/notification-center";
 
+import { sseManager } from "@/lib/sse-manager";
+import { useMessageStore } from "@/store/messageStore";
+
+import { PrismIcon } from "@/components/shared/logo";
+
 // Loading Screen Component
 const FullPageLoader = () => (
-  <div className="min-h-screen bg-black flex items-center justify-center">
-    <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+  <div className="min-h-screen bg-[#131619] flex items-center justify-center overflow-hidden">
+    <div className="relative">
+      {/* Background Glow */}
+      <motion.div 
+        animate={{ 
+          scale: [1, 1.2, 1],
+          opacity: [0.2, 0.4, 0.2]
+        }}
+        transition={{
+          duration: 4,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+        className="absolute inset-0 bg-[#82dbf7]/10 blur-[100px] rounded-full"
+      />
+      
+      {/* Icon and Pulse */}
+      <motion.div
+        animate={{ 
+          scale: [0.98, 1.02, 0.98],
+          opacity: [0.9, 1, 0.9]
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+        className="relative z-10 flex flex-col items-center gap-4"
+      >
+        <PrismIcon size={64} variant="gradient" />
+        <div className="flex gap-1.5 mt-2">
+           {[0, 1, 2].map((i) => (
+             <motion.div
+               key={i}
+               animate={{ opacity: [0.2, 1, 0.2] }}
+               transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+               className="size-1.5 rounded-full bg-[#b6f09c]"
+             />
+           ))}
+        </div>
+      </motion.div>
+    </div>
   </div>
 );
 
@@ -17,9 +62,13 @@ export const PublicLayout = () => {
   const location = useLocation();
   const outlet = useOutlet();
   const { checkAuth, isInitializing } = useAuthStore();
+  const initialized = React.useRef(false);
 
   useEffect(() => {
-    checkAuth();
+    if (!initialized.current) {
+      initialized.current = true;
+      checkAuth();
+    }
   }, [checkAuth]);
 
   if (isInitializing) return <FullPageLoader />;
@@ -48,11 +97,29 @@ export const PublicLayout = () => {
 
 export const ProtectedLayout = () => {
     const { isAuthenticated, isInitializing, checkAuth, user } = useAuthStore();
+    const { fetchInitialData } = useMessageStore();
     const [showWelcome, setShowWelcome] = useState(false);
+    const initialized = React.useRef(false);
     
     useEffect(() => {
-      checkAuth();
-    }, [checkAuth]);
+      console.log("[ProtectedLayout] State:", { isAuthenticated, isInitializing });
+      if (!initialized.current) {
+        initialized.current = true;
+        checkAuth().catch(err => console.error("[ProtectedLayout] checkAuth failed:", err));
+      }
+    }, [checkAuth, isAuthenticated, isInitializing]);
+
+    useEffect(() => {
+      if (isAuthenticated && user?.publicId) {
+        // Fetch initial notification data
+        fetchInitialData();
+        // Connect to SSE
+        sseManager.connect(user.publicId);
+      }
+      return () => {
+        if (!isAuthenticated) sseManager.disconnect();
+      };
+    }, [isAuthenticated, user?.publicId, fetchInitialData]);
 
     useEffect(() => {
       // Show welcome screen only if authenticated and haven't seen it this session

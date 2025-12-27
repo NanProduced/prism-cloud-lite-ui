@@ -15,11 +15,11 @@ import SettingsPage from "@/pages/dashboard/settings/SettingsPage";
 import MapPage from "@/pages/dashboard/map/MapPage";
 import DeviceDetailsPage from "@/pages/dashboard/devices/DeviceDetailsPage";
 import SchedulePage from "@/pages/dashboard/schedule/SchedulePage";
+import MessagesPage from "@/pages/dashboard/messages/MessagesPage";
 import {
   AnalyticsPage,
   MonitoringPage,
   LogsPage,
-  MessagesPage,
 } from "@/pages/dashboard/PlaceholderPages";
 
 const queryClient = new QueryClient({

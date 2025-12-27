@@ -171,5 +171,64 @@
       "continueUrlInvalid": "Invalid redirect URL",
       "allFieldsRequired": "All fields are required"
     }
+  },
+  "billing": {
+    "title": "Subscription Plans",
+    "subtitle": "Choose the scale that fits your business needs",
+    "currentPlan": "Current Plan",
+    "expiresAt": "Expires on {{date}}",
+    "reloginNotice": "Subscription updated! Please re-login to activate all features.",
+    "free": {
+      "name": "Free",
+      "price": "$0",
+      "description": "Essential features for small setups",
+      "features": [
+        "20 Devices",
+        "20 Programs",
+        "10 Versions per program",
+        "3 Custom device columns",
+        "2GB Cloud Storage"
+      ]
+    },
+    "pro": {
+      "name": "Pro",
+      "price": "$29",
+      "period": "/mo",
+      "description": "Powerful tools for growing networks",
+      "features": [
+        "100 Devices",
+        "200 Programs",
+        "20 Versions per program",
+        "20 Custom device columns",
+        "50GB Cloud Storage",
+        "Priority Transcoding",
+        "Exclusive API Access"
+      ],
+      "button": "Upgrade with Code"
+    },
+    "ultra": {
+      "name": "Ultra",
+      "price": "Custom",
+      "description": "Tailored solutions for large enterprises",
+      "features": [
+        "Unlimited Devices",
+        "Unlimited Programs",
+        "Unlimited History",
+        "Enterprise Security (SSO)",
+        "Dedicated Account Manager",
+        "Custom Feature Development",
+        "SLA Guarantee"
+      ],
+      "button": "Contact Sales"
+    },
+    "redeem": {
+      "title": "Redeem Code",
+      "description": "Enter your 12-character PRDEMO code to upgrade",
+      "placeholder": "PRDEMO-XXXX-XXXX",
+      "button": "Verify & Activate",
+      "submitting": "Activating...",
+      "success": "Activation successful! Your plan is now Pro.",
+      "error": "Invalid or expired code"
+    }
   }
 }

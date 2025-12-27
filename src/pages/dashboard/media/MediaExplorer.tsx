@@ -16,6 +16,7 @@ import {
   Upload,
   Video,
 } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/store/notificationStore';
 
 import { ReactBitsFolder } from '@/components/react-bits/Folder';
@@ -34,6 +35,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { MediaAssetNode, MediaNode } from '@/types/media-library';
+import { deleteNode, renameNode } from '@/services/mediaApi';
+import { getErrorMessage } from '@/services/authApi';
 
 import { MediaAssetPreviewDialog } from './MediaAssetPreviewDialog';
 
@@ -60,23 +63,53 @@ function getInitialMediaViewMode(): MediaViewMode {
 
 export function MediaExplorer({
   nodes,
+  allFolders,
   currentFolderId,
   onFolderChange,
   onRequestUpload,
   onRequestCreateFolder,
 }: {
   nodes: MediaNode[];
+  allFolders: MediaNode[];
   currentFolderId: string | null;
   onFolderChange: (id: string | null) => void;
   onRequestUpload: () => void;
   onRequestCreateFolder: (parentId: string | null) => void;
 }) {
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<MediaFilter>('all');
   const [sort, setSort] = useState<MediaSort>('updatedAt');
   const [viewMode, setViewMode] = useState<MediaViewMode>(() => getInitialMediaViewMode());
   const [previewAsset, setPreviewAsset] = useState<MediaAssetNode | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+
+  // --- Mutations ---
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteNode,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['media', 'nodes'] });
+      queryClient.invalidateQueries({ queryKey: ['media', 'usage'] });
+      toast.success('Deleted successfully');
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error as any));
+    }
+  });
+
+  const renameMutation = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => renameNode(id, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['media', 'nodes'] });
+      toast.success('Renamed successfully');
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error as any));
+    }
+  });
+
+  // --- Handlers ---
 
   const handleViewModeChange = (value: string) => {
     const next = parseMediaViewMode(value);
@@ -106,47 +139,50 @@ export function MediaExplorer({
       return;
     }
 
+    if (action === 'Delete') {
+      if (confirm(`Are you sure you want to delete "${node.name}"?`)) {
+        deleteMutation.mutate(node.id);
+      }
+      return;
+    }
+
+    if (action === 'Rename') {
+      const newName = prompt(`Enter new name for "${node.name}":`, node.name);
+      if (newName && newName !== node.name) {
+        renameMutation.mutate({ id: node.id, name: newName });
+      }
+      return;
+    }
+
     toast.message(`TODO: ${action}`);
   };
 
-  const nodesById = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
-
-  const childrenByParent = useMemo(() => {
-    const map = new Map<string | null, MediaNode[]>();
-    for (const node of nodes) {
-      const list = map.get(node.parentId) ?? [];
-      list.push(node);
-      map.set(node.parentId, list);
-    }
-    return map;
-  }, [nodes]);
-
   const currentFolder = useMemo(() => {
     if (!currentFolderId) return null;
-    const node = nodesById.get(currentFolderId);
-    if (!node || node.type !== 'folder') return null;
-    return node;
-  }, [currentFolderId, nodesById]);
+    return allFolders.find((n) => n.id === currentFolderId) ?? null;
+  }, [currentFolderId, allFolders]);
 
   const currentPath = useMemo(() => {
     const path: Array<{ id: string; name: string; parentId: string | null }> = [];
     let cursor = currentFolderId;
+    const folderMap = new Map(allFolders.map(f => [f.id, f]));
+
     while (cursor) {
-      const node = nodesById.get(cursor);
-      if (!node || node.type !== 'folder') break;
+      const node = folderMap.get(cursor);
+      if (!node) break;
       path.unshift({ id: node.id, name: node.name, parentId: node.parentId });
       cursor = node.parentId;
     }
     return path;
-  }, [currentFolderId, nodesById]);
+  }, [currentFolderId, allFolders]);
 
   const visibleNodes = useMemo(() => {
-    const list = childrenByParent.get(currentFolderId) ?? [];
     const query = searchQuery.trim().toLowerCase();
-    const filteredByQuery = query ? list.filter((n) => n.name.toLowerCase().includes(query)) : list;
+    const filteredByQuery = query ? nodes.filter((n) => n.name.toLowerCase().includes(query)) : nodes;
     const filteredByType = filterNodes(filteredByQuery, filter);
+    // Sorting is now handled by the backend partially, but we can still sort locally for better UX
     return sortNodes(filteredByType, sort);
-  }, [childrenByParent, currentFolderId, filter, searchQuery, sort]);
+  }, [nodes, filter, searchQuery, sort]);
 
   return (
     <>

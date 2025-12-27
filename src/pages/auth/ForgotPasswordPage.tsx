@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/store/notificationStore";
 import { PrismWordmark, PrismIcon } from "../../components/shared/logo";
+import { LanguageSwitcher } from "../../components/shared/LanguageSwitcher";
 import { requestPasswordReset, confirmPasswordReset, getErrorMessage } from "../../services/authApi";
 
 // Icons

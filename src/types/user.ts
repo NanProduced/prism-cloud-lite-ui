@@ -1,9 +1,31 @@
+export type SubscriptionTier = 'FREE' | 'PRO' | 'ULTRA';
+
+export interface SubscriptionSnapshot {
+  tier: SubscriptionTier;
+  startAt?: string;
+  endAt?: string;
+  proActive: boolean;
+}
+
+export interface RedeemRequest {
+  code: string;
+}
+
+export interface SubscriptionHistoryItem {
+  id: string;
+  type: string;
+  success: boolean;
+  code?: string;
+  metadata?: string;
+  createdAt: string;
+}
+
 export interface UserProfile {
   publicId: string;
   email: string;
   displayName?: string;
   avatarId?: string;
-  subscriptionTier?: string;
+  subscriptionTier?: SubscriptionTier;
   subscriptionExpiresAt?: string;
   phone?: string;
 }

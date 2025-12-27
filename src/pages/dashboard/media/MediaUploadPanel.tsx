@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { formatBytes } from '@better-upload/client/helpers';
 import { AlertTriangle, CheckCircle2, FileText, Image as ImageIcon, Loader2, Video, X } from 'lucide-react';
 import { toast } from '@/store/notificationStore';
@@ -15,6 +16,13 @@ import type { MediaAssetKind, MediaNode } from '@/types/media-library';
 import { UploadSettingsDialog } from './UploadSettingsDialog';
 import type { PendingUploadFile, UploadTask, UploadTaskStatus } from './uploadModels';
 
+import { 
+  duplicateCheck, 
+  batchFinalize, 
+  getUploadUrls 
+} from '@/services/mediaApi';
+import axios from 'axios';
+
 export type MediaUploadPanelHandle = {
   openFilePicker: () => void;
 };
@@ -27,6 +35,7 @@ export const MediaUploadPanel = forwardRef<
     onRequestCreateFolder: (parentId: string | null) => void;
     stats: {
       totalBytes: number;
+      quotaBytes: number;
       bytesByKind: Record<MediaAssetKind, number>;
       counts: {
         image: number;
@@ -38,8 +47,8 @@ export const MediaUploadPanel = forwardRef<
     };
   }
 >(function MediaUploadPanel({ defaultFolderId, folderNodes, onRequestCreateFolder, stats }, ref) {
+  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const taskTimersRef = useRef<Map<string, number>>(new Map());
   const md5ControllersRef = useRef<Map<string, AbortController>>(new Map());
   const taskTokensRef = useRef<Map<string, number>>(new Map());
   const throughputSamplesRef = useRef<Map<string, { bytes: number; timestamp: number }>>(new Map());
@@ -51,8 +60,8 @@ export const MediaUploadPanel = forwardRef<
   const [uploadFolderId, setUploadFolderId] = useState<string | null>(null);
   const [uploadTasks, setUploadTasks] = useState<UploadTask[]>([]);
 
-  const totalQuotaBytes = 2 * 1024 * 1024 * 1024;
-  const usedQuotaBytes = Math.min(stats.totalBytes, totalQuotaBytes);
+  const totalQuotaBytes = stats.quotaBytes;
+  const usedQuotaBytes = stats.totalBytes;
   const quotaPercent = totalQuotaBytes === 0 ? 0 : Math.round((usedQuotaBytes / totalQuotaBytes) * 100);
 
   const storageBreakdown = useMemo(() => {
@@ -166,60 +175,7 @@ export const MediaUploadPanel = forwardRef<
     throughputSamplesRef.current.delete(groupId);
   };
 
-  const updateThroughput = (groupId: string, bytesUploaded: number, timestamp: number) => {
-    const previous = throughputSamplesRef.current.get(groupId);
-    throughputSamplesRef.current.set(groupId, { bytes: bytesUploaded, timestamp });
-
-    if (!previous) return undefined;
-    const deltaMs = timestamp - previous.timestamp;
-    const deltaBytes = bytesUploaded - previous.bytes;
-    if (deltaMs <= 0 || deltaBytes <= 0) return undefined;
-    return (deltaBytes / deltaMs) * 1000;
-  };
-
-  const stopMockTimer = (groupId: string) => {
-    const timer = taskTimersRef.current.get(groupId);
-    if (timer) window.clearInterval(timer);
-    taskTimersRef.current.delete(groupId);
-  };
-
-  const startMockUploadProgress = (groupId: string) => {
-    stopMockTimer(groupId);
-    clearThroughput(groupId);
-
-    const timerId = window.setInterval(() => {
-      const now = Date.now();
-      setUploadTasks((prev) =>
-        prev.map((t) => {
-          if (t.groupId !== groupId) return t;
-          if (t.status === 'canceled' || t.status === 'error' || t.status === 'done') return t;
-
-          const nextProgress = Math.min(1, t.progress + 0.03);
-          const status: UploadTaskStatus =
-            nextProgress < 0.86 ? 'uploading' : nextProgress < 0.98 ? 'finalizing' : 'done';
-          const bytesUploaded = Math.round(t.bytesTotal * nextProgress);
-
-          const isProgressing = status === 'uploading';
-          const throughputBps = isProgressing ? updateThroughput(groupId, bytesUploaded, now) : undefined;
-          if (!isProgressing) clearThroughput(groupId);
-
-          if (status === 'done') {
-            clearThroughput(groupId);
-            return { ...t, progress: 1, status, bytesUploaded: t.bytesTotal, throughputBps: undefined };
-          }
-
-          return { ...t, progress: nextProgress, status, bytesUploaded, throughputBps };
-        }),
-      );
-    }, 160);
-
-    taskTimersRef.current.set(groupId, timerId);
-  };
-
   const startUploadFlow = (task: UploadTask) => {
-    stopMockTimer(task.groupId);
-    clearThroughput(task.groupId);
-
     const token = nextTaskToken(task.groupId);
 
     const previousMd5 = md5ControllersRef.current.get(task.groupId);
@@ -247,6 +203,7 @@ export const MediaUploadPanel = forwardRef<
 
     void (async () => {
       try {
+        // 1. Calculate MD5
         const md5 = await computeMd5(task.original, task.groupId, {
           signal: controller.signal,
           onProgress: (percent, data) => {
@@ -289,65 +246,93 @@ export const MediaUploadPanel = forwardRef<
           ),
         );
 
-        const checkResult = await checkDuplicate({
-          clientId: task.groupId,
-          md5,
-          size: task.original.size,
-          type: task.original.type,
-        }).catch(() => ({ duplicate: false }));
+        // 2. Duplicate Check
+        const checkRes = await duplicateCheck({
+          files: [{
+            clientId: task.groupId,
+            md5,
+            size: task.original.size,
+            type: task.original.type
+          }]
+        });
 
+        const checkResult = checkRes.data?.results[0];
         if (!isTaskTokenActive(task.groupId, token)) return;
 
-        if (checkResult.duplicate) {
+        if (checkResult?.duplicate && checkResult.fileEntityId) {
+          // SECONDS-LEVEL UPLOAD (Skip actual S3 upload)
           setUploadTasks((prev) =>
-            prev.map((t) =>
-              t.groupId === task.groupId
-                ? {
-                    ...t,
-                    status: 'finalizing',
-                    progress: 1,
-                    bytesUploaded: t.bytesTotal,
-                    bytesTotal: t.bytesTotal,
-                    throughputBps: undefined,
-                  }
-                : t,
-            ),
+            prev.map((t) => (t.groupId === task.groupId ? { ...t, status: 'finalizing', progress: 1 } : t))
           );
-
-          window.setTimeout(() => {
-            if (!isTaskTokenActive(task.groupId, token)) return;
-            setUploadTasks((prev) =>
-              prev.map((t) => (t.groupId === task.groupId ? { ...t, status: 'done', progress: 1 } : t)),
-            );
-          }, 450);
-
+          
+          await finalizeUpload(task, md5, undefined, checkResult.fileEntityId);
           return;
         }
 
-        clearThroughput(task.groupId);
+        // 3. Get Presigned URL (Better Upload)
         setUploadTasks((prev) =>
-          prev.map((t) =>
-            t.groupId === task.groupId
-              ? {
-                  ...t,
-                  status: 'uploading',
-                  progress: 0,
-                  bytesUploaded: 0,
-                  bytesTotal: task.original.size + estimateCoverBytes(task.original),
-                  throughputBps: undefined,
-                }
-              : t,
-          ),
+          prev.map((t) => (t.groupId === task.groupId ? { ...t, status: 'uploading', progress: 0 } : t))
         );
 
-        startMockUploadProgress(task.groupId);
-      } catch (error) {
+        const uploadInfo = await getUploadUrls({
+          route: 'mediaLibrary',
+          files: [{
+            name: task.original.name,
+            size: task.original.size,
+            type: task.original.type
+          }],
+          metadata: {
+            folderId: task.folderId || 'default',
+            items: [{
+              name: task.original.name,
+              groupId: task.groupId,
+              role: 'original',
+              md5
+            }]
+          }
+        });
+
+        const fileInfo = uploadInfo.files[0];
+        const s3Key = fileInfo.objectInfo.key;
+
+        // 4. Upload to S3
+        await axios.put(fileInfo.uploadUrl, task.original, {
+          headers: { 'Content-Type': task.original.type },
+          onUploadProgress: (progressEvent) => {
+            if (!isTaskTokenActive(task.groupId, token)) return;
+            const now = Date.now();
+            const progress = progressEvent.loaded / (progressEvent.total || task.original.size);
+            setUploadTasks((prev) =>
+              prev.map((t) =>
+                t.groupId === task.groupId
+                  ? {
+                      ...t,
+                      progress,
+                      bytesUploaded: progressEvent.loaded,
+                      throughputBps: updateThroughput(task.groupId, progressEvent.loaded, now),
+                    }
+                  : t,
+              ),
+            );
+          }
+        });
+
+        if (!isTaskTokenActive(task.groupId, token)) return;
+
+        // 5. Finalize in Database
+        setUploadTasks((prev) =>
+          prev.map((t) => (t.groupId === task.groupId ? { ...t, status: 'finalizing', progress: 1 } : t))
+        );
+
+        await finalizeUpload(task, md5, s3Key);
+
+      } catch (error: any) {
         if (!isTaskTokenActive(task.groupId, token)) return;
         md5ControllersRef.current.delete(task.groupId);
         clearThroughput(task.groupId);
 
-        const message = error instanceof Error ? error.message : 'Failed to compute MD5.';
-        const canceled = message.toLowerCase().includes('cancel');
+        const message = error.response?.data?.error?.displayMessage || error.message || 'Upload failed.';
+        const canceled = message.toLowerCase().includes('cancel') || axios.isCancel(error);
 
         setUploadTasks((prev) =>
           prev.map((t) =>
@@ -365,8 +350,40 @@ export const MediaUploadPanel = forwardRef<
     })();
   };
 
+  const finalizeUpload = async (task: UploadTask, md5: string, s3Key?: string, fileEntityId?: string) => {
+    try {
+      await batchFinalize({
+        folderId: task.folderId,
+        items: [{
+          groupId: task.groupId,
+          title: task.title,
+          files: [{
+            role: 'original',
+            s3Key,
+            fileEntityId,
+            size: task.original.size,
+            type: task.original.type,
+            originalName: task.original.name,
+            md5
+          }]
+        }]
+      });
+
+      setUploadTasks((prev) =>
+        prev.map((t) => (t.groupId === task.groupId ? { ...t, status: 'done', progress: 1 } : t))
+      );
+
+      // Refresh list and usage
+      queryClient.invalidateQueries({ queryKey: ['media'] });
+    } catch (error: any) {
+      const message = error.response?.data?.error?.displayMessage || error.message || 'Finalize failed.';
+      setUploadTasks((prev) =>
+        prev.map((t) => (t.groupId === task.groupId ? { ...t, status: 'error', error: message } : t))
+      );
+    }
+  };
+
   const cancelTask = (groupId: string) => {
-    stopMockTimer(groupId);
     clearThroughput(groupId);
     const controller = md5ControllersRef.current.get(groupId);
     if (controller) controller.abort();
@@ -461,23 +478,14 @@ export const MediaUploadPanel = forwardRef<
   };
 
   useEffect(() => {
-    const timers = taskTimersRef.current;
     const controllers = md5ControllersRef.current;
     const throughputSamples = throughputSamplesRef.current;
     return () => {
-      timers.forEach((timer) => window.clearInterval(timer));
-      timers.clear();
       controllers.forEach((controller) => controller.abort());
       controllers.clear();
       throughputSamples.clear();
     };
   }, []);
-
-  useEffect(() => {
-    for (const task of uploadTasks) {
-      if (task.status === 'done' || task.status === 'canceled' || task.status === 'error') stopMockTimer(task.groupId);
-    }
-  }, [uploadTasks]);
 
   const recentCountLabel = useMemo(() => {
     const active = uploadTasks.filter((t) =>
@@ -801,64 +809,6 @@ function estimateCoverBytes(file: File): number {
   if (kind === 'video') return 220_000;
   if (kind === 'image') return Math.min(350_000, Math.round(file.size * 0.25));
   return 0;
-}
-
-async function checkDuplicate(input: { clientId: string; md5?: string; size: number; type: string }): Promise<{
-  duplicate: boolean;
-  fileEntityId?: string;
-}> {
-  const response = await fetch('/api/upload/check', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      files: [
-        {
-          clientId: input.clientId,
-          md5: input.md5,
-          size: input.size,
-          type: input.type,
-        },
-      ],
-    }),
-  });
-
-  type BffResponse<T> = {
-    success: boolean;
-    data: T | null;
-    error?: { displayMessage?: string; message?: string } | null;
-    traceId?: string;
-  };
-
-  type DuplicateCheckData = {
-    results: { clientId: string; duplicate: boolean; fileEntityId?: string }[];
-  };
-
-  const payload = (await response.json().catch(() => null)) as unknown;
-
-  if (!response.ok) {
-    throw new Error('Duplicate check failed.');
-  }
-
-  if (!payload || typeof payload !== 'object') return { duplicate: false };
-
-  if (!('success' in payload)) return { duplicate: false };
-
-  const bff = payload as BffResponse<DuplicateCheckData>;
-
-  if (!bff.success) {
-    const message = bff.error?.displayMessage || bff.error?.message || 'Duplicate check failed.';
-    throw new Error(message);
-  }
-
-  const results = bff.data?.results;
-  if (!Array.isArray(results)) return { duplicate: false };
-
-  const item = results.find((result) => result.clientId === input.clientId);
-  return {
-    duplicate: Boolean(item?.duplicate),
-    fileEntityId: typeof item?.fileEntityId === 'string' ? item.fileEntityId : undefined,
-  };
 }
 
 async function getImageDimensions(file: File): Promise<{ width: number; height: number }> {

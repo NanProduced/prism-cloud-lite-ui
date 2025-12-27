@@ -1,7 +1,14 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/store/notificationStore';
 
-import { mockMediaLibraryNodes } from '@/lib/mock/media-library';
+import { 
+  getMediaNodes, 
+  getMediaUsage, 
+  createFolder,
+  getAllFolders
+} from '@/services/mediaApi';
+import { getErrorMessage } from '@/services/authApi';
 import type { MediaNode } from '@/types/media-library';
 
 import { CreateFolderDialog } from './CreateFolderDialog';
@@ -9,43 +16,73 @@ import { MediaExplorer } from './MediaExplorer';
 import { MediaUploadPanel, type MediaUploadPanelHandle } from './MediaUploadPanel';
 
 export default function MediaLibraryPage() {
-  const [nodes, setNodes] = useState<MediaNode[]>(() => mockMediaLibraryNodes);
+  const queryClient = useQueryClient();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const uploadPanelRef = useRef<MediaUploadPanelHandle | null>(null);
+  
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [createFolderParentId, setCreateFolderParentId] = useState<string | null>(null);
 
-  const nodesWithComputedCounts = useMemo(() => withComputedFolderCounts(nodes), [nodes]);
-  const folderNodes = useMemo(() => nodesWithComputedCounts.filter((n) => n.type === 'folder'), [nodesWithComputedCounts]);
-  const assets = useMemo(() => nodesWithComputedCounts.filter((n) => n.type === 'asset'), [nodesWithComputedCounts]);
+  // --- Queries ---
 
+  const { data: nodesData, isLoading: isNodesLoading } = useQuery({
+    queryKey: ['media', 'nodes', currentFolderId],
+    queryFn: () => getMediaNodes({ parentId: currentFolderId, limit: 500 }),
+  });
+
+  const { data: usageData } = useQuery({
+    queryKey: ['media', 'usage'],
+    queryFn: getMediaUsage,
+  });
+
+  const { data: allFoldersData } = useQuery({
+    queryKey: ['media', 'folders'],
+    queryFn: getAllFolders,
+  });
+
+  // --- Mutations ---
+
+  const createFolderMutation = useMutation({
+    mutationFn: createFolder,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['media', 'nodes'] });
+      queryClient.invalidateQueries({ queryKey: ['media', 'folders'] });
+      toast.success('Folder created');
+      setCreateFolderOpen(false);
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error as any));
+    }
+  });
+
+  // --- Derived Data ---
+
+  const nodes = nodesData?.data?.items || [];
+  const folderNodes = allFoldersData?.data || [];
+  
   const stats = useMemo(() => {
-    const totalBytes = assets.reduce((acc, n) => acc + n.sizeBytes, 0);
-    const bytesByKind = assets.reduce(
-      (acc, asset) => {
-        acc[asset.assetKind] += asset.sizeBytes;
-        return acc;
-      },
-      { image: 0, video: 0, document: 0, other: 0 } as Record<'image' | 'video' | 'document' | 'other', number>,
-    );
+    const usage = usageData?.data;
     return {
-      totalBytes,
-      bytesByKind,
-      counts: {
-        image: assets.filter((a) => a.assetKind === 'image').length,
-        video: assets.filter((a) => a.assetKind === 'video').length,
-        document: assets.filter((a) => a.assetKind === 'document').length,
-        other: assets.filter((a) => a.assetKind === 'other').length,
-        folders: folderNodes.length,
+      totalBytes: usage?.usedBytes || 0,
+      quotaBytes: usage?.quotaBytes || 2 * 1024 * 1024 * 1024,
+      bytesByKind: usage?.bytesByKind || { image: 0, video: 0, document: 0, other: 0 },
+      counts: usage?.counts || {
+        image: 0,
+        video: 0,
+        document: 0,
+        other: 0,
+        folders: 0,
       },
     };
-  }, [assets, folderNodes.length]);
+  }, [usageData]);
 
   const createFolderParentLabel = useMemo(() => {
     if (!createFolderParentId) return 'Library';
-    const match = folderNodes.find((n) => n.id === createFolderParentId && n.type === 'folder');
+    const match = folderNodes.find((n) => n.id === createFolderParentId);
     return match?.name ?? 'Library';
   }, [createFolderParentId, folderNodes]);
+
+  // --- Handlers ---
 
   const requestCreateFolder = (parentId: string | null) => {
     setCreateFolderParentId(parentId);
@@ -53,27 +90,31 @@ export default function MediaLibraryPage() {
   };
 
   const handleCreateFolder = (name: string) => {
-    const parentId = createFolderParentId;
-    const nowIso = new Date().toISOString();
-    const id =
-      globalThis.crypto?.randomUUID?.() ??
-      `folder-${nowIso.replace(/[:.]/g, '-')}-${Math.random().toString(16).slice(2)}`;
-
-    setNodes((prev) => [
-      ...prev,
-      {
-        id,
-        type: 'folder',
-        name,
-        parentId,
-        childrenCount: 0,
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      },
-    ]);
-
-    toast.success('Folder created');
+    createFolderMutation.mutate({
+      name,
+      parentId: createFolderParentId
+    });
   };
+
+  useEffect(() => {
+    const handleRefresh = () => {
+      queryClient.invalidateQueries({ queryKey: ['media'] });
+    };
+
+    window.addEventListener('prism.device.updated' as any, handleRefresh);
+    window.addEventListener('prism.operation.updated' as any, handleRefresh);
+    window.addEventListener('prism.subscription.updated' as any, handleRefresh);
+
+    return () => {
+      window.removeEventListener('prism.device.updated' as any, handleRefresh);
+      window.removeEventListener('prism.operation.updated' as any, handleRefresh);
+      window.removeEventListener('prism.subscription.updated' as any, handleRefresh);
+    };
+  }, [queryClient]);
+
+  if (isNodesLoading && !nodesData) {
+    return <div className="flex justify-center p-12 text-muted-foreground">Loading media library...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -86,7 +127,8 @@ export default function MediaLibraryPage() {
       />
 
       <MediaExplorer
-        nodes={nodesWithComputedCounts}
+        nodes={nodes}
+        allFolders={folderNodes}
         currentFolderId={currentFolderId}
         onFolderChange={setCurrentFolderId}
         onRequestUpload={() => uploadPanelRef.current?.openFilePicker()}
@@ -104,18 +146,4 @@ export default function MediaLibraryPage() {
       />
     </div>
   );
-}
-
-function withComputedFolderCounts(nodes: MediaNode[]): MediaNode[] {
-  const countsByParentId = new Map<string, number>();
-
-  for (const node of nodes) {
-    if (!node.parentId) continue;
-    countsByParentId.set(node.parentId, (countsByParentId.get(node.parentId) ?? 0) + 1);
-  }
-
-  return nodes.map((node) => {
-    if (node.type !== 'folder') return node;
-    return { ...node, childrenCount: countsByParentId.get(node.id) ?? 0 };
-  });
 }

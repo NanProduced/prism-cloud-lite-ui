@@ -9,6 +9,9 @@ import type {
   CreateApiKeyRequest,
   ChangePasswordRequest,
   UpdateProfileRequest,
+  SubscriptionSnapshot,
+  RedeemRequest,
+  SubscriptionHistoryItem,
 } from '@/types/user';
 
 // User Profile
@@ -17,6 +20,16 @@ export const getUserProfile = () =>
 
 export const updateUserProfile = (data: UpdateProfileRequest) =>
   handleRequest(apiClient.post<BffResponse<UserProfile>>('/user/me', data));
+
+// Subscription
+export const getUserSubscription = () =>
+  handleRequest(apiClient.get<BffResponse<SubscriptionSnapshot>>('/user/subscription'));
+
+export const redeemSubscriptionCode = (data: RedeemRequest) =>
+  handleRequest(apiClient.post<BffResponse<SubscriptionSnapshot>>('/user/subscription/redeem', data));
+
+export const getSubscriptionHistory = (params?: { page?: number; size?: number }) =>
+  handleRequest(apiClient.get<BffResponse<{ items: SubscriptionHistoryItem[]; total: number }>>('/user/subscription/history', { params }));
 
 // User Settings
 export const getUserSettings = () =>

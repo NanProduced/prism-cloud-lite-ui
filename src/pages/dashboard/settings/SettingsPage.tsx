@@ -10,9 +10,12 @@ import SettingsNotifications, {
 } from '@/registry/new-york/blocks/settings/settings-notifications';
 import SettingsPreferences, { type PreferencesData } from '@/registry/new-york/blocks/settings/settings-preferences';
 import SettingsProfile, { type ProfileData } from '@/registry/new-york/blocks/settings/settings-profile';
-import SettingsSecurity, { type SecurityEvent, type SecuritySession } from '@/registry/new-york/blocks/settings/settings-security';
-import SettingsAPIKeys, { type APIKey } from '@/registry/new-york/blocks/settings/settings-api-keys';
+import SettingsSecurity from '@/registry/new-york/blocks/settings/settings-security';
+import type { SecurityEvent, SecuritySession } from '@/registry/new-york/blocks/settings/settings-security';
+import SettingsAPIKeys from '@/registry/new-york/blocks/settings/settings-api-keys';
+import type { APIKey } from '@/registry/new-york/blocks/settings/settings-api-keys';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/registry/new-york/ui/tabs';
+import BillingPage from '../BillingPage';
 
 import { DeviceDefaultsCard, type DeviceDefaults } from './DeviceDefaultsCard';
 import { ProgramDraftPolicyCard } from './ProgramDraftPolicyCard';
@@ -32,6 +35,7 @@ import {
   revokeApiKey,
   regenerateApiKey,
 } from '@/services/userApi';
+import type { UserProfile, UserSettingsOverrides, UserSession, UserSecurityEvent, UserApiKey } from '@/types/user';
 import { getErrorMessage } from '@/services/authApi';
 import { useAuthStore } from '@/store/authStore';
 
@@ -412,18 +416,7 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent className="mt-0" forceMount value="billing">
-          <div className="flex flex-col items-center justify-center space-y-4 rounded-xl border bg-card p-12 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              <CreditCard className="h-6 w-6 text-primary" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Billing & Subscription</h3>
-              <p className="text-sm text-muted-foreground">
-                Manage your subscription plans and billing history. 
-                This feature is currently under development.
-              </p>
-            </div>
-          </div>
+          <BillingPage />
         </TabsContent>
       </Tabs>
     </div>

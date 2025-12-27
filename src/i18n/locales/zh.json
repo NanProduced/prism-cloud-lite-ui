@@ -171,5 +171,64 @@
       "continueUrlInvalid": "无效的重定向地址",
       "allFieldsRequired": "请填写所有必填字段"
     }
+  },
+  "billing": {
+    "title": "订阅计划",
+    "subtitle": "选择适合您业务规模的套餐",
+    "currentPlan": "当前计划",
+    "expiresAt": "{{date}} 到期",
+    "reloginNotice": "权益已更新！请重新登录以激活所有配额。",
+    "free": {
+      "name": "免费版",
+      "price": "¥0",
+      "description": "适合初创及小型个人工作室",
+      "features": [
+        "20 台设备上限",
+        "20 个节目上限",
+        "单节目 10 个历史版本",
+        "3 个自定义设备列",
+        "2GB 云端存储空间"
+      ]
+    },
+    "pro": {
+      "name": "专业版",
+      "price": "¥199",
+      "period": "/月",
+      "description": "为成长型商业网络量身打造",
+      "features": [
+        "100 台设备上限",
+        "200 个节目上限",
+        "单节目 20 个历史版本",
+        "20 个自定义设备列",
+        "50GB 云端存储空间",
+        "转码/导出任务优先处理",
+        "专属 API 访问权限"
+      ],
+      "button": "使用兑换码升级"
+    },
+    "ultra": {
+      "name": "旗舰版",
+      "price": "定制",
+      "description": "面向大规模企业及行业解决方案",
+      "features": [
+        "无限制设备数量",
+        "无限制节目数量",
+        "无限制历史版本",
+        "企业级安全集成 (SSO)",
+        "专属大客户经理",
+        "定制化功能开发",
+        "SLA 服务质量保证"
+      ],
+      "button": "联系销售"
+    },
+    "redeem": {
+      "title": "兑换码核销",
+      "description": "输入 12 位 PRDEMO 兑换码升级权益",
+      "placeholder": "PRDEMO-XXXX-XXXX",
+      "button": "立即核销并激活",
+      "submitting": "正在激活...",
+      "success": "核销成功！您的计划已升级为专业版。",
+      "error": "兑换码无效或已过期"
+    }
   }
 }

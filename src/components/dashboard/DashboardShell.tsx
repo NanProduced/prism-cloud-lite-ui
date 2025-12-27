@@ -1,4 +1,4 @@
-import { type ComponentType, type PropsWithChildren, useState, useEffect, useMemo } from "react";
+import React, { type ComponentType, type PropsWithChildren, useState, useEffect, useMemo, Suspense, lazy } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Activity,
@@ -56,7 +56,11 @@ import { cn } from "@/lib/utils";
 import { PrismIcon } from "@/components/shared/logo";
 import { getAvatarById } from "@/lib/avatars";
 import { useAuthStore } from "@/store/authStore";
+import { useMessageStore } from "@/store/messageStore";
 import { logout } from "@/services/authApi";
+import { getMediaUsage } from "@/services/mediaApi";
+import { markSingleAsRead } from "@/services/messageApi";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "@/store/notificationStore";
 
 type NavItem = {
@@ -75,6 +79,8 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { BreadcrumbNav } from "@/components/dashboard/BreadcrumbNav";
 import { CommandSearch } from "@/components/ui/command-search";
 import { AIChatBubble, AIChatWindow } from "@/features/ai-assistant";
+
+const BillingPlanSelector = lazy(() => import("@/components/billing/BillingPlanSelector").then(m => ({ default: m.BillingPlanSelector })));
 
 const NAV_GROUPS: NavGroup[] = [
   {
@@ -141,9 +147,16 @@ const notifications = [
 export function DashboardShell({ children }: PropsWithChildren) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isBillingOpen, setIsBillingOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, clearAuth } = useAuthStore();
+
+  const { data: usageData } = useQuery({
+    queryKey: ['media', 'usage'],
+    queryFn: getMediaUsage,
+    enabled: !!user,
+  });
 
   const selectedAvatar = useMemo(() => 
     getAvatarById(user?.avatarId || 'm-1'), 
@@ -275,7 +288,12 @@ export function DashboardShell({ children }: PropsWithChildren) {
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-          <StoragePanel tier={user?.subscriptionTier} />
+          <StoragePanel 
+            tier={user?.subscriptionTier} 
+            navigate={navigate} 
+            usage={usageData?.data}
+            onUpgrade={() => setIsBillingOpen(true)}
+          />
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
@@ -360,42 +378,58 @@ export function DashboardShell({ children }: PropsWithChildren) {
 
       <AIChatWindow isOpen={isChatOpen} />
       <AIChatBubble isOpen={isChatOpen} onClick={() => setIsChatOpen(!isChatOpen)} />
+      <Suspense fallback={null}>
+        <BillingPlanSelector open={isBillingOpen} onOpenChange={setIsBillingOpen} />
+      </Suspense>
     </SidebarProvider>
   );
 }
 
-function StoragePanel({ tier = "Lite" }: { tier?: string }) {
-  // Mock data - will fetch from API in the future
-  const usedSpace = 1.2; // GB
-  const totalSpace = tier === "Pro" ? 10 : 2;  // GB
-  const percentage = (usedSpace / totalSpace) * 100;
+function StoragePanel({ 
+  tier = "Lite", 
+  navigate, 
+  onUpgrade,
+  usage
+}: { 
+  tier?: string; 
+  navigate: (path: string) => void; 
+  onUpgrade: () => void;
+  usage?: { usedBytes: number; quotaBytes: number }
+}) {
+  const usedSpaceGB = (usage?.usedBytes || 0) / (1024 * 1024 * 1024);
+  const totalSpaceGB = (usage?.quotaBytes || 2 * 1024 * 1024 * 1024) / (1024 * 1024 * 1024);
+  
+  const percentage = Math.min(100, (usedSpaceGB / totalSpaceGB) * 100);
   const isWarning = percentage > 85;
 
   return (
     <div className="rounded-lg border bg-muted/50 p-4">
       {/* Title + Subscription Level */}
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-semibold">Storage Space</h4>
-        <Badge variant="outline" className="text-xs capitalize">{tier || "Lite"}</Badge>
+        <h4 className="text-sm font-semibold">Cloud Storage</h4>
+        <Badge variant="outline" className="text-[10px] uppercase h-5">{tier || "Lite"}</Badge>
       </div>
 
       {/* Progress Bar */}
-      <Progress value={percentage} className="h-2 mb-2" />
+      <Progress value={percentage} className="h-1.5 mb-2" />
 
       {/* Data Display */}
       <p
         className={cn(
-          "text-xs mb-3",
-          isWarning ? "text-amber-600 font-medium" : "text-muted-foreground"
+          "text-[11px] mb-3",
+          isWarning ? "text-amber-600 font-bold" : "text-muted-foreground font-medium"
         )}
       >
-        {usedSpace.toFixed(1)}GB / {totalSpace}GB used ({percentage.toFixed(0)}%)
+        {usedSpaceGB.toFixed(2)}GB / {totalSpaceGB.toFixed(0)}GB used
       </p>
 
       {/* Upgrade Button */}
       {tier !== "Pro" && (
-        <Button className="w-full h-9 text-xs rounded-lg">
-          Upgrade for More Space
+        <Button 
+          className="w-full h-8 text-[11px] font-bold rounded-lg shadow-sm"
+          onClick={onUpgrade}
+        >
+          Upgrade Plan
         </Button>
       )}
     </div>
@@ -403,23 +437,18 @@ function StoragePanel({ tier = "Lite" }: { tier?: string }) {
 }
 
 function NotificationPopover() {
-  const [readIds, setReadIds] = useState<Set<number>>(new Set());
+  const { unreadCount, recentMessages, markLocalAsRead } = useMessageStore();
+  const navigate = useNavigate();
 
-  const unreadCount = notifications.length - readIds.size;
-  const hasUnread = unreadCount > 0;
-
-  const toggleRead = (id: number) => {
-    const newSet = new Set(readIds);
-    if (newSet.has(id)) {
-      newSet.delete(id);
-    } else {
-      newSet.add(id);
+  const handleToggleRead = async (id: string, isRead: boolean) => {
+    if (!isRead) {
+      markLocalAsRead(id);
+      try {
+        await markSingleAsRead(id);
+      } catch (e) {
+        console.error("Failed to mark message as read", e);
+      }
     }
-    setReadIds(newSet);
-  };
-
-  const markAllAsRead = () => {
-    setReadIds(new Set(notifications.map((n) => n.id)));
   };
 
   return (
@@ -432,7 +461,7 @@ function NotificationPopover() {
           title="Notifications"
         >
           <Bell className="h-5 w-5" />
-          {hasUnread && (
+          {unreadCount > 0 && (
             <span className="absolute right-1 top-1 inline-flex h-2 w-2 rounded-full bg-rose-500" />
           )}
         </Button>
@@ -444,16 +473,14 @@ function NotificationPopover() {
               <h4 className="text-sm font-semibold">Notifications</h4>
               <p className="text-xs text-muted-foreground">Latest system events</p>
             </div>
-            {hasUnread && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={markAllAsRead}
-              >
-                Mark all read
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => navigate("/dashboard/messages")}
+            >
+              View all
+            </Button>
           </div>
           {unreadCount > 0 && (
             <Badge variant="secondary" className="mt-2 text-xs">
@@ -463,38 +490,41 @@ function NotificationPopover() {
         </div>
 
         <div className="max-h-[400px] overflow-y-auto">
-          {notifications.length === 0 ? (
-            <div className="flex h-32 items-center justify-center text-center">
-              <p className="text-xs text-muted-foreground">No notifications</p>
+          {recentMessages.length === 0 ? (
+            <div className="flex h-32 items-center justify-center text-center p-4">
+              <p className="text-xs text-muted-foreground">No notifications yet</p>
             </div>
           ) : (
             <div className="flex flex-col">
-              {notifications.map((item) => (
+              {recentMessages.map((item) => (
                 <div key={item.id}>
                   <div
                     className={cn(
                       "flex cursor-pointer items-start gap-3 border-b px-4 py-3 transition-colors hover:bg-muted/50",
-                      readIds.has(item.id) && "opacity-60"
+                      item.readAt && "opacity-60"
                     )}
-                    onClick={() => toggleRead(item.id)}
+                    onClick={() => handleToggleRead(item.id, !!item.readAt)}
                   >
-                    <div className="mt-1 flex h-2 w-2 flex-shrink-0 rounded-full bg-primary" />
+                    <div className={cn(
+                      "mt-1.5 flex h-2 w-2 flex-shrink-0 rounded-full",
+                      item.readAt ? "bg-muted-foreground/30" : "bg-primary"
+                    )} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <span
                           className={cn(
-                            "text-xs font-medium",
-                            getToneColor(item.tone)
+                            "text-xs font-semibold truncate",
+                            !item.readAt && getToneColorByStatus(item.status)
                           )}
                         >
                           {item.title}
                         </span>
-                        <span className="flex-shrink-0 text-xs text-muted-foreground">
-                          {item.time}
+                        <span className="flex-shrink-0 text-[10px] text-muted-foreground">
+                          {formatTimeAgo(item.createdAt)}
                         </span>
                       </div>
-                      <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-                        {item.desc}
+                      <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
+                        {item.summary}
                       </p>
                     </div>
                   </div>
@@ -508,15 +538,29 @@ function NotificationPopover() {
   );
 }
 
-function getToneColor(tone: string) {
-  switch (tone) {
-    case "success":
-      return "text-emerald-300";
-    case "error":
-      return "text-rose-300";
-    case "warning":
-      return "text-amber-300";
+function getToneColorByStatus(status?: string) {
+  switch (status) {
+    case "SUCCESS":
+      return "text-emerald-600";
+    case "FAILED":
+      return "text-rose-600";
+    case "RUNNING":
+      return "text-blue-600 animate-pulse";
     default:
-      return "text-slate-200";
+      return "text-foreground";
   }
 }
+
+function formatTimeAgo(dateStr: string) {
+  const date = new Date(dateStr);
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+  
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return date.toLocaleDateString();
+}
+
+

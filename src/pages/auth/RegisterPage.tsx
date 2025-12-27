@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/store/notificationStore";
 import { PrismWordmark, PrismIcon, GoogleLogo, AppleLogo, WechatLogo } from "../../components/shared/logo";

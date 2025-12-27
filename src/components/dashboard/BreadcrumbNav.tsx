@@ -1,6 +1,5 @@
 import React from "react";
-import { useLocation } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -13,7 +12,6 @@ import { getProgram } from "@/features/programs/storage/programsDb";
 
 // Route to breadcrumb label mapping
 const routeMap: Record<string, string> = {
-  "/": "Home",
   "/dashboard": "Dashboard",
   "/dashboard/overview": "Overview",
   "/dashboard/devices": "Devices",
@@ -46,7 +44,7 @@ export function BreadcrumbNav() {
       label: string;
       href: string;
       isCurrent: boolean;
-    }> = [{ label: "Home", href: "/", isCurrent: pathname === "/" }];
+    }> = [];
 
     let currentPath = "";
     for (let i = 0; i < paths.length; i++) {
@@ -66,10 +64,12 @@ export function BreadcrumbNav() {
           label = program?.name ?? formatProgramFallback(segment);
         }
       }
+      
       const isCurrent = currentPath === pathname;
+      
       breadcrumbs.push({
         label,
-        href: currentPath,
+        href: currentPath === "/dashboard" ? "/dashboard/overview" : currentPath,
         isCurrent,
       });
     }
