@@ -12,6 +12,8 @@ import type {
   SubscriptionSnapshot,
   RedeemRequest,
   SubscriptionHistoryItem,
+  BindPhoneRequest,
+  BindPhoneConfirmRequest,
 } from '@/types/user';
 
 // User Profile
@@ -20,6 +22,13 @@ export const getUserProfile = () =>
 
 export const updateUserProfile = (data: UpdateProfileRequest) =>
   handleRequest(apiClient.post<BffResponse<UserProfile>>('/user/me', data));
+
+// Security - Phone Binding
+export const bindPhoneRequest = (data: BindPhoneRequest) =>
+  handleRequest(apiClient.post<BffResponse<void>>('/user/security/phone/bind/request', data));
+
+export const bindPhoneConfirm = (data: BindPhoneConfirmRequest) =>
+  handleRequest(apiClient.post<BffResponse<void>>('/user/security/phone/bind/confirm', data));
 
 // Subscription
 export const getUserSubscription = () =>

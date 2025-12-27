@@ -178,11 +178,10 @@ export function DashboardShell({ children }: PropsWithChildren) {
   };
 
   const handleLogout = () => {
-    // 1. 清理前端本地存储
-    clearAuth();
-    sessionStorage.clear();
-    
-    // 2. 触发后端登出流程 (OIDC RP-Initiated Logout)
+    // 触发后端登出流程 (OIDC RP-Initiated Logout)
+    // 注意：不要在此处调用 clearAuth()，否则会触发 ProtectedLayout 的即时重定向，
+    // 干扰 window.location.assign('/logout') 的整页跳转流程。
+    // 状态清理将在重定向回来的 LoginPage 中完成。
     logout();
   };
 

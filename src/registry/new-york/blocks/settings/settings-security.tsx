@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Activity,
   AlertTriangle,
   Check,
   Clock,
@@ -62,9 +63,13 @@ import { Separator } from "@/registry/new-york/ui/separator";
 export interface SecuritySession {
   id: string;
   device: string;
+  browser?: string;
+  os?: string;
   location: string;
   ipAddress: string;
   lastActive: Date;
+  createdAt: Date;
+  expiresAt: Date;
   current: boolean;
 }
 
@@ -514,45 +519,52 @@ export default function SettingsSecurity({
               <div className="flex flex-col gap-3">
                 {sessions.map((session) => (
                   <div
-                    className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center"
+                    className="flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-start"
                     key={session.id}
                   >
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                        {session.device.includes("Mobile") ? (
+                    <div className="flex min-w-0 flex-1 items-start gap-4">
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted mt-1">
+                        {session.device.includes("Mobile") || session.os?.includes("Android") || session.os?.includes("iOS") ? (
                           <Smartphone className="size-5" />
                         ) : (
                           <Monitor className="size-5" />
                         )}
                       </div>
-                      <div className="flex min-w-0 flex-1 flex-col gap-2">
+                      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-medium text-sm">
-                            {session.device}
+                          <span className="font-semibold text-sm">
+                            {session.device} {session.browser && `• ${session.browser}`}
                           </span>
                           {session.current && (
-                            <Badge className="text-xs" variant="default">
-                              Current
+                            <Badge className="text-[10px] h-4 px-1.5 bg-green-500 hover:bg-green-600 text-white border-none" variant="default">
+                              Current Session
                             </Badge>
                           )}
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs">
-                          <span className="flex items-center gap-1">
-                            <MapPin className="size-3" />
-                            {session.location}
-                          </span>
-                          <span>•</span>
-                          <span>{session.ipAddress}</span>
-                          <span>•</span>
-                          <span>
-                            Active {formatRelativeTime(session.lastActive)}
-                          </span>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-1 gap-x-4 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1.5">
+                            <MapPin className="size-3 opacity-70" />
+                            <span>{session.ipAddress} ({session.location})</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="size-3 opacity-70" />
+                            <span>First seen: {formatDate(session.createdAt)}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Activity className="size-3 opacity-70" />
+                            <span>Last active: {formatRelativeTime(session.lastActive)}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Shield className="size-3 opacity-70" />
+                            <span>Expires: {formatDate(session.expiresAt)}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
                     {!session.current && (
                       <Button
-                        className="w-full sm:w-auto"
+                        className="w-full sm:w-auto h-8 px-3 text-xs gap-1.5"
                         disabled={isRevoking === session.id}
                         onClick={() => {
                           setIsRevoking(session.id);
@@ -565,12 +577,12 @@ export default function SettingsSecurity({
                       >
                         {isRevoking === session.id ? (
                           <>
-                            <Loader2 className="size-4 animate-spin" />
+                            <Loader2 className="size-3 animate-spin" />
                             Revoking…
                           </>
                         ) : (
                           <>
-                            <Trash2 className="size-4" />
+                            <Trash2 className="size-3" />
                             Revoke
                           </>
                         )}

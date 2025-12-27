@@ -79,3 +79,12 @@ export interface UpdateProfileRequest {
   displayName?: string;
   avatarId?: string;
 }
+
+export interface BindPhoneRequest {
+  phone: string;
+}
+
+export interface BindPhoneConfirmRequest {
+  phone: string;
+  code: string;
+}

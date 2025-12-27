@@ -1,9 +1,10 @@
 "use client";
 
-import { Check, ChevronDown, ChevronUp, Loader2, Save } from "lucide-react";
-import { useState } from "react";
+import { Check, ChevronDown, ChevronUp, Loader2, Save, Phone, ShieldCheck } from "lucide-react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/registry/new-york/ui/button";
+import { Badge } from "@/registry/new-york/ui/badge";
 import {
   Card,
   CardContent,
@@ -20,17 +21,22 @@ export interface ProfileData {
   name: string;
   email: string;
   avatarPreset: string;
+  phone?: string;
 }
 
 export interface SettingsProfileProps {
   profile?: ProfileData;
   onSave?: (data: ProfileData) => Promise<void>;
+  onBindPhoneRequest?: (phone: string) => Promise<void>;
+  onBindPhoneConfirm?: (phone: string, code: string) => Promise<void>;
   className?: string;
 }
 
 export default function SettingsProfile({
   profile,
   onSave,
+  onBindPhoneRequest,
+  onBindPhoneConfirm,
   className,
 }: SettingsProfileProps) {
   const [isSaving, setIsSaving] = useState(false);
@@ -41,7 +47,62 @@ export default function SettingsProfile({
     name: profile?.name || "",
     email: profile?.email || "",
     avatarPreset: profile?.avatarPreset || ALL_AVATARS[0]?.id || "m-1",
+    phone: profile?.phone || "",
   });
+
+  const [isBindingMode, setIsBindingMode] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isConfirmingOtp, setIsConfirmingOtp] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
+  const handleSendOtp = async () => {
+    if (!formData.phone) {
+      setErrors({ phone: "Phone number is required" });
+      return;
+    }
+    setErrors({});
+    setIsSendingOtp(true);
+    try {
+      await onBindPhoneRequest?.(formData.phone);
+      setOtpSent(true);
+      setCountdown(60);
+    } catch (error) {
+      setErrors({ phone: error instanceof Error ? error.message : "Failed to send OTP" });
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleConfirmBind = async () => {
+    if (!otpCode) {
+      setErrors({ otp: "Verification code is required" });
+      return;
+    }
+    setErrors({});
+    setIsConfirmingOtp(true);
+    try {
+      if (formData.phone) {
+        await onBindPhoneConfirm?.(formData.phone, otpCode);
+        setIsBindingMode(false);
+        setOtpSent(false);
+        setOtpCode("");
+      }
+    } catch (error) {
+      setErrors({ otp: error instanceof Error ? error.message : "Failed to confirm" });
+    } finally {
+      setIsConfirmingOtp(false);
+    }
+  };
 
   const handleSave = async () => {
     setErrors({});
@@ -230,6 +291,126 @@ export default function SettingsProfile({
                     value={formData.email}
                   />
                 </InputGroup>
+              </FieldContent>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="phone">Phone Number</FieldLabel>
+              <FieldContent>
+                {profile?.phone ? (
+                  <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+                    <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Phone className="size-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{profile.phone}</p>
+                      <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                        <ShieldCheck className="size-3" />
+                        <span>Verified & Bound</span>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
+                      Active
+                    </Badge>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {!isBindingMode ? (
+                      <div className="flex items-center justify-between gap-4 rounded-lg border border-dashed p-4">
+                        <div className="flex items-center gap-3 text-muted-foreground">
+                          <Phone className="size-5 opacity-50" />
+                          <p className="text-sm">No phone number linked to this account.</p>
+                        </div>
+                        <Button
+                          onClick={() => setIsBindingMode(true)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          Link Phone
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border bg-card p-4 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-medium">Link Phone Number</h4>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-muted-foreground"
+                            onClick={() => {
+                              setIsBindingMode(false);
+                              setOtpSent(false);
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+
+                        <div className="grid gap-4">
+                          <div className="space-y-2">
+                            <InputGroup>
+                              <InputGroupInput
+                                id="phone-input"
+                                placeholder="Phone number (e.g. 13800138000)"
+                                value={formData.phone}
+                                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                                disabled={otpSent}
+                              />
+                              {!otpSent && (
+                                <Button
+                                  variant="secondary"
+                                  className="rounded-l-none border-l-0"
+                                  onClick={handleSendOtp}
+                                  disabled={isSendingOtp || !formData.phone}
+                                >
+                                  {isSendingOtp ? <Loader2 className="size-3 animate-spin" /> : "Send Code"}
+                                </Button>
+                              )}
+                            </InputGroup>
+                            {errors.phone && <FieldError>{errors.phone}</FieldError>}
+                          </div>
+
+                          {otpSent && (
+                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                              <div className="flex items-center justify-between">
+                                <label className="text-xs font-medium text-muted-foreground">Verification Code</label>
+                                <button
+                                  className="text-xs text-primary hover:underline disabled:opacity-50"
+                                  disabled={countdown > 0 || isSendingOtp}
+                                  onClick={handleSendOtp}
+                                >
+                                  {countdown > 0 ? `Resend in ${countdown}s` : "Resend Code"}
+                                </button>
+                              </div>
+                              <InputGroup>
+                                <InputGroupInput
+                                  placeholder="6-digit code"
+                                  value={otpCode}
+                                  onChange={(e) => setOtpCode(e.target.value)}
+                                />
+                              </InputGroup>
+                              {errors.otp && <FieldError>{errors.otp}</FieldError>}
+                              <Button
+                                className="w-full"
+                                onClick={handleConfirmBind}
+                                disabled={isConfirmingOtp || otpCode.length < 4}
+                              >
+                                {isConfirmingOtp ? (
+                                  <>
+                                    <Loader2 className="size-4 animate-spin mr-2" />
+                                    Confirming...
+                                  </>
+                                ) : (
+                                  "Verify & Link"
+                                )}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </FieldContent>
             </Field>
           </div>

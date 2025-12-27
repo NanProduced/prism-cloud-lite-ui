@@ -272,9 +272,6 @@ export function logout(): void {
   sessionStorage.setItem('prism_logout_in_progress', 'true');
   sessionStorage.setItem('prism_just_logged_out', 'true');
   
-  // 清理本地持久化状态
-  localStorage.removeItem('prism-auth-storage');
-  
   // 必须使用整页跳转，因为登出包含多次 302 重定向
   window.location.assign('/logout');
 }

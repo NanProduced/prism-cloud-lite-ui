@@ -34,10 +34,13 @@ import {
   createApiKey,
   revokeApiKey,
   regenerateApiKey,
+  bindPhoneRequest,
+  bindPhoneConfirm,
 } from '@/services/userApi';
 import type { UserProfile, UserSettingsOverrides, UserSession, UserSecurityEvent, UserApiKey } from '@/types/user';
 import { getErrorMessage } from '@/services/authApi';
 import { useAuthStore } from '@/store/authStore';
+import { UAParser } from 'ua-parser-js';
 
 const TAB_ITEMS = [
   { value: 'profile', label: 'Profile' },
@@ -202,12 +205,34 @@ export default function SettingsPage() {
     },
   });
 
+  const bindPhoneRequestMutation = useMutation({
+    mutationFn: bindPhoneRequest,
+    onSuccess: () => {
+      toast.info('Verification code sent to your phone');
+    },
+    onError: (error: any) => {
+      toast.error(getErrorMessage(error));
+    },
+  });
+
+  const bindPhoneConfirmMutation = useMutation({
+    mutationFn: bindPhoneConfirm,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', 'profile'] });
+      toast.success('Phone number bound successfully');
+    },
+    onError: (error: any) => {
+      toast.error(getErrorMessage(error));
+    },
+  });
+
   // --- Data Mapping ---
 
   const userProfile: ProfileData = {
     name: profileData?.data?.displayName || 'User',
     email: profileData?.data?.email || '',
     avatarPreset: profileData?.data?.avatarId || 'm-1',
+    phone: profileData?.data?.phone,
   };
 
   // Map backend settings to UI preferences
@@ -235,14 +260,38 @@ export default function SettingsPage() {
     rebootTime: '03:00',
   };
 
-  const sessions: SecuritySession[] = (sessionsData?.data || []).map(s => ({
-    id: s.series,
-    device: s.userAgent || 'Unknown Device', // Simple mapping, ideally parse UA
-    location: s.ipAddress || 'Unknown', // No location data in API yet
-    ipAddress: s.ipAddress || '',
-    lastActive: new Date(s.lastUsedAt),
-    current: s.current,
-  }));
+  const sessions: SecuritySession[] = (sessionsData?.data || []).map(s => {
+    const parser = new UAParser(s.userAgent || '');
+    const browser = parser.getBrowser();
+    const os = parser.getOS();
+    const device = parser.getDevice();
+
+    const browserName = browser.name ? `${browser.name} ${browser.major || ''}` : 'Unknown Browser';
+    const osName = os.name ? `${os.name} ${os.version || ''}` : 'Unknown OS';
+    
+    // Construct a friendly device string
+    let deviceDisplay = s.deviceName || osName;
+    if (device.model) {
+      deviceDisplay = `${device.vendor || ''} ${device.model}`.trim();
+    } else if (os.name === 'Windows') {
+      deviceDisplay = 'Windows PC';
+    } else if (os.name === 'Mac OS') {
+      deviceDisplay = 'Mac';
+    }
+
+    return {
+      id: s.series,
+      device: deviceDisplay,
+      browser: browserName,
+      os: osName,
+      location: s.ipAddress === '127.0.0.1' || s.ipAddress === '0:0:0:0:0:0:0:1' ? 'Localhost' : 'Unknown',
+      ipAddress: s.ipAddress || '',
+      lastActive: new Date(s.lastUsedAt),
+      createdAt: new Date(s.createdAt),
+      expiresAt: new Date(s.expiresAt),
+      current: s.current,
+    };
+  });
 
   const securityHistory: SecurityEvent[] = (securityHistoryData?.data?.items || []).map(e => ({
     id: e.id.toString(),
@@ -304,6 +353,12 @@ export default function SettingsPage() {
                 displayName: next.name,
                 avatarId: next.avatarPreset,
               });
+            }}
+            onBindPhoneRequest={async (phone) => {
+              await bindPhoneRequestMutation.mutateAsync({ phone });
+            }}
+            onBindPhoneConfirm={async (phone, code) => {
+              await bindPhoneConfirmMutation.mutateAsync({ phone, code });
             }}
           />
         </TabsContent>
