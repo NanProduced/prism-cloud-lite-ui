@@ -18,8 +18,9 @@ import SchedulePage from "@/pages/dashboard/schedule/SchedulePage";
 import MessagesPage from "@/pages/dashboard/messages/MessagesPage";
 import MonitoringPage from "@/pages/dashboard/MonitoringPage";
 import AnalyticsPage from "@/pages/dashboard/AnalyticsPage";
+import LogsPage from "@/pages/dashboard/logs/LogsPage";
 import {
-  LogsPage,
+  MediaPage,
 } from "@/pages/dashboard/PlaceholderPages";
 
 const queryClient = new QueryClient({

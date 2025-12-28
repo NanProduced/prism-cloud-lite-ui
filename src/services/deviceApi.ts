@@ -12,6 +12,15 @@ export async function getDevices(): Promise<BffResponse<Device[]>> {
 }
 
 /**
+ * Filter devices by name or other criteria
+ */
+export async function filterDevices(params: { keyword?: string }): Promise<BffResponse<Device[]>> {
+  return handleRequest<Device[]>(
+    apiClient.get('/devices/filter', { params })
+  );
+}
+
+/**
  * Get device details by ID
  */
 export async function getDevice(deviceId: number): Promise<BffResponse<Device>> {

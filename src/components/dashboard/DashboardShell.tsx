@@ -129,9 +129,8 @@ const NAV_GROUPS: NavGroup[] = [
         icon: FileText,
         href: "/dashboard/logs",
         children: [
-          { label: "Operation Logs", href: "/dashboard/logs" },
-          { label: "Device Logs", href: "/dashboard/logs?tab=device" },
-          { label: "Terminal Logs", href: "/dashboard/logs?tab=terminal" },
+          { label: "Device Logs", href: "/dashboard/logs" },
+          { label: "Command Logs", href: "/dashboard/logs?tab=terminal" },
         ],
       },
       { label: "Settings", icon: Settings, href: "/dashboard/settings" },
