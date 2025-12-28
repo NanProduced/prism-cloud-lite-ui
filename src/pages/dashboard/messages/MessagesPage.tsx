@@ -1,40 +1,55 @@
-import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
+import React, { useState, useEffect, useMemo } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  Bell, 
-  CheckCircle2, 
-  Clock, 
-  Filter, 
-  Search, 
-  Trash2, 
+import {
+  Bell,
+  CheckCircle2,
+  Clock,
+  Filter,
+  Search,
   CheckCheck,
-  MoreHorizontal,
   ChevronLeft,
   ChevronRight,
   Info,
   AlertCircle,
   Zap,
-  RefreshCcw
+  RefreshCw,
+  Monitor,
+  Layers,
+  Terminal,
+  ExternalLink,
+  Eye,
+  Check,
+  Mail,
+  Inbox,
+  Activity,
+  Calendar
 } from "lucide-react";
 
-import { Button } from "@/registry/new-york/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/registry/new-york/ui/card";
-import { Input } from "@/registry/new-york/ui/input";
-import { Badge } from "@/registry/new-york/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/registry/new-york/ui/tabs";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
-} from "@/components/ui/dropdown-menu";
-import { 
-  getMessages, 
-  markAsRead, 
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  getMessages,
+  markAsRead,
   markSingleAsRead,
-  getUnreadCount
+  getUnreadCount,
+  getMessageDetail
 } from "@/services/messageApi";
 import { useMessageStore } from "@/store/messageStore";
 import type { MessageListItem, MessageKind, MessageStatus } from "@/types/message";
@@ -43,34 +58,74 @@ import { toast } from "@/store/notificationStore";
 import { useTimeFormatter } from "@/hooks/use-time-formatter";
 
 export default function MessagesPage() {
-  const { t } = useTranslation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { fetchInitialData } = useMessageStore();
   const { formatDateTime } = useTimeFormatter();
-  
-  const [activeTab, setActiveTab] = useState<'all' | 'NOTIFICATION' | 'TASK'>('all');
+
+  // Tab mapping for sidebar compatibility
+  const tabParam = searchParams.get('tab');
+  const activeTab = useMemo(() => {
+    if (tabParam === 'notifications') return 'NOTIFICATION';
+    if (tabParam === 'tasks') return 'TASK';
+    return 'all';
+  }, [tabParam]);
+
+  // Filters
+  const [dateRange, setDateRange] = useState({
+    from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    to: new Date().toISOString().split('T')[0],
+  });
   const [readFilter, setReadFilter] = useState<'all' | 'unread' | 'read'>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchKeyword, setSearchKeyword] = useState("");
   const [page, setPage] = useState(0);
   const pageSize = 15;
 
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+
   // --- Queries ---
 
   const { data: messagesData, isLoading, isFetching } = useQuery({
-    queryKey: ['messages', activeTab, readFilter, searchKeyword, page],
+    queryKey: ['messages', activeTab, readFilter, statusFilter, searchKeyword, dateRange, page],
     queryFn: () => getMessages({
       kind: activeTab === 'all' ? undefined : activeTab,
       read: readFilter,
+      status: statusFilter === 'all' ? undefined : statusFilter,
       keyword: searchKeyword,
+      from: new Date(dateRange.from).toISOString(),
+      to: new Date(dateRange.to + 'T23:59:59').toISOString(),
       page,
       size: pageSize
     }),
   });
 
-  const { data: unreadData } = useQuery({
+  const { data: unreadRes } = useQuery({
     queryKey: ['messages', 'unread-count'],
     queryFn: getUnreadCount,
   });
+
+  const { data: detailRes } = useQuery({
+    queryKey: ['messages', 'detail', selectedMessageId],
+    queryFn: () => getMessageDetail(selectedMessageId!),
+    enabled: !!selectedMessageId,
+  });
+
+  // --- SSE Integration ---
+  useEffect(() => {
+    const handleUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
+    };
+
+    window.addEventListener('prism.message.created', handleUpdate);
+    window.addEventListener('prism.message.updated', handleUpdate);
+
+    return () => {
+      window.removeEventListener('prism.message.created', handleUpdate);
+      window.removeEventListener('prism.message.updated', handleUpdate);
+    };
+  }, [queryClient]);
 
   // --- Mutations ---
 
@@ -78,7 +133,7 @@ export default function MessagesPage() {
     mutationFn: (ids: string[]) => markAsRead(ids),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });
-      fetchInitialData(); // Update bell
+      fetchInitialData(); // Update global store
     }
   });
 
@@ -86,21 +141,45 @@ export default function MessagesPage() {
     mutationFn: (id: string) => markSingleAsRead(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });
-      fetchInitialData(); // Update bell
+      fetchInitialData(); // Update global store
     }
   });
 
   // --- Handlers ---
 
+  const handleTabChange = (tab: string) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (tab === 'all') next.delete('tab');
+      else next.set('tab', tab);
+      return next;
+    });
+    setPage(0);
+  };
+
   const handleMarkAllRead = () => {
     const unreadIds = messagesData?.data?.items
       .filter(m => !m.readAt)
       .map(m => m.id) || [];
-    
+
     if (unreadIds.length > 0) {
       markReadMutation.mutate(unreadIds);
-      toast.success("Marked all as read");
+      toast.success("Marked current page as read");
     }
+  };
+
+  const setQuickRange = (days: number) => {
+    setDateRange({
+      from: new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      to: new Date().toISOString().split('T')[0],
+    });
+  };
+
+  const handleMessageClick = (message: MessageListItem) => {
+    if (!message.readAt) {
+      markSingleReadMutation.mutate(message.id);
+    }
+    setSelectedMessageId(message.id);
   };
 
   const getStatusIcon = (kind: MessageKind, status?: MessageStatus) => {
@@ -108,11 +187,11 @@ export default function MessagesPage() {
       switch (status) {
         case 'SUCCESS': return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
         case 'FAILED': return <AlertCircle className="h-4 w-4 text-rose-500" />;
-        case 'RUNNING': return <RefreshCcw className="h-4 w-4 text-blue-500 animate-spin" />;
+        case 'RUNNING': return <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />;
         default: return <Clock className="h-4 w-4 text-muted-foreground" />;
       }
     }
-    return <Info className="h-4 w-4 text-blue-400" />;
+    return <Bell className="h-4 w-4 text-primary/60" />;
   };
 
   const messages = messagesData?.data?.items || [];
@@ -120,122 +199,215 @@ export default function MessagesPage() {
   const totalPages = Math.ceil(total / pageSize);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="flex flex-col gap-4 p-0 h-full animate-in fade-in duration-500">
+      {/* TOPBAR */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Message Center</h1>
-          <p className="text-muted-foreground">Stay updated with your system notifications and tasks.</p>
+        <div className="flex items-center bg-muted/40 p-1 rounded-xl border shadow-inner w-fit">
+          <button
+            type="button"
+            className={cn(
+              'rounded-lg px-6 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-1.5',
+              activeTab === 'all' ? 'bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.03]' : 'text-muted-foreground/60 hover:text-muted-foreground',
+            )}
+            onClick={() => handleTabChange('all')}
+          >
+            <Inbox className="h-3.5 w-3.5" />
+            Inbox
+          </button>
+          <button
+            type="button"
+            className={cn(
+              'rounded-lg px-6 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-1.5',
+              activeTab === 'NOTIFICATION' ? 'bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.03]' : 'text-muted-foreground/60 hover:text-muted-foreground',
+            )}
+            onClick={() => handleTabChange('notifications')}
+          >
+            <Bell className="h-3.5 w-3.5" />
+            Notifications
+          </button>
+          <button
+            type="button"
+            className={cn(
+              'rounded-lg px-6 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-1.5',
+              activeTab === 'TASK' ? 'bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.03]' : 'text-muted-foreground/60 hover:text-muted-foreground',
+            )}
+            onClick={() => handleTabChange('tasks')}
+          >
+            <Zap className="h-3.5 w-3.5" />
+            Tasks
+          </button>
         </div>
+
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleMarkAllRead} disabled={unreadData?.data?.count === 0}>
-            <CheckCheck className="mr-2 h-4 w-4" />
-            Mark all read
+          <div className="flex items-center bg-muted/50 rounded-xl p-1 border mr-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setQuickRange(1)}
+              className={cn("h-7 px-3 text-[10px] font-bold uppercase rounded-lg", dateRange.from === new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] && "bg-background shadow-sm")}
+            >24H</Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setQuickRange(7)}
+              className={cn("h-7 px-3 text-[10px] font-bold uppercase rounded-lg", dateRange.from === new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] && "bg-background shadow-sm")}
+            >7D</Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setQuickRange(30)}
+              className={cn("h-7 px-3 text-[10px] font-bold uppercase rounded-lg", dateRange.from === new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] && "bg-background shadow-sm")}
+            >30D</Button>
+          </div>
+          <Button variant="outline" size="sm" className="h-9 rounded-xl font-bold text-[10px] uppercase tracking-widest px-4" onClick={handleMarkAllRead} disabled={unreadRes?.data?.count === 0}>
+            <CheckCheck className="mr-2 h-3.5 w-3.5" />
+            Mark read
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => queryClient.invalidateQueries({ queryKey: ['messages'] })}>
-            <RefreshCcw className={cn("h-4 w-4", isFetching && "animate-spin")} />
+          <Button variant="outline" size="icon" className="rounded-xl h-9 w-9" onClick={() => queryClient.invalidateQueries({ queryKey: ['messages'] })}>
+            <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} />
           </Button>
         </div>
       </div>
 
-      <Card className="border-none shadow-sm bg-card">
-        <CardHeader className="pb-3 border-b px-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <Tabs 
-              value={activeTab} 
-              onValueChange={(v) => { setActiveTab(v as any); setPage(0); }} 
-              className="w-full md:w-auto"
-            >
-              <TabsList className="grid grid-cols-3 w-[300px]">
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="NOTIFICATION">Alerts</TabsTrigger>
-                <TabsTrigger value="TASK">Tasks</TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            <div className="flex items-center gap-3">
-              <div className="relative w-full md:w-[300px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search messages..." 
-                  className="pl-9 bg-muted/30 border-none"
-                  value={searchKeyword}
-                  onChange={(e) => { setSearchKeyword(e.target.value); setPage(0); }}
-                />
-              </div>
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon">
-                    <Filter className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => setReadFilter('all')}>
-                    <span className={cn("flex-1", readFilter === 'all' && "font-bold text-primary")}>All Messages</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setReadFilter('unread')}>
-                    <span className={cn("flex-1", readFilter === 'unread' && "font-bold text-primary")}>Unread Only</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setReadFilter('read')}>
-                    <span className={cn("flex-1", readFilter === 'read' && "font-bold text-primary")}>Read Only</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+      {/* FILTER BAR */}
+      <Card className="flex items-center gap-4 flex-wrap p-3 px-6 shadow-sm border rounded-2xl bg-card/50">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-primary" />
+          <div className="flex items-center gap-1">
+            <Input
+              type="date"
+              value={dateRange.from}
+              onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
+              className="h-8 w-32 border-none bg-transparent font-bold text-xs p-0 focus-visible:ring-0 cursor-pointer"    
+            />
+            <span className="text-[10px] font-bold opacity-30">TO</span>
+            <Input
+              type="date"
+              value={dateRange.to}
+              onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
+              className="h-8 w-32 border-none bg-transparent font-bold text-xs p-0 focus-visible:ring-0 cursor-pointer"    
+            />
           </div>
-        </CardHeader>
-        
-        <CardContent className="p-0">
+        </div>
+
+        <Separator orientation="vertical" className="h-6" />
+
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground/60" />
+          <div className="flex flex-col">
+            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/50 leading-none mb-0.5">Read Status</span>
+            <Select value={readFilter} onValueChange={(v) => setReadFilter(v as any)}>
+              <SelectTrigger className="h-6 border-none bg-transparent font-bold text-xs p-0 focus:ring-0 shadow-none w-24">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="unread">Unread Only</SelectItem>
+                <SelectItem value="read">Read Only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <Separator orientation="vertical" className="h-6" />
+
+        <div className="flex items-center gap-2">
+          <Activity className="h-4 w-4 text-muted-foreground/60" />
+          <div className="flex flex-col">
+            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/50 leading-none mb-0.5">Status</span>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-6 border-none bg-transparent font-bold text-xs p-0 focus:ring-0 shadow-none w-24">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="RUNNING">Running</SelectItem>
+                <SelectItem value="SUCCESS">Success</SelectItem>
+                <SelectItem value="FAILED">Failed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <Separator orientation="vertical" className="h-6" />
+
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
+          <Input
+            placeholder="Search by title or summary..."
+            className="pl-9 h-9 border-none bg-transparent font-bold text-xs p-0 focus-visible:ring-0"
+            value={searchKeyword}
+            onChange={(e) => { setSearchKeyword(e.target.value); setPage(0); }}
+          />
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+           {unreadRes?.data && unreadRes.data.count > 0 && (
+             <Badge className="bg-rose-500 hover:bg-rose-600 text-white border-none rounded-full h-5 px-2 text-[10px] font-black tabular-nums shadow-lg shadow-rose-500/20">
+               {unreadRes.data.count} UNREAD
+             </Badge>
+           )}
+        </div>
+      </Card>
+
+      {/* CONTENT */}
+      <Card className="flex-1 flex flex-col min-h-0 border rounded-2xl bg-card shadow-sm overflow-hidden">
+        <div className="flex-1 overflow-auto custom-scrollbar">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center p-24 space-y-4">
-              <RefreshCcw className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground font-medium">Loading your messages...</p>
+            <div className="flex flex-col items-center justify-center h-full p-24 space-y-4">
+              <RefreshCw className="h-8 w-8 animate-spin text-primary/40" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Syncing Messages...</p>
             </div>
           ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-24 text-center">
-              <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                <Bell className="h-8 w-8 text-muted-foreground opacity-20" />
+            <div className="flex flex-col items-center justify-center h-full p-24 text-center">
+              <div className="h-20 w-20 bg-muted/50 rounded-3xl flex items-center justify-center mb-6 border border-dashed">
+                <Mail className="h-8 w-8 text-muted-foreground opacity-20" />
               </div>
-              <h3 className="text-lg font-semibold">No messages found</h3>
-              <p className="text-sm text-muted-foreground max-w-[250px] mt-1">
-                We'll notify you here when there are updates to your system.
+              <h3 className="text-lg font-bold tracking-tight">Your inbox is clear</h3>
+              <p className="text-sm text-muted-foreground max-w-[280px] mt-2 leading-relaxed">
+                Stay tuned! We'll notify you here about system updates, device events, and task completions.
               </p>
             </div>
           ) : (
-            <div className="divide-y border-t">
+            <div className="divide-y divide-border/50">
               {messages.map((message) => (
-                <MessageItem 
-                  key={message.id} 
-                  message={message} 
+                <MessageItem
+                  key={message.id}
+                  message={message}
+                  onSelect={handleMessageClick}
                   onMarkRead={(id) => markSingleReadMutation.mutate(id)}
                   getStatusIcon={getStatusIcon}
                   formatDateTime={formatDateTime}
+                  navigate={navigate}
                 />
               ))}
             </div>
           )}
-        </CardContent>
+        </div>
 
         {totalPages > 1 && (
-          <div className="px-6 py-4 border-t flex items-center justify-between">
-            <p className="text-xs text-muted-foreground font-medium">
-              Showing {page * pageSize + 1} to {Math.min((page + 1) * pageSize, total)} of {total} messages
+          <div className="px-6 py-3 border-t bg-muted/5 flex items-center justify-between">
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+              Showing {page * pageSize + 1} to {Math.min((page + 1) * pageSize, total)} of {total} messages 
             </p>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0 rounded-lg shadow-sm"
                 onClick={() => setPage(p => Math.max(0, p - 1))}
                 disabled={page === 0}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <div className="text-xs font-bold px-3">
+              <div className="bg-background border rounded-lg px-3 h-8 flex items-center text-[10px] font-black shadow-inner">
                 {page + 1} / {totalPages}
               </div>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
+                className="h-8 w-8 p-0 rounded-lg shadow-sm"
                 onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                 disabled={page === totalPages - 1}
               >
@@ -245,87 +417,196 @@ export default function MessagesPage() {
           </div>
         )}
       </Card>
+
+      {/* DETAIL DIALOG */}
+      <Dialog open={!!selectedMessageId} onOpenChange={(open) => !open && setSelectedMessageId(null)}>
+        <DialogContent className="max-w-2xl overflow-hidden rounded-[2rem] p-0 border-none shadow-2xl">
+          {detailRes?.data && (
+            <div className="flex flex-col">
+              <div className="bg-primary/5 p-8 border-b relative">
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "h-14 w-14 rounded-2xl flex items-center justify-center shadow-inner",
+                    detailRes.data.kind === 'TASK' ? "bg-blue-500/10 text-blue-600" : "bg-primary/10 text-primary"
+                  )}>
+                    {getStatusIcon(detailRes.data.kind, detailRes.data.status)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Badge variant="outline" className="mb-2 text-[8px] font-black uppercase tracking-widest bg-background/50">
+                      {detailRes.data.kind}
+                    </Badge>
+                    <DialogTitle className="text-xl font-bold tracking-tight">{detailRes.data.title}</DialogTitle>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
+                        <Clock className="h-3 w-3" />
+                        {formatDateTime(detailRes.data.createdAt)}
+                      </div>
+                      {detailRes.data.status && (
+                        <Badge className={cn(
+                          "h-5 text-[9px] px-2 font-black uppercase border-none",
+                          detailRes.data.status === 'SUCCESS' ? "bg-emerald-500 text-white" :
+                          detailRes.data.status === 'FAILED' ? "bg-rose-500 text-white" :
+                          "bg-blue-500 text-white animate-pulse"
+                        )}>
+                          {detailRes.data.status}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-8 space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                <div className="space-y-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Message Summary</p>
+                  <p className="text-sm leading-relaxed text-foreground font-medium">
+                    {detailRes.data.summary}
+                  </p>
+                </div>
+
+                {(detailRes.data.deviceId || detailRes.data.programId) && (
+                  <div className="grid grid-cols-2 gap-4">
+                    {detailRes.data.deviceId && (
+                      <div className="p-4 rounded-2xl bg-muted/30 border shadow-sm flex items-center justify-between group">
+                        <div className="flex items-center gap-3">
+                          <Monitor className="h-4 w-4 text-primary" />
+                          <div className="flex flex-col">
+                            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Related Device</span>
+                            <span className="text-xs font-bold font-mono">{detailRes.data.deviceId}</span>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => navigate(`/dashboard/devices/${detailRes.data?.deviceId}`)}>
+                           <ExternalLink className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )}
+                    {detailRes.data.programId && (
+                      <div className="p-4 rounded-2xl bg-muted/30 border shadow-sm flex items-center justify-between group">
+                        <div className="flex items-center gap-3">
+                          <Layers className="h-4 w-4 text-primary" />
+                          <div className="flex flex-col">
+                            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Related Program</span>
+                            <span className="text-xs font-bold truncate max-w-[120px]">{detailRes.data.programId}</span>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => navigate(`/dashboard/programs/${detailRes.data?.programId}`)}>
+                           <ExternalLink className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {detailRes.data.payload && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Technical Details (Payload)</p>
+                    </div>
+                    <div className="bg-slate-950 rounded-2xl p-6 overflow-hidden border border-slate-800 shadow-xl group relative">
+                      <pre className="text-xs text-emerald-400 font-mono overflow-auto max-h-[300px] custom-scrollbar leading-relaxed">
+                        {JSON.stringify(detailRes.data.payload, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-4">
+                  <Button className="rounded-xl font-bold uppercase tracking-widest text-xs px-8 h-10" onClick={() => setSelectedMessageId(null)}>
+                    Dismiss
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function MessageItem({ 
-  message, 
+function MessageItem({
+  message,
+  onSelect,
   onMarkRead,
   getStatusIcon,
-  formatDateTime
-}: { 
+  formatDateTime,
+  navigate
+}: {
   message: MessageListItem;
+  onSelect: (m: MessageListItem) => void;
   onMarkRead: (id: string) => void;
   getStatusIcon: (kind: MessageKind, status?: MessageStatus) => React.ReactNode;
   formatDateTime: (d: string) => string;
+  navigate: (path: string) => void;
 }) {
   return (
-    <div className={cn(
-      "group flex items-start gap-4 p-5 transition-all hover:bg-muted/30 relative",
-      !message.readAt && "bg-primary/5 border-l-2 border-l-primary"
-    )}>
+    <div 
+      className={cn(
+        "group flex items-start gap-4 p-5 transition-all hover:bg-muted/30 cursor-pointer relative border-l-4 border-l-transparent",
+        !message.readAt && "bg-primary/[0.02] border-l-primary"
+      )}
+      onClick={() => onSelect(message)}
+    >
       <div className={cn(
-        "mt-1 p-2 rounded-xl shrink-0",
-        message.readAt ? "bg-muted" : "bg-primary/10"
+        "mt-1 p-2 rounded-xl shrink-0 border shadow-sm transition-transform group-hover:scale-105",
+        message.readAt ? "bg-muted/50 text-muted-foreground/60" : "bg-primary/5 text-primary"
       )}>
         {getStatusIcon(message.kind, message.status)}
       </div>
 
-      <div className="flex-1 min-w-0 space-y-1">
-        <div className="flex items-center gap-2 mb-0.5">
-          <h4 className={cn(
-            "text-sm font-semibold truncate",
-            !message.readAt ? "text-foreground" : "text-muted-foreground"
-          )}>
-            {message.title}
-          </h4>
-          {!message.readAt && <Badge className="h-4 px-1.5 text-[8px] bg-primary uppercase">New</Badge>}
+      <div className="flex-1 min-w-0 space-y-1.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 mb-0.5">
+            <h4 className={cn(
+              "text-sm font-bold truncate",
+              !message.readAt ? "text-foreground" : "text-muted-foreground/70"
+            )}>
+              {message.title}
+            </h4>
+            {!message.readAt && (
+              <div className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse shadow-sm" />
+            )}
+          </div>
+          <span className="text-[10px] text-muted-foreground/60 font-bold tabular-nums whitespace-nowrap">
+            {formatDateTime(message.createdAt)}
+          </span>
         </div>
+        
         <p className={cn(
-          "text-xs leading-relaxed line-clamp-2",
-          message.readAt ? "text-muted-foreground/60" : "text-muted-foreground"
+          "text-xs leading-relaxed line-clamp-1 font-medium",
+          message.readAt ? "text-muted-foreground/50" : "text-muted-foreground/80"
         )}>
           {message.summary}
         </p>
-        <div className="flex items-center gap-3 pt-1">
-          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium">
-            <Clock className="h-3 w-3" />
-            {formatDateTime(message.createdAt)}
-          </div>
-          {message.kind === 'TASK' && message.status && (
-            <Badge variant="outline" className={cn(
-              "h-4 text-[9px] px-1.5 border-none",
-              message.status === 'SUCCESS' ? "bg-emerald-50 text-emerald-600" : 
-              message.status === 'FAILED' ? "bg-rose-50 text-rose-600" :
-              "bg-blue-50 text-blue-600"
-            )}>
-              {message.status}
+
+        <div className="flex items-center gap-2 pt-1">
+          {message.deviceId && (
+            <Badge variant="outline" className="h-4 text-[8px] font-black uppercase tracking-tight bg-muted/20 border-none flex gap-1 items-center">
+              <Monitor className="h-2 w-2" /> Device {message.deviceId}
             </Badge>
+          )}
+          {message.programId && (
+            <Badge variant="outline" className="h-4 text-[8px] font-black uppercase tracking-tight bg-muted/20 border-none flex gap-1 items-center">
+              <Layers className="h-2 w-2" /> Program Ref
+            </Badge>
+          )}
+          {message.operationId && (
+             <Badge variant="outline" className="h-4 text-[8px] font-black uppercase tracking-tight bg-muted/20 border-none flex gap-1 items-center">
+               <Terminal className="h-2 w-2" /> Audit Trail
+             </Badge>
           )}
         </div>
       </div>
 
-      <div className="flex flex-col items-end gap-2 shrink-0">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {!message.readAt && (
-              <DropdownMenuItem onClick={() => onMarkRead(message.id)}>
-                <CheckCheck className="mr-2 h-4 w-4" />
-                Mark as read
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem className="text-rose-600">
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-4 self-center">
+        {!message.readAt && (
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 transition-colors" onClick={(e) => { e.stopPropagation(); onMarkRead(message.id); }}>
+            <CheckCheck className="h-4 w-4" />
+          </Button>
+        )}
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors">
+          <Eye className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );

@@ -55,6 +55,8 @@ class SSEManager {
           useMessageStore.getState().upsertMessage(envelope.data.message as MessageListItem);
           // Refresh unread count to be accurate
           useMessageStore.getState().fetchInitialData();
+          // Dispatch custom event for page-level refresh
+          window.dispatchEvent(new CustomEvent(`prism.${envelope.type}`, { detail: envelope.data.message }));
         }
         break;
       

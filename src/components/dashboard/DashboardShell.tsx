@@ -119,8 +119,8 @@ const NAV_GROUPS: NavGroup[] = [
         icon: MessageSquare,
         href: "/dashboard/messages",
         children: [
-          { label: "All Messages", href: "/dashboard/messages" },
-          { label: "Alerts", href: "/dashboard/messages?tab=alerts" },
+          { label: "Inbox", href: "/dashboard/messages" },
+          { label: "Notifications", href: "/dashboard/messages?tab=notifications" },
           { label: "Tasks", href: "/dashboard/messages?tab=tasks" },
         ],
       },
