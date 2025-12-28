@@ -793,8 +793,6 @@ export function DeviceTable({
     rowSelectionMode: 'multiple',
     rowSelectionActivator: 'none',
     rowSelectChildren: true,
-    // Add getRowId for the new deviceId field
-    getRowId: (data) => String((data as Device).deviceId),
   });
 
   const gridSelectedIds = grid.state.rowSelectedIds.useValue();
@@ -815,7 +813,7 @@ export function DeviceTable({
     }
 
     if (changed) {
-      grid.state.rowSelectedIds.set(Array.from(external));
+      grid.state.rowSelectedIds.set(new Set(external));
     }
   }, [grid, selectedDeviceIds]);
 

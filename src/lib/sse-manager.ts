@@ -69,7 +69,9 @@ class SSEManager {
         break;
 
       case 'operation.updated':
-        window.dispatchEvent(new CustomEvent('prism.operation.updated', { detail: envelope.data }));
+        window.dispatchEvent(new CustomEvent('prism.operation.updated', { 
+          detail: { scope: envelope.scope, data: envelope.data } 
+        }));
         break;
 
       default:

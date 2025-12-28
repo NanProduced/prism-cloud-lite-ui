@@ -6,33 +6,97 @@ export type DeviceStatus = 'pending' | 'online' | 'offline';
 export type NetworkType = 'WiFi' | '4G' | 'Ethernet' | 'FOUR_G' | 'WIFI' | 'ETHERNET';
 
 export interface Tag {
+  id: string; // Mandatory for existing components
+  name?: string; 
+  slug?: string; 
   tagName: string;
   tagSlug: string;
   color: string;
   icon?: string;
   description?: string;
+  isSystem?: boolean;
+}
+
+export interface Resolution {
+  width: number;
+  height: number;
+}
+
+export interface DeviceLocation {
+  lat: number;
+  lng: number;
+  source: 'reported' | 'manual';
+  timestamp: string;
+  accuracyM?: number;
+}
+
+export interface CurrentProgram {
+  id: string;
+  name: string;
+  version: string;
 }
 
 export interface Device {
-  deviceId: number;
+  // Primary IDs
+  id: string; // compatibility (e.g. "device-001")
+  deviceId: number; // backend real ID (e.g. 10001)
+  
+  // Basic Info
   deviceName: string;
+  alias?: string; // compatibility
   description?: string;
-  onlineStatus: number; // 1 for online, 0 for offline, etc.
+  serialNumber?: string; // compatibility
+
+  // Status mapping
+  onlineStatus: number; // 1 for online, 0 for offline
+  status: DeviceStatus; // compatibility ('online' | 'offline' | 'pending')
+  
+  // Timestamps
   onboardingTime: string;
   lastReportTime: string;
   createTime: string;
+  offlineDuration?: number;
+
+  // Hardware/Version
   model: string;
   version: string;
-  brightness: number;
+  firmwareVersion?: string; // compatibility
+  resolution: Resolution; // Changed from string to object
+
+  // Network
   networkType: NetworkType;
   networkStrength?: number;
-  playingProgram?: string;
-  resolution: string;
+  signalStrength?: number; // compatibility
+  ipAddress?: string;
+  macAddress?: string;
+  websocketStatus?: 'connected' | 'disconnected';
+
+  // Display Control
+  brightness: number;
+  colorTemperature?: number;
+  volume?: number;
+
+  // Storage
   totalStorage: number;
   freeStorage: number;
+  storageTotal?: number; // compatibility
+  storageUsed?: number; // compatibility
+
+  // Playback
+  playingProgram?: string;
+  currentProgram?: CurrentProgram; // compatibility
+
+  // Screenshot
   lastScreenshotUrl?: string;
+  latestScreenshot?: { url: string; timestamp: string }; // compatibility
+
+  // Metadata
   tags: Tag[];
   customFieldValues?: Record<string, any>;
+  
+  // Location
+  reportedLocation?: DeviceLocation;
+  manualLocation?: DeviceLocation;
 }
 
 // Filter Condition Types

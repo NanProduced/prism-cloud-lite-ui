@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertCircle, Copy, FilePlus2, History, LayoutPanelTop, MoreHorizontal, Pencil, Plus, Search, Send, Sparkles, Trash2, XCircle } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { AlertCircle, Copy, FilePlus2, History, LayoutPanelTop, MoreHorizontal, Pencil, Plus, Search, Send, Sparkles, Trash2, XCircle, RefreshCw } from 'lucide-react';
 import { toast } from '@/store/notificationStore';
-import { formatBytes } from '@better-upload/client/helpers';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,22 +18,17 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { mockMediaLibraryNodes } from '@/lib/mock/media-library';
 import { cn } from '@/lib/utils';
 
-import { listDeployments, undeployProgramEverywhere, type ProgramDeploymentRecord } from '@/features/programs/storage/deploymentsDb';
-import { createProgram, createProgramFromSeed, deleteProgram, listPrograms, renameProgram, type ProgramRecord } from '@/features/programs/storage/programsDb';
-import { addProgramAuditLog } from '@/features/programs/storage/auditLogsDb';
-import { createProgramTemplate, deleteProgramTemplate, listProgramTemplates, renameProgramTemplate, type ProgramTemplateRecord } from '@/features/programs/storage/templatesDb';
-import { buildMaterialSizeIndex, sumMaterialBytesForDoc } from '@/features/programs/vsn/materials';
-import { summarizeVsn } from '@/features/programs/vsn/summary';
-import type { VsnDocument } from '@/features/programs/vsn/types';
+import {
+  getPrograms,
+  getProgramTemplates,
+  createProgram as createProgramApi,
+  renameProgram as renameProgramApi,
+  deleteProgram as deleteProgramApi,
+} from '@/services/programApi';
+import type { ProgramListResp, ProgramTemplateResp } from '@/types/program';
+import { getErrorMessage } from '@/services/authApi';
 import { ProgramPublishDialog } from '@/features/programs/publishing/ProgramPublishDialog';
 
 type ResolutionPreset = { label: string; width: number; height: number };
@@ -47,43 +42,66 @@ const RESOLUTION_PRESETS: ResolutionPreset[] = [
 
 export default function ProgramsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [programs, setPrograms] = useState<ProgramRecord[]>(() => listPrograms());
-  const [templates, setTemplates] = useState<ProgramTemplateRecord[]>(() => listProgramTemplates());
   const [query, setQuery] = useState('');
-  const [deployments, setDeployments] = useState<ProgramDeploymentRecord[]>(() => listDeployments());
 
-  const materialSizeIndex = useMemo(() => buildMaterialSizeIndex(mockMediaLibraryNodes), []);
-  const deploymentsByProgramId = useMemo(() => {
-    const map = new Map<string, ProgramDeploymentRecord[]>();
-    for (const d of deployments) {
-      const existing = map.get(d.programId);
-      if (existing) existing.push(d);
-      else map.set(d.programId, [d]);
-    }
-    for (const list of map.values()) {
-      list.sort((a, b) => b.deployedAt.localeCompare(a.deployedAt));
-    }
-    return map;
-  }, [deployments]);
+  // --- Queries ---
+  const { data: programsData, isLoading: isProgramsLoading } = useQuery({
+    queryKey: ['programs'],
+    queryFn: getPrograms,
+  });
+
+  const { data: templatesData, isLoading: isTemplatesLoading } = useQuery({
+    queryKey: ['programs', 'templates'],
+    queryFn: getProgramTemplates,
+  });
+
+  const programs = programsData?.data || [];
+  const templates = templatesData?.data || [];
+
+  // --- Mutations ---
+  const createProgramMutation = useMutation({
+    mutationFn: createProgramApi,
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['programs'] });
+      setCreateOpen(false);
+      if (res.data) {
+        navigate(`/dashboard/programs/${res.data.id}/edit`);
+      }
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+
+  const renameMutation = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => renameProgramApi(id, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['programs'] });
+      setRenameOpen(false);
+      toast.success('Program renamed');
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteProgramApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['programs'] });
+      setDeleteOpen(false);
+      toast.success('Program deleted');
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
 
   const [renameOpen, setRenameOpen] = useState(false);
-  const [renameTarget, setRenameTarget] = useState<ProgramRecord | null>(null);
+  const [renameTarget, setRenameTarget] = useState<ProgramListResp | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<ProgramRecord | null>(null);
-
-  const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
-  const [saveAsTemplateTarget, setSaveAsTemplateTarget] = useState<ProgramRecord | null>(null);
-  const [templateName, setTemplateName] = useState('');
-  const [templateDesc, setTemplateDesc] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<ProgramListResp | null>(null);
 
   const [publishOpen, setPublishOpen] = useState(false);
-  const [publishTarget, setPublishTarget] = useState<ProgramRecord | null>(null);
-
-  const [unpublishOpen, setUnpublishOpen] = useState(false);
-  const [unpublishTarget, setUnpublishTarget] = useState<ProgramRecord | null>(null);
+  const [publishTarget, setPublishTarget] = useState<ProgramListResp | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('New Program');
@@ -105,98 +123,39 @@ export default function ProgramsPage() {
     return list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [query, templates]);
 
-  const openPublishDialog = (program: ProgramRecord) => {
+  const openPublishDialog = (program: ProgramListResp) => {
     setPublishTarget(program);
     setPublishOpen(true);
   };
 
-  const requestUnpublish = (program: ProgramRecord) => {
-    setUnpublishTarget(program);
-    setUnpublishOpen(true);
-  };
-
-  const handleConfirmUnpublish = () => {
-    if (!unpublishTarget) return;
-    const deployed = deploymentsByProgramId.get(unpublishTarget.id) ?? [];
-    undeployProgramEverywhere(unpublishTarget.id);
-    setDeployments(listDeployments());
-    toast.success(`Unpublished from ${deployed.length} device${deployed.length === 1 ? '' : 's'}`);
-    setUnpublishOpen(false);
-    setUnpublishTarget(null);
-  };
-
   const handleProgramRename = () => {
     if (!renameTarget) return;
-    const next = renameProgram(renameTarget.id, renameValue.trim() || renameTarget.name);
-    if (!next) {
-      toast.error('Rename failed');
-      return;
-    }
-    setPrograms(listPrograms());
-    toast.success('Program renamed');
-    setRenameOpen(false);
-    setRenameTarget(null);
+    renameMutation.mutate({ id: renameTarget.id, name: renameValue.trim() });
   };
 
   const handleProgramDelete = () => {
     if (!deleteTarget) return;
-    undeployProgramEverywhere(deleteTarget.id);
-    setDeployments(listDeployments());
-    const ok = deleteProgram(deleteTarget.id);
-    if (!ok) {
-      toast.error('Delete failed');
-      return;
-    }
-    setPrograms(listPrograms());
-    toast.success('Program deleted');
-    setDeleteOpen(false);
-    setDeleteTarget(null);
-  };
-
-  const handleSaveAsTemplate = () => {
-    if (!saveAsTemplateTarget) return;
-    const { vsn } = pickProgramPreviewDoc(saveAsTemplateTarget);
-    if (!vsn) {
-      toast.error('No content to save as template');
-      return;
-    }
-    createProgramTemplate({
-      name: templateName.trim() || saveAsTemplateTarget.name,
-      description: templateDesc.trim(),
-      sourceVsn: vsn,
-    });
-    setTemplates(listProgramTemplates());
-    toast.success('Template created');
-    setSaveAsTemplateOpen(false);
-    setSaveAsTemplateTarget(null);
+    deleteMutation.mutate(deleteTarget.id);
   };
 
   const handleCreate = () => {
     const name = createName.trim() || 'Untitled Program';
-
     if (createMode === 'template') {
-      const tpl = templates.find((t) => t.id === createTemplateId) ?? null;
-      if (!tpl) return;
-      const record = createProgramFromSeed({ name, width: tpl.width, height: tpl.height, vsn: tpl.vsn });
-      setPrograms(listPrograms());
-      setCreateOpen(false);
-      navigate(`/dashboard/programs/${record.id}/edit?base=blank`);
-      return;
+       toast.info('Starting from template not yet implemented in API');
+       return;
     }
-
     const preset = RESOLUTION_PRESETS[createPresetIndex] ?? RESOLUTION_PRESETS[0];
-    const p = createProgram({ name, width: preset.width, height: preset.height });
-    addProgramAuditLog({
-      programId: p.id,
-      action: 'CREATE',
-      userId: 'admin',
-      userName: 'Administrator',
-      details: { description: `Resolution: ${preset.width}x${preset.height}` }
-    });
-    setPrograms(listPrograms());
-    setCreateOpen(false);
-    navigate(`/dashboard/programs/${p.id}/edit`);
+    createProgramMutation.mutate({ name, width: preset.width, height: preset.height });
   };
+
+  if (isProgramsLoading && tab !== 'templates') {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
+        <RefreshCw className="h-8 w-8 animate-spin text-primary/40" />
+        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Loading Workspace...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6 pt-2">
@@ -285,16 +244,6 @@ export default function ProgramsPage() {
                       setCreateName(`${tpl.name} Program`);
                       setCreateOpen(true);
                     }}
-                    onRename={(name) => {
-                      const updated = renameProgramTemplate(tpl.id, name);
-                      if (!updated) return;
-                      setTemplates(listProgramTemplates());
-                    }}
-                    onDelete={() => {
-                      const ok = deleteProgramTemplate(tpl.id);
-                      if (!ok) return;
-                      setTemplates(listProgramTemplates());
-                    }}
                   />
                 ))}
               </div>
@@ -322,39 +271,11 @@ export default function ProgramsPage() {
                   Explore templates
                 </Button>
               </div>
-              <div className="mt-4 grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
-                <div className="rounded-lg border bg-muted/30 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Step 1</p>
-                  <p className="mt-1 text-xs font-medium">Design Canvas</p>
-                </div>
-                <div className="rounded-lg border bg-muted/30 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Step 2</p>
-                  <p className="mt-1 text-xs font-medium">Add Media</p>
-                </div>
-                <div className="rounded-lg border bg-muted/30 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Step 3</p>
-                  <p className="mt-1 text-xs font-medium">Publish Live</p>
-                </div>
-              </div>
             </div>
           ) : (
             <div className="divide-y">
               {filteredPrograms.map((program) => {
-                const unpublishedChanges = hasUnpublishedChanges(program);
-                const { vsn: previewDoc, thumbnail } = pickProgramPreviewDoc(program);
-                const summary = summarizeVsn(previewDoc);
-                const materialBytes = sumMaterialBytesForDoc(previewDoc, materialSizeIndex);
-                const latestPublished = pickLatestPublished(program);
-
-                const programDeployments = deploymentsByProgramId.get(program.id) ?? [];
-                const deploymentVersions = getVersionDistribution(programDeployments);
-                const isMixed = deploymentVersions.length > 1;
-                const liveLabel = programDeployments.length === 0
-                  ? 'Not published'
-                  : isMixed
-                    ? `Live (mixed) · ${programDeployments.length}`
-                    : `Live v${deploymentVersions[0]?.version ?? ''} · ${programDeployments.length}`;
-
+                const liveLabel = program.latestVersion ? `Live v${program.latestVersion}` : 'Not published';
                 return (
                   <div
                     key={program.id}
@@ -362,7 +283,13 @@ export default function ProgramsPage() {
                   >
                     <div className="flex min-w-0 flex-1 items-start gap-5">
                       <div className="relative shrink-0">
-                        <ProgramListThumbnail doc={previewDoc} thumbnail={thumbnail} />
+                        {program.coverUrl ? (
+                          <img src={program.coverUrl} className="h-[72px] w-[120px] rounded-lg object-cover border" alt="" />
+                        ) : (
+                          <div className="h-[72px] w-[120px] rounded-lg bg-black flex items-center justify-center border">
+                             <LayoutPanelTop className="h-6 w-6 text-white/20" />
+                          </div>
+                        )}
                         <div className="absolute inset-0 rounded-lg ring-1 ring-inset ring-foreground/5 shadow-sm" />
                       </div>
                       
@@ -374,43 +301,22 @@ export default function ProgramsPage() {
                           >
                             {program.name}
                           </Link>
-                          {unpublishedChanges && (
+                          {program.unpublishedChanges && (
                             <Badge variant="outline" className="bg-amber-500/5 text-amber-600 border-amber-500/20 px-1.5 h-4.5 text-[10px] font-bold uppercase">
                               Unpublished
                             </Badge>
                           )}
                           
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge
-                                  className={cn(
-                                    "px-1.5 h-4.5 text-[10px] font-bold uppercase cursor-help",
-                                    programDeployments.length === 0
-                                      ? 'bg-muted text-muted-foreground hover:bg-muted'
-                                      : isMixed
-                                        ? 'bg-amber-500/10 text-amber-700 hover:bg-amber-500/10'
-                                        : 'bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10',
-                                  )}
-                                >
-                                  {liveLabel}
-                                </Badge>
-                              </TooltipTrigger>
-                              {programDeployments.length > 0 && (
-                                <TooltipContent className="p-3 rounded-xl shadow-xl bg-background border ring-1 ring-foreground/5">
-                                  <p className="text-[10px] font-black uppercase text-muted-foreground mb-2 tracking-wider">Distribution</p>
-                                  <div className="space-y-1.5">
-                                    {deploymentVersions.map(v => (
-                                      <div key={v.version} className="flex items-center justify-between gap-6">
-                                        <Badge variant="outline" className="h-4 px-1 text-[9px] font-black">v{v.version}</Badge>
-                                        <span className="text-[10px] font-bold">{v.count} device{v.count === 1 ? '' : 's'}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </TooltipContent>
-                              )}
-                            </Tooltip>
-                          </TooltipProvider>
+                          <Badge
+                            className={cn(
+                              "px-1.5 h-4.5 text-[10px] font-bold uppercase",
+                              !program.latestVersion
+                                ? 'bg-muted text-muted-foreground hover:bg-muted'
+                                : 'bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10',
+                            )}
+                          >
+                            {liveLabel}
+                          </Badge>
                         </div>
 
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -418,13 +324,7 @@ export default function ProgramsPage() {
                             <span className="font-semibold text-foreground/70">{program.width}×{program.height}</span>
                           </span>
                           <span className="flex items-center gap-1">
-                            Version: <span className="font-semibold text-foreground/70">{latestPublished ? `v${latestPublished.version}` : 'Draft'}</span>
-                          </span>
-                          <span className="flex items-center gap-1">
-                            Duration: <span className="font-semibold text-foreground/70">{formatDurationMs(summary.totalDurationMs)}</span>
-                          </span>
-                          <span className="flex items-center gap-1">
-                            Size: <span className="font-semibold text-foreground/70">{formatBytes(materialBytes)}</span>
+                            Version: <span className="font-semibold text-foreground/70">{program.latestVersion ? `v${program.latestVersion}` : 'Draft'}</span>
                           </span>
                         </div>
 
@@ -432,14 +332,6 @@ export default function ProgramsPage() {
                           <p className="text-[11px] text-muted-foreground/60 italic">
                             Updated {formatRelativeTime(program.updatedAt)}
                           </p>
-                          {programDeployments.length > 0 && (
-                            <>
-                              <Separator orientation="vertical" className="h-2.5" />
-                              <p className="text-[11px] font-medium text-emerald-600">
-                                {isMixed ? `Mixed: ${formatVersionDistribution(deploymentVersions)}` : 'Fully deployed'}
-                              </p>
-                            </>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -472,51 +364,17 @@ export default function ProgramsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem
-                            onSelect={() => navigate(`/dashboard/programs/${program.id}`)}
-                          >
+                          <DropdownMenuItem onSelect={() => navigate(`/dashboard/programs/${program.id}`)}>
                             <History className="mr-2 h-4 w-4" />
                             View Status & History
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onSelect={() => {
-                              setRenameTarget(program);
-                              setRenameValue(program.name);
-                              setRenameOpen(true);
-                            }}
-                          >
+                          <DropdownMenuItem onSelect={() => { setRenameTarget(program); setRenameValue(program.name); setRenameOpen(true); }}>
                             <Pencil className="mr-2 h-4 w-4" />
                             Rename
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() => {
-                              setTemplateName(`${program.name} Template`);
-                              setTemplateDesc('');
-                              setSaveAsTemplateTarget(program);
-                              setSaveAsTemplateOpen(true);
-                            }}
-                          >
-                            <Copy className="mr-2 h-4 w-4" />
-                            Save as template
-                          </DropdownMenuItem>
-                          <Separator className="my-1" />
-                          {programDeployments.length > 0 && (
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onSelect={() => requestUnpublish(program)}
-                            >
-                              <XCircle className="mr-2 h-4 w-4" />
-                              Unpublish all
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onSelect={() => {
-                              setDeleteTarget(program);
-                              setDeleteOpen(true);
-                            }}
-                          >
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => { setDeleteTarget(program); setDeleteOpen(true); }}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete program
                           </DropdownMenuItem>
@@ -531,298 +389,92 @@ export default function ProgramsPage() {
         </CardContent>
       </Card>
 
-      <Dialog
-        open={createOpen}
-        onOpenChange={(open) => {
-          setCreateOpen(open);
-          if (!open) {
-            setCreateName('New Program');
-            setCreatePresetIndex(0);
-            setCreateMode('blank');
-            setCreateTemplateId('');
-          }
-        }}
-      >
-        <DialogContent className="max-w-[500px] p-0 overflow-hidden border-0 shadow-2xl rounded-2xl ring-1 ring-foreground/5">
-          <div className="bg-background">
-            <div className="p-8">
-              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <FilePlus2 className="h-6 w-6" />
+      <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) { setCreateName('New Program'); setCreatePresetIndex(0); setCreateMode('blank'); } }}>
+        <DialogContent className="max-w-[500px] p-0 overflow-hidden border-0 shadow-2xl rounded-2xl ring-1 ring-foreground/5 text-foreground">
+          <div className="p-8">
+            <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <FilePlus2 className="h-6 w-6" />
+            </div>
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold tracking-tight">Create Program</DialogTitle>
+              <DialogDescription className="text-sm pt-2">Initialize a new program workspace.</DialogDescription>
+            </DialogHeader>
+            <form className="mt-8 space-y-6" onSubmit={(e) => { e.preventDefault(); handleCreate(); }}>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60" htmlFor="program-name">Program Name</label>
+                <Input id="program-name" value={createName} onChange={(e) => setCreateName(e.target.value)} className="h-11 bg-muted/20 border-border/50 text-sm font-bold" />
               </div>
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold tracking-tight">Create Program</DialogTitle>
-                <DialogDescription className="text-sm leading-relaxed pt-2">
-                  Initialize a new program workspace. Choose between a blank canvas or start from a saved template.
-                </DialogDescription>
-              </DialogHeader>
-
-              <form
-                id="create-program-form"
-                className="mt-8 space-y-8"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (createMode === 'template' && !createTemplateId) return;
-                  handleCreate();
-                }}
-              >
-                <div className="grid grid-cols-1 gap-6 px-1">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-1" htmlFor="program-name">
-                      Program Name
-                    </label>
-                    <Input
-                      id="program-name"
-                      value={createName}
-                      onChange={(e) => setCreateName(e.target.value)}
-                      placeholder="e.g. Lobby Display"
-                      className="h-11 bg-muted/20 border-border/50 focus-visible:ring-primary/20 text-sm font-bold"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-1" htmlFor="program-create-mode">
-                        Content Source
-                      </label>
-                      <Select
-                        value={createMode}
-                        onValueChange={(v) => setCreateMode(v as typeof createMode)}
-                      >
-                        <SelectTrigger id="program-create-mode" className="h-11 bg-muted/20 border-border/50 font-bold text-sm">
-                          <SelectValue placeholder="Select mode" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="blank" className="text-sm font-bold">Blank Canvas</SelectItem>
-                          <SelectItem value="template" disabled={templates.length === 0} className="text-sm font-bold">From Template</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-1" htmlFor="program-resolution">
-                        {createMode === 'template' ? 'Template' : 'Resolution'}
-                      </label>
-                      {createMode === 'template' ? (
-                        <Select
-                          value={createTemplateId}
-                          onValueChange={(v) => setCreateTemplateId(v)}
-                        >
-                          <SelectTrigger id="program-resolution" className="h-11 bg-muted/20 border-border/50 font-bold text-sm">
-                            <SelectValue placeholder="Pick template" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {templates.map((tpl) => (
-                              <SelectItem key={tpl.id} value={tpl.id} className="text-sm font-bold">
-                                {tpl.name} · {tpl.width}×{tpl.height}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Select
-                          value={String(createPresetIndex)}
-                          onValueChange={(v) => setCreatePresetIndex(Number(v))}
-                        >
-                          <SelectTrigger id="program-resolution" className="h-11 bg-muted/20 border-border/50 font-bold text-sm">
-                            <SelectValue placeholder="Pick size" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {RESOLUTION_PRESETS.map((preset, index) => (
-                              <SelectItem key={preset.label} value={String(index)} className="text-sm font-bold">
-                                {preset.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </div>
-                  </div>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Source</label>
+                  <Select value={createMode} onValueChange={(v) => setCreateMode(v as any)}>
+                    <SelectTrigger className="h-11 bg-muted/20 border-border/50 font-bold text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="blank" className="font-bold">Blank Canvas</SelectItem>
+                      <SelectItem value="template" disabled={templates.length === 0} className="font-bold">From Template</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Resolution</label>
+                  <Select value={String(createPresetIndex)} onValueChange={(v) => setCreatePresetIndex(Number(v))}>
+                    <SelectTrigger className="h-11 bg-muted/20 border-border/50 font-bold text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent>{RESOLUTION_PRESETS.map((p, i) => (<SelectItem key={p.label} value={String(i)} className="font-bold">{p.label}</SelectItem>))}</SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)} className="font-bold text-xs uppercase tracking-widest px-8">Cancel</Button>
+                <Button type="submit" disabled={createProgramMutation.isPending} className="font-bold text-xs uppercase tracking-widest px-10 h-11 shadow-xl">
+                  {createProgramMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-2" />} Create
+                </Button>
+              </div>
+            </form>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-                {createMode === 'template' && templates.length === 0 && (
-                  <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-[11px] text-amber-700 font-bold">
-                    <AlertCircle className="h-4 w-4" />
-                    <span>Your template library is currently empty.</span>
-                  </div>
-                )}
-              </form>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 p-8 pt-0">
-              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)} className="font-bold text-xs uppercase tracking-widest px-8">
-                Cancel
-              </Button>
-              <Button 
-                form="create-program-form"
-                type="submit" 
-                disabled={createMode === 'template' && !createTemplateId} 
-                className="font-bold text-xs uppercase tracking-widest px-10 h-11 shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-              >
-                Create Workspace
-              </Button>
+      <Dialog open={renameOpen} onOpenChange={(open) => { setRenameOpen(open); if (!open) setRenameTarget(null); }}>
+        <DialogContent className="w-[min(100vw-2rem,520px)] text-foreground">
+          <DialogHeader><DialogTitle>Rename program</DialogTitle></DialogHeader>
+          <div className="space-y-4 pt-4">
+            <Input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} placeholder="Program name" />
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setRenameOpen(false)}>Cancel</Button>
+              <Button onClick={handleProgramRename} disabled={renameMutation.isPending}>Save</Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={saveAsTemplateOpen}
-        onOpenChange={(open) => {
-          setSaveAsTemplateOpen(open);
-          if (!open) {
-            setSaveAsTemplateTarget(null);
-            setTemplateName('');
-            setTemplateDesc('');
-          }
-        }}
-      >
-        <DialogContent className="w-[min(100vw-2rem,520px)] max-w-none">
-          <DialogHeader>
-            <DialogTitle>Save as Template</DialogTitle>
-            <DialogDescription>
-              Create a reusable template from this program's layout and content.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Template name</label>
-              <Input 
-                value={templateName} 
-                onChange={(e) => setTemplateName(e.target.value)} 
-                placeholder="e.g. Promo Layout" 
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Description (optional)</label>
-              <Input 
-                value={templateDesc} 
-                onChange={(e) => setTemplateDesc(e.target.value)} 
-                placeholder="e.g. Standard 16:9 promo template" 
-              />
-            </div>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="ghost" onClick={() => setSaveAsTemplateOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveAsTemplate} disabled={!templateName.trim()}>
-                Create template
-              </Button>
+      <Dialog open={deleteOpen} onOpenChange={(open) => { setDeleteOpen(open); if (!open) setDeleteTarget(null); }}>
+        <DialogContent className="w-[min(100vw-2rem,520px)] text-foreground">
+          <DialogHeader><DialogTitle>Delete program</DialogTitle></DialogHeader>
+          <div className="space-y-4 pt-4 text-center">
+            <p className="text-sm font-medium">{deleteTarget?.name}</p>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={handleProgramDelete} disabled={deleteMutation.isPending}>Delete</Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {publishTarget ? (
+      {publishTarget && (
         <ProgramPublishDialog
           open={publishOpen}
-          onOpenChange={(next) => {
-            setPublishOpen(next);
-            if (!next) setPublishTarget(null);
-          }}
-          program={publishTarget}
-          deployments={deploymentsByProgramId.get(publishTarget.id) ?? []}
-          onAfterPublish={() => {
-            setPrograms(listPrograms());
-            setDeployments(listDeployments());
-          }}
+          onOpenChange={(next) => { setPublishOpen(next); if (!next) setPublishTarget(null); }}
+          program={publishTarget as any}
+          deployments={[]}
+          onAfterPublish={() => queryClient.invalidateQueries({ queryKey: ['programs'] })}
         />
-      ) : null}
-
-      <Dialog
-        open={unpublishOpen}
-        onOpenChange={(open) => {
-          setUnpublishOpen(open);
-          if (!open) setUnpublishTarget(null);
-        }}
-      >
-        <DialogContent className="w-[min(100vw-2rem,520px)] max-w-none">
-          <DialogHeader>
-            <DialogTitle>Unpublish program</DialogTitle>
-            <DialogDescription>Remove this program from all devices currently running it.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="rounded-lg border bg-muted/20 p-3 text-sm">
-              <p className="font-medium">{unpublishTarget?.name ?? ''}</p>
-              <p className="mt-1 text-muted-foreground">
-                {unpublishTarget ? (deploymentsByProgramId.get(unpublishTarget.id)?.length ?? 0) : 0} device(s) will stop playing this program.
-              </p>
-            </div>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="ghost" onClick={() => setUnpublishOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleConfirmUnpublish} disabled={!unpublishTarget}>
-                Unpublish
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={renameOpen}
-        onOpenChange={(open) => {
-          setRenameOpen(open);
-          if (!open) setRenameTarget(null);
-        }}
-      >
-        <DialogContent className="w-[min(100vw-2rem,520px)] max-w-none">
-          <DialogHeader>
-            <DialogTitle>Rename program</DialogTitle>
-            <DialogDescription>Update the program name across lists and editors.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} placeholder="Program name" />
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="ghost" onClick={() => setRenameOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleProgramRename} disabled={!renameTarget}>
-                Save
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={deleteOpen}
-        onOpenChange={(open) => {
-          setDeleteOpen(open);
-          if (!open) setDeleteTarget(null);
-        }}
-      >
-        <DialogContent className="w-[min(100vw-2rem,520px)] max-w-none">
-          <DialogHeader>
-            <DialogTitle>Delete program</DialogTitle>
-            <DialogDescription>This removes unpublished changes and version history from your account.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="rounded-lg border bg-muted/20 p-3 text-sm">
-              <p className="font-medium">{deleteTarget?.name ?? ''}</p>
-              {deleteTarget ? (
-                <p className="mt-1 text-muted-foreground">
-                  {deleteTarget.width}×{deleteTarget.height} · {deleteTarget.versions.length} versions
-                  {hasUnpublishedChanges(deleteTarget) ? ' · Unpublished changes' : ''}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="ghost" onClick={() => setDeleteOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleProgramDelete} disabled={!deleteTarget}>
-                Delete
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      )}
     </div>
   );
 }
 
 function formatRelativeTime(iso: string): string {
+  if (!iso) return 'Unknown';
   const then = new Date(iso).getTime();
   const now = Date.now();
   const diffMs = Math.max(0, now - then);
@@ -835,180 +487,14 @@ function formatRelativeTime(iso: string): string {
   return `${days}d ago`;
 }
 
-function formatDurationMs(ms: number): string {
-  if (!Number.isFinite(ms) || ms <= 0) return '0s';
-  const totalSeconds = Math.round(ms / 1000);
-  if (totalSeconds < 60) return `${totalSeconds}s`;
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}m ${seconds}s`;
-}
-
-function getVersionDistribution(deployments: ProgramDeploymentRecord[]): Array<{ version: number; count: number }> {
-  const counts = new Map<number, number>();
-  for (const d of deployments) {
-    counts.set(d.version, (counts.get(d.version) ?? 0) + 1);
-  }
-  return [...counts.entries()]
-    .map(([version, count]) => ({ version, count }))
-    .sort((a, b) => b.version - a.version);
-}
-
-function formatVersionDistribution(versions: Array<{ version: number; count: number }>): string {
-  const parts = versions.slice(0, 3).map((v) => `v${v.version}×${v.count}`);
-  return versions.length > 3 ? `${parts.join(', ')}, …` : parts.join(', ');
-}
-
-function pickLatestDraft(program: ProgramRecord): ProgramRecord['drafts'][number] | null {
-  if (!program.drafts.length) return null;
-  return [...program.drafts].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0] ?? null;
-}
-
-function pickLatestPublished(program: ProgramRecord): ProgramRecord['versions'][number] | null {
-  if (!program.versions.length) return null;
-  return [...program.versions].sort((a, b) => b.version - a.version)[0] ?? null;
-}
-
-function hasUnpublishedChanges(program: ProgramRecord): boolean {
-  const published = pickLatestPublished(program);
-  if (!published) return false;
-
-  const baselineDraft = program.drafts.find((d) => d.baseVersion === published.version) ?? null;
-  if (!baselineDraft) return false;
-
-  return baselineDraft.updatedAt > published.createdAt;
-}
-
-function pickProgramPreviewDoc(program: ProgramRecord): { vsn: VsnDocument | null; thumbnail?: string | null } {
-  if (program.defaultVersion) {
-    const def = program.versions.find((v) => v.version === program.defaultVersion);
-    if (def) return { vsn: def.vsn, thumbnail: def.thumbnail };
-  }
-  const latest = pickLatestPublished(program);
-  if (latest) return { vsn: latest.vsn, thumbnail: latest.thumbnail };
-  
-  const draft = pickLatestDraft(program);
-  return { vsn: draft?.vsn ?? null, thumbnail: draft?.thumbnail };
-}
-
-function ProgramListThumbnail({ doc, thumbnail }: { doc: VsnDocument | null; thumbnail?: string | null }) {
-  if (thumbnail) {
-    return (
-      <div className="relative overflow-hidden rounded-lg border bg-black/70 w-[120px] h-[72px]">
-        <img src={thumbnail} className="h-full w-full object-cover" alt="Preview" />
-      </div>
-    );
-  }
-
-  const info = doc?.Programs?.Program?.Information;
-  const w = Number.parseInt(info?.Width ?? '0', 10) || 1920;
-  const h = Number.parseInt(info?.Height ?? '0', 10) || 1080;
-
-  const page = doc?.Programs?.Program?.Pages?.Page?.[0] ?? null;
-  const regions = page?.Regions?.Region;
-  const regionArr = Array.isArray(regions) ? regions : [];
-
-  const maxW = 120;
-  const maxH = 72;
-  const scale = Math.min(maxW / Math.max(1, w), maxH / Math.max(1, h));
-  const innerW = Math.max(1, Math.round(w * scale));
-  const innerH = Math.max(1, Math.round(h * scale));
-  const offsetX = Math.round((maxW - innerW) / 2);
-  const offsetY = Math.round((maxH - innerH) / 2);
-
+function TemplateRow({ template, onUse }: { template: ProgramTemplateResp; onUse: () => void; }) {
   return (
-    <div className="relative overflow-hidden rounded-lg border bg-black/70" style={{ width: maxW, height: maxH }}>
-      <div className="absolute" style={{ left: offsetX, top: offsetY, width: innerW, height: innerH }}>
-        {regionArr.map((region, idx) => {
-          const rect = (region as { Rect?: { X?: unknown; Y?: unknown; Width?: unknown; Height?: unknown } }).Rect;
-          const x = Number.parseFloat(String(rect?.X ?? '0')) || 0;
-          const y = Number.parseFloat(String(rect?.Y ?? '0')) || 0;
-          const rw = Number.parseFloat(String(rect?.Width ?? '0')) || 1;
-          const rh = Number.parseFloat(String(rect?.Height ?? '0')) || 1;
-          return (
-            <div
-              key={`r-${idx}`}
-              className="absolute rounded border border-white/40 bg-white/5"
-              style={{
-                left: x * scale,
-                top: y * scale,
-                width: Math.max(2, rw * scale),
-                height: Math.max(2, rh * scale),
-              }}
-            />
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function TemplateRow({
-  template,
-  onUse,
-  onRename,
-  onDelete,
-}: {
-  template: ProgramTemplateRecord;
-  onUse: () => void;
-  onRename: (name: string) => void;
-  onDelete: () => void;
-}) {
-  const [renameOpen, setRenameOpen] = useState(false);
-  const [nameDraft, setNameDraft] = useState(template.name);
-  const summary = useMemo(() => summarizeVsn(template.vsn), [template.vsn]);
-
-  return (
-    <div className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex items-center justify-between px-6 py-4">
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold">{template.name}</p>
-        {template.description ? (
-          <p className="mt-1 truncate text-xs text-muted-foreground">
-            {template.description}
-          </p>
-        ) : null}
-        <p className="mt-1 text-xs text-muted-foreground">
-          {template.width}×{template.height} · {summary.regionCount} window{summary.regionCount === 1 ? '' : 's'} · {summary.pageCount} page
-          {summary.pageCount === 1 ? '' : 's'} · Updated {formatRelativeTime(template.updatedAt)}
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground">{template.width}×{template.height}</p>
       </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm" onClick={onUse}>
-          Use
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => { setNameDraft(template.name); setRenameOpen(true); }}>
-          Rename
-        </Button>
-        <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={onDelete}>
-          Delete
-        </Button>
-      </div>
-
-      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
-        <DialogContent className="w-[min(100vw-2rem,520px)] max-w-none">
-          <DialogHeader>
-            <DialogTitle>Rename template</DialogTitle>
-            <DialogDescription>Update the template name shown in the library.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} />
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button variant="ghost" onClick={() => setRenameOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={() => {
-                  onRename(nameDraft);
-                  setRenameOpen(false);
-                }}
-              >
-                Save
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <Button variant="outline" size="sm" onClick={onUse}>Use</Button>
     </div>
   );
 }

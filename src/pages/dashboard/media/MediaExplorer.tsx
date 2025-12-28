@@ -19,6 +19,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/store/notificationStore';
 
+import { useIsMobile } from '@/hooks/use-mobile';
 import { ReactBitsFolder } from '@/components/react-bits/Folder';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -35,10 +36,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { MediaAssetNode, MediaNode } from '@/types/media-library';
-import { deleteNode, renameNode } from '@/services/mediaApi';
+import { deleteNode, renameNode, moveNodes, createTranscodeTask } from '@/services/mediaApi';
 import { getErrorMessage } from '@/services/authApi';
 
 import { MediaAssetPreviewDialog } from './MediaAssetPreviewDialog';
+import { MoveNodesDialog } from './MoveNodesDialog';
 
 type MediaFilter = 'all' | 'folders' | 'image' | 'video' | 'document' | 'other';
 type MediaSort = 'updatedAt' | 'name' | 'size';
@@ -68,6 +70,9 @@ export function MediaExplorer({
   onFolderChange,
   onRequestUpload,
   onRequestCreateFolder,
+  hasMore,
+  onLoadMore,
+  isLoadingMore,
 }: {
   nodes: MediaNode[];
   allFolders: MediaNode[];
@@ -75,6 +80,9 @@ export function MediaExplorer({
   onFolderChange: (id: string | null) => void;
   onRequestUpload: () => void;
   onRequestCreateFolder: (parentId: string | null) => void;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  isLoadingMore?: boolean;
 }) {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
@@ -83,6 +91,9 @@ export function MediaExplorer({
   const [viewMode, setViewMode] = useState<MediaViewMode>(() => getInitialMediaViewMode());
   const [previewAsset, setPreviewAsset] = useState<MediaAssetNode | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  
+  const [moveNodesOpen, setMoveNodesOpen] = useState(false);
+  const [movingNodes, setMovingNodes] = useState<{ ids: string[]; names: string[] }>({ ids: [], names: [] });
 
   // --- Mutations ---
 
@@ -103,6 +114,31 @@ export function MediaExplorer({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['media', 'nodes'] });
       toast.success('Renamed successfully');
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error as any));
+    }
+  });
+
+  const moveMutation = useMutation({
+    mutationFn: (targetParentId: string | null) => 
+      moveNodes({ nodeIds: movingNodes.ids, targetParentId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['media', 'nodes'] });
+      queryClient.invalidateQueries({ queryKey: ['media', 'folders'] });
+      toast.success('Items moved successfully');
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error as any));
+    }
+  });
+
+  const transcodeMutation = useMutation({
+    mutationFn: (assetId: string) => 
+      createTranscodeTask(assetId, { presetId: 'default-mp4' }), // Default preset
+    onSuccess: (res) => {
+      toast.success('Transcoding task started');
+      // Redirect to message center if needed, or just let SSE handle updates
     },
     onError: (error) => {
       toast.error(getErrorMessage(error as any));
@@ -151,6 +187,17 @@ export function MediaExplorer({
       if (newName && newName !== node.name) {
         renameMutation.mutate({ id: node.id, name: newName });
       }
+      return;
+    }
+
+    if (action === 'Move') {
+      setMovingNodes({ ids: [node.id], names: [node.name] });
+      setMoveNodesOpen(true);
+      return;
+    }
+
+    if (action === 'Transcode') {
+      transcodeMutation.mutate(node.id);
       return;
     }
 
@@ -352,12 +399,28 @@ export function MediaExplorer({
             </div>
           </div>
         ) : (
-          <MediaNodeCollection
-            nodes={visibleNodes}
-            viewMode={viewMode}
-            onOpenFolder={(id) => onFolderChange(id)}
-            onAction={handleNodeAction}
-          />
+          <>
+            <MediaNodeCollection
+              nodes={visibleNodes}
+              viewMode={viewMode}
+              onOpenFolder={(id) => onFolderChange(id)}
+              onAction={handleNodeAction}
+            />
+            {hasMore && (
+              <div className="mt-8 flex justify-center pb-4">
+                <Button variant="outline" onClick={onLoadMore} disabled={isLoadingMore} className="rounded-xl px-8">
+                  {isLoadingMore ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    'Load More'
+                  )}
+                </Button>
+              </div>
+            )}
+          </>
         )}
         </CardContent>
       </Card>
@@ -366,6 +429,15 @@ export function MediaExplorer({
         open={previewOpen}
         onOpenChange={handlePreviewOpenChange}
         asset={previewAsset}
+      />
+
+      <MoveNodesDialog
+        open={moveNodesOpen}
+        onOpenChange={setMoveNodesOpen}
+        nodeIds={movingNodes.ids}
+        nodeNames={movingNodes.names}
+        currentParentId={currentFolderId}
+        onConfirm={(targetId) => moveMutation.mutate(targetId)}
       />
     </>
   );
@@ -414,6 +486,7 @@ function MediaNodeThumbnailTile({
   onOpenFolder: (id: string) => void;
   onAction: (action: string, node: MediaNode) => void;
 }) {
+  const isMobile = useIsMobile();
   const metaLines = getThumbnailMetaLines(node);
 
   const handleOpen = () => {
@@ -445,7 +518,8 @@ function MediaNodeThumbnailTile({
         'group rounded-xl p-2 outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         node.type === 'folder' && 'hover:bg-primary/5',
       )}
-      onClick={handleOpen}
+      onClick={isMobile ? handleOpen : undefined}
+      onDoubleClick={!isMobile ? handleOpen : undefined}
       onKeyDown={(event) => {
         if (event.target !== event.currentTarget) return;
         if (event.key === 'Enter' || event.key === ' ') {
@@ -495,6 +569,7 @@ function MediaNodeListRow({
   onOpenFolder: (id: string) => void;
   onAction: (action: string, node: MediaNode) => void;
 }) {
+  const isMobile = useIsMobile();
   const handleOpen = () => {
     if (node.type === 'folder') onOpenFolder(node.id);
     else onAction('Preview', node);
@@ -525,7 +600,8 @@ function MediaNodeListRow({
         'group flex items-center gap-3 px-3 py-2 outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         node.type === 'folder' && 'hover:bg-primary/5',
       )}
-      onClick={handleOpen}
+      onClick={isMobile ? handleOpen : undefined}
+      onDoubleClick={!isMobile ? handleOpen : undefined}
       onKeyDown={(event) => {
         if (event.target !== event.currentTarget) return;
         if (event.key === 'Enter' || event.key === ' ') {
@@ -553,7 +629,7 @@ function MediaNodeListRow({
 
       <div className="hidden items-center gap-3 text-xs text-muted-foreground sm:flex">
         <span className="tabular-nums">{node.type === 'asset' ? formatBytes(node.sizeBytes) : 'Folder'}</span>
-        <span className="tabular-nums">{formatRelativeTime(node.updatedAt)}</span>
+        {node.type !== 'folder' && <span className="tabular-nums">{formatRelativeTime(node.updatedAt)}</span>}
       </div>
 
       <div className="opacity-100 transition-opacity group-focus-within:opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
@@ -602,6 +678,7 @@ function MediaNodeDetailsRow({
   onOpenFolder: (id: string) => void;
   onAction: (action: string, node: MediaNode) => void;
 }) {
+  const isMobile = useIsMobile();
   const handleOpen = () => {
     if (node.type === 'folder') onOpenFolder(node.id);
     else onAction('Preview', node);
@@ -617,7 +694,8 @@ function MediaNodeDetailsRow({
         'group grid grid-cols-[minmax(180px,1fr)_90px_44px] sm:grid-cols-[minmax(240px,1fr)_120px_90px_44px] md:grid-cols-[minmax(280px,1fr)_140px_100px_160px_44px] items-center gap-3 px-3 py-2 outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         node.type === 'folder' && 'hover:bg-primary/5',
       )}
-      onClick={handleOpen}
+      onClick={isMobile ? handleOpen : undefined}
+      onDoubleClick={!isMobile ? handleOpen : undefined}
       onKeyDown={(event) => {
         if (event.target !== event.currentTarget) return;
         if (event.key === 'Enter' || event.key === ' ') {
@@ -650,7 +728,7 @@ function MediaNodeDetailsRow({
       </div>
 
       <div className="hidden text-right text-xs text-muted-foreground tabular-nums md:block">
-        {formatRelativeTime(node.updatedAt)}
+        {node.type === 'folder' ? '—' : formatRelativeTime(node.updatedAt)}
       </div>
 
       <div className="flex justify-end opacity-100 transition-opacity group-focus-within:opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
@@ -668,6 +746,7 @@ function MediaNodeActionsMenu({
   onAction: (action: string, node: MediaNode) => void;
 }) {
   const canPreview = supportsAssetPreview(node);
+  const canTranscode = node.type === 'asset' && node.assetKind === 'video';
 
   return (
     <DropdownMenu>
@@ -688,6 +767,7 @@ function MediaNodeActionsMenu({
         {canPreview ? <DropdownMenuItem onClick={() => onAction('Preview', node)}>Preview</DropdownMenuItem> : null}
         <DropdownMenuItem onClick={() => onAction('Rename', node)}>Rename</DropdownMenuItem>
         <DropdownMenuItem onClick={() => onAction('Move', node)}>Move</DropdownMenuItem>
+        {canTranscode ? <DropdownMenuItem onClick={() => onAction('Transcode', node)}>Transcode</DropdownMenuItem> : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem className="text-rose-600" onClick={() => onAction('Delete', node)}>
           Delete
@@ -706,7 +786,7 @@ function renderNodeIcon(node: MediaNode, className: string) {
 }
 
 function getThumbnailMetaLines(node: MediaNode): string[] {
-  if (node.type === 'folder') return [formatRelativeTime(node.updatedAt)];
+  if (node.type === 'folder') return [];
 
   const sizeAndDims = `${formatBytes(node.sizeBytes)}${node.width && node.height ? ` · ${node.width}×${node.height}` : ''}`;
   if (node.assetKind === 'video') return [sizeAndDims];
@@ -744,7 +824,7 @@ function formatDetailsSubtitle(node: MediaNode): string {
 }
 
 function formatListMobileSubtitle(node: MediaNode): string {
-  if (node.type === 'folder') return `Folder · ${formatRelativeTime(node.updatedAt)}`;
+  if (node.type === 'folder') return 'Folder';
 
   const parts: string[] = [];
   parts.push(formatDetailsTypeLabel(node));

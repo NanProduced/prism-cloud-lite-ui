@@ -22,13 +22,46 @@ export default function MediaLibraryPage() {
   
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [createFolderParentId, setCreateFolderParentId] = useState<string | null>(null);
+  const [nodes, setNodes] = useState<MediaNode[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // --- Queries ---
 
-  const { data: nodesData, isLoading: isNodesLoading } = useQuery({
+  useEffect(() => {
+    setNodes([]);
+    setNextCursor(null);
+  }, [currentFolderId]);
+
+  const { isLoading: isNodesLoading } = useQuery({
     queryKey: ['media', 'nodes', currentFolderId],
-    queryFn: () => getMediaNodes({ parentId: currentFolderId, limit: 500 }),
+    queryFn: async () => {
+      const res = await getMediaNodes({ parentId: currentFolderId, limit: 100 });
+      if (res.success && res.data) {
+        setNodes(res.data.items);
+        setNextCursor(res.data.nextCursor);
+      }
+      return res;
+    },
   });
+
+  const handleLoadMore = async () => {
+    if (!nextCursor || isLoadingMore) return;
+    setIsLoadingMore(true);
+    try {
+      const res = await getMediaNodes({ 
+        parentId: currentFolderId, 
+        limit: 100, 
+        cursor: nextCursor 
+      });
+      if (res.success && res.data) {
+        setNodes(prev => [...prev, ...res.data!.items]);
+        setNextCursor(res.data.nextCursor);
+      }
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   const { data: usageData } = useQuery({
     queryKey: ['media', 'usage'],
@@ -57,7 +90,6 @@ export default function MediaLibraryPage() {
 
   // --- Derived Data ---
 
-  const nodes = nodesData?.data?.items || [];
   const folderNodes = allFoldersData?.data || [];
   
   const stats = useMemo(() => {
@@ -112,7 +144,7 @@ export default function MediaLibraryPage() {
     };
   }, [queryClient]);
 
-  if (isNodesLoading && !nodesData) {
+  if (isNodesLoading && nodes.length === 0) {
     return <div className="flex justify-center p-12 text-muted-foreground">Loading media library...</div>;
   }
 
@@ -133,6 +165,9 @@ export default function MediaLibraryPage() {
         onFolderChange={setCurrentFolderId}
         onRequestUpload={() => uploadPanelRef.current?.openFilePicker()}
         onRequestCreateFolder={requestCreateFolder}
+        hasMore={!!nextCursor}
+        onLoadMore={handleLoadMore}
+        isLoadingMore={isLoadingMore}
       />
 
       <CreateFolderDialog

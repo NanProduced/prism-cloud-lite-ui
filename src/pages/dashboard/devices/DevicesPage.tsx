@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { DeviceTable } from './DeviceTable';
 import { DeviceCardView } from './DeviceCardView';
 import { getDevices } from '@/services/deviceApi';
@@ -11,18 +11,36 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Search, Grid3x3, LayoutGrid, Download, Loader2, Zap } from 'lucide-react';
+import { Search, Grid3x3, LayoutGrid, Download, Loader2, Zap, Plus } from 'lucide-react';
 import { BatchCommandDialog } from '@/features/devices/commands/BatchCommandDialog';
+import { AddDeviceDialog } from '@/components/devices/AddDeviceDialog';
 
 type ViewMode = 'grid' | 'card';
 
 export default function DevicesPage() {
+  const queryClient = useQueryClient();
   const { data: bffResponse, isLoading: isQueryLoading } = useQuery({
     queryKey: ['devices'],
     queryFn: () => getDevices(),
   });
 
   const devices = useMemo(() => bffResponse?.data || [], [bffResponse]);
+
+  // Real-time updates via SSE
+  useEffect(() => {
+    const handleDeviceUpdate = () => {
+      // Invalidate query to refetch data
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
+    };
+
+    window.addEventListener('prism.device.updated', handleDeviceUpdate);
+    window.addEventListener('prism.device.status.changed', handleDeviceUpdate);
+    
+    return () => {
+      window.removeEventListener('prism.device.updated', handleDeviceUpdate);
+      window.removeEventListener('prism.device.status.changed', handleDeviceUpdate);
+    };
+  }, [queryClient]);
 
   const [tags, setTags] = useState<Tag[]>([]);
   const [customFieldDefs, setCustomFieldDefs] = useState<DeviceCustomFieldDef[]>(() => mockDeviceCustomFieldDefs);
@@ -39,6 +57,7 @@ export default function DevicesPage() {
   const [filters, setFilters] = useState<DeviceFilterState>({});
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<Set<string>>(new Set());
   const [showBatchCommandDialog, setShowBatchCommandDialog] = useState(false);
+  const [showAddDeviceDialog, setShowAddDeviceDialog] = useState(false);
   const [showGridDialog, setShowGridDialog] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [gridLoading, setGridLoading] = useState(false);
@@ -176,6 +195,15 @@ export default function DevicesPage() {
     <div className="flex flex-col gap-4 p-6">
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
+        <Button 
+          size="sm" 
+          className="gap-2 shrink-0"
+          onClick={() => setShowAddDeviceDialog(true)}
+        >
+          <Plus className="h-4 w-4" />
+          Add Device
+        </Button>
+
         {viewMode === 'card' && (
           <div className="relative flex-1 max-w-md min-w-[220px]">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -246,6 +274,12 @@ export default function DevicesPage() {
         devices={devices}
         initialSelectedDeviceIds={Array.from(selectedDeviceIds)}
         mode="multi-device"
+      />
+
+      <AddDeviceDialog
+        open={showAddDeviceDialog}
+        onOpenChange={setShowAddDeviceDialog}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['devices'] })}
       />
 
       {/* Stats */}

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Icons from 'lucide-react';
-import { Check, ChevronsRight, ChevronRight, X, Clock, AlertCircle, Monitor, ShieldCheck, Search, Filter, Send, History, Database, TrendingUp, Plus } from 'lucide-react';
-import { toast } from 'sonner';
+import { Check, ChevronsRight, ChevronRight, X, Clock, AlertCircle, Monitor, ShieldCheck, Search, Filter, Send, History, Database, TrendingUp, Plus, RefreshCw } from 'lucide-react';
+import { toast } from '@/store/notificationStore';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,22 +17,22 @@ import { cn } from '@/lib/utils';
 import type { Device, Tag } from '@/types/device';
 import { mockDevices } from '@/lib/mock/devices';
 
-import { deployProgramVersionToDevices, listProgramDeployments, type ProgramDeploymentRecord } from '@/features/programs/storage/deploymentsDb';
-import { getProgram, publishDraft, type ProgramRecord } from '@/features/programs/storage/programsDb';
-import { addProgramAuditLog } from '@/features/programs/storage/auditLogsDb';
+import { publishProgram } from '@/services/programApi';
+import { getErrorMessage } from '@/services/authApi';
+import type { ProgramDetailResp, ProgramDeploymentResp, ProgramPublishReq } from '@/types/program';
 
-type PublishScope = 'selected' | 'running';
-type PublishMode = 'append' | 'overwrite';
-type VersionMode = 'create' | 'existing';
+type PublishScope = 'SELECTED' | 'RUNNING';
+type PublishMode = 'APPEND' | 'OVERWRITE';
+type VersionMode = 'CREATE' | 'EXISTING';
 
 export type ProgramPublishDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  program: ProgramRecord;
-  deployments: ProgramDeploymentRecord[];
+  program: ProgramDetailResp;
+  deployments: ProgramDeploymentResp[];
   preferredDraftId?: string | null;
   initialSelectedDeviceIds?: string[] | null;
-  onAfterPublish?: (next: { program: ProgramRecord; deployments: ProgramDeploymentRecord[] }) => void;
+  onAfterPublish?: () => void;
 };
 
 export function ProgramPublishDialog({
@@ -43,14 +44,16 @@ export function ProgramPublishDialog({
   initialSelectedDeviceIds,
   onAfterPublish,
 }: ProgramPublishDialogProps) {
+  const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
 
   const deploymentsByDeviceId = useMemo(() => new Map(deployments.map((d) => [d.deviceId, d])), [deployments]);
   const allTags = useMemo(() => collectDeviceTags(mockDevices), []);
-  const defaultExistingVersion = useMemo(() => pickLatestPublished(program)?.version ?? 1, [program]);
+  const latestPublished = useMemo(() => [...(program.versions || [])].sort((a, b) => b.version - a.version)[0], [program.versions]);
+  
   const defaultVersionMode = useMemo(
-    () => (preferredDraftId ? 'create' : program.versions.length === 0 ? 'create' : 'existing'),
-    [preferredDraftId, program.versions.length],
+    () => (preferredDraftId ? 'CREATE' : (program.versions?.length || 0) === 0 ? 'CREATE' : 'EXISTING'),
+    [preferredDraftId, program.versions?.length],
   );
 
   const [deviceQuery, setDeviceQuery] = useState('');
@@ -60,12 +63,26 @@ export function ProgramPublishDialog({
   const [resolutionOnly, setResolutionOnly] = useState<'any' | 'match'>('any');
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<Set<string>>(() => new Set());
 
-  const [versionMode, setVersionMode] = useState<VersionMode>('create');
-  const [existingVersion, setExistingVersion] = useState<number>(() => pickLatestPublished(program)?.version ?? 1);
-  const [scope, setScope] = useState<PublishScope>('selected');
-  const [mode, setMode] = useState<PublishMode>('append');
+  const [versionMode, setVersionMode] = useState<VersionMode>(defaultVersionMode);
+  const [existingVersion, setExistingVersion] = useState<number>(latestPublished?.version ?? 1);
+  const [scope, setScope] = useState<PublishScope>('SELECTED');
+  const [mode, setMode] = useState<PublishMode>('APPEND');
 
-  const predictedNewVersion = useMemo(() => Math.max(0, ...program.versions.map((v) => v.version)) + 1, [program.versions]);
+  const predictedNewVersion = useMemo(() => Math.max(0, ...(program.versions || []).map((v) => v.version)) + 1, [program.versions]);
+
+  // --- Mutations ---
+  const publishMutation = useMutation({
+    mutationFn: (data: ProgramPublishReq) => publishProgram(program.id, data),
+    onSuccess: (res) => {
+      const syncMsg = plan.counts.pendingSync > 0 
+        ? `. ${plan.counts.pendingSync} devices will sync when online.` 
+        : '';
+      toast.success(`Published to ${res.data?.results.length || 0} devices${syncMsg}`);
+      onAfterPublish?.();
+      close();
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
 
   const filteredDevices = useMemo(() => {
     const q = deviceQuery.trim().toLowerCase();
@@ -96,17 +113,17 @@ export function ProgramPublishDialog({
   const runningDeviceIds = useMemo(() => deployments.map((d) => d.deviceId), [deployments]);
 
   const baseTargetDeviceIds = useMemo(() => {
-    if (scope === 'running') return runningDeviceIds;
+    if (scope === 'RUNNING') return runningDeviceIds;
     return [...selectedDeviceIds];
   }, [runningDeviceIds, scope, selectedDeviceIds]);
 
   const targetDeviceIds = useMemo(() => {
-    if (mode === 'overwrite') return baseTargetDeviceIds;
+    if (mode === 'OVERWRITE') return baseTargetDeviceIds;
     return baseTargetDeviceIds.filter((id) => !deploymentsByDeviceId.has(id));
   }, [baseTargetDeviceIds, deploymentsByDeviceId, mode]);
 
   const plan = useMemo(() => {
-    const targetVersion = versionMode === 'existing' ? existingVersion : predictedNewVersion;
+    const targetVersion = versionMode === 'EXISTING' ? existingVersion : predictedNewVersion;
     const perDevice = baseTargetDeviceIds.map((deviceId) => {
       const device = mockDevices.find(d => d.id === deviceId);
       const current = deploymentsByDeviceId.get(deviceId)?.version ?? null;
@@ -150,16 +167,16 @@ export function ProgramPublishDialog({
     const initialSelected = (initialSelectedDeviceIds ?? []).filter(Boolean);
     setSelectedDeviceIds(new Set(initialSelected));
     setVersionMode(defaultVersionMode);
-    setExistingVersion(defaultExistingVersion);
-    setScope('selected');
+    setExistingVersion(latestPublished?.version ?? 1);
+    setScope('SELECTED');
     const anyRunningSelected = initialSelected.some((id) => deploymentsByDeviceId.has(id));
-    setMode(anyRunningSelected ? 'overwrite' : 'append');
+    setMode(anyRunningSelected ? 'OVERWRITE' : 'APPEND');
   };
 
   useEffect(() => {
     if (!open) return;
     resetDialog();
-  }, [open, program.id]);
+  }, [open, program.id, latestPublished]);
 
   const close = () => {
     onOpenChange(false);
@@ -169,60 +186,24 @@ export function ProgramPublishDialog({
   const canNext = useMemo(() => {
     if (step === 0) return selectedDeviceIds.size > 0 || deployments.length > 0;
     if (step === 1) {
-      if (scope === 'running' && deployments.length === 0) return false;
-      if (scope === 'selected' && selectedDeviceIds.size === 0) return false;
+      if (scope === 'RUNNING' && deployments.length === 0) return false;
+      if (scope === 'SELECTED' && selectedDeviceIds.size === 0) return false;
       return true;
     }
     return true;
   }, [deployments.length, scope, selectedDeviceIds.size, step]);
 
   const onConfirm = () => {
-    try {
-      let version = plan.targetVersion;
-      if (versionMode === 'create') {
-        const draftSnapshot = pickDraftForPublish(program, preferredDraftId);
-        if (!draftSnapshot) throw new Error('No changes to publish.');
-        const res = publishDraft(program.id, draftSnapshot.id);
-        if (!res) throw new Error('Failed to create version.');
-        version = res.version.version;
-        
-        addProgramAuditLog({
-          programId: program.id,
-          action: 'CREATE_VERSION',
-          userId: 'admin',
-          userName: 'Administrator',
-          details: { version }
-        });
-      }
+    const draftId = preferredDraftId || [...(program.drafts || [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0]?.id;
 
-      const deviceIds = targetDeviceIds;
-      deployProgramVersionToDevices({ programId: program.id, version, deviceIds });
-      
-      addProgramAuditLog({
-        programId: program.id,
-        action: 'PUBLISH_START',
-        userId: 'admin',
-        userName: 'Administrator',
-        details: { 
-          version, 
-          deviceCount: deviceIds.length,
-          strategy: `${scope} / ${mode}` 
-        }
-      });
-
-      const syncMsg = plan.counts.pendingSync > 0 
-        ? `. ${plan.counts.pendingSync} devices will sync when online.` 
-        : '';
-      toast.success(`Published v${version} to ${deviceIds.length} devices${syncMsg}`);
-      
-      onAfterPublish?.({ 
-        program: getProgram(program.id)!, 
-        deployments: listProgramDeployments(program.id) 
-      });
-      close();
-    } catch (error: any) {
-      toast.error(error.message || 'Publish failed');
-    }
+    publishMutation.mutate({
+      versionMode,
+      existingVersion: versionMode === 'EXISTING' ? existingVersion : undefined,
+      draftId: versionMode === 'CREATE' ? draftId : undefined,
+      scope,
+      deviceIds: scope === 'SELECTED' ? [...selectedDeviceIds] : undefined,
+      mode
+    });
   };
 
   return (
@@ -295,7 +276,7 @@ export function ProgramPublishDialog({
                       scope={scope}
                       versionMode={versionMode}
                       selectedCount={selectedDeviceIds.size}
-                      latest={pickLatestPublished(program)}
+                      latest={latestPublished}
                     />
                   )}
                   {step === 2 && (
@@ -312,10 +293,12 @@ export function ProgramPublishDialog({
                   </Button>
                   <Button 
                     onClick={step === 2 ? onConfirm : () => setStep(s => s + 1)} 
-                    disabled={!canNext}
+                    disabled={!canNext || publishMutation.isPending}
                     className="px-10 font-bold gap-2 h-10 shadow-lg shadow-primary/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
                   >
-                    {step === 2 ? (
+                    {publishMutation.isPending ? (
+                      <><RefreshCw className="h-4 w-4 animate-spin" /> Processing...</>
+                    ) : step === 2 ? (
                       <><ShieldCheck className="h-4 w-4" /> Finalize & Deploy</>
                     ) : (
                       <>Continue <ChevronRight className="h-4 w-4" /></>
@@ -433,7 +416,7 @@ interface DeviceSelectStepProps {
   allTags: Tag[];
   deviceQuery: string;
   onDeviceQueryChange: (v: string) => void;
-  deploymentsByDeviceId: Map<string, ProgramDeploymentRecord>;
+  deploymentsByDeviceId: Map<string, ProgramDeploymentResp>;
 }
 
 function DeviceSelectStep({
@@ -640,14 +623,14 @@ interface StrategyStepProps {
   versionMode: VersionMode;
   onVersionModeChange: (v: VersionMode) => void;
   predictedNewVersion: number;
-  program: ProgramRecord;
+  program: ProgramDetailResp;
   existingVersion: number;
   onExistingVersionChange: (v: number) => void;
-  latest: ProgramRecord['versions'][number] | null;
+  latest: any | null;
   scope: PublishScope;
   onScopeChange: (v: PublishScope) => void;
   selectedCount: number;
-  deployments: ProgramDeploymentRecord[];
+  deployments: ProgramDeploymentResp[];
   mode: PublishMode;
   onModeChange: (v: PublishMode) => void;
 }
@@ -667,19 +650,19 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
              <div
                role="button"
                tabIndex={0}
-               aria-pressed={versionMode === 'create'}
-               onClick={() => onVersionModeChange('create')}
+               aria-pressed={versionMode === 'CREATE'}
+               onClick={() => onVersionModeChange('CREATE')}
                onKeyDown={(e) => {
                  if (e.key !== 'Enter' && e.key !== ' ') return;
                  e.preventDefault();
-                 onVersionModeChange('create');
+                 onVersionModeChange('CREATE');
                }}
                className={cn(
                  "flex flex-col p-8 rounded-[2.5rem] border-2 text-left transition-all relative overflow-hidden group shadow-sm cursor-pointer select-none",
-                 versionMode === 'create' ? "border-primary bg-primary/[0.02] ring-8 ring-primary/5" : "bg-card hover:border-muted-foreground/30",
+                 versionMode === 'CREATE' ? "border-primary bg-primary/[0.02] ring-8 ring-primary/5" : "bg-card hover:border-muted-foreground/30",
                )}
              >
-                {versionMode === 'create' && <div className="absolute top-5 right-5 h-7 w-7 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="h-4 w-4 text-white" /></div>}
+                {versionMode === 'CREATE' && <div className="absolute top-5 right-5 h-7 w-7 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="h-4 w-4 text-white" /></div>}
                 <span className="text-lg font-black mb-1.5 tracking-tight group-hover:text-primary transition-colors">Issue Production Release</span>
                 <p className="text-[13px] text-muted-foreground leading-relaxed">Snapshot the current editor workspace as <span className="font-black text-foreground underline decoration-primary/30 underline-offset-2">v{predictedNewVersion}</span>. This release becomes the new baseline for global distribution.</p>
                 <div className="mt-8 flex items-center gap-2">
@@ -688,26 +671,26 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
              </div>
              <div
                role="button"
-               tabIndex={program.versions.length === 0 ? -1 : 0}
-               aria-disabled={program.versions.length === 0}
-               aria-pressed={versionMode === 'existing'}
+               tabIndex={(program.versions?.length || 0) === 0 ? -1 : 0}
+               aria-disabled={(program.versions?.length || 0) === 0}
+               aria-pressed={versionMode === 'EXISTING'}
                onClick={() => {
-                 if (program.versions.length === 0) return;
-                 onVersionModeChange('existing');
+                 if ((program.versions?.length || 0) === 0) return;
+                 onVersionModeChange('EXISTING');
                }}
                onKeyDown={(e) => {
-                 if (program.versions.length === 0) return;
+                 if ((program.versions?.length || 0) === 0) return;
                  if (e.key !== 'Enter' && e.key !== ' ') return;
                  e.preventDefault();
-                 onVersionModeChange('existing');
+                 onVersionModeChange('EXISTING');
                }}
                className={cn(
                  "flex flex-col p-8 rounded-[2.5rem] border-2 text-left transition-all relative overflow-hidden group shadow-sm select-none",
-                 program.versions.length === 0 ? "opacity-40 grayscale cursor-not-allowed" : "cursor-pointer",
-                 versionMode === 'existing' ? "border-primary bg-primary/[0.02] ring-8 ring-primary/5" : "bg-card hover:border-muted-foreground/30",
+                 (program.versions?.length || 0) === 0 ? "opacity-40 grayscale cursor-not-allowed" : "cursor-pointer",
+                 versionMode === 'EXISTING' ? "border-primary bg-primary/[0.02] ring-8 ring-primary/5" : "bg-card hover:border-muted-foreground/30",
                )}
              >
-                {versionMode === 'existing' && <div className="absolute top-5 right-5 h-7 w-7 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="h-4 w-4 text-white" /></div>}
+                {versionMode === 'EXISTING' && <div className="absolute top-5 right-5 h-7 w-7 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="h-4 w-4 text-white" /></div>}
                 <span className="text-lg font-black mb-1.5 tracking-tight group-hover:text-primary transition-colors">Redeploy Stable Archive</span>
                 <p className="text-[13px] text-muted-foreground leading-relaxed mb-6">Access the version library to redistribute or roll back nodes to a previously validated and immutable release snapshot.</p>
                 
@@ -715,13 +698,13 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
                    <Select 
                       value={String(existingVersion)} 
                       onValueChange={v => onExistingVersionChange(Number(v))}
-                      disabled={versionMode !== 'existing'}
+                      disabled={versionMode !== 'EXISTING'}
                    >
                       <SelectTrigger className="w-full h-12 text-xs font-black px-4 bg-muted/60 border-0 shadow-inner rounded-xl">
                          <SelectValue placeholder="Select version" />
                       </SelectTrigger>
                       <SelectContent>
-                         {[...program.versions].reverse().map(v => (
+                         {[...(program.versions || [])].reverse().map(v => (
                            <SelectItem key={v.version} value={String(v.version)} className="text-xs font-bold">
                              v{v.version} — {v.version === latest?.version ? 'CURRENT LIVE RELEASE' : 'LEGACY ARCHIVE'}
                            </SelectItem>
@@ -741,22 +724,22 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
              <div className="space-y-4">
                 <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.15em] ml-2">Endpoint Selection</span>
                 <div className="flex p-1.5 bg-muted/40 rounded-2xl gap-1.5 ring-1 ring-inset ring-foreground/5 shadow-inner">
-                   <button onClick={() => onScopeChange('selected')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest", scope === 'selected' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground")}>QUEUE ({selectedCount})</button>
-                   <button disabled={deployments.length === 0} onClick={() => onScopeChange('running')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest", scope === 'running' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground", deployments.length === 0 && "opacity-20 cursor-not-allowed")}>ACTIVE ({deployments.length})</button>
+                   <button onClick={() => onScopeChange('SELECTED')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest", scope === 'SELECTED' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground")}>QUEUE ({selectedCount})</button>
+                   <button disabled={deployments.length === 0} onClick={() => onScopeChange('RUNNING')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest", scope === 'RUNNING' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground", deployments.length === 0 && "opacity-20 cursor-not-allowed")}>ACTIVE ({deployments.length})</button>
                 </div>
              </div>
              <div className="space-y-4">
                 <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.15em] ml-2">Override Protocol</span>
                 <div className="flex p-1.5 bg-muted/40 rounded-2xl gap-1.5 ring-1 ring-inset ring-foreground/5 shadow-inner">
-                   <button disabled={scope === 'running'} onClick={() => onModeChange('append')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest", mode === 'append' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground", scope === 'running' && "opacity-20 cursor-not-allowed")}>Append</button>
-                   <button onClick={() => onModeChange('overwrite')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest", mode === 'overwrite' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground")}>Overwrite</button>
+                   <button disabled={scope === 'RUNNING'} onClick={() => onModeChange('APPEND')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest", mode === 'APPEND' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground", scope === 'RUNNING' && "opacity-20 cursor-not-allowed")}>Append</button>
+                   <button onClick={() => onModeChange('OVERWRITE')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest", mode === 'OVERWRITE' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground")}>Overwrite</button>
                 </div>
              </div>
           </div>
           <div className="p-4 rounded-2xl bg-muted/20 border-2 border-dotted flex items-start gap-4 mx-1 group hover:border-muted-foreground/20 transition-colors">
              <ShieldCheck className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5 group-hover:text-primary transition-colors" />
              <p className="text-[11px] leading-relaxed text-muted-foreground font-bold uppercase tracking-tight opacity-70">
-               {mode === 'append' ? 'Policy: Incremental rollout. Nodes already running an instance of this program will be excluded from the synchronization task.' : 'Policy: Global push. Every targeted node will be forced to synchronize with the selected release version immediately.'}
+               {mode === 'APPEND' ? 'Policy: Incremental rollout. Nodes already running an instance of this program will be excluded from the synchronization task.' : 'Policy: Global push. Every targeted node will be forced to synchronize with the selected release version immediately.'}
              </p>
           </div>
        </div>
@@ -851,21 +834,22 @@ function collectDeviceTags(devices: Device[]): Tag[] {
   return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function pickLatestPublished(program: ProgramRecord) {
-  if (!program.versions.length) return null;
-  return [...program.versions].sort((a, b) => b.version - a.version)[0];
-}
-
-function pickDraftForPublish(program: ProgramRecord, preferredDraftId?: string | null) {
-  if (preferredDraftId) {
-    const hit = program.drafts.find((d) => d.id === preferredDraftId);
-    if (hit) return hit;
-  }
-  return [...program.drafts].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0] || null;
-}
-
 function formatDeviceId(deviceId: string): string {
   const id = deviceId.trim();
   if (id.length <= 12) return id;
   return `${id.slice(0, 8)}…${id.slice(-4)}`;
+}
+
+function pickLatestPublished(program: ProgramDetailResp) {
+  if (!program.versions || !program.versions.length) return null;
+  return [...program.versions].sort((a, b) => b.version - a.version)[0];
+}
+
+function pickDraftForPublish(program: ProgramDetailResp, preferredDraftId?: string | null) {
+  if (preferredDraftId && program.drafts) {
+    const hit = program.drafts.find((d) => d.id === preferredDraftId);
+    if (hit) return hit;
+  }
+  if (!program.drafts || !program.drafts.length) return null;
+  return [...program.drafts].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0] || null;
 }

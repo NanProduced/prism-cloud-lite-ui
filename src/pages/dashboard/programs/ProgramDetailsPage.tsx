@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Send, 
   Monitor, Info, CheckCircle2, AlertCircle,
-  Database, Layers, XCircle, Search, Pencil, MoreHorizontal, History as HistoryIcon
-} from 'lucide-react';import { toast } from '@/store/notificationStore';
+  Database, Layers, XCircle, Search, Pencil, MoreHorizontal, History as HistoryIcon, RefreshCw
+} from 'lucide-react';
+import { toast } from '@/store/notificationStore';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,59 +19,91 @@ import {
   DropdownMenuTrigger, DropdownMenuSeparator 
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { mockDevices } from '@/lib/mock/devices';
-
-import { getProgram, deleteProgram, type ProgramRecord } from '@/features/programs/storage/programsDb';
-import { listProgramDeployments, undeployProgramEverywhere, type ProgramDeploymentRecord } from '@/features/programs/storage/deploymentsDb';
-import { listProgramAuditLogs, addProgramAuditLog, type ProgramAuditLog } from '@/features/programs/storage/auditLogsDb';
+import { 
+  getProgramDetails, 
+  getProgramAuditLogs, 
+  deleteProgram as deleteProgramApi,
+  unpublishProgram
+} from '@/services/programApi';
+import { getErrorMessage } from '@/services/authApi';
 import { ProgramPublishDialog } from '@/features/programs/publishing/ProgramPublishDialog';
 
 export default function ProgramDetailsPage() {
   const { programId } = useParams<{ programId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   
-  const [program, setProgram] = useState<ProgramRecord | null>(null);
-  const [deployments, setDeployments] = useState<ProgramDeploymentRecord[]>([]);
-  const [auditLogs, setAuditLogs] = useState<ProgramAuditLog[]>([]);
   const [publishOpen, setPublishOpen] = useState(false);
   const [deviceQuery, setDeviceQuery] = useState('');
 
-  const loadData = () => {
-    if (!programId) return;
-    const p = getProgram(programId);
-    if (!p) {
-      toast.error('Program not found');
-      navigate('/dashboard/programs');
-      return;
-    }
-    setProgram(p);
-    setDeployments(listProgramDeployments(programId));
-    setAuditLogs(listProgramAuditLogs(programId));
-  };
+  // --- Queries ---
+  const { data: programData, isLoading: isProgramLoading, isError } = useQuery({
+    queryKey: ['programs', programId],
+    queryFn: () => getProgramDetails(programId!),
+    enabled: !!programId,
+  });
 
-  useEffect(() => { loadData(); }, [programId]);
+  const { data: auditLogsData } = useQuery({
+    queryKey: ['programs', programId, 'audit-logs'],
+    queryFn: () => getProgramAuditLogs(programId!),
+    enabled: !!programId,
+  });
+
+  const program = programData?.data;
+  const deployments = program?.deployments || [];
+  const auditLogs = auditLogsData?.data || [];
+
+  // --- Mutations ---
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteProgramApi(programId!),
+    onSuccess: () => {
+      toast.success('Program deleted');
+      navigate('/dashboard/programs');
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+
+  const unpublishMutation = useMutation({
+    mutationFn: () => unpublishProgram(programId!, deployments.map(d => d.deviceId)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['programs', programId] });
+      toast.success('Unpublished from all devices');
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
 
   const filteredDeployments = useMemo(() => {
     const q = deviceQuery.toLowerCase().trim();
     return deployments.filter(d => {
-      const dev = mockDevices.find(md => md.id === d.deviceId);
-      const name = (dev?.alias || dev?.deviceName || d.deviceId).toLowerCase();
+      const name = (d.deviceName || d.deviceId).toLowerCase();
       return name.includes(q) || d.deviceId.toLowerCase().includes(q);
     });
   }, [deployments, deviceQuery]);
 
   const latestRelease = useMemo(() => {
-    if (!program) return null;
-    let best: ProgramRecord['versions'][number] | null = null;
-    for (const v of program.versions) {
-      if (!best || v.version > best.version) best = v;
-    }
-    return best;
+    if (!program?.versions?.length) return null;
+    return [...program.versions].sort((a, b) => b.version - a.version)[0];
   }, [program]);
+  
   const maxVersion = latestRelease?.version ?? 0;
   const hasRelease = maxVersion > 0;
 
-  if (!program) return null;
+  if (isProgramLoading) {
+    return <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
+      <RefreshCw className="h-8 w-8 animate-spin text-primary/40" />
+      <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Loading Workspace Details...</p>
+    </div>;
+  }
+
+  if (!program || isError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
+        <AlertCircle className="h-12 w-12 text-destructive/50" />
+        <p className="text-sm font-bold uppercase tracking-widest">Program not found</p>
+        <Button variant="outline" onClick={() => navigate('/dashboard/programs')}>Back to Library</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-8 max-w-[1400px] mx-auto w-full">
@@ -93,9 +127,9 @@ export default function ProgramDetailsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-                  <Button className="h-10 px-6 gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]" onClick={() => navigate(`/dashboard/programs/${programId}/edit`)}>
-                    <Pencil className="h-3.5 w-3.5" /> Edit Workspace
-                  </Button>
+           <Button className="h-10 px-6 gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]" onClick={() => navigate(`/dashboard/programs/${programId}/edit`)}>
+             <Pencil className="h-3.5 w-3.5" /> Edit Workspace
+           </Button>
            <Button size="sm" className="font-bold gap-2 shadow-lg shadow-primary/20" onClick={() => setPublishOpen(true)}>
               <Send className="h-3.5 w-3.5" /> Publish New
            </Button>
@@ -114,15 +148,7 @@ export default function ProgramDetailsPage() {
                     className="text-destructive" 
                     onClick={() => {
                        if (confirm('Undeploy this program from all devices?')) {
-                          undeployProgramEverywhere(program.id);
-                          addProgramAuditLog({
-                             programId: program.id,
-                             action: 'UNDEPLOY',
-                             userId: 'admin',
-                             userName: 'Administrator',
-                             details: { description: 'Manual bulk undeploy' }
-                          });
-                          loadData();
+                          unpublishMutation.mutate();
                        }
                     }}
                  >
@@ -132,8 +158,7 @@ export default function ProgramDetailsPage() {
                     className="text-destructive" 
                     onClick={() => {
                        if (confirm('Delete program permanently?')) {
-                          deleteProgram(program.id);
-                          navigate('/dashboard/programs');
+                          deleteMutation.mutate();
                        }
                     }}
                  >
@@ -180,19 +205,18 @@ export default function ProgramDetailsPage() {
                        <ScrollArea className="h-[500px]">
                           <div className="divide-y divide-foreground/[0.03]">
                              {filteredDeployments.map(d => {
-                                const dev = mockDevices.find(md => md.id === d.deviceId);
                                 return (
                                    <div key={d.deviceId} className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-muted/5">
                                       <div className="min-w-0 flex-1">
-                                         <p className="text-sm font-bold truncate leading-tight">{dev?.alias || dev?.deviceName || d.deviceId}</p>
+                                         <p className="text-sm font-bold truncate leading-tight">{d.deviceName || d.deviceId}</p>
                                          <p className="text-[10px] text-muted-foreground font-mono mt-1 opacity-60 uppercase">{d.deviceId.slice(0, 12)}</p>
                                       </div>
                                       <div className="flex items-center gap-6">
                                          <div className="text-right">
                                             <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-40 mb-1 tracking-tighter">Status</p>
                                             <div className="flex items-center gap-1.5 justify-end">
-                                               <div className={cn("w-1 h-1 rounded-full", dev?.status === 'online' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" : "bg-zinc-300")} />
-                                               <span className="text-[10px] font-black uppercase tracking-tighter">{dev?.status}</span>
+                                               <div className={cn("w-1 h-1 rounded-full", d.status === 'DOWNLOADED' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" : "bg-amber-500")} />
+                                               <span className="text-[10px] font-black uppercase tracking-tighter">{d.status || 'Assigned'}</span>
                                             </div>
                                          </div>
                                          <div className="text-right min-w-[80px]">
@@ -232,10 +256,10 @@ export default function ProgramDetailsPage() {
                                 <div className="min-w-0 flex-1 pt-0.5">
                                    <div className="flex items-center gap-2 mb-1">
                                       <span className="text-[11px] font-black uppercase tracking-wider text-foreground">{log.action.replace('_', ' ')}</span>
-                                      <span className="text-[10px] text-muted-foreground/60">• {new Date(log.timestamp).toLocaleString()}</span>
+                                      <span className="text-[10px] text-muted-foreground/60">• {new Date(log.createdAt).toLocaleString()}</span>
                                    </div>
                                    <p className="text-sm font-medium text-muted-foreground/80 leading-relaxed">
-                                      <span className="text-foreground font-bold">{log.userName}</span> {getActionDesc(log)}
+                                      <span className="text-foreground font-bold">{log.operatorName}</span> {log.action}
                                    </p>
                                 </div>
                              </div>
@@ -293,7 +317,11 @@ export default function ProgramDetailsPage() {
               <CardContent className="pt-0">
                  <div className="rounded-xl border bg-muted/20 p-4 flex flex-col items-center gap-3 overflow-hidden">
                     <div className="aspect-video w-full bg-black rounded-lg flex items-center justify-center border shadow-inner">
-                       <Layers className="h-8 w-8 text-white/20" />
+                       {latestRelease?.coverUrl ? (
+                          <img src={latestRelease.coverUrl} className="h-full w-full object-cover rounded-md" alt="" />
+                       ) : (
+                          <Layers className="h-8 w-8 text-white/20" />
+                       )}
                     </div>
                     <p className="text-[10px] text-muted-foreground italic text-center">
                       {hasRelease ? 'Preview of the most recently published snapshot.' : 'Publish to create your first release (v1).'}
@@ -312,9 +340,9 @@ export default function ProgramDetailsPage() {
       <ProgramPublishDialog 
         open={publishOpen} 
         onOpenChange={setPublishOpen} 
-        program={program} 
+        program={program as any} 
         deployments={deployments}
-        onAfterPublish={loadData}
+        onAfterPublish={() => queryClient.invalidateQueries({ queryKey: ['programs', programId] })}
       />
     </div>
   );
@@ -323,20 +351,6 @@ export default function ProgramDetailsPage() {
 function AuditIcon({ action }: { action: string }) {
    if (action.includes('PUBLISH')) return <Send className="h-4 w-4 text-primary" />;
    if (action.includes('VERSION')) return <Database className="h-4 w-4 text-emerald-500" />;
-   if (action.includes('EDIT')) return <Pencil className="h-4 w-4 text-amber-500" />;
+   if (action.includes('EDIT') || action.includes('SAVE')) return <Pencil className="h-4 w-4 text-amber-500" />;
    return <CheckCircle2 className="h-4 w-4 text-zinc-400" />;
-}
-
-function getActionDesc(log: ProgramAuditLog) {
-   const { details } = log;
-   switch (log.action) {
-      case 'PUBLISH_START': return `initiated a deployment task targeting ${details.deviceCount} nodes with strategy: "${details.strategy}".`;
-      case 'PUBLISH_COMPLETE': return `successfully pushed v${details.version} to all online nodes.`;
-      case 'CREATE_VERSION': return `frozen the current draft into an immutable Release v${details.version}.`;
-      case 'SAVE_DRAFT': return `saved a workspace snapshot.`;
-      case 'EDIT': return `updated the program layout and material configuration.`;
-      case 'CREATE': return `initialized this program from scratch.`;
-      case 'UNDEPLOY': return `removed this program from all active devices.`;
-      default: return `performed an operation on this program.`;
-   }
 }

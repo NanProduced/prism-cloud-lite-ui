@@ -42,10 +42,28 @@ export async function deleteDevice(deviceId: string): Promise<BffResponse<void>>
 }
 
 /**
+ * Create a new device
+ */
+export async function createDevice(data: {
+  displayName: string;
+  account: string;
+  password?: string;
+  description?: string;
+}): Promise<BffResponse<{
+  deviceId: number;
+  deviceAccount: string;
+  devicePassword?: string;
+}>> {
+  return handleRequest<any>(
+    apiClient.post('/devices', data)
+  );
+}
+
+/**
  * Execute action on a single device
  */
 export async function executeDeviceAction(
-  deviceId: number,
+  deviceId: number | string,
   action: { type: string; body?: any }
 ): Promise<BffResponse<any>> {
   return handleRequest<any>(
@@ -57,10 +75,12 @@ export async function executeDeviceAction(
  * Execute actions on multiple devices in batch
  */
 export async function executeBatchActions(request: {
-  actions: Array<{
-    targetDeviceId: number;
-    type: string;
-    body?: any;
+  items: Array<{
+    deviceId: number | string;
+    action: {
+      type: string;
+      body?: any;
+    };
   }>;
 }): Promise<BffResponse<any>> {
   return handleRequest<any>(

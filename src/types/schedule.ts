@@ -39,7 +39,7 @@ export interface ProgramScheduleRule {
   limitDate?: ScheduleLimitDate | null;
   
   ifLimitWeekday: boolean;
-  limitWeekday?: WeekDay[] | null;
+  limitWeekday?: boolean[] | null; // Length 7: [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
 }
 
 /**
@@ -48,19 +48,24 @@ export interface ProgramScheduleRule {
  */
 export interface CommandScheduleRule {
   id: string;
-  name: string; // Action name like 'Brightness_Control'
-  operation?: string; // Backend DTO alignment (DeviceActionBase)
-  payloadJson: string; // Raw JSON string for terminal
+  name: string; 
+  
+  // Backend request structure
+  operation: {
+    type: 'BRIGHTNESS' | 'VOLUME' | 'COLOR_TEMP' | 'POWER' | 'INPUT_MODE' | 'CLEAR_CACHE';
+    body?: any;
+  };
+  opTime: string[]; // Array of trigger points: ["08:00:00", "22:00:00"]
   
   // Limits
-  ifLimitTime: boolean;
-  limitTime?: ScheduleLimitTime | null;
-  
   ifLimitDate: boolean;
   limitDate?: ScheduleLimitDate | null;
   
   ifLimitWeekday: boolean;
-  limitWeekday?: WeekDay[] | null;
+  limitWeekday?: boolean[] | null;
+  
+  // Read-only from backend
+  payload?: any; 
 }
 
 /**

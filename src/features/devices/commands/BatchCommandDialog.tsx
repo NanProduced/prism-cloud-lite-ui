@@ -20,7 +20,8 @@ import {
   CloudUpload,
   Moon,
   Film,
-  Timer
+  Timer,
+  Thermometer
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -42,14 +43,15 @@ import { executeBatchActions } from '@/services/deviceApi';
 // --- Types ---
 
 type ActionType = 
-  | 'WAKE_SLEEP' 
-  | 'REBOOT' 
+  | 'POWER' 
   | 'BRIGHTNESS' 
   | 'VOLUME' 
+  | 'COLOR_TEMP' 
+  | 'INPUT_MODE'
   | 'TIMEZONE' 
-  | 'LANGUAGE' 
-  | 'MEDIA' 
-  | 'PROGRAM';
+  | 'LOCALE' 
+  | 'CONTENT_REPORT_SWITCH' 
+  | 'CLEAR_CACHE';
 
 interface ActionConfig {
   type: ActionType;
@@ -71,23 +73,27 @@ interface BatchCommandDialogProps {
 
 function formatActionParams(type: ActionType, params: any): string {
   switch (type) {
-    case 'WAKE_SLEEP':
-      return params.state === 'wake' ? 'Switch to Wake State' : 'Switch to Sleep State';
-    case 'REBOOT':
-      return 'System Reboot';
+    case 'POWER':
+      if (params.command === 'reboot') return 'System Reboot';
+      return params.command === 'wakeup' ? 'Switch to Wake State' : 'Switch to Sleep State';
     case 'BRIGHTNESS':
-      return params.auto ? 'Auto Brightness' : `Fixed Brightness: ${params.value}%`;
+      return `Brightness: ${params.brightness}%`;
     case 'VOLUME':
-      return `Volume: ${params.value}/15`;
+      return `Volume: ${params.musicvolume}/15`;
+    case 'COLOR_TEMP':
+      return `Color Temp: ${params.colortemp}K`;
+    case 'INPUT_MODE':
+      return `Input Mode: ${params.inputmode.toUpperCase()}`;
     case 'TIMEZONE':
-      return `${params.timezone} ${params.sync ? '(NTP Sync)' : ''}`;
-    case 'LANGUAGE': {
+      return `${params.timezoneId} (UTC${params.timezone >= 0 ? '+' : ''}${params.timezone})`;
+    case 'LOCALE': {
       const langs: any = { zh: 'Chinese', en: 'English', ja: 'Japanese' };
-      return `Language: ${langs[params.language] || params.language}`;
+      return `Language: ${langs[params.language] || params.language} (${params.country})`;
     }
-    case 'MEDIA':
-    case 'PROGRAM':
-      return params.enabled ? 'Collection Enabled' : 'Collection Disabled';
+    case 'CONTENT_REPORT_SWITCH':
+      return params.status === 1 ? 'Report Enabled' : 'Report Disabled';
+    case 'CLEAR_CACHE':
+      return 'Clear Terminal Cache';
     default:
       return '';
   }
@@ -109,10 +115,34 @@ export function BatchCommandDialog({
   const [step, setStep] = useState(0);
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<Set<string>>(new Set(initialSelectedDeviceIds));
   const [actions, setActions] = useState<ActionConfig[]>([]);
-  const [executionResults, setExecutionResults] = useState<Record<string, any>>({});
+  const [executionResults, setExecutionResults] = useState<Record<string, { status: string, operationId?: string, deviceId?: string }>>({});
   const [riskConfirmed, setRiskConfirmed] = useState(false);
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // SSE tracking
+  useEffect(() => {
+    const handleOperationUpdate = (event: any) => {
+      const { scope, data } = event.detail;
+      const { operationId } = scope;
+      const { status } = data;
+
+      setExecutionResults(prev => {
+        const next = { ...prev };
+        let found = false;
+        for (const key in next) {
+          if (next[key].operationId === operationId) {
+            next[key] = { ...next[key], status };
+            found = true;
+          }
+        }
+        return found ? next : prev;
+      });
+    };
+
+    window.addEventListener('prism.operation.updated', handleOperationUpdate);
+    return () => window.removeEventListener('prism.operation.updated', handleOperationUpdate);
+  }, []);
 
   // Determine if we should hide the back button at Step 2
   const isPreSelected = initialSelectedDeviceIds.length > 0;
@@ -132,7 +162,7 @@ export function BatchCommandDialog({
 
   const close = () => onOpenChange(false);
 
-  const hasHighRisk = useMemo(() => actions.some(a => a.type === 'REBOOT' || a.type === 'WAKE_SLEEP'), [actions]);
+  const hasHighRisk = useMemo(() => actions.some(a => a.type === 'POWER'), [actions]);
 
   const canNext = useMemo(() => {
     if (step === 0) return selectedDeviceIds.size > 0;
@@ -146,33 +176,46 @@ export function BatchCommandDialog({
     setStep(3);
     
     try {
-      const batchActions = mode === 'MULTI_DEVICE_SINGLE_COMMAND' 
+      const items = mode === 'MULTI_DEVICE_SINGLE_COMMAND' 
         ? Array.from(selectedDeviceIds).map(id => ({
-            targetDeviceId: parseInt(id),
-            type: actions[0].type,
-            body: actions[0].params
+            deviceId: id,
+            action: {
+              type: actions[0].type,
+              body: actions[0].params
+            }
           }))
         : actions.map(action => ({
-            targetDeviceId: parseInt(Array.from(selectedDeviceIds)[0]),
-            type: action.type,
-            body: action.params
+            deviceId: Array.from(selectedDeviceIds)[0],
+            action: {
+              type: action.type,
+              body: action.params
+            }
           }));
 
-      const response = await executeBatchActions({ actions: batchActions });
+      const response = await executeBatchActions({ items });
       
-      if (response.success) {
+      if (response.success && response.data) {
         toast.success('Commands dispatched');
         const results: Record<string, any> = {};
-        batchActions.forEach((a, i) => {
-          const key = mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? String(a.targetDeviceId) : `${a.targetDeviceId}-action-${i}`;
-          results[key] = { status: 'SUCCEEDED' };
+        const apiResults = response.data.results || [];
+        
+        items.forEach((item, i) => {
+          const apiResult = apiResults[i] || {};
+          const key = mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? String(item.deviceId) : `${item.deviceId}-action-${i}`;
+          results[key] = { 
+            status: apiResult.status || 'DISPATCHED',
+            operationId: apiResult.operationId,
+            deviceId: String(item.deviceId)
+          };
         });
         setExecutionResults(results);
       } else {
-        toast.error('Failed to dispatch commands');
+        toast.error(response.error?.message || 'Failed to dispatch commands');
+        setStep(2); // Go back to review
       }
     } catch (error) {
       toast.error('Network error during dispatch');
+      setStep(2);
     } finally {
       setIsLoading(false);
     }
@@ -488,14 +531,15 @@ function ActionConfigStep({
   mode: CommandMode
 }) {
   const ALL_ACTION_TYPES: { type: ActionType, label: string, desc: string, icon: any }[] = [
-    { type: 'WAKE_SLEEP', label: 'Wake/Sleep', desc: 'Manage display power state', icon: Power },
-    { type: 'REBOOT', label: 'Reboot', desc: 'Perform a system reset', icon: RotateCcw },
+    { type: 'POWER', label: 'Power', desc: 'Manage display power state', icon: Power },
     { type: 'BRIGHTNESS', label: 'Brightness', desc: 'Adjust screen luminance', icon: Sun },
     { type: 'VOLUME', label: 'Volume', desc: 'Control acoustic output', icon: Volume2 },
+    { type: 'COLOR_TEMP', label: 'Color Temp', desc: 'Adjust display color temperature', icon: Thermometer },
+    { type: 'INPUT_MODE', label: 'Input Mode', desc: 'Switch video input source', icon: Monitor },
     { type: 'TIMEZONE', label: 'Timezone', desc: 'Sync system clock & region', icon: Clock },
-    { type: 'LANGUAGE', label: 'Language', desc: 'Set interface core dialect', icon: Languages },
-    { type: 'MEDIA', label: 'Media', desc: 'Assets & resources stats', icon: Film },
-    { type: 'PROGRAM', label: 'Program', desc: 'Playback & playlist status', icon: PlaySquare },
+    { type: 'LOCALE', label: 'Locale', desc: 'Set interface core dialect', icon: Languages },
+    { type: 'CONTENT_REPORT_SWITCH', label: 'Reporting', desc: 'Material/Program stats report', icon: Film },
+    { type: 'CLEAR_CACHE', label: 'Clear Cache', desc: 'Clear terminal storage cache', icon: Trash2 },
   ];
 
   const addAction = (type: ActionType) => {
@@ -583,85 +627,56 @@ function ActionConfigStep({
                 
                 <CardContent className="p-4 pt-2">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                    {action.type === 'WAKE_SLEEP' && (
+                    {action.type === 'POWER' && (
                       <div className="space-y-2 col-span-2">
-                        <p className="text-[11px] font-bold uppercase text-muted-foreground">Target State</p>
+                        <p className="text-[11px] font-bold uppercase text-muted-foreground">Command</p>
                         <div className="flex gap-3">
                           <Button 
-                            variant={action.params.state === 'wake' ? 'default' : 'outline'}
-                            onClick={() => updateParam(index, 'state', 'wake')}
+                            variant={action.params.command === 'wakeup' ? 'default' : 'outline'}
+                            onClick={() => updateParam(index, 'command', 'wakeup')}
                             className="flex-1 h-10 gap-2 text-xs"
                           ><Power className="h-3.5 w-3.5" /> Wake Up</Button>
                           <Button 
-                            variant={action.params.state === 'sleep' ? 'default' : 'outline'}
-                            onClick={() => updateParam(index, 'state', 'sleep')}
+                            variant={action.params.command === 'sleep' ? 'default' : 'outline'}
+                            onClick={() => updateParam(index, 'command', 'sleep')}
                             className="flex-1 h-10 gap-2 text-xs"
-                          ><Moon className="h-3.5 w-3.5" /> Sleep Mode</Button>
+                          ><Moon className="h-3.5 w-3.5" /> Sleep</Button>
+                          <Button 
+                            variant={action.params.command === 'reboot' ? 'default' : 'outline'}
+                            onClick={() => updateParam(index, 'command', 'reboot')}
+                            className="flex-1 h-10 gap-2 text-xs"
+                          ><RotateCcw className="h-3.5 w-3.5" /> Reboot</Button>
                         </div>
                       </div>
                     )}
                     {action.type === 'BRIGHTNESS' && (
-                      <>
-                        <ControlItem label="Auto Adjustment">
-                           <div className="flex items-center justify-between p-2.5 bg-muted/30 rounded-md border">
-                             <span className="text-[11px] font-medium">Automatic Gain</span>
-                             <Switch checked={action.params.auto} onCheckedChange={(v) => updateParam(index, 'auto', v)} className="scale-75 origin-right" />
-                           </div>
-                        </ControlItem>
-                        {!action.params.auto && (
-                          <ControlItem label={`Brightness: ${action.params.value}%`}>
-                             <div className="pt-2 px-1">
-                                <Slider value={[action.params.value]} onValueChange={([v]) => updateParam(index, 'value', v)} max={100} step={1} />
-                             </div>
-                          </ControlItem>
-                        )}
-                      </>
+                      <ControlItem label={`Brightness: ${action.params.brightness}%`} className="col-span-2">
+                         <div className="pt-2 px-1">
+                            <Slider value={[action.params.brightness]} onValueChange={([v]) => updateParam(index, 'brightness', v)} max={100} step={1} />
+                         </div>
+                      </ControlItem>
                     )}
                     {action.type === 'VOLUME' && (
-                      <ControlItem label={`Volume Level: ${action.params.value}`} className="col-span-2">
+                      <ControlItem label={`Volume Level: ${action.params.musicvolume}`} className="col-span-2">
                          <div className="flex items-center gap-6 bg-muted/20 p-3 rounded-md border">
                             <Volume2 className="h-4 w-4 text-primary" />
-                            <Slider value={[action.params.value]} onValueChange={([v]) => updateParam(index, 'value', v)} max={15} step={1} className="flex-1" />
+                            <Slider value={[action.params.musicvolume]} onValueChange={([v]) => updateParam(index, 'musicvolume', v)} max={15} step={1} className="flex-1" />
                             <span className="font-bold tabular-nums text-base w-6 text-primary">15</span>
                          </div>
                       </ControlItem>
                     )}
-                    {action.type === 'TIMEZONE' && (
-                      <>
-                        <ControlItem label="Sync Protocol">
-                           <div className="flex items-center justify-between p-2.5 bg-muted/30 rounded-md border">
-                             <span className="text-[11px] font-medium">NTP Sync</span>
-                             <Switch checked={action.params.sync} onCheckedChange={(v) => updateParam(index, 'sync', v)} className="scale-75 origin-right" />
-                           </div>
-                        </ControlItem>
-                        <ControlItem label="Select Timezone">
-                          <Select 
-                            value={action.params.timezone} 
-                            onValueChange={(v) => updateParam(index, 'timezone', v)}
-                            modal={false}
-                          >
-                            <SelectTrigger className="h-9 rounded-md bg-muted/30 border border-transparent focus:border-primary/40 focus:ring-0 focus-visible:ring-0 outline-none px-3 text-xs transition-all shadow-none">
-                              <SelectValue placeholder="Select" />
-                            </SelectTrigger>
-                            <SelectContent 
-                              position="popper" 
-                              sideOffset={4} 
-                              className="z-[101] min-w-[var(--radix-select-trigger-width)]"
-                              onCloseAutoFocus={(e) => e.preventDefault()}
-                            >
-                              <SelectItem value="UTC+8" className="text-xs">Shanghai (UTC+8)</SelectItem>
-                              <SelectItem value="UTC+0" className="text-xs">London (UTC+0)</SelectItem>
-                              <SelectItem value="UTC-5" className="text-xs">New York (UTC-5)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </ControlItem>
-                      </>
+                    {action.type === 'COLOR_TEMP' && (
+                      <ControlItem label={`Color Temperature: ${action.params.colortemp}K`} className="col-span-2">
+                         <div className="pt-2 px-1">
+                            <Slider value={[action.params.colortemp]} onValueChange={([v]) => updateParam(index, 'colortemp', v)} min={2000} max={10000} step={100} />
+                         </div>
+                      </ControlItem>
                     )}
-                    {action.type === 'LANGUAGE' && (
-                      <ControlItem label="System Language" className="col-span-2">
+                    {action.type === 'INPUT_MODE' && (
+                      <ControlItem label="Input Mode" className="col-span-2">
                         <Select 
-                          value={action.params.language} 
-                          onValueChange={(v) => updateParam(index, 'language', v)}
+                          value={action.params.inputmode} 
+                          onValueChange={(v) => updateParam(index, 'inputmode', v)}
                           modal={false}
                         >
                           <SelectTrigger className="h-9 rounded-md bg-muted/30 border border-transparent focus:border-primary/40 focus:ring-0 focus-visible:ring-0 outline-none px-3 text-xs transition-all shadow-none">
@@ -673,25 +688,114 @@ function ActionConfigStep({
                             className="z-[101] min-w-[var(--radix-select-trigger-width)]"
                             onCloseAutoFocus={(e) => e.preventDefault()}
                           >
-                            <SelectItem value="zh" className="text-xs">Chinese (zh-CN)</SelectItem>
-                            <SelectItem value="en" className="text-xs">English (en-US)</SelectItem>
-                            <SelectItem value="ja" className="text-xs">Japanese (ja-JP)</SelectItem>
+                            <SelectItem value="hdmi" className="text-xs">HDMI</SelectItem>
+                            <SelectItem value="dvi" className="text-xs">DVI</SelectItem>
+                            <SelectItem value="vga" className="text-xs">VGA</SelectItem>
                           </SelectContent>
                         </Select>
                       </ControlItem>
                     )}
-                    {['MEDIA', 'PROGRAM'].includes(action.type) && (
-                      <ControlItem label="Feedback Collection" className="col-span-2">
+                    {action.type === 'TIMEZONE' && (
+                      <>
+                        <ControlItem label="Select Timezone">
+                          <Select 
+                            value={action.params.timezoneId} 
+                            onValueChange={(v) => {
+                              const mapping: Record<string, number> = { 'Asia/Shanghai': 8, 'UTC': 0, 'America/New_York': -5 };
+                              updateParam(index, 'timezoneId', v);
+                              updateParam(index, 'timezone', mapping[v] || 0);
+                            }}
+                          >
+                            <SelectTrigger className="h-9 rounded-md bg-muted/30 border border-transparent focus:border-primary/40 focus:ring-0 focus-visible:ring-0 outline-none px-3 text-xs transition-all shadow-none">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent 
+                              position="popper" 
+                              sideOffset={4} 
+                              className="z-[101] min-w-[var(--radix-select-trigger-width)]"
+                              onCloseAutoFocus={(e) => e.preventDefault()}
+                            >
+                              <SelectItem value="Asia/Shanghai" className="text-xs">Shanghai (UTC+8)</SelectItem>
+                              <SelectItem value="UTC" className="text-xs">Universal (UTC+0)</SelectItem>
+                              <SelectItem value="America/New_York" className="text-xs">New York (UTC-5)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </ControlItem>
+                      </>
+                    )}
+                    {action.type === 'LOCALE' && (
+                      <>
+                        <ControlItem label="Language">
+                          <Select 
+                            value={action.params.language} 
+                            onValueChange={(v) => updateParam(index, 'language', v)}
+
+                          >
+                            <SelectTrigger className="h-9 rounded-md bg-muted/30 border border-transparent focus:border-primary/40 focus:ring-0 focus-visible:ring-0 outline-none px-3 text-xs transition-all shadow-none">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent 
+                              position="popper" 
+                              sideOffset={4} 
+                              className="z-[101] min-w-[var(--radix-select-trigger-width)]"
+                              onCloseAutoFocus={(e) => e.preventDefault()}
+                            >
+                              <SelectItem value="zh" className="text-xs">Chinese (zh)</SelectItem>
+                              <SelectItem value="en" className="text-xs">English (en)</SelectItem>
+                              <SelectItem value="ja" className="text-xs">Japanese (ja)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </ControlItem>
+                        <ControlItem label="Country">
+                          <Select 
+                            value={action.params.country} 
+                            onValueChange={(v) => updateParam(index, 'country', v)}
+
+                          >
+                            <SelectTrigger className="h-9 rounded-md bg-muted/30 border border-transparent focus:border-primary/40 focus:ring-0 focus-visible:ring-0 outline-none px-3 text-xs transition-all shadow-none">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent 
+                              position="popper" 
+                              sideOffset={4} 
+                              className="z-[101] min-w-[var(--radix-select-trigger-width)]"
+                              onCloseAutoFocus={(e) => e.preventDefault()}
+                            >
+                              <SelectItem value="CN" className="text-xs">China (CN)</SelectItem>
+                              <SelectItem value="US" className="text-xs">USA (US)</SelectItem>
+                              <SelectItem value="JP" className="text-xs">Japan (JP)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </ControlItem>
+                      </>
+                    )}
+                    {action.type === 'CONTENT_REPORT_SWITCH' && (
+                      <ControlItem label="Reporting Switches" className="col-span-2">
                         <div className="flex items-center justify-between p-3 bg-primary/[0.02] border border-dashed rounded-md">
                           <div>
-                             <p className="text-xs font-bold">{formatActionType(action.type)} Stats</p>
-                             <p className="text-[10px] text-muted-foreground mt-0.5">Collect terminal telemetry data</p>
+                             <p className="text-xs font-bold">Terminal Stats Report</p>
+                             <p className="text-[10px] text-muted-foreground mt-0.5">Collect playback and material telemetry</p>
                           </div>
-                          <Switch checked={action.params.enabled} onCheckedChange={(v) => updateParam(index, 'enabled', v)} className="scale-90" />
+                          <div className="flex gap-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px]">General</span>
+                              <Switch checked={action.params.status === 1} onCheckedChange={(v) => updateParam(index, 'status', v ? 1 : 0)} className="scale-75" />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px]">Program</span>
+                              <Switch checked={action.params.programReportStatus === 1} onCheckedChange={(v) => updateParam(index, 'programReportStatus', v ? 1 : 0)} className="scale-75" />
+                            </div>
+                          </div>
                         </div>
                       </ControlItem>
                     )}
-                    {action.type === 'REBOOT' && (
+                    {action.type === 'CLEAR_CACHE' && (
+                      <div className="col-span-2 flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-md">
+                         <Trash2 className="h-4 w-4 text-blue-600 shrink-0" />
+                         <p className="text-[11px] text-blue-900 font-medium leading-relaxed">This will clear all downloaded materials and cached data on the terminal. The device will re-download required content.</p>
+                      </div>
+                    )}
+                    {action.type === 'POWER' && action.params.command === 'reboot' && (
                       <div className="col-span-2 flex items-center gap-3 p-3 bg-rose-50 border border-rose-100 rounded-md">
                          <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
                          <p className="text-[11px] text-rose-900 font-medium leading-relaxed">Warning: Rebooting will interrupt all active playback until the system fully recovers.</p>
@@ -753,7 +857,7 @@ function ReviewStep({
   const selectedDevices = Array.from(selectedDeviceIds).map(id => devices.find(d => String(d.deviceId) === id)).filter(Boolean) as Device[];
   const onlineCount = selectedDevices.filter(d => d.onlineStatus === 1).length;
   const offlineCount = selectedDevices.length - onlineCount;
-  const hasHighRisk = actions.some(a => a.type === 'REBOOT' || a.type === 'WAKE_SLEEP');
+  const hasHighRisk = actions.some(a => a.type === 'POWER');
 
   const updateTimeout = (index: number, val: number) => {
     const next = [...actions];
@@ -848,7 +952,7 @@ function ReviewStep({
                            <Select 
                               value={String(a.timeout)} 
                               onValueChange={(v) => updateTimeout(i, parseInt(v))}
-                              modal={false}
+  
                            >
                               <SelectTrigger className="h-7 w-[90px] text-[10px] font-bold bg-muted/10 hover:bg-muted/20 border border-transparent focus:border-primary/40 focus:ring-0 focus-visible:ring-0 outline-none transition-all shadow-none">
                                  <SelectValue />
@@ -1010,6 +1114,7 @@ function StatusBadge({ status }: { status: string }) {
         </Badge>
       );
     case 'DISPATCHED':
+    case 'PUBLISHED':
       return (
         <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-200 gap-1.5 h-6 px-2 rounded-md">
           <Loader2 className="h-3 w-3 animate-spin" />
@@ -1017,6 +1122,7 @@ function StatusBadge({ status }: { status: string }) {
         </Badge>
       );
     case 'ACKED':
+    case 'CONFIRMED':
       return (
         <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200 gap-1.5 h-6 px-2 rounded-md">
           <Check className="h-3 w-3" />
@@ -1024,6 +1130,7 @@ function StatusBadge({ status }: { status: string }) {
         </Badge>
       );
     case 'SUCCEEDED':
+    case 'COMPLETED':
       return (
         <Badge className="bg-emerald-500 text-white border-none gap-1.5 h-6 px-2 rounded-md shadow-none">
           <Check className="h-3 w-3 stroke-[3]" />
@@ -1031,44 +1138,50 @@ function StatusBadge({ status }: { status: string }) {
         </Badge>
       );
     case 'FAILED':
+    case 'EXPIRED':
       return (
         <Badge className="bg-destructive text-white border-none gap-1.5 h-6 px-2 rounded-md shadow-none">
           <AlertCircle className="h-3 w-3" />
-          <span className="text-[9px] font-bold uppercase">Failed</span>
+          <span className="text-[9px] font-bold uppercase">{status === 'EXPIRED' ? 'Expired' : 'Failed'}</span>
         </Badge>
       );
     default:
-      return <Badge variant="outline" className="opacity-20 h-6 px-2">-</Badge>;
+      return <Badge variant="outline" className="opacity-20 h-6 px-2">{status}</Badge>;
   }
 }
 
 function ActionIcon({ type, className }: { type: ActionType, className?: string }) {
   switch (type) {
-    case 'WAKE_SLEEP': return <Power className={className} />;
-    case 'REBOOT': return <RotateCcw className={className} />;
+    case 'POWER': return <Power className={className} />;
     case 'BRIGHTNESS': return <Sun className={className} />;
     case 'VOLUME': return <Volume2 className={className} />;
+    case 'COLOR_TEMP': return <Thermometer className={className} />;
+    case 'INPUT_MODE': return <Monitor className={className} />;
     case 'TIMEZONE': return <Clock className={className} />;
-    case 'LANGUAGE': return <Languages className={className} />;
-    case 'MEDIA': return <Film className={className} />;
-    case 'PROGRAM': return <PlaySquare className={className} />;
+    case 'LOCALE': return <Languages className={className} />;
+    case 'CONTENT_REPORT_SWITCH': return <Film className={className} />;
+    case 'CLEAR_CACHE': return <Trash2 className={className} />;
   }
 }
 
 function formatActionType(type: ActionType): string {
-  if (type === 'WAKE_SLEEP') return 'Wake / Sleep';
+  if (type === 'COLOR_TEMP') return 'Color Temp';
+  if (type === 'CONTENT_REPORT_SWITCH') return 'Reporting';
+  if (type === 'INPUT_MODE') return 'Input Mode';
   return type.charAt(0) + type.slice(1).toLowerCase().replace(/_/g, ' ');
 }
 
 function getDefaultParams(type: ActionType): any {
   switch (type) {
-    case 'WAKE_SLEEP': return { state: 'wake' };
-    case 'BRIGHTNESS': return { auto: true, value: 50 };
-    case 'VOLUME': return { value: 10 };
-    case 'TIMEZONE': return { timezone: 'UTC+8', sync: true };
-    case 'LANGUAGE': return { language: 'en' };
-    case 'MEDIA': return { enabled: true };
-    case 'PROGRAM': return { enabled: true };
+    case 'POWER': return { command: 'wakeup' };
+    case 'BRIGHTNESS': return { brightness: 50 };
+    case 'VOLUME': return { musicvolume: 10 };
+    case 'COLOR_TEMP': return { colortemp: 5000 };
+    case 'INPUT_MODE': return { inputmode: 'hdmi' };
+    case 'TIMEZONE': return { timezoneId: 'Asia/Shanghai', timezone: 8 };
+    case 'LOCALE': return { language: 'en', country: 'US' };
+    case 'CONTENT_REPORT_SWITCH': return { status: 1, programReportStatus: 1 };
+    case 'CLEAR_CACHE': return {};
     default: return {};
   }
 }

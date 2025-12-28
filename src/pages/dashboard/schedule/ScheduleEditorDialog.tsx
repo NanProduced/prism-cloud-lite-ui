@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Reorder } from 'framer-motion';
 import { 
   X, 
   Save, 
@@ -19,8 +18,13 @@ import {
   Send,
   AlertTriangle,
   Info,
-  Globe
+  Globe,
+  PlusCircle,
+  XCircle,
+  RefreshCw
 } from 'lucide-react';
+import { Reorder } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,17 +50,18 @@ import type {
   WeekDay,
   ContentsScheduleType
 } from '@/types/schedule';
-import { listPrograms, type ProgramRecord } from '@/features/programs/storage/programsDb';
+import { getPrograms, getProgramDetails } from '@/services/programApi';
 import { toast } from '@/store/notificationStore';
+import { TimelineProjection, type TimelineRule } from '@/components/dashboard/schedule/TimelineProjection';
 
-const WEEKDAYS: { key: WeekDay, label: string }[] = [
-  { key: 'MON', label: 'Mon' },
-  { key: 'TUE', label: 'Tue' },
-  { key: 'WED', label: 'Wed' },
-  { key: 'THU', label: 'Thu' },
-  { key: 'FRI', label: 'Fri' },
-  { key: 'SAT', label: 'Sat' },
-  { key: 'SUN', label: 'Sun' },
+const WEEKDAYS: { label: string }[] = [
+  { label: 'Mon' },
+  { label: 'Tue' },
+  { label: 'Wed' },
+  { label: 'Thu' },
+  { label: 'Fri' },
+  { label: 'Sat' },
+  { label: 'Sun' },
 ];
 
 interface ScheduleEditorDialogProps {
@@ -70,14 +75,15 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
   const [draft, setDraft] = useState<ScheduleRecord | null>(null);
   const [activeTab, setActiveTab] = useState<'programs' | 'commands' | 'devices' | 'preview'>('programs');
   const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
-  const [availablePrograms, setAvailablePrograms] = useState<ProgramRecord[]>([]);
 
-  // Load programs from DB
-  useEffect(() => {
-    if (open) {
-      setAvailablePrograms(listPrograms());
-    }
-  }, [open]);
+  // --- Queries ---
+  const { data: programsData, isLoading: isProgramsLoading } = useQuery({
+    queryKey: ['programs'],
+    queryFn: getPrograms,
+    enabled: open,
+  });
+
+  const availablePrograms = programsData?.data || [];
 
   // Sync draft with initialSchedule
   useEffect(() => {
@@ -91,7 +97,6 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
         setSelectedRuleId(null);
       }
     } else {
-      // New Schedule Boilerplate
       setDraft({
         id: `sch-${Date.now()}`,
         name: 'New Playback Plan',
@@ -108,6 +113,27 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
     }
   }, [initialSchedule, open]);
 
+  // Use a state-local details fetch for version info if needed, or rely on program list which might have latestVersion
+  // For selecting a program, we ideally need its versions.
+  // According to program-and-schedule.md, getPrograms returns list of ProgramListResp
+  // ProgramListResp doesn't have all versions, only latestVersion.
+  // If we need multiple versions, we might need another approach or fetch detail.
+  // For now, let's assume we use the latest version or fetch detail on select.
+
+  const [programDetails, setProgramDetails] = useState<Record<string, any>>({});
+
+  const handleProgramSelect = async (pId: string) => {
+     if (programDetails[pId]) return;
+     try {
+        const res = await getProgramDetails(pId);
+        if (res.data) {
+           setProgramDetails(prev => ({ ...prev, [pId]: res.data }));
+        }
+     } catch (e) {
+        toast.error('Failed to load program versions');
+     }
+  };
+
   const handleAddProgramRule = () => {
     if (!draft) return;
     const newRule: ProgramScheduleRule = {
@@ -121,6 +147,7 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
       ifLimitTime: false,
       ifLimitDate: false,
       ifLimitWeekday: false,
+      limitWeekday: [true, true, true, true, true, false, false], // Mon-Fri
     };
     const next = { ...draft, programRules: [...draft.programRules, newRule] };
     setDraft(next);
@@ -132,13 +159,12 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
     if (!draft) return;
     const newRule: CommandScheduleRule = {
       id: `cmd-${Date.now()}`,
-      name: 'Brightness_Control',
-      operation: 'Brightness_Control',
-      payloadJson: '{"type":"Brightness_Control", "brightness": 100}',
-      ifLimitTime: true,
-      limitTime: { start: '08:00:00', end: '08:00:05' },
+      name: 'Brightness Control',
+      operation: { type: 'BRIGHTNESS', body: { brightness: 80 } },
+      opTime: ['08:00:00'],
       ifLimitDate: false,
       ifLimitWeekday: false,
+      limitWeekday: [true, true, true, true, true, true, true],
     };
     const next = { ...draft, commandRules: [...draft.commandRules, newRule] };
     setDraft(next);
@@ -187,7 +213,6 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
 
   const handleReorderPrograms = (newOrder: ProgramScheduleRule[]) => {
     if (!draft) return;
-    // Re-assign priorities based on new index: Highest at top = Highest priority
     const updated = newOrder.map((rule, index) => ({
       ...rule,
       priority: newOrder.length - index
@@ -298,8 +323,8 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
                             {draft?.commandRules.map(rule => (
                               <Reorder.Item key={rule.id} value={rule}>
                                 <RuleListItem 
-                                  title={rule.name.replace('_', ' ')}
-                                  subtitle={rule.ifLimitTime ? rule.limitTime?.start : 'Always'}
+                                  title={rule.name}
+                                  subtitle={rule.opTime.join(', ')}
                                   icon={<Zap className="h-3 w-3" />}
                                   active={selectedRuleId === rule.id}
                                   onClick={() => setSelectedRuleId(rule.id)}
@@ -344,34 +369,48 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
                                
                                <div className="grid grid-cols-2 gap-8">
                                   <div className="col-span-2 space-y-2">
-                                     <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Target Program & Version</Label>
+                                     <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Target Program</Label>
                                      <Select 
-                                       value={`${selectedProgramRule.programId}|${selectedProgramRule.version}`} 
-                                       onValueChange={(val) => {
-                                          const [pId, ver] = val.split('|');
+                                       value={selectedProgramRule.programId} 
+                                       onValueChange={async (pId) => {
                                           const prog = availablePrograms.find(p => p.id === pId);
                                           if (prog) {
-                                             updateProgramRule(selectedProgramRule.id, {
-                                                programId: pId,
-                                                programName: prog.name,
-                                                version: Number(ver),
-                                                // In real app, releaseProgramId would come from a real version record
-                                                releaseProgramId: 1000 + Math.floor(Math.random() * 9000) 
-                                             });
+                                             // Fetch details to get versions and deviceProgramId
+                                             try {
+                                                const res = await getProgramDetails(pId);
+                                                const details = res.data;
+                                                const latest = details?.versions.sort((a, b) => b.version - a.version)[0];
+                                                
+                                                if (latest) {
+                                                   updateProgramRule(selectedProgramRule.id, {
+                                                      programId: pId,
+                                                      programName: prog.name,
+                                                      version: latest.version,
+                                                      releaseProgramId: latest.deviceProgramId
+                                                   });
+                                                } else {
+                                                   toast.error('This program has no published versions');
+                                                }
+                                             } catch (e) {
+                                                toast.error('Failed to fetch program details');
+                                             }
                                           }
                                        }}
                                      >
                                         <SelectTrigger className="h-14 rounded-xl font-bold border-2">
-                                           <SelectValue placeholder="Pick a program version..." />
+                                           <SelectValue placeholder="Select a program..." />
                                         </SelectTrigger>
                                         <SelectContent>
                                            {availablePrograms.map(p => (
-                                              <SelectItem key={p.id} value={`${p.id}|${p.versions[0]?.version || 0}`}>
-                                                 {p.name} (v{p.versions[0]?.version || 'Draft'})
+                                              <SelectItem key={p.id} value={p.id}>
+                                                 {p.name} {p.latestVersion ? `(v${p.latestVersion})` : '(No Release)'}
                                               </SelectItem>
                                            ))}
                                         </SelectContent>
                                      </Select>
+                                     <p className="text-[9px] font-bold text-muted-foreground italic opacity-60">
+                                        The latest published version will be automatically assigned.
+                                     </p>
                                   </div>
 
                                   <div className="space-y-2">
@@ -397,7 +436,6 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
                                        onChange={(e) => updateProgramRule(selectedProgramRule.id, { priority: Number(e.target.value) })}
                                        className="h-12 rounded-xl font-bold border-2" 
                                      />
-                                     <p className="text-[9px] font-bold text-muted-foreground italic opacity-60">Higher values override lower priorities for Spot content.</p>
                                   </div>
                                </div>
                             </section>
@@ -414,85 +452,116 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
                                    <div className="space-y-4">
                                       <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Action Type</Label>
                                       <Select 
-                                        value={selectedCommandRule.name} 
-                                        onValueChange={(v) => {
-                                          let payload = selectedCommandRule.payloadJson;
-                                          if (v === 'Brightness_Control') payload = '{"type":"Brightness_Control", "brightness": 80}';
-                                          if (v === 'Volume_Control') payload = '{"type":"Volume_Control", "volume": 10}';
-                                          if (v === 'Sleep') payload = '{"type":"Sleep"}';
-                                          if (v === 'Wakeup') payload = '{"type":"Wakeup"}';
-                                          updateCommandRule(selectedCommandRule.id, { name: v, payloadJson: payload });
+                                        value={selectedCommandRule.operation.type} 
+                                        onValueChange={(v: any) => {
+                                          let body = {};
+                                          if (v === 'BRIGHTNESS') body = { brightness: 80 };
+                                          if (v === 'VOLUME') body = { musicvolume: 10 };
+                                          if (v === 'POWER') body = { command: 'sleep' };
+                                          updateCommandRule(selectedCommandRule.id, { 
+                                            name: v.replace('_', ' '),
+                                            operation: { type: v, body } 
+                                          });
                                         }}
                                       >
                                          <SelectTrigger className="h-12 rounded-xl font-bold border-2">
                                             <SelectValue />
                                          </SelectTrigger>
                                          <SelectContent>
-                                            <SelectItem value="Brightness_Control">Brightness Adjustment</SelectItem>
-                                            <SelectItem value="Volume_Control">Volume Adjustment</SelectItem>
-                                            <SelectItem value="Sleep">Power Standby (Sleep)</SelectItem>
-                                            <SelectItem value="Wakeup">Power Wakeup</SelectItem>
-                                            <SelectItem value="Reboot">System Reboot</SelectItem>
+                                            <SelectItem value="BRIGHTNESS">Brightness Adjustment</SelectItem>
+                                            <SelectItem value="VOLUME">Volume Adjustment</SelectItem>
+                                            <SelectItem value="POWER">Power Management</SelectItem>
+                                            <SelectItem value="REBOOT">System Reboot</SelectItem>
+                                            <SelectItem value="CLEAR_CACHE">Clear Device Cache</SelectItem>
                                          </SelectContent>
                                       </Select>
                                    </div>
 
-                                   {/* Template Form Fields */}
+                                   {/* Parameter Form */}
                                    <div className="bg-muted/20 p-6 rounded-2xl border-2 border-dashed">
-                                      {selectedCommandRule.name === 'Brightness_Control' && (
+                                      {selectedCommandRule.operation.type === 'BRIGHTNESS' && (
                                          <div className="space-y-4">
                                             <div className="flex justify-between items-center text-[10px] font-black uppercase">
                                                <span>Target Brightness</span>
                                                <span className="text-primary font-mono bg-background px-2 py-1 rounded border">
-                                                  {JSON.parse(selectedCommandRule.payloadJson).brightness || 0}%
+                                                  {selectedCommandRule.operation.body?.brightness || 0}%
                                                </span>
                                             </div>
                                             <Slider 
-                                               value={[JSON.parse(selectedCommandRule.payloadJson).brightness || 0]} 
+                                               value={[selectedCommandRule.operation.body?.brightness || 0]} 
                                                max={100} 
                                                onValueChange={(v) => {
-                                                  const payload = JSON.stringify({ type: 'Brightness_Control', brightness: v[0] });
-                                                  updateCommandRule(selectedCommandRule.id, { payloadJson: payload });
+                                                  updateCommandRule(selectedCommandRule.id, { 
+                                                    operation: { ...selectedCommandRule.operation, body: { brightness: v[0] } } 
+                                                  });
                                                }}
                                             />
                                          </div>
                                       )}
-                                      {selectedCommandRule.name === 'Volume_Control' && (
+                                      {selectedCommandRule.operation.type === 'POWER' && (
                                          <div className="space-y-4">
-                                            <div className="flex justify-between items-center text-[10px] font-black uppercase">
-                                               <span>Target Volume</span>
-                                               <span className="text-primary font-mono bg-background px-2 py-1 rounded border">
-                                                  {JSON.parse(selectedCommandRule.payloadJson).volume || 0} / 15
-                                               </span>
-                                            </div>
-                                            <Slider 
-                                               value={[JSON.parse(selectedCommandRule.payloadJson).volume || 0]} 
-                                               max={15} 
-                                               onValueChange={(v) => {
-                                                  const payload = JSON.stringify({ type: 'Volume_Control', volume: v[0] });
-                                                  updateCommandRule(selectedCommandRule.id, { payloadJson: payload });
-                                               }}
-                                            />
+                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Power Action</Label>
+                                            <Select 
+                                              value={selectedCommandRule.operation.body?.command} 
+                                              onValueChange={(v) => updateCommandRule(selectedCommandRule.id, { 
+                                                operation: { ...selectedCommandRule.operation, body: { command: v } } 
+                                              })}
+                                            >
+                                               <SelectTrigger className="h-10 rounded-lg font-bold border">
+                                                  <SelectValue />
+                                               </SelectTrigger>
+                                               <SelectContent>
+                                                  <SelectItem value="sleep">Sleep (Standby)</SelectItem>
+                                                  <SelectItem value="wakeup">Wakeup</SelectItem>
+                                                  <SelectItem value="reboot">Reboot</SelectItem>
+                                               </SelectContent>
+                                            </Select>
                                          </div>
                                       )}
-                                      {(selectedCommandRule.name === 'Sleep' || selectedCommandRule.name === 'Wakeup' || selectedCommandRule.name === 'Reboot') && (
+                                      {(selectedCommandRule.operation.type === 'REBOOT' || selectedCommandRule.operation.type === 'CLEAR_CACHE') && (
                                          <div className="flex items-center gap-3 text-muted-foreground italic">
                                             <Info className="h-4 w-4" />
-                                            <p className="text-[10px] font-bold uppercase tracking-tighter">No parameters required for this action.</p>
+                                            <p className="text-[10px] font-bold uppercase tracking-tighter">No parameters required.</p>
                                          </div>
                                       )}
                                    </div>
 
-                                   <div className="col-span-2 space-y-2 pt-4">
+                                   {/* opTime List */}
+                                   <div className="col-span-2 space-y-4">
                                       <div className="flex items-center justify-between">
-                                         <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Raw Terminal Payload (JSON)</Label>
-                                         <Badge variant="outline" className="text-[8px] font-black uppercase opacity-40">Advanced Mode</Badge>
+                                         <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Execution Time Points</Label>
+                                         <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            onClick={() => updateCommandRule(selectedCommandRule.id, { opTime: [...selectedCommandRule.opTime, '12:00:00'] })}
+                                            className="h-6 text-[9px] uppercase font-black gap-1.5"
+                                         >
+                                            <PlusCircle className="h-3 w-3" /> Add Point
+                                         </Button>
                                       </div>
-                                      <textarea 
-                                        value={selectedCommandRule.payloadJson}
-                                        onChange={(e) => updateCommandRule(selectedCommandRule.id, { payloadJson: e.target.value })}
-                                        className="w-full h-24 p-4 rounded-xl border-2 font-mono text-xs bg-muted/10 focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                      />
+                                      <div className="flex flex-wrap gap-3">
+                                         {selectedCommandRule.opTime.map((time, idx) => (
+                                            <div key={idx} className="flex items-center gap-2 bg-background border-2 rounded-xl p-1 pr-3">
+                                               <Input 
+                                                  type="time" 
+                                                  step="1"
+                                                  value={time} 
+                                                  onChange={(e) => {
+                                                     const newTimes = [...selectedCommandRule.opTime];
+                                                     newTimes[idx] = e.target.value;
+                                                     updateCommandRule(selectedCommandRule.id, { opTime: newTimes });
+                                                  }}
+                                                  className="h-8 border-none focus-visible:ring-0 w-32 font-mono text-xs font-bold"
+                                               />
+                                               <button 
+                                                  onClick={() => updateCommandRule(selectedCommandRule.id, { opTime: selectedCommandRule.opTime.filter((_, i) => i !== idx) })}
+                                                  className="text-muted-foreground/40 hover:text-destructive transition-colors"
+                                               >
+                                                  <XCircle className="h-4 w-4" />
+                                               </button>
+                                            </div>
+                                         ))}
+                                      </div>
                                    </div>
                                 </div>
                              </section>
@@ -500,7 +569,7 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
 
                           <Separator />
 
-                          {/* Temporal Constraints - Shared between Programs and Commands */}
+                          {/* Temporal Constraints */}
                           <section className="space-y-8">
                              <div className="flex items-center gap-4">
                                 <div className="h-8 w-1 bg-zinc-900 rounded-full" />
@@ -508,43 +577,38 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
                              </div>
 
                              <div className="space-y-10">
-                                {/* Time Limit */}
+                                {/* Time Limit (Only for Programs) */}
+                                {activeTab === 'programs' && selectedProgramRule && (
                                 <ConstraintGroup 
                                   label="Daily Time Window" 
                                   icon={<Clock className="h-4 w-4" />}
-                                  enabled={selectedProgramRule?.ifLimitTime || selectedCommandRule?.ifLimitTime || false}
+                                  enabled={selectedProgramRule.ifLimitTime}
                                   onToggle={(checked) => {
-                                     const patch = { ifLimitTime: checked, limitTime: checked ? { start: '09:00:00', end: '18:00:00' } : null };
-                                     if (activeTab === 'programs' && selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
-                                     else if (activeTab === 'commands' && selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
+                                     updateProgramRule(selectedProgramRule.id, { 
+                                       ifLimitTime: checked, 
+                                       limitTime: checked ? { start: '09:00:00', end: '18:00:00' } : null 
+                                     });
                                   }}
                                 >
                                    <div className="flex items-center gap-4">
                                       <Input 
                                         type="time" 
                                         step="1"
-                                        value={selectedProgramRule?.limitTime?.start || selectedCommandRule?.limitTime?.start || '00:00:00'} 
-                                        onChange={(e) => {
-                                          const patch = { limitTime: { ...((selectedProgramRule?.limitTime || selectedCommandRule?.limitTime) as any), start: e.target.value } };
-                                          if (activeTab === 'programs' && selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
-                                          else if (activeTab === 'commands' && selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
-                                        }}
+                                        value={selectedProgramRule.limitTime?.start || '00:00:00'} 
+                                        onChange={(e) => updateProgramRule(selectedProgramRule.id, { limitTime: { ...(selectedProgramRule.limitTime as any), start: e.target.value } })}
                                         className="h-12 rounded-xl font-bold border-2 w-48" 
                                       />
                                       <ArrowRight className="h-4 w-4 text-muted-foreground" />
                                       <Input 
                                         type="time" 
                                         step="1"
-                                        value={selectedProgramRule?.limitTime?.end || selectedCommandRule?.limitTime?.end || '23:59:59'} 
-                                        onChange={(e) => {
-                                          const patch = { limitTime: { ...((selectedProgramRule?.limitTime || selectedCommandRule?.limitTime) as any), end: e.target.value } };
-                                          if (activeTab === 'programs' && selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
-                                          else if (activeTab === 'commands' && selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
-                                        }}
+                                        value={selectedProgramRule.limitTime?.end || '23:59:59'} 
+                                        onChange={(e) => updateProgramRule(selectedProgramRule.id, { limitTime: { ...(selectedProgramRule.limitTime as any), end: e.target.value } })}
                                         className="h-12 rounded-xl font-bold border-2 w-48" 
                                       />
                                    </div>
                                 </ConstraintGroup>
+                                )}
 
                                 {/* Weekday Limit */}
                                 <ConstraintGroup 
@@ -552,23 +616,24 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
                                   icon={<CalendarDays className="h-4 w-4" />}
                                   enabled={selectedProgramRule?.ifLimitWeekday || selectedCommandRule?.ifLimitWeekday || false}
                                   onToggle={(checked) => {
-                                     const patch = { ifLimitWeekday: checked, limitWeekday: checked ? ['MON', 'TUE', 'WED', 'THU', 'FRI'] : null };
-                                     if (activeTab === 'programs' && selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
-                                     else if (activeTab === 'commands' && selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
+                                     const patch = { ifLimitWeekday: checked, limitWeekday: checked ? [true,true,true,true,true,false,false] : null };
+                                     if (selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
+                                     else if (selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
                                   }}
                                 >
                                    <div className="flex flex-wrap gap-2">
-                                      {WEEKDAYS.map(day => {
-                                        const currentDays = selectedProgramRule?.limitWeekday || selectedCommandRule?.limitWeekday || [];
-                                        const isSelected = currentDays.includes(day.key);
+                                      {WEEKDAYS.map((day, idx) => {
+                                        const currentDays = (selectedProgramRule?.limitWeekday || selectedCommandRule?.limitWeekday) || [true,true,true,true,true,true,true];
+                                        const isSelected = currentDays[idx];
                                         return (
                                           <button 
-                                            key={day.key}
+                                            key={idx}
                                             onClick={() => {
-                                              const nextDays = isSelected ? currentDays.filter(d => d !== day.key) : [...currentDays, day.key];
+                                              const nextDays = [...currentDays];
+                                              nextDays[idx] = !isSelected;
                                               const patch = { limitWeekday: nextDays };
-                                              if (activeTab === 'programs' && selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
-                                              else if (activeTab === 'commands' && selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
+                                              if (selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
+                                              else if (selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
                                             }}
                                             className={cn(
                                               "px-4 py-2.5 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest transition-all",
@@ -591,8 +656,8 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
                                   enabled={selectedProgramRule?.ifLimitDate || selectedCommandRule?.ifLimitDate || false}
                                   onToggle={(checked) => {
                                      const patch = { ifLimitDate: checked, limitDate: checked ? { start: '2025-01-01', end: '2025-12-31' } : null };
-                                     if (activeTab === 'programs' && selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
-                                     else if (activeTab === 'commands' && selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
+                                     if (selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
+                                     else if (selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
                                   }}
                                 >
                                    <div className="flex items-center gap-4">
@@ -601,8 +666,8 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
                                         value={selectedProgramRule?.limitDate?.start || selectedCommandRule?.limitDate?.start || ''} 
                                         onChange={(e) => {
                                           const patch = { limitDate: { ...((selectedProgramRule?.limitDate || selectedCommandRule?.limitDate) as any), start: e.target.value } };
-                                          if (activeTab === 'programs' && selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
-                                          else if (activeTab === 'commands' && selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
+                                          if (selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
+                                          else if (selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
                                         }}
                                         className="h-12 rounded-xl font-bold border-2 w-48" 
                                       />
@@ -612,8 +677,8 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
                                         value={selectedProgramRule?.limitDate?.end || selectedCommandRule?.limitDate?.end || ''} 
                                         onChange={(e) => {
                                           const patch = { limitDate: { ...((selectedProgramRule?.limitDate || selectedCommandRule?.limitDate) as any), end: e.target.value } };
-                                          if (activeTab === 'programs' && selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
-                                          else if (activeTab === 'commands' && selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
+                                          if (selectedProgramRule) updateProgramRule(selectedProgramRule.id, patch);
+                                          else if (selectedCommandRule) updateCommandRule(selectedCommandRule.id, patch);
                                         }}
                                         className="h-12 rounded-xl font-bold border-2 w-48" 
                                       />
@@ -660,7 +725,7 @@ function TabButton({ active, onClick, icon, children }: { active: boolean, onCli
 }
 
 function RuleListItem({ title, subtitle, badge, badgeColor, icon, active, onClick, onDelete }: { 
-  title: string, subtitle: string, badge?: string, badgeColor?: string, icon?: React.ReactNode, active: boolean, onClick: () => void, onDelete: () => void
+  title: string, subtitle: string | string[], badge?: string, badgeColor?: string, icon?: React.ReactNode, active: boolean, onClick: () => void, onDelete: () => void
 }) {
   return (
     <div 
@@ -682,7 +747,9 @@ function RuleListItem({ title, subtitle, badge, badgeColor, icon, active, onClic
        )}
        <div className="flex-1 min-w-0">
           <p className={cn("text-xs font-black uppercase truncate tracking-tight", active ? "text-primary" : "text-foreground/80")}>{title}</p>
-          <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest mt-0.5">{subtitle}</p>
+          <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest mt-0.5 truncate">
+             {Array.isArray(subtitle) ? subtitle.join(', ') : subtitle}
+          </p>
        </div>
        <div className="flex flex-col items-end gap-1 shrink-0">
           {badge && (
@@ -733,9 +800,8 @@ function DeviceBindingTab({ boundCount, scheduleId }: { boundCount: number, sche
   
   const handlePush = () => {
     setIsPushing(true);
-    setPushResults([]); // Clear previous
+    setPushResults([]);
     
-    // Mock API Push
     setTimeout(() => {
       const results = mockDevices.slice(0, 4).map(d => ({
         deviceId: d.id,
@@ -768,7 +834,6 @@ function DeviceBindingTab({ boundCount, scheduleId }: { boundCount: number, sche
        </div>
 
        <div className="flex-1 grid grid-cols-12 overflow-hidden">
-          {/* Linked Devices List / Results */}
           <div className="col-span-8 border-r bg-background overflow-hidden flex flex-col">
              {pushResults.length > 0 ? (
                 <div className="flex flex-col h-full">
@@ -832,7 +897,6 @@ function DeviceBindingTab({ boundCount, scheduleId }: { boundCount: number, sche
              )}
           </div>
 
-          {/* Conflict / Meta Panel */}
           <div className="col-span-4 bg-muted/10 p-8 space-y-8">
              <div className="p-6 rounded-3xl bg-amber-500/5 border-2 border-dashed border-amber-500/20 space-y-4">
                 <div className="flex items-center gap-3 text-amber-600">
@@ -871,65 +935,51 @@ function DeviceBindingTab({ boundCount, scheduleId }: { boundCount: number, sche
 function ExecutionPreviewTab({ schedule }: { schedule: ScheduleRecord | null }) {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   
-  // Helper: Check if rule is active on specific date
   const isRuleActive = (rule: ProgramScheduleRule | CommandScheduleRule, dateStr: string) => {
     const d = new Date(dateStr);
-    
-    // Date Range Check
     if (rule.ifLimitDate && rule.limitDate) {
       const start = new Date(rule.limitDate.start);
       const end = new Date(rule.limitDate.end);
       if (d < start || d > end) return false;
     }
-    
-    // Weekday Check
     if (rule.ifLimitWeekday && rule.limitWeekday) {
-      const dayMap: Record<number, WeekDay> = { 0: 'SUN', 1: 'MON', 2: 'TUE', 3: 'WED', 4: 'THU', 5: 'FRI', 6: 'SAT' };
-      const currentDay = dayMap[d.getUTCDay()]; // Use UTC or Local based on timezone, simplified to UTC for now
-      if (!rule.limitWeekday.includes(currentDay)) return false;
+      // Backend index 0 = Mon. JS getUTCDay() 0 = Sun.
+      const jsDay = d.getUTCDay();
+      const backendIdx = jsDay === 0 ? 6 : jsDay - 1; 
+      if (!rule.limitWeekday[backendIdx]) return false;
     }
-    
     return true;
   };
 
-  const { spotRules, rotationRules, commandRules, timelineEvents } = useMemo(() => {
-    if (!schedule) return { spotRules: [], rotationRules: [], commandRules: [], timelineEvents: [] };
+  const timelineRules: TimelineRule[] = useMemo(() => {
+    if (!schedule) return [];
 
-    const activePrograms = schedule.programRules.filter(r => isRuleActive(r, selectedDate));
-    const activeCommands = schedule.commandRules.filter(r => isRuleActive(r, selectedDate));
+    const programRules: TimelineRule[] = schedule.programRules
+      .filter(r => isRuleActive(r, selectedDate))
+      .map(r => ({
+        id: r.id,
+        type: r.type as 'rotation' | 'spot',
+        name: r.programName,
+        startTime: r.ifLimitTime && r.limitTime ? r.limitTime.start : '00:00:00',
+        endTime: r.ifLimitTime && r.limitTime ? r.limitTime.end : '23:59:59',
+        priority: r.priority,
+        color: r.type === 'spot' ? 'rose' : 'blue'
+      }));
 
-    const spots = activePrograms.filter(r => r.type === 'spot').sort((a, b) => b.priority - a.priority);
-    const rotations = activePrograms.filter(r => r.type === 'rotation').sort((a, b) => b.priority - a.priority);
-    
-    // Build Timeline Events for Agenda
-    const events: any[] = [];
-    
-    // Add Content Start/End events
-    activePrograms.forEach(r => {
-       const start = r.ifLimitTime && r.limitTime ? r.limitTime.start : '00:00:00';
-       const end = r.ifLimitTime && r.limitTime ? r.limitTime.end : '23:59:59';
-       events.push({ time: start, type: 'content_start', rule: r });
-       events.push({ time: end, type: 'content_end', rule: r });
-    });
-    
-    // Add Command events
-    activeCommands.forEach(r => {
-       const time = r.ifLimitTime && r.limitTime ? r.limitTime.start : '00:00:00';
-       events.push({ time, type: 'command', rule: r });
-    });
+    const commandRules: TimelineRule[] = schedule.commandRules
+      .filter(r => isRuleActive(r, selectedDate))
+      .flatMap(r => r.opTime.map((time, idx) => ({
+        id: `${r.id}-${idx}`,
+        type: 'command',
+        name: r.name,
+        startTime: time,
+        priority: 0,
+        color: 'amber',
+        payload: { type: r.operation.type === 'POWER' ? 'power' : 'other' }
+      })));
 
-    return { 
-      spotRules: spots, 
-      rotationRules: rotations, 
-      commandRules: activeCommands,
-      timelineEvents: events.sort((a, b) => a.time.localeCompare(b.time))
-    };
+    return [...programRules, ...commandRules];
   }, [schedule, selectedDate]);
-
-  const getTimePos = (timeStr: string) => {
-     const [h, m, s] = timeStr.split(':').map(Number);
-     return ((h * 3600 + m * 60 + s) / 86400) * 100;
-  };
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden animate-in fade-in duration-500">
@@ -957,142 +1007,15 @@ function ExecutionPreviewTab({ schedule }: { schedule: ScheduleRecord | null }) 
           </div>
        </div>
 
-       {schedule?.programRules.length === 0 && schedule?.commandRules.length === 0 ? (
+       {timelineRules.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center opacity-30">
              <Layers className="h-16 w-16 mb-4" />
              <p className="text-sm font-black uppercase tracking-widest">No Rules to Simulate</p>
           </div>
        ) : (
        <ScrollArea className="flex-1 bg-muted/5">
-          <div className="p-8 space-y-12">
-             
-             {/* 3-Lane Timeline */}
-             <div className="space-y-6">
-                <div className="flex items-center justify-between px-2">
-                   <h3 className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em]">Execution Lanes (24H)</h3>
-                   {spotRules.length === 0 && rotationRules.length === 0 && commandRules.length === 0 && (
-                      <span className="text-[10px] font-bold text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded uppercase">No Active Rules on this date</span>
-                   )}
-                </div>
-                
-                <div className="relative border rounded-[1.5rem] bg-background shadow-sm overflow-hidden">
-                   {/* Grid Background */}
-                   <div className="absolute inset-0 flex pointer-events-none z-0">
-                      {Array.from({ length: 24 }).map((_, i) => (
-                         <div key={i} className="flex-1 border-r border-muted/20 last:border-r-0 flex items-end justify-center pb-2">
-                            <span className="text-[7px] font-black text-muted-foreground/20">{i}H</span>
-                         </div>
-                      ))}
-                   </div>
-
-                   <div className="relative z-10 py-6 space-y-6">
-                      {/* Lane A: Spot */}
-                      <div className="h-12 relative w-full">
-                         <div className="absolute left-0 -top-4 text-[8px] font-black text-rose-500/40 uppercase px-4 tracking-widest">Lane A: Priority Spots</div>
-                         {spotRules.map((r, i) => {
-                            const start = r.ifLimitTime && r.limitTime ? getTimePos(r.limitTime.start) : 0;
-                            const end = r.ifLimitTime && r.limitTime ? getTimePos(r.limitTime.end) : 100;
-                            return (
-                               <div 
-                                 key={r.id} 
-                                 className="absolute h-10 top-1 rounded-lg bg-rose-500/10 border-2 border-rose-500/30 text-rose-700 flex items-center px-2 overflow-hidden hover:z-20 hover:scale-[1.02] transition-all cursor-help"
-                                 style={{ left: `${start}%`, width: `${Math.max(end - start, 0.5)}%`, zIndex: r.priority }}
-                                 title={`${r.programName} (Priority: ${r.priority})`}
-                               >
-                                  <div className="h-1.5 w-1.5 rounded-full bg-rose-500 shrink-0 mr-2" />
-                                  <span className="text-[8px] font-black uppercase truncate">{r.programName}</span>
-                               </div>
-                            );
-                         })}
-                         {spotRules.length === 0 && <div className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-muted-foreground/10 uppercase tracking-widest">No Active Spot Rules</div>}
-                      </div>
-
-                      {/* Lane B: Rotation */}
-                      <div className="h-12 relative w-full bg-muted/5">
-                         <div className="absolute left-0 -top-4 text-[8px] font-black text-blue-500/40 uppercase px-4 tracking-widest">Lane B: Standard Rotation</div>
-                         {rotationRules.map((r, i) => {
-                            const start = r.ifLimitTime && r.limitTime ? getTimePos(r.limitTime.start) : 0;
-                            const end = r.ifLimitTime && r.limitTime ? getTimePos(r.limitTime.end) : 100;
-                            return (
-                               <div 
-                                 key={r.id} 
-                                 className="absolute h-10 top-1 rounded-lg bg-blue-500/10 border-2 border-blue-500/30 text-blue-700 flex items-center px-2 overflow-hidden opacity-90"
-                                 style={{ left: `${start}%`, width: `${Math.max(end - start, 0.5)}%`, top: `${i * 2}px` }}
-                               >
-                                  <div className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0 mr-2" />
-                                  <span className="text-[8px] font-black uppercase truncate">{r.programName}</span>
-                               </div>
-                            );
-                         })}
-                         {rotationRules.length === 0 && <div className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-muted-foreground/10 uppercase tracking-widest">No Active Rotation Rules</div>}
-                      </div>
-
-                      {/* Lane C: Commands */}
-                      <div className="h-8 relative w-full border-t border-dashed border-muted/30 pt-2">
-                         <div className="absolute left-0 -top-4 text-[8px] font-black text-amber-500/40 uppercase px-4 tracking-widest">Lane C: Commands</div>
-                         {commandRules.map((r, i) => {
-                            const start = r.ifLimitTime && r.limitTime ? getTimePos(r.limitTime.start) : 0;
-                            return (
-                               <div 
-                                 key={r.id} 
-                                 className="absolute top-1 -ml-2 group cursor-pointer"
-                                 style={{ left: `${start}%` }}
-                               >
-                                  <div className="h-4 w-4 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-sm z-10 relative group-hover:scale-125 transition-transform">
-                                     <Zap className="h-2.5 w-2.5" />
-                                  </div>
-                                  <div className="absolute top-6 left-1/2 -translate-x-1/2 whitespace-nowrap bg-zinc-900 text-white text-[8px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 uppercase">
-                                     {r.name.replace('_', ' ')}
-                                  </div>
-                               </div>
-                            );
-                         })}
-                      </div>
-                   </div>
-                </div>
-                <div className="flex items-center gap-2 justify-end">
-                   <AlertTriangle className="h-3 w-3 text-amber-500" />
-                   <p className="text-[9px] font-bold text-muted-foreground uppercase">
-                      Preview based on active rules. Final output on device may vary slightly due to network latency.
-                   </p>
-                </div>
-             </div>
-
-             {/* Unified Agenda */}
-             <div className="space-y-4">
-                <h3 className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] px-2">Sequential Agenda</h3>
-                <div className="border rounded-2xl bg-background divide-y">
-                   {timelineEvents.length === 0 ? (
-                      <div className="p-8 text-center text-xs font-bold text-muted-foreground/40 uppercase">No events scheduled for this day</div>
-                   ) : (
-                      timelineEvents.map((evt, idx) => (
-                         <div key={idx} className="p-4 flex items-center gap-6 hover:bg-muted/5 transition-colors">
-                            <div className="w-16 font-mono text-xs font-black text-muted-foreground">{evt.time.slice(0, 5)}</div>
-                            <div className="flex-1 flex items-center gap-4">
-                               {evt.type === 'command' ? (
-                                  <Badge className="bg-amber-500 text-white border-none h-5 px-2 text-[9px] uppercase font-black tracking-wider">Command</Badge>
-                               ) : evt.type === 'content_start' ? (
-                                  <Badge className={cn("border-none h-5 px-2 text-[9px] uppercase font-black tracking-wider", evt.rule.type === 'spot' ? "bg-rose-500" : "bg-blue-500")}>
-                                     {evt.rule.type === 'spot' ? 'Spot Start' : 'Loop Start'}
-                                  </Badge>
-                               ) : (
-                                  <Badge variant="outline" className="h-5 px-2 text-[9px] uppercase font-black tracking-wider opacity-50">End</Badge>
-                               )}
-                               
-                               <span className="text-xs font-black uppercase tracking-tight">
-                                  {evt.type === 'command' ? evt.rule.name.replace('_', ' ') : evt.rule.programName}
-                               </span>
-                            </div>
-                            {evt.type === 'command' && (
-                               <div className="text-[9px] font-mono bg-muted px-2 py-1 rounded">
-                                  {evt.rule.payloadJson.slice(0, 30)}...
-                               </div>
-                            )}
-                         </div>
-                      ))
-                   )}
-                </div>
-             </div>
+          <div className="p-12 max-w-[1200px] mx-auto space-y-12">
+             <TimelineProjection rules={timelineRules} />
           </div>
        </ScrollArea>
        )}

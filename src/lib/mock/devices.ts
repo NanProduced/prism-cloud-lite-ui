@@ -13,12 +13,12 @@ const RESOLUTIONS = [
 
 // Pre-defined tags
 const MOCK_TAGS: Tag[] = [
-  { id: 'tag-1', name: 'Lobby', slug: 'lobby', color: 'sky', icon: 'Building2', isSystem: false },
-  { id: 'tag-2', name: 'Retail', slug: 'retail', color: 'amber', icon: 'Store', isSystem: false },
-  { id: 'tag-3', name: 'Office', slug: 'office', color: 'slate', icon: 'Briefcase', isSystem: false },
-  { id: 'tag-4', name: 'Outdoor', slug: 'outdoor', color: 'emerald', icon: 'Trees', isSystem: false },
-  { id: 'tag-5', name: 'High Priority', slug: 'high-priority', color: 'rose', icon: 'AlertTriangle', isSystem: false },
-  { id: 'tag-6', name: 'Test Device', slug: 'test-device', color: 'stone', icon: 'FlaskConical', isSystem: false },
+  { id: 'tag-1', name: 'Lobby', tagName: 'Lobby', slug: 'lobby', tagSlug: 'lobby', color: 'sky', icon: 'Building2', isSystem: false },
+  { id: 'tag-2', name: 'Retail', tagName: 'Retail', slug: 'retail', tagSlug: 'retail', color: 'amber', icon: 'Store', isSystem: false },
+  { id: 'tag-3', name: 'Office', tagName: 'Office', slug: 'office', tagSlug: 'office', color: 'slate', icon: 'Briefcase', isSystem: false },
+  { id: 'tag-4', name: 'Outdoor', tagName: 'Outdoor', slug: 'outdoor', tagSlug: 'outdoor', color: 'emerald', icon: 'Trees', isSystem: false },
+  { id: 'tag-5', name: 'High Priority', tagName: 'High Priority', slug: 'high-priority', tagSlug: 'high-priority', color: 'rose', icon: 'AlertTriangle', isSystem: false },
+  { id: 'tag-6', name: 'Test Device', tagName: 'Test Device', slug: 'test-device', tagSlug: 'test-device', color: 'stone', icon: 'FlaskConical', isSystem: false },
 ];
 
 // Status distribution: 15 online, 3 offline, 2 pending
@@ -144,18 +144,22 @@ function generateMockDevice(index: number): Device {
 
   return {
     id: `device-${String(index).padStart(3, '0')}`,
+    deviceId: 10000 + index,
     deviceName: `${faker.location.city()} ${faker.helpers.arrayElement(['Display', 'Screen', 'Terminal', 'Panel'])} ${index}`,
     alias: faker.helpers.maybe(() => faker.word.adjective() + ' ' + faker.word.noun(), { probability: 0.3 }),
     serialNumber: faker.string.alphanumeric({ length: 16, casing: 'upper' }),
 
     // Status
     status,
+    onlineStatus: status === 'online' ? 1 : 0,
     lastReportTime: lastReportTime.toISOString(),
     onboardingTime: onboardingTime.toISOString(),
+    createTime: onboardingTime.toISOString(),
     offlineDuration,
 
     // Hardware Info
     model: faker.helpers.arrayElement(DEVICE_MODELS),
+    version: `${faker.number.int({ min: 1, max: 3 })}.${faker.number.int({ min: 0, max: 9 })}.${faker.number.int({ min: 0, max: 20 })}`,
     firmwareVersion: `${faker.number.int({ min: 1, max: 3 })}.${faker.number.int({ min: 0, max: 9 })}.${faker.number.int({ min: 0, max: 20 })}`,
     resolution,
 
@@ -165,6 +169,7 @@ function generateMockDevice(index: number): Device {
     ipAddress: status !== 'pending' ? faker.internet.ipv4() : undefined,
     macAddress: faker.internet.mac(),
     signalStrength,
+    networkStrength: signalStrength,
 
     // Display Control
     brightness: faker.number.int({ min: 30, max: 100 }),
@@ -174,18 +179,22 @@ function generateMockDevice(index: number): Device {
     // Storage
     storageUsed,
     storageTotal,
+    totalStorage: storageTotal,
+    freeStorage: storageTotal - storageUsed,
 
     // Current Program
     currentProgram,
+    playingProgram: currentProgram?.name,
 
     // Tags
-    tags,
+    tags: tags.map(t => ({ ...t, tagName: t.name, tagSlug: t.slug })),
 
     // Custom Fields
     customFieldValues: generateMockDeviceCustomFieldValues(index),
 
     // Screenshot
     latestScreenshot,
+    lastScreenshotUrl: latestScreenshot?.url,
 
     reportedLocation,
     manualLocation,

@@ -8,7 +8,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { getProgram } from "@/features/programs/storage/programsDb";
 
 // Route to breadcrumb label mapping
 const routeMap: Record<string, string> = {
@@ -60,8 +59,7 @@ export function BreadcrumbNav() {
         if (prevPrevSegment === "programs" && segment === "edit") {
           label = "Editor";
         } else if (prevSegment === "programs") {
-          const program = getProgram(segment);
-          label = program?.name ?? formatProgramFallback(segment);
+          label = "Details";
         }
       }
       
