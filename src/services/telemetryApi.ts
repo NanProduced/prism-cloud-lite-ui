@@ -129,31 +129,199 @@ export interface PlaybackOverviewResponse {
 }
 
 export const getPlaybackOverview = (params: PlaybackOverviewParams) =>
+
   handleRequest(apiClient.get<BffResponse<PlaybackOverviewResponse>>('/telemetry/playback/overview', { params }));
 
-export const getProgramPlaybackSummary = (params: { from: string; to: string; limit?: number; sort?: string }) =>
-  handleRequest(apiClient.get<BffResponse<PlaybackSummaryItem[]>>('/telemetry/playback/programs/summary', { params }));
 
-export const getMediaPlaybackSummary = (params: { from: string; to: string; limit?: number; sort?: string }) =>
-  handleRequest(apiClient.get<BffResponse<PlaybackSummaryItem[]>>('/telemetry/playback/media/summary', { params }));
+
+export const getProgramPlaybackBuckets = (params: { 
+
+  programId: string; 
+
+  version: string; 
+
+  from: string; 
+
+  to: string; 
+
+  tz: string; 
+
+  bucket: PlaybackBucket 
+
+}) =>
+
+  handleRequest(apiClient.get<BffResponse<any>>(`/telemetry/playback/programs/${params.programId}/versions/${params.version}/buckets`, { params }));
+
+
+
+export const getMediaPlaybackBuckets = (params: { 
+
+  mediaId: string; 
+
+  from: string; 
+
+  to: string; 
+
+  tz: string; 
+
+  bucket: PlaybackBucket 
+
+}) =>
+
+  handleRequest(apiClient.get<BffResponse<any>>(`/telemetry/playback/media/${params.mediaId}/buckets`, { params }));
+
+
+
+export const getProgramPlaybackDevices = (params: { 
+
+  programId: string; 
+
+  version: string; 
+
+  from: string; 
+
+  to: string; 
+
+  limit?: number; 
+
+  sort?: string 
+
+}) =>
+
+  handleRequest(apiClient.get<BffResponse<any>>(`/telemetry/playback/programs/${params.programId}/versions/${params.version}/devices`, { params }));
+
+
+
+export const getMediaPlaybackDevices = (params: { 
+
+  mediaId: string; 
+
+  from: string; 
+
+  to: string; 
+
+  limit?: number; 
+
+  sort?: string 
+
+}) =>
+
+  handleRequest(apiClient.get<BffResponse<any>>(`/telemetry/playback/media/${params.mediaId}/devices`, { params }));
+
+
 
 // --- Online Time Telemetry ---
 
+
+
 export interface OnlineTimeSummaryItem {
+
   deviceId: string;
+
   onlineSeconds: number;
+
   offlineSeconds: number;
+
   onlineRate: number; // 0-1
+
 }
 
+
+
 export const getOnlineTimeSummary = (params: { from: string; to: string }) =>
+
   handleRequest(apiClient.get<BffResponse<OnlineTimeSummaryItem[]>>('/telemetry/online-time/devices/summary', { params }));
 
-export const getDeviceOnlineBuckets = (params: { 
-  deviceId: string; 
+
+
+export const getActiveDeviceCountBuckets = (params: { 
+
   from: string; 
+
   to: string; 
+
   tz: string; 
+
   bucket: PlaybackBucket 
+
 }) =>
+
+  handleRequest(apiClient.get<BffResponse<any>>('/telemetry/online-time/devices/active-count/buckets', { params }));
+
+
+
+export const getConcurrencyBuckets = (params: { 
+
+  from: string; 
+
+  to: string; 
+
+  tz: string; 
+
+  bucket: PlaybackBucket 
+
+}) =>
+
+  handleRequest(apiClient.get<BffResponse<any>>('/telemetry/online-time/devices/concurrency/buckets', { params }));
+
+
+
+export const getDeviceOnlineBuckets = (params: { 
+
+  deviceId: string; 
+
+  from: string; 
+
+  to: string; 
+
+  tz: string; 
+
+  bucket: PlaybackBucket 
+
+}) =>
+
   handleRequest(apiClient.get<BffResponse<any>>(`/telemetry/online-time/devices/${params.deviceId}/buckets`, { params }));
+
+
+
+export const getDeviceSessionStats = (params: { deviceId: string; from: string; to: string }) =>
+
+  handleRequest(apiClient.get<BffResponse<any>>(`/telemetry/online-time/devices/${params.deviceId}/session-stats`, { params }));
+
+
+
+export const getDeviceOfflineGapStats = (params: { deviceId: string; from: string; to: string }) =>
+
+  handleRequest(apiClient.get<BffResponse<any>>(`/telemetry/online-time/devices/${params.deviceId}/offline-gap-stats`, { params }));
+
+
+
+export interface DeviceSession {
+
+  sessionId: string;
+
+  startTime: string;
+
+  endTime: string;
+
+  durationSeconds: number;
+
+}
+
+
+
+export const getDeviceSessions = (params: { 
+
+  deviceId: string; 
+
+  from: string; 
+
+  to: string; 
+
+  limit?: number; 
+
+  cursor?: string 
+
+}) =>
+
+  handleRequest(apiClient.get<BffResponse<{ items: DeviceSession[], nextCursor?: string }>>(`/telemetry/online-time/devices/${params.deviceId}/sessions`, { params }));
