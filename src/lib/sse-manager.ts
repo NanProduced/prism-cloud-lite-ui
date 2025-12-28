@@ -68,6 +68,12 @@ class SSEManager {
         window.dispatchEvent(new CustomEvent('prism.device.updated', { detail: envelope.scope }));
         break;
 
+      case 'telemetry.gps.reported':
+        window.dispatchEvent(new CustomEvent('prism.telemetry.gps.reported', { 
+          detail: { scope: envelope.scope, data: envelope.data, occurredAt: envelope.occurredAt } 
+        }));
+        break;
+
       case 'operation.updated':
         window.dispatchEvent(new CustomEvent('prism.operation.updated', { 
           detail: { scope: envelope.scope, data: envelope.data } 

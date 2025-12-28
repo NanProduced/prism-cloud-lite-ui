@@ -20,6 +20,7 @@ import BillingPage from '../BillingPage';
 import { DeviceDefaultsCard, type DeviceDefaults } from './DeviceDefaultsCard';
 import { ProgramDraftPolicyCard } from './ProgramDraftPolicyCard';
 import { getProgramDraftSavePolicy, setProgramDraftSavePolicy, type ProgramDraftSavePolicy } from '@/features/programs/storage/draftPolicyDb';
+import { useSettingsStore, type UserPreferences } from '@/store/settingsStore';
 import {
   getUserProfile,
   updateUserProfile,
@@ -76,6 +77,8 @@ export default function SettingsPage() {
     }
   }, [searchParams, activeTab]);
 
+  const { preferences: globalPreferences, updatePreferences } = useSettingsStore();
+
   const [programDraftPolicy, setProgramDraftPolicyState] = useState<ProgramDraftSavePolicy>(() => getProgramDraftSavePolicy());
 
   // --- Queries ---
@@ -85,7 +88,7 @@ export default function SettingsPage() {
     queryFn: getUserProfile,
   });
 
-  const { data: settingsData, isLoading: isSettingsLoading } = useQuery({
+  const { data: settingsData } = useQuery({
     queryKey: ['user', 'settings'],
     queryFn: getUserSettings,
   });
@@ -236,19 +239,9 @@ export default function SettingsPage() {
   };
 
   // Map backend settings to UI preferences
-  // Backend stores arbitrary JSON in `settings` and `ui`. 
-  // We'll use `ui.preferences` for SettingsPreferences component.
   const uiSettings = settingsData?.data?.ui || {};
   
-  const preferences: PreferencesData = uiSettings.preferences || {
-    theme: 'system',
-    language: 'en',
-    timezone: 'UTC',
-    dashboard: {
-      refreshRate: 30,
-      widgets: ['stats', 'activity'],
-    },
-  };
+  const preferences: any = globalPreferences;
 
   const notifications: NotificationPreferences = uiSettings.notifications?.categories 
     ? uiSettings.notifications 
@@ -368,8 +361,7 @@ export default function SettingsPage() {
             <SettingsPreferences
               preferences={preferences}
               onSave={async (next) => {
-                const newUi = { ...uiSettings, preferences: next };
-                updateSettingsMutation.mutateAsync({ ui: newUi });
+                await updatePreferences(next);
               }}
             />
 

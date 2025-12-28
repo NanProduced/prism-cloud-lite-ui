@@ -38,6 +38,7 @@ import { cn } from '@/lib/utils';
 import type { MediaAssetNode, MediaNode } from '@/types/media-library';
 import { deleteNode, renameNode, moveNodes, createTranscodeTask } from '@/services/mediaApi';
 import { getErrorMessage } from '@/services/authApi';
+import { useTimeFormatter } from '@/hooks/use-time-formatter';
 
 import { MediaAssetPreviewDialog } from './MediaAssetPreviewDialog';
 import { MoveNodesDialog } from './MoveNodesDialog';
@@ -487,7 +488,8 @@ function MediaNodeThumbnailTile({
   onAction: (action: string, node: MediaNode) => void;
 }) {
   const isMobile = useIsMobile();
-  const metaLines = getThumbnailMetaLines(node);
+  const { formatRelative } = useTimeFormatter();
+  const metaLines = getThumbnailMetaLines(node, formatRelative);
 
   const handleOpen = () => {
     if (node.type === 'folder') onOpenFolder(node.id);
@@ -570,12 +572,13 @@ function MediaNodeListRow({
   onAction: (action: string, node: MediaNode) => void;
 }) {
   const isMobile = useIsMobile();
+  const { formatRelative } = useTimeFormatter();
   const handleOpen = () => {
     if (node.type === 'folder') onOpenFolder(node.id);
     else onAction('Preview', node);
   };
 
-  const subtitleMobile = formatListMobileSubtitle(node);
+  const subtitleMobile = formatListMobileSubtitle(node, formatRelative);
   const subtitleDesktop = formatListDesktopSubtitle(node);
 
   const leadingVisual =
@@ -629,7 +632,7 @@ function MediaNodeListRow({
 
       <div className="hidden items-center gap-3 text-xs text-muted-foreground sm:flex">
         <span className="tabular-nums">{node.type === 'asset' ? formatBytes(node.sizeBytes) : 'Folder'}</span>
-        {node.type !== 'folder' && <span className="tabular-nums">{formatRelativeTime(node.updatedAt)}</span>}
+        {node.type !== 'folder' && <span className="tabular-nums">{formatRelative(node.updatedAt)}</span>}
       </div>
 
       <div className="opacity-100 transition-opacity group-focus-within:opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
@@ -679,6 +682,7 @@ function MediaNodeDetailsRow({
   onAction: (action: string, node: MediaNode) => void;
 }) {
   const isMobile = useIsMobile();
+  const { formatRelative } = useTimeFormatter();
   const handleOpen = () => {
     if (node.type === 'folder') onOpenFolder(node.id);
     else onAction('Preview', node);
@@ -728,7 +732,7 @@ function MediaNodeDetailsRow({
       </div>
 
       <div className="hidden text-right text-xs text-muted-foreground tabular-nums md:block">
-        {node.type === 'folder' ? '—' : formatRelativeTime(node.updatedAt)}
+        {node.type === 'folder' ? '—' : formatRelative(node.updatedAt)}
       </div>
 
       <div className="flex justify-end opacity-100 transition-opacity group-focus-within:opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
@@ -785,16 +789,16 @@ function renderNodeIcon(node: MediaNode, className: string) {
   return <File className={className} />;
 }
 
-function getThumbnailMetaLines(node: MediaNode): string[] {
+function getThumbnailMetaLines(node: MediaNode, formatRelative: (d: string) => string): string[] {
   if (node.type === 'folder') return [];
 
   const sizeAndDims = `${formatBytes(node.sizeBytes)}${node.width && node.height ? ` · ${node.width}×${node.height}` : ''}`;
   if (node.assetKind === 'video') return [sizeAndDims];
 
-  if (node.assetKind === 'image') return [sizeAndDims, formatRelativeTime(node.updatedAt)];
+  if (node.assetKind === 'image') return [sizeAndDims, formatRelative(node.updatedAt)];
 
   const ext = node.extension?.toUpperCase() ?? (node.assetKind === 'document' ? 'DOC' : 'FILE');
-  return [`${ext} · ${formatBytes(node.sizeBytes)}`, formatRelativeTime(node.updatedAt)];
+  return [`${ext} · ${formatBytes(node.sizeBytes)}`, formatRelative(node.updatedAt)];
 }
 
 function formatDetailsTypeLabel(node: MediaNode): string {
@@ -823,7 +827,7 @@ function formatDetailsSubtitle(node: MediaNode): string {
   return [ext, node.mimeType].filter(Boolean).join(' · ') || 'File';
 }
 
-function formatListMobileSubtitle(node: MediaNode): string {
+function formatListMobileSubtitle(node: MediaNode, formatRelative: (d: string) => string): string {
   if (node.type === 'folder') return 'Folder';
 
   const parts: string[] = [];
@@ -838,7 +842,7 @@ function formatListMobileSubtitle(node: MediaNode): string {
   const ext = node.extension?.toUpperCase();
   if (ext && (node.assetKind === 'document' || node.assetKind === 'other')) parts.unshift(ext);
 
-  parts.push(formatRelativeTime(node.updatedAt));
+  parts.push(formatRelative(node.updatedAt));
   return parts.join(' · ');
 }
 
@@ -927,16 +931,4 @@ function formatDuration(durationMs: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
-}
-
-function formatRelativeTime(isoDate: string): string {
-  const date = new Date(isoDate);
-  const diffMs = Date.now() - date.getTime();
-  const minutes = Math.floor(diffMs / (60 * 1000));
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
 }

@@ -37,6 +37,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { HistoricalScreenshot } from "@/types/device";
+import { useTimeFormatter } from "@/hooks/use-time-formatter";
 
 interface ScreenshotManagerDialogProps {
   open: boolean;
@@ -53,6 +54,7 @@ export function ScreenshotManagerDialog({
   onDelete,
   onClearAll
 }: ScreenshotManagerDialogProps) {
+  const { formatDateTime } = useTimeFormatter();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [localScreenshots, setLocalScreenshots] = useState<HistoricalScreenshot[]>(initialScreenshots);
@@ -287,8 +289,7 @@ export function ScreenshotManagerDialog({
 
                           <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all">
                              <div className="text-white text-[10px] font-medium leading-none drop-shadow-md">
-                                <p className="mb-1">{new Date(s.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                                <p className="opacity-80">{new Date(s.timestamp).toLocaleDateString()}</p>
+                                <p className="mb-1">{formatDateTime(s.timestamp)}</p>
                              </div>
                              <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                                 <Button 
@@ -341,8 +342,8 @@ export function ScreenshotManagerDialog({
                                    </div>
                                 </div>
                                 <div className="space-y-0.5">
-                                   <p className="text-sm font-medium tracking-tight">{new Date(s.timestamp).toLocaleString()}</p>
-                                   <p className="text-[10px] text-muted-foreground font-mono">ID: {s.id.slice(0, 8).toUpperCase()}</p>
+                                   <p className="text-sm font-medium tracking-tight">{formatDateTime(s.timestamp)}</p>
+                                   <p className="text-[10px] text-muted-foreground font-mono">ID: {s.id?.slice(0, 8).toUpperCase() ?? "UNKNOWN"}</p>
                                 </div>
                              </div>
                              <div className="col-span-2 text-right">

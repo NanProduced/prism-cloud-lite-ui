@@ -21,6 +21,7 @@ import {
   redeemSubscriptionCode 
 } from "@/services/userApi";
 import type { SubscriptionSnapshot } from "@/types/user";
+import { useTimeFormatter } from "@/hooks/use-time-formatter";
 import HexTaBillingPlanSelector, { type SelectablePlan } from "@lytenyte/components/ui/billing-plan-selector";
 
 interface BillingPlanSelectorProps {
@@ -30,6 +31,7 @@ interface BillingPlanSelectorProps {
 
 export function BillingPlanSelector({ open, onOpenChange }: BillingPlanSelectorProps) {
   const { t } = useTranslation();
+  const { formatDateTime } = useTimeFormatter();
   const [subscription, setSubscription] = useState<SubscriptionSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [redeemCode, setRedeemCode] = useState("");
@@ -140,7 +142,7 @@ export function BillingPlanSelector({ open, onOpenChange }: BillingPlanSelectorP
                 {subscription?.endAt && (
                   <p className="text-xs text-muted-foreground mt-3 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                    {t('billing.expiresAt', { date: new Date(subscription.endAt).toLocaleDateString() })}
+                    {t('billing.expiresAt', { date: formatDateTime(subscription.endAt) })}
                   </p>
                 )}
               </div>

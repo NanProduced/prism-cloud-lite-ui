@@ -26,12 +26,14 @@ import {
   unpublishProgram
 } from '@/services/programApi';
 import { getErrorMessage } from '@/services/authApi';
+import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { ProgramPublishDialog } from '@/features/programs/publishing/ProgramPublishDialog';
 
 export default function ProgramDetailsPage() {
   const { programId } = useParams<{ programId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { formatDateTime } = useTimeFormatter();
   
   const [publishOpen, setPublishOpen] = useState(false);
   const [deviceQuery, setDeviceQuery] = useState('');
@@ -121,7 +123,7 @@ export default function ProgramDetailsPage() {
             <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground font-medium">
                <span>{program.width}×{program.height}</span>
                <span className="opacity-30">•</span>
-               <span>Modified {new Date(program.updatedAt).toLocaleString()}</span>
+               <span>Modified {formatDateTime(program.updatedAt)}</span>
             </div>
           </div>
         </div>
@@ -209,7 +211,7 @@ export default function ProgramDetailsPage() {
                                    <div key={d.deviceId} className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-muted/5">
                                       <div className="min-w-0 flex-1">
                                          <p className="text-sm font-bold truncate leading-tight">{d.deviceName || d.deviceId}</p>
-                                         <p className="text-[10px] text-muted-foreground font-mono mt-1 opacity-60 uppercase">{d.deviceId.slice(0, 12)}</p>
+                                         <p className="text-[10px] text-muted-foreground font-mono mt-1 opacity-60 uppercase">{d.deviceId?.slice(0, 12) ?? "Unknown"}</p>
                                       </div>
                                       <div className="flex items-center gap-6">
                                          <div className="text-right">
@@ -256,7 +258,7 @@ export default function ProgramDetailsPage() {
                                 <div className="min-w-0 flex-1 pt-0.5">
                                    <div className="flex items-center gap-2 mb-1">
                                       <span className="text-[11px] font-black uppercase tracking-wider text-foreground">{log.action.replace('_', ' ')}</span>
-                                      <span className="text-[10px] text-muted-foreground/60">• {new Date(log.createdAt).toLocaleString()}</span>
+                                      <span className="text-[10px] text-muted-foreground/60">• {formatDateTime(log.createdAt)}</span>
                                    </div>
                                    <p className="text-sm font-medium text-muted-foreground/80 leading-relaxed">
                                       <span className="text-foreground font-bold">{log.operatorName}</span> {log.action}
@@ -298,7 +300,7 @@ export default function ProgramDetailsPage() {
                  <div className="space-y-3">
                     <div className="flex items-center justify-between text-[11px]">
                        <span className="text-muted-foreground font-bold uppercase tracking-wider">Storage ID</span>
-                       <span className="font-mono opacity-60 uppercase">{program.id.slice(0, 8)}...</span>
+                       <span className="font-mono opacity-60 uppercase">{program.id?.slice(0, 8) ?? "Unknown"}...</span>
                     </div>
                     <div className="flex items-center justify-between text-[11px]">
                        <span className="text-muted-foreground font-bold uppercase tracking-wider">Sync Integrity</span>

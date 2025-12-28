@@ -57,6 +57,7 @@ import { PrismIcon } from "@/components/shared/logo";
 import { getAvatarById } from "@/lib/avatars";
 import { useAuthStore } from "@/store/authStore";
 import { useMessageStore } from "@/store/messageStore";
+import { useTimeFormatter } from "@/hooks/use-time-formatter";
 import { logout } from "@/services/authApi";
 import { getMediaUsage } from "@/services/mediaApi";
 import { markSingleAsRead } from "@/services/messageApi";
@@ -438,6 +439,7 @@ function StoragePanel({
 function NotificationPopover() {
   const { unreadCount, recentMessages, markLocalAsRead } = useMessageStore();
   const navigate = useNavigate();
+  const { formatRelative } = useTimeFormatter();
 
   const handleToggleRead = async (id: string, isRead: boolean) => {
     if (!isRead) {
@@ -519,7 +521,7 @@ function NotificationPopover() {
                           {item.title}
                         </span>
                         <span className="flex-shrink-0 text-[10px] text-muted-foreground">
-                          {formatTimeAgo(item.createdAt)}
+                          {formatRelative(item.createdAt)}
                         </span>
                       </div>
                       <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
@@ -548,18 +550,6 @@ function getToneColorByStatus(status?: string) {
     default:
       return "text-foreground";
   }
-}
-
-function formatTimeAgo(dateStr: string) {
-  const date = new Date(dateStr);
-  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-  
-  if (seconds < 60) return 'just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return date.toLocaleDateString();
 }
 
 

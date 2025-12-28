@@ -1,7 +1,7 @@
 "use client";
 
 import { Calendar, Clock, Globe, Languages, Loader2, Moon, Save, Sun, Timer } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/registry/new-york/ui/button";
 import {
@@ -37,6 +37,7 @@ export interface PreferencesData {
   timeFormat: "12h" | "24h";
   showSeconds: boolean;
   defaultCommandTimeout: number; // in minutes
+  mapLocationMode: "auto" | "reported" | "manual";
 }
 
 export interface SettingsPreferencesProps {
@@ -117,6 +118,7 @@ const defaultPreferences: PreferencesData = {
   timeFormat: "24h",
   showSeconds: false,
   defaultCommandTimeout: 60,
+  mapLocationMode: "auto",
 };
 
 export default function SettingsPreferences({
@@ -129,6 +131,13 @@ export default function SettingsPreferences({
     ...defaultPreferences,
     ...preferences,
   });
+
+  useEffect(() => {
+    setLocalPreferences({
+      ...defaultPreferences,
+      ...preferences,
+    });
+  }, [preferences]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -197,7 +206,7 @@ export default function SettingsPreferences({
               {isSaving ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  <span className="whitespace-nowrap">Saving…</span>
+                  <span className="whitespace-nowrap">Saving...</span>
                 </>
               ) : (
                 <>
@@ -422,6 +431,44 @@ export default function SettingsPreferences({
               <p className="mt-2 text-xs text-muted-foreground">
                 Example stored as UTC: <span className="font-mono">2025-12-13T02:37:19.000Z</span>
               </p>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-2">
+              <Globe className="size-5 text-muted-foreground" />
+              <h3 className="font-semibold text-base">Map & Location</h3>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field>
+                <FieldLabel htmlFor="map-location-mode">Location Priority</FieldLabel>
+                <FieldContent>
+                  <Select
+                    onValueChange={(next) =>
+                      setLocalPreferences((p) => ({
+                        ...p,
+                        mapLocationMode: next as PreferencesData["mapLocationMode"],
+                      }))
+                    }
+                    value={localPreferences.mapLocationMode}
+                  >
+                    <SelectTrigger className="w-full" id="map-location-mode">
+                      <SelectValue placeholder="Select priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">Auto (Manual preferred)</SelectItem>
+                      <SelectItem value="reported">Reported Only</SelectItem>
+                      <SelectItem value="manual">Manual Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FieldContent>
+                <FieldDescription>
+                  Choose which coordinate source to prioritize on the map.
+                </FieldDescription>
+              </Field>
             </div>
           </div>
 

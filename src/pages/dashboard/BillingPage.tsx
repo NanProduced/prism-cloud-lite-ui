@@ -35,24 +35,18 @@ import {
 } from "@/services/userApi";
 import type { SubscriptionSnapshot, SubscriptionHistoryItem, SubscriptionTier } from "@/types/user";
 import { cn } from "@/lib/utils";
+import { useTimeFormatter } from "@/hooks/use-time-formatter";
 
 export default function BillingPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
+  const { formatDateTime } = useTimeFormatter();
   const [subscription, setSubscription] = useState<SubscriptionSnapshot | null>(null);
   const [history, setHistory] = useState<SubscriptionHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRedeemOpen, setIsRedeemOpen] = useState(false);
   const [redeemCode, setRedeemCode] = useState("");
   const [isRedeeming, setIsRedeeming] = useState(false);
-
-  const formatDate = (dateString: string) => {
-    try {
-      return new Date(dateString).toLocaleDateString();
-    } catch (e) {
-      return dateString;
-    }
-  };
 
   useEffect(() => {
     fetchData();
@@ -161,7 +155,7 @@ export default function BillingPage() {
                 </div>
                 {subscription?.endAt && (
                   <p className="text-sm text-muted-foreground mt-1">
-                    {t('billing.expiresAt', { date: formatDate(subscription.endAt) })}
+                    {t('billing.expiresAt', { date: formatDateTime(subscription.endAt) })}
                   </p>
                 )}
               </div>
@@ -338,7 +332,7 @@ export default function BillingPage() {
                     <td className="px-4 py-4 font-medium">{item.type}</td>
                     <td className="px-4 py-4 font-mono text-xs">{item.code || '-'}</td>
                     <td className="px-4 py-4 text-muted-foreground">
-                      {formatDate(item.createdAt)}
+                      {formatDateTime(item.createdAt)}
                     </td>
                     <td className="px-4 py-4 text-right">
                       {item.success ? (

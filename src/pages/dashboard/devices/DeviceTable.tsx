@@ -7,7 +7,7 @@ import type {
   Column,
 } from '@1771technologies/lytenyte-core/types';
 import { measureText } from '@1771technologies/lytenyte-shared';
-import type { Device } from '@/types/device';
+import { type Device, resolveDeviceStatus } from '@/types/device';
 import type { DeviceCustomFieldDef, DeviceCustomFieldValue } from '@/types/device-custom-field';
 import { DeviceStatusBadge } from '@/components/devices/DeviceStatusBadge';
 import { DeviceScreenshot } from '@/components/devices/DeviceScreenshot';
@@ -28,12 +28,14 @@ import { toast } from '@/store/notificationStore';
 import { cn } from '@/lib/utils';
 import { CountryFlag } from '@/components/ui/country-flag';
 import { UrlGlimpseLink } from './UrlGlimpseLink';
+import { useTimeFormatter } from '@/hooks/use-time-formatter';
 
 interface DeviceTableProps {
   devices: Device[];
   customFieldDefs: DeviceCustomFieldDef[];
   isProActive: boolean;
   selectedDeviceIds: Set<string>;
+  pulsingDeviceIds?: Set<string>;
   onSelectionChange: (ids: Set<string>) => void;
   onBatchCommand: () => void;
   onProActiveChange?: (next: boolean) => void;
@@ -86,6 +88,7 @@ export function DeviceTable({
   customFieldDefs,
   isProActive,
   selectedDeviceIds,
+  pulsingDeviceIds,
   onSelectionChange,
   onProActiveChange,
   onCustomFieldDefsChange,
@@ -96,6 +99,7 @@ export function DeviceTable({
 }: DeviceTableProps) {
   const gridId = useId();
   const navigate = useNavigate();
+  const { formatDateTime } = useTimeFormatter();
 
   const customColumns = useMemo<Column<Device>[]>(() => {
     const sorted = customFieldDefs.slice().sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
@@ -152,7 +156,7 @@ export function DeviceTable({
           if (def.fieldType === 'DATETIME' && typeof raw === 'string') {
             const d = new Date(raw);
             if (Number.isNaN(d.getTime())) return <span className="text-muted-foreground">-</span>;       
-            return <span className="text-sm">{d.toLocaleString()}</span>;
+            return <span className="text-sm">{formatDateTime(raw)}</span>;
           }
 
           if (def.fieldType === 'BOOLEAN') {
@@ -414,7 +418,8 @@ export function DeviceTable({
         const device = row.data;
         return (
           <DeviceStatusBadge
-            status={device.onlineStatus}
+            status={resolveDeviceStatus(device)}
+            pulse={pulsingDeviceIds?.has(String(device.deviceId))}
           />
         );
       },
@@ -502,12 +507,7 @@ export function DeviceTable({
 
         return (
           <span className={`text-sm ${isOutdated ? 'text-amber-600 font-semibold' : 'text-gray-600'}`}>
-            {date.toLocaleString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
+            {formatDateTime(device.lastReportTime)}
           </span>
         );
       },

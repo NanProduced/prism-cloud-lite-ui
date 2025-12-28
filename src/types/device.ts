@@ -99,6 +99,18 @@ export interface Device {
   manualLocation?: DeviceLocation;
 }
 
+/**
+ * Resolves the device status string based on backend onlineStatus and onboardingTime.
+ * If onboardingTime is null/empty, the device is considered 'pending' (onboarding).
+ * Otherwise, it follows the onlineStatus (1=online, 0=offline).
+ */
+export function resolveDeviceStatus(device: Device): DeviceStatus {
+  if (!device.onboardingTime || device.onboardingTime === '') {
+    return 'pending';
+  }
+  return device.onlineStatus === 1 ? 'online' : 'offline';
+}
+
 // Filter Condition Types
 export type FilterOperator =
   | 'eq'      // equals

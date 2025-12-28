@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import type { Device } from '@/types/device';
+import { type Device, resolveDeviceStatus } from '@/types/device';
 import { DeviceScreenshot } from '@/components/devices/DeviceScreenshot';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -7,6 +7,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import type { Tag } from '@/types/device';
 import { TagChip } from '@/components/devices/TagChip';
 import { TagPicker } from '@/components/devices/TagPicker';
+import { DeviceStatusBadge } from '@/components/devices/DeviceStatusBadge';
+import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import {
   AlertTriangle,
   Clock,
@@ -23,6 +25,7 @@ interface DeviceCardViewProps {
   devices: Device[];
   tags: Tag[];
   selectedDeviceIds: Set<string>;
+  pulsingDeviceIds?: Set<string>;
   onSelectionChange: (ids: Set<string>) => void;
   onToggleDeviceTag: (deviceId: string, tag: Tag) => void;
   onCreateTag: (draft: { name: string; color: string; icon?: string }) => Tag;
@@ -32,11 +35,13 @@ export function DeviceCardView({
   devices,
   tags,
   selectedDeviceIds,
+  pulsingDeviceIds,
   onSelectionChange,
   onToggleDeviceTag,
   onCreateTag,
 }: DeviceCardViewProps) {
   const navigate = useNavigate();
+  const { formatRelative } = useTimeFormatter();
 
   const handleToggleSelection = (id: string) => {
     const next = new Set(selectedDeviceIds);
@@ -61,10 +66,12 @@ export function DeviceCardView({
           device={device}
           tags={tags}
           isSelected={selectedDeviceIds.has(String(device.deviceId))}
+          isPulsing={pulsingDeviceIds?.has(String(device.deviceId))}
           onToggleSelection={() => handleToggleSelection(String(device.deviceId))}
           onToggleDeviceTag={onToggleDeviceTag}
           onCreateTag={onCreateTag}
           onNavigate={() => navigate(`/dashboard/devices/${device.deviceId}`)}
+          formatRelative={formatRelative}
         />
       ))}
     </div>
@@ -75,18 +82,22 @@ function DeviceCard({
   device,
   tags,
   isSelected,
+  isPulsing,
   onToggleSelection,
   onToggleDeviceTag,
   onCreateTag,
   onNavigate,
+  formatRelative,
 }: {
   device: Device;
   tags: Tag[];
   isSelected: boolean;
+  isPulsing?: boolean;
   onToggleSelection: () => void;
   onToggleDeviceTag: (deviceId: string, tag: Tag) => void;
   onCreateTag: (draft: { name: string; color: string; icon?: string }) => Tag;
   onNavigate: () => void;
+  formatRelative: (d: string) => string;
 }) {
   const lastReport = new Date(device.lastReportTime);
   const now = new Date();
@@ -97,11 +108,11 @@ function DeviceCard({
     device.networkType === 'WIFI' || device.networkType === 'WiFi' ? Wifi : 
     (device.networkType === 'FOUR_G' || device.networkType === '4G') ? RadioTower : EthernetPort;
 
-  const lastReportLabel = formatRelativeTime(diffMinutes);
+  const lastReportLabel = formatRelative(device.lastReportTime);
   const showOutdatedWarn = device.onlineStatus === 1 && isOutdated;
 
-  const displayedTags = device.tags.slice(0, 2);
-  const remainingTagCount = Math.max(0, device.tags.length - displayedTags.length);
+  const displayedTags = (device.tags || []).slice(0, 2);
+  const remainingTagCount = Math.max(0, (device.tags?.length || 0) - displayedTags.length);
 
   return (
     <Card className={cn('group overflow-hidden transition-all', isSelected && 'ring-2 ring-primary')}>
@@ -115,7 +126,11 @@ function DeviceCard({
           />
         </div>
         <div className="absolute top-2 left-2">
-          <StatusPill status={device.onlineStatus} />
+          <DeviceStatusBadge
+            status={resolveDeviceStatus(device)}
+            pulse={isPulsing}
+            className="shadow-lg backdrop-blur-sm"
+          />
         </div>
         <div className="absolute top-2 right-2">
           <Checkbox
@@ -179,7 +194,7 @@ function DeviceCard({
 
         <TagPicker
           allTags={tags}
-          selectedTagIds={device.tags.map((t) => t.tagSlug)}
+          selectedTagIds={(device.tags || []).map((t) => t.tagSlug)}
           onToggleTag={(tag) => onToggleDeviceTag(String(device.deviceId), tag)}
           onCreateTag={onCreateTag}
         >
@@ -187,7 +202,7 @@ function DeviceCard({
             type="button"
             className={cn(
               'w-full flex items-center gap-1.5 rounded-md border bg-muted/10 px-2 py-1.5 text-left transition-colors hover:bg-muted/20',
-              device.tags.length === 0 && 'text-muted-foreground',
+              (!device.tags || device.tags.length === 0) && 'text-muted-foreground',
             )}
             aria-label="Edit tags"
           >
@@ -213,37 +228,6 @@ function DeviceCard({
       </CardContent>
     </Card>
   );
-}
-
-function StatusPill({
-  status,
-}: {
-  status: Device['onlineStatus'];
-}) {
-  const { label, className } = (() => {
-    if (status === 1) {
-      return { label: 'Online', className: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-200 border-emerald-500/30' };
-    }
-    if (status === 0) {
-      return { label: 'Offline', className: 'bg-muted/50 text-muted-foreground border-border' };
-    }
-    return { label: 'Pending', className: 'bg-amber-500/15 text-amber-700 dark:text-amber-200 border-amber-500/30' };
-  })();
-
-  return (
-    <Badge variant="outline" className={cn('text-xs font-medium border', className)}>
-      {label}
-    </Badge>
-  );
-}
-
-function formatRelativeTime(diffMinutes: number): string {
-  if (diffMinutes < 1) return 'just now';
-  if (diffMinutes < 60) return `${Math.floor(diffMinutes)}m ago`;
-  const hours = diffMinutes / 60;
-  if (hours < 24) return `${Math.floor(hours)}h ago`;
-  const days = hours / 24;
-  return `${Math.floor(days)}d ago`;
 }
 
 function formatDuration(seconds: number): string {

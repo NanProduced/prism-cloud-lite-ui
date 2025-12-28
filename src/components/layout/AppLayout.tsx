@@ -8,6 +8,7 @@ import { NotificationCenter } from "@/components/uitripled/notification-center";
 
 import { sseManager } from "@/lib/sse-manager";
 import { useMessageStore } from "@/store/messageStore";
+import { useSettingsStore } from "@/store/settingsStore";
 
 import { PrismIcon } from "@/components/shared/logo";
 
@@ -98,6 +99,7 @@ export const PublicLayout = () => {
 export const ProtectedLayout = () => {
     const { isAuthenticated, isInitializing, checkAuth, user } = useAuthStore();
     const { fetchInitialData } = useMessageStore();
+    const { fetchSettings } = useSettingsStore();
     const [showWelcome, setShowWelcome] = useState(false);
     const initialized = React.useRef(false);
     
@@ -113,13 +115,15 @@ export const ProtectedLayout = () => {
       if (isAuthenticated && user?.publicId) {
         // Fetch initial notification data
         fetchInitialData();
+        // Fetch user preferences
+        fetchSettings();
         // Connect to SSE
         sseManager.connect(user.publicId);
       }
       return () => {
         if (!isAuthenticated) sseManager.disconnect();
       };
-    }, [isAuthenticated, user?.publicId, fetchInitialData]);
+    }, [isAuthenticated, user?.publicId, fetchInitialData, fetchSettings]);
 
     useEffect(() => {
       // Show welcome screen only if authenticated and haven't seen it this session

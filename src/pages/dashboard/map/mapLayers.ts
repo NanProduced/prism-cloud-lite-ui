@@ -47,14 +47,30 @@ export function getDeviceLayers(): {
           "#f59e0b",
           "#3b82f6",
         ],
-        "circle-radius": ["case", ["boolean", ["get", "selected"], false], 10, 6],
+        "circle-radius": [
+          "case",
+          ["boolean", ["get", "selected"], false],
+          10,
+          ["boolean", ["get", "pulsing"], false],
+          9,
+          6
+        ],
         "circle-stroke-color": [
           "case",
           ["boolean", ["get", "selected"], false],
           "rgba(17, 24, 39, 0.8)",
+          ["boolean", ["get", "pulsing"], false],
+          "rgba(16, 185, 129, 0.8)",
           "rgba(255, 255, 255, 0.9)",
         ],
-        "circle-stroke-width": ["case", ["boolean", ["get", "selected"], false], 3, 2],
+        "circle-stroke-width": [
+          "case", 
+          ["boolean", ["get", "selected"], false], 
+          3, 
+          ["boolean", ["get", "pulsing"], false],
+          4,
+          2
+        ],
       },
     },
   };

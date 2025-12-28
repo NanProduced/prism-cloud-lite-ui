@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { DeviceTable } from './DeviceTable';
 import { DeviceCardView } from './DeviceCardView';
 import { getDevices } from '@/services/deviceApi';
-import type { Device, Tag } from '@/types/device';
+import { type Device, type Tag, resolveDeviceStatus } from '@/types/device';
 import { mockDeviceCustomFieldDefs } from '@/lib/mock/device-custom-fields';
 import type { DeviceCustomFieldDef, DeviceCustomFieldValue } from '@/types/device-custom-field';
 import { DeviceFilters, type DeviceFilterState } from '@/components/devices/DeviceFilters';
@@ -33,12 +33,29 @@ export default function DevicesPage() {
       queryClient.invalidateQueries({ queryKey: ['devices'] });
     };
 
+    const handleGlobalGps = (event: any) => {
+      const { scope } = event.detail;
+      const deviceId = scope.deviceId;
+      if (!deviceId) return;
+
+      setPulsingDeviceIds(prev => new Set(prev).add(deviceId));
+      setTimeout(() => {
+        setPulsingDeviceIds(prev => {
+          const next = new Set(prev);
+          next.delete(deviceId);
+          return next;
+        });
+      }, 5000);
+    };
+
     window.addEventListener('prism.device.updated', handleDeviceUpdate);
     window.addEventListener('prism.device.status.changed', handleDeviceUpdate);
+    window.addEventListener('prism.telemetry.gps.reported', handleGlobalGps);
     
     return () => {
       window.removeEventListener('prism.device.updated', handleDeviceUpdate);
       window.removeEventListener('prism.device.status.changed', handleDeviceUpdate);
+      window.removeEventListener('prism.telemetry.gps.reported', handleGlobalGps);
     };
   }, [queryClient]);
 
@@ -56,6 +73,7 @@ export default function DevicesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<DeviceFilterState>({});
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<Set<string>>(new Set());
+  const [pulsingDeviceIds, setPulsingDeviceIds] = useState<Set<string>>(new Set());
   const [showBatchCommandDialog, setShowBatchCommandDialog] = useState(false);
   const [showAddDeviceDialog, setShowAddDeviceDialog] = useState(false);
   const [showGridDialog, setShowGridDialog] = useState(false);
@@ -131,7 +149,7 @@ export default function DevicesPage() {
 
     if (filters.status && filters.status.length > 0) {
       filtered = filtered.filter(d => {
-        const statusStr = d.onlineStatus === 1 ? 'online' : 'offline';
+        const statusStr = resolveDeviceStatus(d);
         return filters.status!.includes(statusStr as any);
       });
     }
@@ -291,13 +309,19 @@ export default function DevicesPage() {
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Online:</span>
           <span className="font-medium text-emerald-600">
-            {devices.filter((d) => d.onlineStatus === 1).length}
+            {devices.filter((d) => resolveDeviceStatus(d) === 'online').length}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Offline:</span>
           <span className="font-medium text-gray-600">
-            {devices.filter((d) => d.onlineStatus === 0).length}
+            {devices.filter((d) => resolveDeviceStatus(d) === 'offline').length}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground">Pending:</span>
+          <span className="font-medium text-amber-600">
+            {devices.filter((d) => resolveDeviceStatus(d) === 'pending').length}
           </span>
         </div>
         {viewMode === 'card' && (searchQuery || hasAdvancedFilters) && (
@@ -323,6 +347,7 @@ export default function DevicesPage() {
             customFieldDefs={customFieldDefs}
             isProActive={isProActive}
             selectedDeviceIds={selectedDeviceIds}
+            pulsingDeviceIds={pulsingDeviceIds}
             onSelectionChange={setSelectedDeviceIds}
             onBatchCommand={() => setShowBatchCommandDialog(true)}
             onProActiveChange={setIsProActive}
@@ -337,6 +362,7 @@ export default function DevicesPage() {
           devices={filteredDevices}
           tags={tags}
           selectedDeviceIds={selectedDeviceIds}
+          pulsingDeviceIds={pulsingDeviceIds}
           onSelectionChange={setSelectedDeviceIds}
           onCreateTag={createTag}
           onToggleDeviceTag={toggleDeviceTag}

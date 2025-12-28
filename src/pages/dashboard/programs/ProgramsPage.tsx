@@ -29,6 +29,7 @@ import {
 } from '@/services/programApi';
 import type { ProgramListResp, ProgramTemplateResp } from '@/types/program';
 import { getErrorMessage } from '@/services/authApi';
+import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { ProgramPublishDialog } from '@/features/programs/publishing/ProgramPublishDialog';
 
 type ResolutionPreset = { label: string; width: number; height: number };
@@ -45,6 +46,7 @@ export default function ProgramsPage() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState('');
+  const { formatRelative } = useTimeFormatter();
 
   // --- Queries ---
   const { data: programsData, isLoading: isProgramsLoading } = useQuery({
@@ -330,7 +332,7 @@ export default function ProgramsPage() {
 
                         <div className="flex items-center gap-2">
                           <p className="text-[11px] text-muted-foreground/60 italic">
-                            Updated {formatRelativeTime(program.updatedAt)}
+                            Updated {formatRelative(program.updatedAt)}
                           </p>
                         </div>
                       </div>
@@ -471,20 +473,6 @@ export default function ProgramsPage() {
       )}
     </div>
   );
-}
-
-function formatRelativeTime(iso: string): string {
-  if (!iso) return 'Unknown';
-  const then = new Date(iso).getTime();
-  const now = Date.now();
-  const diffMs = Math.max(0, now - then);
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
 }
 
 function TemplateRow({ template, onUse }: { template: ProgramTemplateResp; onUse: () => void; }) {

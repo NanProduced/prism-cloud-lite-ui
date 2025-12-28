@@ -1,8 +1,13 @@
 import { useEffect, useState, useMemo, type ComponentType } from "react";
 import { useQuery } from '@tanstack/react-query';
 import { getDevices } from '@/services/deviceApi';
+import { getMediaUsage } from '@/services/mediaApi';
 import { useAuthStore } from '@/store/authStore';
+import { useMessageStore } from '@/store/messageStore';
 import { getAvatarById } from "@/lib/avatars";
+import { useTimeFormatter } from "@/hooks/use-time-formatter";
+import { formatBytes } from '@better-upload/client/helpers';
+import { type Device, resolveDeviceStatus } from '@/types/device';
 import {
   Area,
   AreaChart,
@@ -65,24 +70,6 @@ const playbackData = [
   { name: "Emergency", value: 10 },
 ];
 
-const pendingTasks = [
-  { id: 1, title: "Transcoding 'Promo_4K.mp4'", progress: 45, type: "task" as const },
-  { id: 2, title: "Publishing to 'Store Group A'", progress: 80, type: "task" as const },
-  { id: 3, title: "Device 'Screen 04' went offline", time: "2m ago", type: "alert" as const },
-];
-
-const recentAlerts = [
-  { id: 1, device: "Lobby Screen", type: "Offline", time: "10m ago", severity: "high" },
-  { id: 2, device: "Hallway B", type: "Temp High", time: "2h ago", severity: "medium" },
-  { id: 3, device: "Store Front", type: "Sync Failed", time: "1d ago", severity: "low" },
-];
-
-const offlineDevices = [
-  { id: 1, name: "West Entrance", lastSeen: "2h ago" },
-  { id: 2, name: "Cafeteria Menu", lastSeen: "15m ago" },
-  { id: 3, name: "Meeting Room 1", lastSeen: "5m ago" },
-];
-
 const publishedPrograms = [
   { name: "Summer Campaign", version: "v1.2", devices: 12, status: "live" },
   { name: "Daily Notices", version: "v2.0", devices: 4, status: "draft_changes" },
@@ -93,6 +80,8 @@ export function DashboardOverview() {
   const [isMounted, setIsMounted] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { formatRelative } = useTimeFormatter();
+  const { recentMessages } = useMessageStore();
 
   const selectedAvatar = useMemo(() => 
     getAvatarById(user?.avatarId || 'm-1'), 
@@ -104,11 +93,50 @@ export function DashboardOverview() {
     queryFn: () => getDevices(),
   });
 
+  const { data: usageRes } = useQuery({
+    queryKey: ['media', 'usage'],
+    queryFn: getMediaUsage,
+  });
+
   const devices = useMemo(() => bffResponse?.data || [], [bffResponse]);
-  const onlineCount = useMemo(() => devices.filter(d => d.onlineStatus === 1).length, [devices]);
+  const onlineCount = useMemo(() => devices.filter(d => resolveDeviceStatus(d) === 'online').length, [devices]);
   const totalCount = devices.length;
   const onlinePercentage = totalCount > 0 ? Math.round((onlineCount / totalCount) * 100) : 0;
 
+  const usage = usageRes?.data;
+  const storageUsedLabel = usage ? formatBytes(usage.usedBytes) : '0 GB';
+  const storageQuotaLabel = usage ? formatBytes(usage.quotaBytes) : '2 GB';
+  const storagePercentage = usage ? Math.round((usage.usedBytes / usage.quotaBytes) * 100) : 0;
+
+  const pendingTasksList = useMemo(() => {
+    const tasks = recentMessages.filter(m => m.kind === 'TASK' && m.status === 'RUNNING').slice(0, 2);
+    const alerts = recentMessages.filter(m => m.kind === 'NOTIFICATION' && !m.readAt).slice(0, 1);
+    
+    return [
+      ...tasks.map(t => ({ id: t.id, title: t.title, progress: 50, type: 'task' as const })),
+      ...alerts.map(a => ({ id: a.id, title: a.title, time: formatRelative(a.createdAt), type: 'alert' as const }))
+    ];
+  }, [recentMessages, formatRelative]);
+
+  const recentAlertsList = useMemo(() => 
+    recentMessages.filter(m => m.kind === 'NOTIFICATION').slice(0, 3).map(m => ({
+      id: m.id,
+      device: m.title,
+      type: "Alert",
+      time: formatRelative(m.createdAt),
+      severity: m.status === 'FAILED' ? 'high' : 'medium'
+    })),
+    [recentMessages, formatRelative]
+  );
+
+    const offlineDevicesList = useMemo(() =>
+      devices.filter(d => resolveDeviceStatus(d) === 'offline').slice(0, 3).map(d => ({
+        id: d.id,
+        name: d.deviceName,
+        lastSeen: formatRelative(d.lastReportTime)
+      })),
+      [devices, formatRelative]
+    );
   useEffect(() => {
     const timer = setTimeout(() => setIsMounted(true), 100);
     return () => clearTimeout(timer);
@@ -156,9 +184,9 @@ export function DashboardOverview() {
           />
           <MetricCard
             title="Storage Used"
-            value="1.4"
-            total="GB / 2 GB"
-            percentage={70}
+            value={storageUsedLabel.split(' ')[0]}
+            total={`${storageUsedLabel.split(' ')[1]} / ${storageQuotaLabel}`}
+            percentage={storagePercentage}
             color="bg-amber-500"
             icon={HardDrive}
             onClick={() => navigate("/dashboard/media")}
@@ -173,7 +201,7 @@ export function DashboardOverview() {
               <Activity className="h-4 w-4 text-amber-500" />
               <CardTitle className="text-base">Pending Tasks & Alerts</CardTitle>
               <Badge variant="secondary" className="ml-2 text-xs">
-                3
+                {pendingTasksList.length}
               </Badge>
             </div>
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/dashboard/monitoring")}>
@@ -181,7 +209,7 @@ export function DashboardOverview() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-3">
-            {pendingTasks.map((task) => (
+            {pendingTasksList.map((task) => (
               <div key={task.id} className="flex items-center gap-3 rounded-xl border border-muted/40 p-3">
                 {task.type === "task" ? (
                   <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
@@ -199,6 +227,9 @@ export function DashboardOverview() {
                 )}
               </div>
             ))}
+            {pendingTasksList.length === 0 && (
+              <div className="py-6 text-center text-xs text-muted-foreground opacity-50">No pending tasks or alerts.</div>
+            )}
           </CardContent>
         </Card>
 
@@ -360,12 +391,12 @@ export function DashboardOverview() {
             <CardDescription>Most recent issues by severity</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {recentAlerts.map((alert) => (
+            {recentAlertsList.map((alert) => (
               <div key={alert.id} className="rounded-xl border border-muted/50 p-3">
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-4 w-4 text-amber-500" />
-                    <span className="font-medium">{alert.device}</span>
+                    <span className="font-medium truncate max-w-[180px]">{alert.device}</span>
                   </div>
                   <Badge variant="outline" className="capitalize">
                     {alert.severity}
@@ -377,6 +408,9 @@ export function DashboardOverview() {
                 </div>
               </div>
             ))}
+            {recentAlertsList.length === 0 && (
+              <div className="py-10 text-center text-xs text-muted-foreground opacity-50">No recent alerts.</div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -388,17 +422,20 @@ export function DashboardOverview() {
             <CardDescription>Last seen timestamps</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {offlineDevices.map((device) => (
+            {offlineDevicesList.map((device) => (
               <div key={device.id} className="flex items-center justify-between rounded-xl border border-muted/50 p-3">
                 <div>
                   <div className="font-medium">{device.name}</div>
                   <p className="text-xs text-muted-foreground">Last seen {device.lastSeen}</p>
                 </div>
-                <Button variant="ghost" size="sm" className="text-xs">
+                <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate(`/dashboard/devices/${device.id}`)}>
                   Ping
                 </Button>
               </div>
             ))}
+            {offlineDevicesList.length === 0 && (
+              <div className="py-10 text-center text-xs text-muted-foreground opacity-50">All devices are online.</div>
+            )}
           </CardContent>
         </Card>
 

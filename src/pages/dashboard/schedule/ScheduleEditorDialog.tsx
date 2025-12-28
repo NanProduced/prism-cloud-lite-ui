@@ -52,6 +52,7 @@ import type {
 } from '@/types/schedule';
 import { getPrograms, getProgramDetails } from '@/services/programApi';
 import { toast } from '@/store/notificationStore';
+import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { TimelineProjection, type TimelineRule } from '@/components/dashboard/schedule/TimelineProjection';
 
 const WEEKDAYS: { label: string }[] = [
@@ -797,6 +798,7 @@ function ConstraintGroup({ label, icon, enabled, onToggle, children }: { label: 
 function DeviceBindingTab({ boundCount, scheduleId }: { boundCount: number, scheduleId: string }) {
   const [isPushing, setIsPushing] = useState(false);
   const [pushResults, setPushResults] = useState<any[]>([]);
+  const { formatDateTime } = useTimeFormatter();
   
   const handlePush = () => {
     setIsPushing(true);
@@ -808,7 +810,7 @@ function DeviceBindingTab({ boundCount, scheduleId }: { boundCount: number, sche
         deviceName: d.deviceName,
         status: Math.random() > 0.2 ? 'success' : 'failed',
         message: Math.random() > 0.2 ? 'Sync command accepted' : 'Timeout: Device unreachable',
-        timestamp: new Date().toLocaleTimeString()
+        timestamp: formatDateTime(new Date())
       }));
       setPushResults(results);
       setIsPushing(false);

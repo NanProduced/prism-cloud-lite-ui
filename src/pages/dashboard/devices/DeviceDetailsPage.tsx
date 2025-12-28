@@ -68,13 +68,15 @@ import { SlideToUnlock } from "@/components/ui/slide-to-unlock";
 import { BatchCommandDialog } from "@/features/devices/commands/BatchCommandDialog";
 import { ScreenshotManagerDialog } from "@/components/devices/ScreenshotManagerDialog";
 import type { DeviceDetails } from "@/types/device-details";
-import type { HistoricalScreenshot } from "@/types/device";
+import { type HistoricalScreenshot, resolveDeviceStatus } from "@/types/device";
 import { mockDevices, mockTags } from "@/lib/mock/devices";
 import { cn } from "@/lib/utils";
+import { useTimeFormatter } from "@/hooks/use-time-formatter";
 
 export default function DeviceDetailsPage() {
   const { deviceId } = useParams();
   const navigate = useNavigate();
+  const { formatRelative, formatDateTime } = useTimeFormatter();
   const [device, setDevice] = useState<DeviceDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -298,7 +300,7 @@ export default function DeviceDetailsPage() {
                <div className="space-y-1.5">
                   <div className="flex items-center gap-3">
                      <h1 className="text-2xl font-black tracking-tight">{device.deviceName}</h1>
-                     <DeviceStatusBadge status={device.status} />
+                     <DeviceStatusBadge status={resolveDeviceStatus(device)} />
                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
                         <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
                         <span className="text-[10px] font-mono font-bold">READY</span>
@@ -339,7 +341,7 @@ export default function DeviceDetailsPage() {
          
          <Card className="rounded-2xl border-none ring-1 ring-muted/60 bg-muted/20 p-5 flex flex-col justify-center">
             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Last Seen</p>
-            <p className="text-lg font-black tracking-tight">{formatRelativeTime(device.lastReportTime)}</p>
+            <p className="text-lg font-black tracking-tight uppercase">{formatRelative(device.lastReportTime)}</p>
             <div className="flex items-center gap-2 mt-2 opacity-50">
                <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
                <span className="text-[9px] font-bold uppercase tracking-tighter">Live Connection Active</span>
@@ -359,7 +361,7 @@ export default function DeviceDetailsPage() {
                 </CardTitle>
                 <div className="flex items-center gap-3">
                    <Badge variant="outline" className="text-[9px] h-5 border-zinc-800 text-zinc-400 font-mono tracking-tighter">
-                      Captured: {device.latestScreenshot?.timestamp ? new Date(device.latestScreenshot.timestamp).toLocaleString() : 'N/A'}
+                      Captured: {device.latestScreenshot?.timestamp ? formatDateTime(device.latestScreenshot.timestamp) : 'N/A'}
                    </Badge>
                    <Badge variant="outline" className="text-[9px] h-5 border-zinc-800 text-zinc-600 font-mono tracking-tighter">
                       {realProps.dimension?.real_width}x{realProps.dimension?.real_height}
@@ -1052,15 +1054,6 @@ function VisibilityRow({ name, id, source, status, progress }: { name: string, i
          </td>
       </tr>
    );
-}
-
-function formatRelativeTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  const diffMinutes = (Date.now() - date.getTime()) / (1000 * 60);
-  if (diffMinutes < 1) return 'ONLINE NOW';
-  if (diffMinutes < 60) return `${Math.floor(diffMinutes)}M AGO`;
-  if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}H AGO`;
-  return date.toLocaleDateString();
 }
 
 function formatUptime(seconds: number): string {

@@ -37,7 +37,7 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import type { Device } from '@/types/device';
+import { type Device, resolveDeviceStatus } from '@/types/device';
 import { executeBatchActions } from '@/services/deviceApi';
 
 // --- Types ---
@@ -507,9 +507,11 @@ function DeviceSelectStep({
                 <div className="w-24 text-right">
                    <Badge variant="outline" className={cn(
                      "text-[9px] uppercase h-5 border-none shadow-none px-2",
-                     d.onlineStatus === 1 ? "bg-emerald-500/10 text-emerald-600" : "bg-zinc-500/10 text-zinc-500"
+                     resolveDeviceStatus(d) === 'online' ? "bg-emerald-500/10 text-emerald-600" : 
+                     resolveDeviceStatus(d) === 'pending' ? "bg-amber-500/10 text-amber-600" :
+                     "bg-zinc-500/10 text-zinc-500"
                    )}>
-                     {d.onlineStatus === 1 ? 'online' : 'offline'}
+                     {resolveDeviceStatus(d)}
                    </Badge>
                 </div>
               </div>
@@ -855,8 +857,9 @@ function ReviewStep({
   setOnlineOnly: (v: boolean) => void
 }) {
   const selectedDevices = Array.from(selectedDeviceIds).map(id => devices.find(d => String(d.deviceId) === id)).filter(Boolean) as Device[];
-  const onlineCount = selectedDevices.filter(d => d.onlineStatus === 1).length;
-  const offlineCount = selectedDevices.length - onlineCount;
+  const onlineCount = selectedDevices.filter(d => resolveDeviceStatus(d) === 'online').length;
+  const pendingCount = selectedDevices.filter(d => resolveDeviceStatus(d) === 'pending').length;
+  const offlineCount = selectedDevices.length - onlineCount - pendingCount;
   const hasHighRisk = actions.some(a => a.type === 'POWER');
 
   const updateTimeout = (index: number, val: number) => {
@@ -872,8 +875,9 @@ function ReviewStep({
            <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Target Scope</p>
            <div className="flex items-baseline gap-2">
               <p className="text-2xl font-bold tabular-nums">{selectedDeviceIds.size}</p>
-              <div className="flex gap-1.5">
+              <div className="flex flex-wrap gap-1.5">
                  <Badge variant="secondary" className="text-[9px] px-1.5 h-4 bg-emerald-500/10 text-emerald-600 border-none">Online: {onlineCount}</Badge>
+                 <Badge variant="secondary" className="text-[9px] px-1.5 h-4 bg-amber-500/10 text-amber-600 border-none">Pending: {pendingCount}</Badge>
                  <Badge variant="secondary" className="text-[9px] px-1.5 h-4 bg-zinc-500/10 text-zinc-500 border-none">Offline: {offlineCount}</Badge>
               </div>
            </div>
@@ -997,20 +1001,20 @@ function ExecutionStep({
   onlineOnly: boolean
 }) {
   const trackingData = mode === 'MULTI_DEVICE_SINGLE_COMMAND' 
-    ? Array.from(selectedDeviceIds)
-        .map(id => {
-          const d = devices.find(x => String(x.deviceId) === id);
-          const isOnline = d?.onlineStatus === 1;
-          if (onlineOnly && !isOnline) return null;
-          return { 
-            id, 
-            label: d?.deviceName || id,
-            sub: isOnline ? 'Real-time sync' : 'Pending: push on next heartbeat',
-            isDevice: true,
-            isOffline: !isOnline
-          }
-        })
-        .filter(Boolean) as any[]
+        ? Array.from(selectedDeviceIds)
+            .map(id => {
+              const d = devices.find(x => String(x.deviceId) === id);
+              const status = d ? resolveDeviceStatus(d) : 'offline';
+              const isOnline = status === 'online';
+              if (onlineOnly && !isOnline) return null;
+              return {
+                id,
+                label: d?.deviceName || id,
+                sub: isOnline ? 'Real-time sync' : (status === 'pending' ? 'Waiting for first heartbeat' : 'Pending: push on next heartbeat'),
+                isDevice: true,
+                isOffline: !isOnline
+              }
+            })        .filter(Boolean) as any[]
     : actions.map((a, idx) => ({
         id: `${Array.from(selectedDeviceIds)[0]}-action-${idx}`,
         label: formatActionType(a.type),

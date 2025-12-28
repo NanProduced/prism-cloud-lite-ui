@@ -4,10 +4,9 @@ const MAP_STYLE_OVERRIDE = import.meta.env.VITE_MAP_STYLE_URL as string | undefi
 export const MAP_STYLE_FALLBACK = "https://demotiles.maplibre.org/style.json";
 
 export const MAP_STYLES = [
-  { id: "streets", label: "Streets", kind: "maptiler", styleId: "streets-v2" },
-  { id: "dark", label: "Dark", kind: "maptiler", styleId: "dataviz-dark" },
+  { id: "streets", label: "Streets", kind: "maptiler", styleId: "streets-v4" },
+  { id: "dark", label: "Dark View", kind: "maptiler", styleId: "dataviz-dark" },
   { id: "satellite", label: "Satellite", kind: "maptiler", styleId: "hybrid" },
-  { id: "demo", label: "Demo (fallback)", kind: "demo", styleId: "demo" },
 ] as const;
 
 export type MapStyleId = (typeof MAP_STYLES)[number]["id"];

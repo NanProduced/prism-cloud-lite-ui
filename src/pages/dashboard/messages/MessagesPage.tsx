@@ -40,11 +40,13 @@ import { useMessageStore } from "@/store/messageStore";
 import type { MessageListItem, MessageKind, MessageStatus } from "@/types/message";
 import { cn } from "@/lib/utils";
 import { toast } from "@/store/notificationStore";
+import { useTimeFormatter } from "@/hooks/use-time-formatter";
 
 export default function MessagesPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { fetchInitialData } = useMessageStore();
+  const { formatDateTime } = useTimeFormatter();
   
   const [activeTab, setActiveTab] = useState<'all' | 'NOTIFICATION' | 'TASK'>('all');
   const [readFilter, setReadFilter] = useState<'all' | 'unread' | 'read'>('all');
@@ -116,14 +118,6 @@ export default function MessagesPage() {
   const messages = messagesData?.data?.items || [];
   const total = messagesData?.data?.total || 0;
   const totalPages = Math.ceil(total / pageSize);
-
-  const formatDate = (dateStr: string) => {
-    try {
-      return new Date(dateStr).toLocaleString();
-    } catch (e) {
-      return dateStr;
-    }
-  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -215,6 +209,7 @@ export default function MessagesPage() {
                   message={message} 
                   onMarkRead={(id) => markSingleReadMutation.mutate(id)}
                   getStatusIcon={getStatusIcon}
+                  formatDateTime={formatDateTime}
                 />
               ))}
             </div>
@@ -257,11 +252,13 @@ export default function MessagesPage() {
 function MessageItem({ 
   message, 
   onMarkRead,
-  getStatusIcon
+  getStatusIcon,
+  formatDateTime
 }: { 
   message: MessageListItem;
   onMarkRead: (id: string) => void;
   getStatusIcon: (kind: MessageKind, status?: MessageStatus) => React.ReactNode;
+  formatDateTime: (d: string) => string;
 }) {
   return (
     <div className={cn(
@@ -294,7 +291,7 @@ function MessageItem({
         <div className="flex items-center gap-3 pt-1">
           <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium">
             <Clock className="h-3 w-3" />
-            {formatDate(message.createdAt)}
+            {formatDateTime(message.createdAt)}
           </div>
           {message.kind === 'TASK' && message.status && (
             <Badge variant="outline" className={cn(
