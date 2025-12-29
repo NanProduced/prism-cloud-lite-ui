@@ -386,29 +386,46 @@ export const MediaUploadPanel = forwardRef<
         const s3Key = originalResult.file.objectInfo.key;
         const uploadUrl = originalResult.signedUrl;
 
-        // 4. Upload to S3 using fetch (for precise header control)
-        // Only set headers returned by backend, do NOT add extra headers
-        const uploads = [
-          fetch(uploadUrl, {
-            method: 'PUT',
-            headers: originalResult.headers,
-            body: task.original,
-          }).then((res) => {
-            if (!res.ok) throw new Error(`Original upload failed: ${res.status}`);
-            return res;
-          }),
-        ];
+        // 4. Upload to S3 using axios (to support upload progress)
+        const uploadOriginal = axios.put(uploadUrl, task.original, {
+          headers: originalResult.headers,
+          onUploadProgress: (progressEvent) => {
+            if (!isTaskTokenActive(task.groupId, token)) return;
+            const loaded = progressEvent.loaded || 0;
+            const total = progressEvent.total || task.original.size;
+            const percent = loaded / total;
+            const now = Date.now();
+            
+            setUploadTasks((prev) =>
+              prev.map((t) =>
+                t.groupId === task.groupId
+                  ? {
+                      ...t,
+                      status: 'uploading',
+                      progress: percent,
+                      bytesUploaded: loaded,
+                      bytesTotal: total,
+                      throughputBps: updateThroughput(task.groupId, loaded, now),
+                    }
+                  : t,
+              ),
+            );
+          },
+        }).then((res) => {
+          if (res.status < 200 || res.status >= 300) throw new Error(`Original upload failed: ${res.status}`);
+          return res;
+        });
+
+        const uploads: Promise<any>[] = [uploadOriginal];
 
         let coverS3Key: string | undefined;
         if (task.cover && coverResult) {
           coverS3Key = coverResult.file.objectInfo.key;
           uploads.push(
-            fetch(coverResult.signedUrl, {
-              method: 'PUT',
+            axios.put(coverResult.signedUrl, task.cover, {
               headers: coverResult.headers,
-              body: task.cover,
             }).then((res) => {
-              if (!res.ok) throw new Error(`Cover upload failed: ${res.status}`);
+              if (res.status < 200 || res.status >= 300) throw new Error(`Cover upload failed: ${res.status}`);
               return res;
             }),
           );

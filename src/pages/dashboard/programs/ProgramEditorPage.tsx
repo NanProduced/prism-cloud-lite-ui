@@ -179,8 +179,10 @@ export default function ProgramEditorPage() {
 
   // --- Mutations ---
   const saveMutation = useMutation({
-    mutationFn: (newVsn: VsnDocument) => 
-      saveProgramDraft(programId!, draft!.id, { vsnJson: JSON.stringify(newVsn) }),
+    mutationFn: (newVsn: VsnDocument) => {
+      if (!draft?.id) throw new Error('Draft not initialized');
+      return saveProgramDraft(programId!, draft.id, { vsnJson: JSON.stringify(newVsn) });
+    },
     onSuccess: (res) => {
       setDirty(false);
       setAutosavePending(false);
@@ -207,7 +209,7 @@ export default function ProgramEditorPage() {
 
   // Autosave Logic
   useEffect(() => {
-    if (!dirty || !vsn || !draft) return;
+    if (!dirty || !vsn || !draft?.id) return;
     
     const policy = getProgramDraftSavePolicy();
     if (policy === 'manual') return;
