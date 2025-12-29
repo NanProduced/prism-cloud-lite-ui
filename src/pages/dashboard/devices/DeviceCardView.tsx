@@ -99,10 +99,10 @@ function DeviceCard({
   onNavigate: () => void;
   formatRelative: (d: string) => string;
 }) {
-  const lastReport = new Date(device.lastReportTime);
+  const lastReportValue = device.lastReportTime ? new Date(device.lastReportTime) : null;
   const now = new Date();
-  const diffMinutes = (now.getTime() - lastReport.getTime()) / (1000 * 60);
-  const isOutdated = diffMinutes > 60;
+  const diffMinutes = lastReportValue ? (now.getTime() - lastReportValue.getTime()) / (1000 * 60) : 0;
+  const isOutdated = lastReportValue ? diffMinutes > 60 : false;
 
   const NetworkIcon =
     device.networkType === 'WIFI' || device.networkType === 'WiFi' ? Wifi : 

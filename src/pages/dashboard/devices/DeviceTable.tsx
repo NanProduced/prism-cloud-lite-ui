@@ -501,6 +501,10 @@ export function DeviceTable({
         if (grid.api.rowIsGroup(row) || !row.data) return null;
         const device = row.data;
 
+        if (!device.lastReportTime) {
+          return <span className="text-sm text-muted-foreground">-</span>;
+        }
+
         const date = new Date(device.lastReportTime);
         const diffMinutes = (Date.now() - date.getTime()) / (1000 * 60);
         const isOutdated = diffMinutes > 60;

@@ -10,33 +10,47 @@ export function useTimeFormatter() {
   const locale = preferences.language === 'zh' ? zhCN : enUS;
   const timeZone = preferences.timezone || 'UTC';
 
-  const formatDateTime = (date: Date | string | number) => {
-    const d = typeof date === 'string' ? parseISO(date) : new Date(date);
+  const formatDateTime = (date: Date | string | number | null | undefined) => {
+    if (!date) return '-';
     
-    // Date part
-    let datePattern = 'yyyy-MM-dd';
-    switch (preferences.dateFormat) {
-      case 'YYYY/MM/DD': datePattern = 'yyyy/MM/dd'; break;
-      case 'MM/DD/YYYY': datePattern = 'MM/dd/yyyy'; break;
-      case 'DD/MM/YYYY': datePattern = 'dd/MM/yyyy'; break;
-      case 'MMM D, YYYY': datePattern = 'MMM d, yyyy'; break;
-    }
+    try {
+      const d = typeof date === 'string' ? parseISO(date) : new Date(date);
+      if (Number.isNaN(d.getTime())) return '-';
+      
+      // Date part
+      let datePattern = 'yyyy-MM-dd';
+      switch (preferences.dateFormat) {
+        case 'YYYY/MM/DD': datePattern = 'yyyy/MM/dd'; break;
+        case 'MM/DD/YYYY': datePattern = 'MM/dd/yyyy'; break;
+        case 'DD/MM/YYYY': datePattern = 'dd/MM/yyyy'; break;
+        case 'MMM D, YYYY': datePattern = 'MMM d, yyyy'; break;
+      }
 
-    // Time part
-    let timePattern = preferences.timeFormat === '12h' ? 'hh:mm' : 'HH:mm';
-    if (preferences.showSeconds) {
-      timePattern += ':ss';
-    }
-    if (preferences.timeFormat === '12h') {
-      timePattern += ' a';
-    }
+      // Time part
+      let timePattern = preferences.timeFormat === '12h' ? 'hh:mm' : 'HH:mm';
+      if (preferences.showSeconds) {
+        timePattern += ':ss';
+      }
+      if (preferences.timeFormat === '12h') {
+        timePattern += ' a';
+      }
 
-    return formatInTimeZone(d, timeZone, `${datePattern} ${timePattern}`, { locale });
+      return formatInTimeZone(d, timeZone, `${datePattern} ${timePattern}`, { locale });
+    } catch (err) {
+      return '-';
+    }
   };
 
-  const formatRelative = (date: Date | string | number) => {
-    const d = typeof date === 'string' ? parseISO(date) : new Date(date);
-    return formatDistanceToNow(d, { addSuffix: true, locale });
+  const formatRelative = (date: Date | string | number | null | undefined) => {
+    if (!date) return '-';
+    
+    try {
+      const d = typeof date === 'string' ? parseISO(date) : new Date(date);
+      if (Number.isNaN(d.getTime())) return '-';
+      return formatDistanceToNow(d, { addSuffix: true, locale });
+    } catch (err) {
+      return '-';
+    }
   };
 
   return {
