@@ -135,11 +135,28 @@ export default function DeviceDetailsPage() {
 
   const device = bffResponse?.data as DeviceDetails | undefined;
   const historicalScreenshots = useMemo(() => screenshotsResponse?.data || [], [screenshotsResponse]);
+  
+  // Robust fallback logic for screenshot URL
+  const screenshotUrl = useMemo(() => {
+    if (!device) return undefined;
+    return device.latestScreenshot?.url || 
+           device.lastScreenshotUrl || 
+           device.screenshotUrl || 
+           (historicalScreenshots.length > 0 ? (historicalScreenshots[0].url || historicalScreenshots[0].screenshotUrl) : undefined);
+  }, [device, historicalScreenshots]);
+
+  // Robust fallback logic for screenshot timestamp
+  const screenshotTime = useMemo(() => {
+    if (!device) return undefined;
+    return device.latestScreenshot?.timestamp || 
+           (historicalScreenshots.length > 0 ? (historicalScreenshots[0].timestamp || historicalScreenshots[0].createdAt) : device.lastReportTime);
+  }, [device, historicalScreenshots]);
   const recentOperations = useMemo(() => commandLogsResponse?.data?.items || [], [commandLogsResponse]);
   const deviceSchedule = scheduleResponse?.data;
   const programAllowlist = allowlistResponse?.data || [];
 
   const [isCapturing, setIsCapturing] = useState(false);
+  const [activeScreenshotOpId, setActiveScreenshotOpId] = useState<string | null>(null);
   const [showBatchCommand, setShowBatchCommand] = useState(false);
   const [showScreenshotManager, setShowScreenshotManager] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -154,12 +171,40 @@ export default function DeviceDetailsPage() {
   }, [device?.deviceName, deviceId, setBreadcrumbOverride, removeBreadcrumbOverride]);
 
   useEffect(() => {
-    const handleOperationUpdate = () => {
-      refetchCommandLogs();
+    const handleOperationUpdate = (event: any) => {
+      const { scope, data } = event.detail;
+      if (scope.deviceId === Number(deviceId)) {
+        refetchCommandLogs();
+        
+        // Handle screenshot operation feedback
+        if (activeScreenshotOpId && scope.operationId === activeScreenshotOpId) {
+          if (data.status === 'CONFIRMED' || data.status === 'COMPLETED') {
+            toast.success('Screenshot command confirmed by device');
+            setActiveScreenshotOpId(null);
+          } else if (data.status === 'FAILED' || data.status === 'EXPIRED') {
+            toast.error(`Screenshot command failed: ${data.status}`);
+            setActiveScreenshotOpId(null);
+          }
+        }
+      }
     };
+    
+    const handleDeviceUpdate = (event: any) => {
+      const { deviceId: updatedId } = event.detail;
+      if (Number(updatedId) === Number(deviceId)) {
+        queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
+        queryClient.invalidateQueries({ queryKey: ['device-screenshots', deviceId] });
+      }
+    };
+
     window.addEventListener('prism.operation.updated' as any, handleOperationUpdate);
-    return () => window.removeEventListener('prism.operation.updated' as any, handleOperationUpdate);
-  }, [refetchCommandLogs]);
+    window.addEventListener('prism.device.updated' as any, handleDeviceUpdate);
+    
+    return () => {
+      window.removeEventListener('prism.operation.updated' as any, handleOperationUpdate);
+      window.removeEventListener('prism.device.updated' as any, handleDeviceUpdate);
+    };
+  }, [refetchCommandLogs, deviceId, queryClient]);
 
   // Interactive States
   const [brightnessPct, setBrightnessPct] = useState(0);
@@ -248,8 +293,13 @@ export default function DeviceDetailsPage() {
   const handleCapture = async () => {
     setIsCapturing(true);
     try {
-      await executeDeviceAction(deviceId!, { type: 'SCREENSHOT' });
-      toast.success('Capture command dispatched');
+      const res = await executeDeviceAction(deviceId!, { type: 'SCREENSHOT', body: {} });
+      if (res.success && res.data?.operationId) {
+        setActiveScreenshotOpId(res.data.operationId);
+        toast.info('Screenshot command dispatched');
+      } else {
+        toast.success('Screenshot command dispatched');
+      }
     } catch (err) {
       toast.error('Failed to dispatch capture command');
     } finally {
@@ -389,9 +439,9 @@ export default function DeviceDetailsPage() {
                   </CardTitle>
                 </div>
                 <div className="flex items-center gap-3">
-                   {device.latestScreenshot?.timestamp ? (
+                   {screenshotUrl ? (
                       <Badge variant="outline" className="text-[9px] h-5 border-zinc-800 text-zinc-400 font-mono tracking-tighter">
-                         Captured: {formatDateTime(device.latestScreenshot.timestamp)}
+                         Captured: {formatDateTime(screenshotTime)}
                       </Badge>
                    ) : (
                       <Badge variant="outline" className="text-[9px] h-5 border-zinc-800 text-amber-500/80 font-bold tracking-tight">
@@ -405,10 +455,10 @@ export default function DeviceDetailsPage() {
               </CardHeader>
               <CardContent className="p-0 flex-1 relative flex items-center justify-center bg-zinc-900/30 overflow-hidden">
                 <div className="relative w-full aspect-video group">
-                  {device.latestScreenshot?.url ? (
+                  {screenshotUrl ? (
                     <>
                       <DeviceScreenshot
-                        src={device.latestScreenshot.url}
+                        src={screenshotUrl}
                         deviceName={device.deviceName}
                         className="w-full h-full object-contain"
                       />
@@ -461,15 +511,15 @@ export default function DeviceDetailsPage() {
 
                      {/* Screenshot Actions */}
                      <div className="hidden xl:flex flex-col gap-2 items-end">
-                        {device.latestScreenshot?.url && (
+                        {screenshotUrl && (
                            <TooltipProvider>
                               <Tooltip>
                                  <TooltipTrigger asChild>
-                                    <Button 
+                                   <Button 
                                        size="icon" 
                                        variant="secondary" 
                                        className="h-10 w-10 rounded-full shadow-2xl hover:scale-110 transition-transform" 
-                                       onClick={() => setPreviewImage(device.latestScreenshot?.url || null)}
+                                       onClick={() => setPreviewImage(screenshotUrl)}
                                     >
                                        <Maximize2 className="h-5 w-5" />
                                     </Button>
@@ -1124,6 +1174,7 @@ export default function DeviceDetailsPage() {
         screenshots={historicalScreenshots}
         onDelete={handleDeleteScreenshot}
         onClearAll={handleClearScreenshots}
+        onRefresh={() => queryClient.invalidateQueries({ queryKey: ['device-screenshots', deviceId] })}
       />
 
       {/* Full Size Preview Dialog */}

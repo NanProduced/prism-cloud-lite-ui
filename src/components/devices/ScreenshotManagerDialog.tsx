@@ -45,6 +45,7 @@ interface ScreenshotManagerDialogProps {
   screenshots: HistoricalScreenshot[];
   onDelete?: (ids: string[]) => void;
   onClearAll?: () => void;
+  onRefresh?: () => void;
 }
 
 export function ScreenshotManagerDialog({
@@ -52,7 +53,8 @@ export function ScreenshotManagerDialog({
   onOpenChange,
   screenshots: initialScreenshots,
   onDelete,
-  onClearAll
+  onClearAll,
+  onRefresh
 }: ScreenshotManagerDialogProps) {
   const { formatDateTime } = useTimeFormatter();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -61,6 +63,11 @@ export function ScreenshotManagerDialog({
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  // Sync local state with props when refreshed
+  useMemo(() => {
+    setLocalScreenshots(initialScreenshots);
+  }, [initialScreenshots]);
 
   const totalSize = useMemo(() => {
     return localScreenshots.reduce((acc, curr) => acc + curr.size, 0);
@@ -120,11 +127,14 @@ export function ScreenshotManagerDialog({
   };
 
   const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      toast.success("Snapshot list updated");
-    }, 1000);
+    if (onRefresh) {
+      setIsRefreshing(true);
+      onRefresh();
+      setTimeout(() => {
+        setIsRefreshing(false);
+        toast.success("Snapshot list updated");
+      }, 800);
+    }
   };
 
   return (
@@ -274,9 +284,9 @@ export function ScreenshotManagerDialog({
                            "group relative aspect-[4/3] rounded-xl overflow-hidden border transition-all cursor-pointer bg-muted shadow-sm",
                            selectedIds.includes(s.id) ? "ring-2 ring-primary border-primary" : "hover:border-primary/50"
                          )}
-                         onClick={() => setPreviewImage(s.url)}
+                         onClick={() => setPreviewImage(s.url || s.screenshotUrl)}
                        >
-                          <img src={s.url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt="History" />
+                          <img src={s.url || s.screenshotUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt="History" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                           
                           <div className="absolute top-2 left-2" onClick={(e) => e.stopPropagation()}>
@@ -289,14 +299,14 @@ export function ScreenshotManagerDialog({
 
                           <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all">
                              <div className="text-white text-[10px] font-medium leading-none drop-shadow-md">
-                                <p className="mb-1">{formatDateTime(s.timestamp)}</p>
+                                <p className="mb-1">{formatDateTime(s.timestamp || s.createdAt)}</p>
                              </div>
                              <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                                 <Button 
                                    size="icon" 
                                    variant="secondary" 
                                    className="h-7 w-7 rounded-lg bg-black/50 border border-white/20 text-white hover:bg-primary transition-colors"
-                                   onClick={() => setPreviewImage(s.url)}
+                                   onClick={() => setPreviewImage(s.url || s.screenshotUrl)}
                                 >
                                    <Maximize2 className="h-3.5 w-3.5" />
                                 </Button>
@@ -334,16 +344,16 @@ export function ScreenshotManagerDialog({
                              <div className="col-span-7 flex items-center gap-4">
                                 <div 
                                    className="h-10 w-16 rounded-md overflow-hidden border bg-muted relative group/thumb shadow-sm"
-                                   onClick={(e) => { e.stopPropagation(); setPreviewImage(s.url); }}
+                                   onClick={(e) => { e.stopPropagation(); setPreviewImage(s.url || s.screenshotUrl); }}
                                 >
-                                   <img src={s.url} className="w-full h-full object-cover" alt="Thumb" />
+                                   <img src={s.url || s.screenshotUrl} className="w-full h-full object-cover" alt="Thumb" />
                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center transition-opacity">
                                       <Maximize2 className="h-4 w-4 text-white" />
                                    </div>
                                 </div>
                                 <div className="space-y-0.5">
-                                   <p className="text-sm font-medium tracking-tight">{formatDateTime(s.timestamp)}</p>
-                                   <p className="text-[10px] text-muted-foreground font-mono">ID: {s.id?.slice(0, 8).toUpperCase() ?? "UNKNOWN"}</p>
+                                   <p className="text-sm font-medium tracking-tight">{formatDateTime(s.timestamp || s.createdAt)}</p>
+                                   <p className="text-[10px] text-muted-foreground font-mono">ID: {(s.id || s.screenshotId)?.slice(0, 8).toUpperCase() ?? "UNKNOWN"}</p>
                                 </div>
                              </div>
                              <div className="col-span-2 text-right">
@@ -354,7 +364,7 @@ export function ScreenshotManagerDialog({
                                    variant="ghost" 
                                    size="icon" 
                                    className="h-8 w-8 rounded-md"
-                                   onClick={() => setPreviewImage(s.url)}
+                                   onClick={() => setPreviewImage(s.url || s.screenshotUrl)}
                                 >
                                    <Maximize2 className="h-4 w-4" />
                                 </Button>
