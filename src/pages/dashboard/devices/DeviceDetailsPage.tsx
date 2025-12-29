@@ -361,7 +361,16 @@ export default function DeviceDetailsPage() {
   );
 
   const realProps = device.deviceProperties;
-  const activeInterface = realProps.ifstatus?.types?.find(i => i.connected === 1)?.type || 'eth';
+  
+  // Helper to normalize backend interface types (lan/wifi ap/4G) to UI keys (eth/wifi/ap/4g)
+  const normalizeIfaceType = (type: string) => {
+    const t = type.toLowerCase();
+    if (t.includes('ap')) return 'ap';
+    if (t === 'lan') return 'eth';
+    return t;
+  };
+
+  const activeInterface = normalizeIfaceType(realProps.ifstatus?.types?.find(i => i.connected === 1)?.type || 'eth');
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -756,52 +765,87 @@ export default function DeviceDetailsPage() {
                      <TabsTrigger value="4g" className="rounded-lg text-[9px] font-bold tracking-tighter data-[state=active]:bg-background data-[state=active]:shadow-sm">4G</TabsTrigger>
                   </TabsList>
 
-                  {realProps.ifstatus?.types.map((iface) => (
-                     <TabsContent key={iface.type} value={iface.type} className="mt-0 focus-visible:ring-0">
-                        <div className="space-y-4">
-                           <div className="flex justify-between items-center mb-2">
-                              <div className="flex items-center gap-2">
-                                 {iface.type === 'eth' && <Cable className="h-3 w-3 text-primary" />}
-                                 {iface.type === 'wifi' && <Wifi className="h-3 w-3 text-primary" />}
-                                 {iface.type === 'ap' && <Share2 className="h-3 w-3 text-primary" />}
-                                 {iface.type === '4g' && <Signal className="h-3 w-3 text-primary" />}
-                                 <span className="text-[10px] font-bold tracking-widest text-slate-500">
-                                    {iface.type === 'eth' ? 'Ethernet Port' : iface.type === 'ap' ? 'WiFi Hotspot' : iface.type.toUpperCase() + ' Module'}
-                                 </span>
-                              </div>
-                              <Badge variant="outline" className={cn(
-                                 "text-[8px] font-bold h-4 border-none",
-                                 iface.connected === 1 ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"
-                              )}>
-                                 {iface.connected === 1 ? 'ACTIVE' : 'INACTIVE'}
-                              </Badge>
-                           </div>
+                                    {realProps.ifstatus?.types.map((iface) => {
 
-                           {iface.connected === 1 ? (
-                              <div className="space-y-3 pl-1">
-                                 {iface.SSID && <InfoItem label="SSID" value={iface.SSID} fontMono />}
-                                 {iface.ips?.ip && <InfoItem label="IPv4 Address" value={iface.ips.ip} fontMono highlight />}
-                                 <InfoItem label="MAC Address" value={iface.mac} fontMono />
-                                 {iface.strength !== undefined && <InfoItem label="Signal Strength" value={`${iface.strength}%`} highlight />}
-                                 
-                                 {iface.type === '4g' && (
-                                    <>
-                                       <Separator className="my-2 opacity-30" />
-                                       <InfoItem label="Operator" value={realProps["4ginfo"]?.operator} />
-                                       <InfoItem label="RSSI" value={`${realProps["4ginfo"]?.signal} dBm`} highlight />
-                                       <InfoItem label="Modem IMEI" value={realProps["4ginfo"]?.imei} fontMono />
-                                    </>
-                                 )}
-                              </div>
-                           ) : (
-                              <div className="py-8 flex flex-col items-center justify-center gap-2 opacity-20">
-                                 <Network className="h-8 w-8" />
-                                 <p className="text-[8px] font-bold tracking-[0.2em]">Interface Inactive</p>
-                              </div>
-                           )}
-                        </div>
-                     </TabsContent>
-                  ))}
+                                       const normalized = normalizeIfaceType(iface.type);
+
+                                       return (
+
+                                          <TabsContent key={iface.type} value={normalized} className="mt-0 focus-visible:ring-0">
+
+                                             <div className="space-y-4">
+
+                                                <div className="flex justify-between items-center mb-2">
+
+                                                   <div className="flex items-center gap-2">
+
+                                                      {normalized === 'eth' && <Cable className="h-3 w-3 text-primary" />}
+
+                                                      {normalized === 'wifi' && <Wifi className="h-3 w-3 text-primary" />}
+
+                                                      {normalized === 'ap' && <Share2 className="h-3 w-3 text-primary" />}
+
+                                                      {normalized === '4g' && <Signal className="h-3 w-3 text-primary" />}
+
+                                                      <span className="text-[10px] font-bold tracking-widest text-slate-500">
+
+                                                         {normalized === 'eth' ? 'Ethernet Port' : normalized === 'ap' ? 'WiFi Hotspot' : normalized.toUpperCase() + ' Module'}
+
+                                                      </span>
+
+                                                   </div>
+
+                                                   <Badge variant="outline" className={cn(
+
+                                                      "text-[8px] font-bold h-4 border-none",
+
+                                                      iface.connected === 1 ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"
+
+                                                   )}>
+
+                                                      {iface.connected === 1 ? 'ACTIVE' : 'INACTIVE'}
+
+                                                   </Badge>
+
+                                                </div>
+
+                  
+
+                                                <div className="space-y-3 pl-1">
+                                                   {(iface.SSID || iface.currentap) && <InfoItem label="Network Name" value={iface.SSID || iface.currentap} fontMono highlight />}
+                                                   {iface.ips?.ip && <InfoItem label="IPv4 Address" value={iface.ips.ip} fontMono highlight />}
+                                                   {iface.ips?.mask && <InfoItem label="Subnet Mask" value={iface.ips.mask} fontMono />}
+                                                   {iface.ips?.gateway && <InfoItem label="Gateway" value={iface.ips.gateway} fontMono />}
+                                                   <InfoItem label="MAC Address" value={iface.mac} fontMono />
+                                                   {iface.speed !== undefined && iface.speed > 0 && <InfoItem label="Link Speed" value={`${iface.speed} Mbps`} />}
+                                                   {iface.strength !== undefined && iface.strength !== null && <InfoItem label="Signal Strength" value={`${iface.strength}%`} highlight />}
+                                                   
+                                                   {normalized === '4g' && (
+                                                      <>
+                                                         <Separator className="my-2 opacity-30" />
+                                                         <InfoItem label="Operator" value={realProps["4ginfo"]?.operator} />
+                                                         <InfoItem label="RSSI" value={`${realProps["4ginfo"]?.signal} dBm`} highlight />
+                                                         <InfoItem label="Modem IMEI" value={realProps["4ginfo"]?.imei} fontMono />
+                                                      </>
+                                                   )}
+
+                                                   {iface.connected !== 1 && (
+                                                      <div className="pt-4 flex items-center gap-2 opacity-40">
+                                                         <div className="h-1 w-1 rounded-full bg-muted-foreground" />
+                                                         <p className="text-[8px] font-bold tracking-widest text-muted-foreground italic uppercase">
+                                                            Standby / Disconnected
+                                                         </p>
+                                                      </div>
+                                                   )}
+                                                </div>
+
+                                             </div>
+
+                                          </TabsContent>
+
+                                       );
+
+                                    })}
                </Tabs>
             </InfoGroup>
          </div>

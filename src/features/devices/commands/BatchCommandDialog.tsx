@@ -12,7 +12,6 @@ import {
   Volume2, 
   Clock, 
   Languages, 
-  PlaySquare,
   Plus,
   Trash2,
   AlertCircle,
@@ -39,6 +38,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import { type Device, resolveDeviceStatus } from '@/types/device';
 import { executeBatchActions } from '@/services/deviceApi';
+import { SlideToUnlock } from '@/components/ui/slide-to-unlock';
 
 // --- Types ---
 
@@ -51,7 +51,8 @@ type ActionType =
   | 'TIMEZONE' 
   | 'LOCALE' 
   | 'CONTENT_REPORT_SWITCH' 
-  | 'CLEAR_CACHE';
+  | 'CLEAR_CACHE'
+  | 'SCREENSHOT';
 
 interface ActionConfig {
   type: ActionType;
@@ -83,7 +84,7 @@ function formatActionParams(type: ActionType, params: any): string {
     case 'COLOR_TEMP':
       return `Color Temp: ${params.colortemp}K`;
     case 'INPUT_MODE':
-      return `Input Mode: ${params.inputmode.toUpperCase()}`;
+      return `Input Mode: ${(params.inputmode || '').toUpperCase()}`;
     case 'TIMEZONE':
       return `${params.timezoneId} (UTC${params.timezone >= 0 ? '+' : ''}${params.timezone})`;
     case 'LOCALE': {
@@ -94,6 +95,8 @@ function formatActionParams(type: ActionType, params: any): string {
       return params.status === 1 ? 'Report Enabled' : 'Report Disabled';
     case 'CLEAR_CACHE':
       return 'Clear Terminal Cache';
+    case 'SCREENSHOT':
+      return 'Capture current frame';
     default:
       return '';
   }
@@ -127,11 +130,13 @@ export function BatchCommandDialog({
       const { operationId } = scope;
       const { status } = data;
 
+      if (!operationId) return;
+
       setExecutionResults(prev => {
         const next = { ...prev };
         let found = false;
         for (const key in next) {
-          if (next[key].operationId === operationId) {
+          if (String(next[key].operationId) === String(operationId)) {
             next[key] = { ...next[key], status };
             found = true;
           }
@@ -140,16 +145,13 @@ export function BatchCommandDialog({
       });
     };
 
-    window.addEventListener('prism.operation.updated', handleOperationUpdate);
-    return () => window.removeEventListener('prism.operation.updated', handleOperationUpdate);
+    window.addEventListener('prism.operation.updated' as any, handleOperationUpdate);
+    return () => window.removeEventListener('prism.operation.updated' as any, handleOperationUpdate);
   }, []);
-
-  // Determine if we should hide the back button at Step 2
-  const isPreSelected = initialSelectedDeviceIds.length > 0;
 
   useEffect(() => {
     if (open) {
-      const startAtStep = isPreSelected ? 1 : 0;
+      const startAtStep = initialSelectedDeviceIds.length > 0 ? 1 : 0;
       setStep(startAtStep);
       setSelectedDeviceIds(new Set(initialSelectedDeviceIds));
       setActions([]);
@@ -158,7 +160,8 @@ export function BatchCommandDialog({
       setOnlineOnly(false);
       setIsLoading(false);
     }
-  }, [open, initialSelectedDeviceIds, isPreSelected]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const close = () => onOpenChange(false);
 
@@ -211,7 +214,7 @@ export function BatchCommandDialog({
         setExecutionResults(results);
       } else {
         toast.error(response.error?.message || 'Failed to dispatch commands');
-        setStep(2); // Go back to review
+        setStep(2);
       }
     } catch (error) {
       toast.error('Network error during dispatch');
@@ -227,16 +230,15 @@ export function BatchCommandDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[1000px] h-[750px] p-0 overflow-hidden border shadow-lg rounded-xl flex flex-col bg-background">
-        {/* Top Header */}
         <div className="px-8 py-6 border-b flex items-center justify-between bg-muted/10 shrink-0">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
               <DialogTitle className="text-xl font-bold tracking-tight">
-                {mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? 'Command Devices' : 'Batch Command Config'}
+                {mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? 'Command Devices' : 'Advanced Remote Command'}
               </DialogTitle>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>Selected:</span>
+              <span>Target:</span>
               {mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? (
                 <span className="font-medium text-foreground">{selectedDevicesCount} device(s)</span>
               ) : (
@@ -245,34 +247,25 @@ export function BatchCommandDialog({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={close} className="h-9 w-9 rounded-md">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Close</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Button variant="ghost" size="icon" onClick={close} className="h-9 w-9 rounded-md">
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
         <div className="flex-1 flex overflow-hidden">
-          {/* Left Panel: Navigation */}
           <div className="w-[200px] border-r bg-muted/5 flex flex-col p-6 shrink-0">
             <VerticalStepper 
               currentStep={step} 
               steps={[
-                { label: 'Select Devices', description: 'Target scope' },
-                { label: 'Configure', description: 'Action settings' },
-                { label: 'Confirm', description: 'Final check' },
-                { label: 'Monitor', description: 'Execution status' }
+                { label: 'Selection', description: 'Target scope' },
+                { label: 'Parameters', description: 'Action settings' },
+                { label: 'Review', description: 'Safety check' },
+                { label: 'Terminal', description: 'Real-time status' }
               ]} 
             />
           </div>
 
-          {/* Main Content Area */}
           <div className="flex-1 flex flex-col min-w-0 bg-background overflow-hidden p-8">
             {step === 0 && (
               <DeviceSelectStep
@@ -315,10 +308,9 @@ export function BatchCommandDialog({
           </div>
         </div>
 
-        {/* Footer */}
         <div className="px-8 py-4 bg-muted/20 border-t flex items-center justify-between shrink-0">
           <div>
-            {step < 3 && !(step === 1 && isPreSelected) && (
+            {step < 3 && !(step === 1 && initialSelectedDeviceIds.length > 0) && (
               <Button 
                 variant="outline" 
                 onClick={step === 0 ? close : () => setStep(s => s - 1)} 
@@ -338,9 +330,9 @@ export function BatchCommandDialog({
                 className="px-8 h-10 gap-2 shadow-sm"
               >
                 {step === 2 ? (
-                  <><CloudUpload className="h-4 w-4" /> Send Commands</>
+                  <><CloudUpload className="h-4 w-4" /> Dispatch Payload</>
                 ) : (
-                  <>Next Step <ChevronRight className="h-4 w-4" /></>
+                  <>Continue <ChevronRight className="h-4 w-4" /></>
                 )}
               </Button>
             )}
@@ -349,7 +341,7 @@ export function BatchCommandDialog({
                  onClick={close} 
                  className="px-10 h-10 bg-zinc-900 text-white hover:bg-zinc-800"
               >
-                Close Window
+                Exit Console
               </Button>
             )}
           </div>
@@ -358,8 +350,6 @@ export function BatchCommandDialog({
     </Dialog>
   );
 }
-
-// --- Sub-components ---
 
 function VerticalStepper({ currentStep, steps }: { currentStep: number, steps: { label: string, description: string }[] }) {
   return (
@@ -546,13 +536,11 @@ function ActionConfigStep({
 
   const addAction = (type: ActionType) => {
     const defaultParams = getDefaultParams(type);
-    const defaultTimeout = 60; // 60 minutes default
+    const defaultTimeout = 60; 
 
     if (mode === 'MULTI_DEVICE_SINGLE_COMMAND') {
-      // In multi-device mode, only one command type is allowed. Replace existing.
       onActionsChange([{ type, params: defaultParams, timeout: defaultTimeout }]);
     } else {
-      // In single-device mode, allow chaining.
       if (actions.some(a => a.type === type)) {
         toast.error('Command already in queue');
         return;
@@ -679,17 +667,11 @@ function ActionConfigStep({
                         <Select 
                           value={action.params.inputmode} 
                           onValueChange={(v) => updateParam(index, 'inputmode', v)}
-                          modal={false}
                         >
                           <SelectTrigger className="h-9 rounded-md bg-muted/30 border border-transparent focus:border-primary/40 focus:ring-0 focus-visible:ring-0 outline-none px-3 text-xs transition-all shadow-none">
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
-                          <SelectContent 
-                            position="popper" 
-                            sideOffset={4} 
-                            className="z-[101] min-w-[var(--radix-select-trigger-width)]"
-                            onCloseAutoFocus={(e) => e.preventDefault()}
-                          >
+                          <SelectContent position="popper" sideOffset={4} className="z-[101]">
                             <SelectItem value="hdmi" className="text-xs">HDMI</SelectItem>
                             <SelectItem value="dvi" className="text-xs">DVI</SelectItem>
                             <SelectItem value="vga" className="text-xs">VGA</SelectItem>
@@ -698,8 +680,7 @@ function ActionConfigStep({
                       </ControlItem>
                     )}
                     {action.type === 'TIMEZONE' && (
-                      <>
-                        <ControlItem label="Select Timezone">
+                        <ControlItem label="Select Timezone" className="col-span-2">
                           <Select 
                             value={action.params.timezoneId} 
                             onValueChange={(v) => {
@@ -711,37 +692,22 @@ function ActionConfigStep({
                             <SelectTrigger className="h-9 rounded-md bg-muted/30 border border-transparent focus:border-primary/40 focus:ring-0 focus-visible:ring-0 outline-none px-3 text-xs transition-all shadow-none">
                               <SelectValue placeholder="Select" />
                             </SelectTrigger>
-                            <SelectContent 
-                              position="popper" 
-                              sideOffset={4} 
-                              className="z-[101] min-w-[var(--radix-select-trigger-width)]"
-                              onCloseAutoFocus={(e) => e.preventDefault()}
-                            >
+                            <SelectContent position="popper" sideOffset={4} className="z-[101]">
                               <SelectItem value="Asia/Shanghai" className="text-xs">Shanghai (UTC+8)</SelectItem>
                               <SelectItem value="UTC" className="text-xs">Universal (UTC+0)</SelectItem>
                               <SelectItem value="America/New_York" className="text-xs">New York (UTC-5)</SelectItem>
                             </SelectContent>
                           </Select>
                         </ControlItem>
-                      </>
                     )}
                     {action.type === 'LOCALE' && (
                       <>
                         <ControlItem label="Language">
-                          <Select 
-                            value={action.params.language} 
-                            onValueChange={(v) => updateParam(index, 'language', v)}
-
-                          >
-                            <SelectTrigger className="h-9 rounded-md bg-muted/30 border border-transparent focus:border-primary/40 focus:ring-0 focus-visible:ring-0 outline-none px-3 text-xs transition-all shadow-none">
+                          <Select value={action.params.language} onValueChange={(v) => updateParam(index, 'language', v)}>
+                            <SelectTrigger className="h-9 rounded-md bg-muted/30 border border-transparent focus:ring-0 px-3 text-xs shadow-none">
                               <SelectValue placeholder="Select" />
                             </SelectTrigger>
-                            <SelectContent 
-                              position="popper" 
-                              sideOffset={4} 
-                              className="z-[101] min-w-[var(--radix-select-trigger-width)]"
-                              onCloseAutoFocus={(e) => e.preventDefault()}
-                            >
+                            <SelectContent position="popper" sideOffset={4} className="z-[101]">
                               <SelectItem value="zh" className="text-xs">Chinese (zh)</SelectItem>
                               <SelectItem value="en" className="text-xs">English (en)</SelectItem>
                               <SelectItem value="ja" className="text-xs">Japanese (ja)</SelectItem>
@@ -749,20 +715,11 @@ function ActionConfigStep({
                           </Select>
                         </ControlItem>
                         <ControlItem label="Country">
-                          <Select 
-                            value={action.params.country} 
-                            onValueChange={(v) => updateParam(index, 'country', v)}
-
-                          >
-                            <SelectTrigger className="h-9 rounded-md bg-muted/30 border border-transparent focus:border-primary/40 focus:ring-0 focus-visible:ring-0 outline-none px-3 text-xs transition-all shadow-none">
+                          <Select value={action.params.country} onValueChange={(v) => updateParam(index, 'country', v)}>
+                            <SelectTrigger className="h-9 rounded-md bg-muted/30 border border-transparent focus:ring-0 px-3 text-xs shadow-none">
                               <SelectValue placeholder="Select" />
                             </SelectTrigger>
-                            <SelectContent 
-                              position="popper" 
-                              sideOffset={4} 
-                              className="z-[101] min-w-[var(--radix-select-trigger-width)]"
-                              onCloseAutoFocus={(e) => e.preventDefault()}
-                            >
+                            <SelectContent position="popper" sideOffset={4} className="z-[101]">
                               <SelectItem value="CN" className="text-xs">China (CN)</SelectItem>
                               <SelectItem value="US" className="text-xs">USA (US)</SelectItem>
                               <SelectItem value="JP" className="text-xs">Japan (JP)</SelectItem>
@@ -797,12 +754,6 @@ function ActionConfigStep({
                          <p className="text-[11px] text-blue-900 font-medium leading-relaxed">This will clear all downloaded materials and cached data on the terminal. The device will re-download required content.</p>
                       </div>
                     )}
-                    {action.type === 'POWER' && action.params.command === 'reboot' && (
-                      <div className="col-span-2 flex items-center gap-3 p-3 bg-rose-50 border border-rose-100 rounded-md">
-                         <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
-                         <p className="text-[11px] text-rose-900 font-medium leading-relaxed">Warning: Rebooting will interrupt all active playback until the system fully recovers.</p>
-                      </div>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -810,14 +761,10 @@ function ActionConfigStep({
             {actions.length === 0 && (
               <div 
                 className="h-64 flex flex-col items-center justify-center border-2 border-dashed rounded-lg bg-muted/5 hover:bg-muted/10 transition-colors cursor-pointer group"
-                onClick={() => {
-                  const firstBtn = document.querySelector('.action-type-btn') as HTMLButtonElement;
-                  firstBtn?.focus();
-                }}
+                onClick={() => {(document.querySelector('.action-type-btn') as any)?.focus();}}
               >
                 <div className="p-3 rounded-full bg-muted mb-3 group-hover:scale-105 transition-transform"><Plus className="h-6 w-6 text-muted-foreground" /></div>
                 <p className="text-sm font-bold text-muted-foreground">Select a command type above to start</p>
-                <p className="text-[11px] text-muted-foreground/60 mt-1">Configure parameters for deployment</p>
               </div>
             )}
           </div>
@@ -883,7 +830,7 @@ function ReviewStep({
            </div>
          </div>
          <div className="p-4 border rounded-lg bg-muted/5">
-           <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Command Count</p>
+           <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Payload Count</p>
            <p className="text-2xl font-bold tabular-nums">{actions.length}</p>
          </div>
        </div>
@@ -893,30 +840,14 @@ function ReviewStep({
            <div className="p-3.5 bg-rose-50 border border-rose-100 rounded-lg flex items-center justify-between gap-4">
              <div className="flex items-center gap-3">
                <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
-               <div className="min-w-0">
-                 <p className="text-xs font-bold text-rose-900">High Risk Confirmation</p>
-                 <p className="text-[10px] text-rose-800/60">Contains reboot or power state changes</p>
+               <div>
+                 <p className="text-xs font-bold text-rose-900">Critical Confirmation</p>
+                 <p className="text-[10px] text-rose-800/60">Operation includes hardware state changes</p>
                </div>
              </div>
              <div className="flex items-center gap-2 px-2.5 py-1 rounded-md border border-rose-200 shrink-0">
                <Checkbox id="risk-confirm" checked={riskConfirmed} onCheckedChange={(v) => setRiskConfirmed(!!v)} className="h-4 w-4" />
-               <label htmlFor="risk-confirm" className="text-[10px] font-bold cursor-pointer select-none">I understand</label>
-             </div>
-           </div>
-         )}
-
-         {offlineCount > 0 && (
-           <div className="p-3.5 bg-amber-50 border border-amber-100 rounded-lg flex items-center justify-between gap-4">
-             <div className="flex items-center gap-3">
-               <Clock className="h-4 w-4 text-amber-600 shrink-0" />
-               <div className="min-w-0">
-                 <p className="text-xs font-bold text-amber-900">Device Connectivity Filter</p>
-                 <p className="text-[10px] text-amber-800/60">Decide whether to include offline devices</p>
-               </div>
-             </div>
-             <div className="flex items-center gap-2 px-2.5 py-1 rounded-md border border-amber-200 shrink-0">
-               <Switch checked={onlineOnly} onCheckedChange={setOnlineOnly} className="scale-75 origin-right" />
-               <span className="text-[10px] font-bold">Online Only</span>
+               <label htmlFor="risk-confirm" className="text-[10px] font-bold cursor-pointer select-none">Confirmed</label>
              </div>
            </div>
          )}
@@ -924,54 +855,34 @@ function ReviewStep({
 
        <div className="flex-1 border rounded-lg overflow-hidden flex flex-col bg-muted/5">
           <div className="flex items-center gap-6 px-4 py-2 bg-muted/20 text-[10px] font-bold text-muted-foreground border-b uppercase tracking-wider">
-             <span className="flex-1">Command Configuration Summary</span>
-             <span className="w-32 text-right">Task Timeout</span>
+             <span className="flex-1">Configuration Manifest</span>
+             <span className="w-32 text-right">TTL (min)</span>
           </div>
           <ScrollArea className="flex-1">
              <div className="divide-y px-4">
-                <div className="py-4">
-                  <div className="flex flex-wrap gap-1.5">
+                <div className="py-4 flex flex-wrap gap-1.5">
                     {selectedDevices.map(d => (
-                        <Badge key={d.deviceId} variant="outline" className="text-[10px] font-medium bg-background px-2 py-0 h-5">
-                          {d.deviceName}
-                        </Badge>
+                        <Badge key={d.deviceId} variant="outline" className="text-[10px] font-medium bg-background px-2 h-5">{d.deviceName}</Badge>
                     ))}
-                  </div>
                 </div>
-
                 <div className="space-y-2 py-4">
                     {actions.map((a, i) => (
-                      <div key={i} className="flex items-center gap-4 p-3 bg-background border rounded-lg shadow-sm group">
-                        <div className="p-2 rounded-md bg-muted text-foreground">
-                           <ActionIcon type={a.type} className="h-4 w-4" />
-                        </div>
+                      <div key={i} className="flex items-center gap-4 p-3 bg-background border rounded-lg shadow-sm">
+                        <ActionIcon type={a.type} className="h-4 w-4 text-primary" />
                         <div className="min-w-0 flex-1">
                            <span className="text-xs font-bold">{formatActionType(a.type)}</span>
-                           <p className="text-[10px] text-muted-foreground truncate">
-                              {formatActionParams(a.type, a.params)}
-                           </p>
+                           <p className="text-[10px] text-muted-foreground truncate">{formatActionParams(a.type, a.params)}</p>
                         </div>
                         <div className="flex items-center gap-2 border-l pl-4">
                            <Timer className="h-3 w-3 text-muted-foreground" />
-                           <Select 
-                              value={String(a.timeout)} 
-                              onValueChange={(v) => updateTimeout(i, parseInt(v))}
-  
-                           >
-                              <SelectTrigger className="h-7 w-[90px] text-[10px] font-bold bg-muted/10 hover:bg-muted/20 border border-transparent focus:border-primary/40 focus:ring-0 focus-visible:ring-0 outline-none transition-all shadow-none">
+                           <Select value={String(a.timeout)} onValueChange={(v) => updateTimeout(i, parseInt(v))}>
+                              <SelectTrigger className="h-7 w-[90px] text-[10px] font-bold bg-muted/10 border-transparent shadow-none">
                                  <SelectValue />
                               </SelectTrigger>
-                              <SelectContent 
-                                 position="popper" 
-                                 sideOffset={4} 
-                                 className="z-[101] min-w-[var(--radix-select-trigger-width)]"
-                                 onCloseAutoFocus={(e) => e.preventDefault()}
-                              >
+                              <SelectContent position="popper" sideOffset={4} className="z-[101]">
                                  <SelectItem value="15" className="text-[10px]">15m</SelectItem>
                                  <SelectItem value="60" className="text-[10px]">1h</SelectItem>
                                  <SelectItem value="1440" className="text-[10px]">24h</SelectItem>
-                                 <SelectItem value="4320" className="text-[10px]">3 days</SelectItem>
-                                 <SelectItem value="10080" className="text-[10px]">7 days</SelectItem>
                               </SelectContent>
                            </Select>
                         </div>
@@ -1001,44 +912,32 @@ function ExecutionStep({
   onlineOnly: boolean
 }) {
   const trackingData = mode === 'MULTI_DEVICE_SINGLE_COMMAND' 
-        ? Array.from(selectedDeviceIds)
-            .map(id => {
+        ? Array.from(selectedDeviceIds).map(id => {
               const d = devices.find(x => String(x.deviceId) === id);
               const status = d ? resolveDeviceStatus(d) : 'offline';
               const isOnline = status === 'online';
               if (onlineOnly && !isOnline) return null;
-              return {
-                id,
-                label: d?.deviceName || id,
-                sub: isOnline ? 'Real-time sync' : (status === 'pending' ? 'Waiting for first heartbeat' : 'Pending: push on next heartbeat'),
-                isDevice: true,
-                isOffline: !isOnline
-              }
-            })        .filter(Boolean) as any[]
-    : actions.map((a, idx) => ({
-        id: `${Array.from(selectedDeviceIds)[0]}-action-${idx}`,
-        label: formatActionType(a.type),
-        sub: formatActionParams(a.type, a.params),
-        isDevice: false,
-        type: a.type,
-        isOffline: false 
-      }));
+              return { id, label: d?.deviceName || id, sub: isOnline ? 'Real-time sync' : 'Queued for heartbeat', isDevice: true, isOffline: !isOnline };
+            }).filter(Boolean) as any[]
+    : actions.map((a, idx) => ({ id: `${Array.from(selectedDeviceIds)[0]}-action-${idx}`, label: formatActionType(a.type), sub: formatActionParams(a.type, a.params), isDevice: false, type: a.type, isOffline: false }));
 
   const activeStream = trackingData.filter(t => !t.isOffline);
   const queueStream = trackingData.filter(t => t.isOffline);
+  const finishedCount = Object.values(results).filter(r => ['COMPLETED', 'CONFIRMED', 'SUCCEEDED', 'FAILED', 'EXPIRED'].includes(r.status)).length;
+  const isAllFinished = trackingData.length > 0 && finishedCount >= activeStream.length;
 
   return (
     <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center justify-between bg-muted/40 p-4 rounded-lg border">
         <div className="flex items-center gap-4">
-          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-             <CloudUpload className="h-4 w-4 animate-bounce" />
+          <div className={cn("h-8 w-8 rounded-full flex items-center justify-center", isAllFinished ? "bg-emerald-500 text-white" : "bg-primary/10 text-primary")}>
+             {isAllFinished ? <Check className="h-4 w-4 stroke-[3]" /> : <CloudUpload className="h-4 w-4 animate-bounce" />}
           </div>
           <div>
-            <h3 className="text-sm font-bold">Commands dispatched successfully</h3>
+            <h3 className="text-sm font-bold">{isAllFinished ? 'All commands processed' : 'Commands dispatched'}</h3>
             <div className="flex items-center gap-2 mt-0.5">
-               <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-none text-[9px] gap-1.5 h-4 px-1.5">
-                 <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live Status (Demo)
+               <Badge variant="outline" className={cn("border-none text-[9px] h-4 px-1.5", isAllFinished ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600")}>
+                 {isAllFinished ? <>Execution Complete</> : <><div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" /> Tracking Live</>}
                </Badge>
             </div>
           </div>
@@ -1047,18 +946,15 @@ function ExecutionStep({
 
       <div className="flex-1 border rounded-lg overflow-hidden flex flex-col relative bg-muted/5">
         <div className="flex items-center gap-6 px-4 py-2 bg-muted/20 text-[10px] font-bold text-muted-foreground border-b uppercase tracking-wider">
-          <span className="flex-1">{mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? 'Device Instance' : 'Command Queue'}</span>
+          <span className="flex-1">{mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? 'Device' : 'Queue'}</span>
           <span className="w-32 text-center">Status</span>
         </div>
         <ScrollArea className="flex-1">
           <div className="divide-y divide-border/50">
             {activeStream.map(item => (
-              <div key={item.id} className="flex items-center gap-4 px-4 py-3 hover:bg-muted/10 transition-all group">
+              <div key={item.id} className="flex items-center gap-4 px-4 py-3 group transition-all">
                 <div className="flex-1 min-w-0 flex items-center gap-4">
-                  <div className={cn(
-                     "p-2 rounded-md bg-background border shadow-none group-hover:scale-105 transition-transform",
-                     item.isDevice ? "text-primary" : "text-emerald-500"
-                  )}>
+                  <div className={cn("p-2 rounded-md bg-background border shadow-none", item.isDevice ? "text-primary" : "text-emerald-500")}>
                     {item.isDevice ? <Monitor className="h-4 w-4" /> : <ActionIcon type={(item as any).type} className="h-4 w-4" />}
                   </div>
                   <div className="min-w-0">
@@ -1071,37 +967,10 @@ function ExecutionStep({
                 </div>
               </div>
             ))}
-
-            {queueStream.length > 0 && (
-               <div className="bg-amber-500/5">
-                  <div className="px-4 py-2 flex items-center gap-2 opacity-60 border-t border-dashed">
-                     <Clock className="h-3 w-3" />
-                     <span className="text-[9px] font-bold uppercase">Queued (Offline)</span>
-                  </div>
-                  {queueStream.map(item => (
-                    <div key={item.id} className="flex items-center gap-4 px-4 py-2 opacity-60">
-                      <div className="flex-1 min-w-0 flex items-center gap-4">
-                        <div className="p-2 rounded-md bg-background border"><Monitor className="h-4 w-4" /></div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold truncate">{item.label}</p>
-                          <p className="text-[10px] text-muted-foreground">Waiting for heartbeat...</p>
-                        </div>
-                      </div>
-                      <div className="w-32 flex justify-center">
-                         <StatusBadge status="WAITING" />
-                      </div>
-                    </div>
-                  ))}
-               </div>
-            )}
           </div>
         </ScrollArea>
-
-        <div className="h-0.5 bg-muted">
-           <div 
-              className="h-full bg-primary transition-all duration-1000" 
-              style={{ width: `${(Object.values(results).filter(r => r.status === 'SUCCEEDED').length / trackingData.length) * 100}%` }} 
-           />
+        <div className="h-1 bg-muted">
+           <div className="h-full bg-primary transition-all duration-1000" style={{ width: `${(finishedCount / trackingData.length) * 100}%` }} />
         </div>
       </div>
     </div>
@@ -1110,47 +979,16 @@ function ExecutionStep({
 
 function StatusBadge({ status }: { status: string }) {
   switch (status) {
-    case 'WAITING':
-      return (
-        <Badge variant="outline" className="bg-zinc-100 text-zinc-500 border-zinc-200 gap-1.5 h-6 px-2 rounded-md">
-          <Clock className="h-3 w-3" />
-          <span className="text-[9px] font-bold uppercase">In Queue</span>
-        </Badge>
-      );
+    case 'WAITING': return <Badge variant="outline" className="bg-zinc-100 text-zinc-500 border-zinc-200 gap-1.5 h-6 px-2 rounded-md"><Clock className="h-3 w-3" /><span className="text-[9px] font-bold uppercase">In Queue</span></Badge>;
     case 'DISPATCHED':
-    case 'PUBLISHED':
-      return (
-        <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-200 gap-1.5 h-6 px-2 rounded-md">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          <span className="text-[9px] font-bold uppercase">Sending</span>
-        </Badge>
-      );
+    case 'PUBLISHED': return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-200 gap-1.5 h-6 px-2 rounded-md"><Loader2 className="h-3 w-3 animate-spin" /><span className="text-[9px] font-bold uppercase">Sending</span></Badge>;
     case 'ACKED':
-    case 'CONFIRMED':
-      return (
-        <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200 gap-1.5 h-6 px-2 rounded-md">
-          <Check className="h-3 w-3" />
-          <span className="text-[9px] font-bold uppercase">Received</span>
-        </Badge>
-      );
+    case 'CONFIRMED': return <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200 gap-1.5 h-6 px-2 rounded-md"><Check className="h-3 w-3" /><span className="text-[9px] font-bold uppercase">Received</span></Badge>;
     case 'SUCCEEDED':
-    case 'COMPLETED':
-      return (
-        <Badge className="bg-emerald-500 text-white border-none gap-1.5 h-6 px-2 rounded-md shadow-none">
-          <Check className="h-3 w-3 stroke-[3]" />
-          <span className="text-[9px] font-bold uppercase">Success</span>
-        </Badge>
-      );
+    case 'COMPLETED': return <Badge className="bg-emerald-500 text-white border-none gap-1.5 h-6 px-2 rounded-md shadow-none"><Check className="h-3 w-3 stroke-[3]" /><span className="text-[9px] font-bold uppercase">Success</span></Badge>;
     case 'FAILED':
-    case 'EXPIRED':
-      return (
-        <Badge className="bg-destructive text-white border-none gap-1.5 h-6 px-2 rounded-md shadow-none">
-          <AlertCircle className="h-3 w-3" />
-          <span className="text-[9px] font-bold uppercase">{status === 'EXPIRED' ? 'Expired' : 'Failed'}</span>
-        </Badge>
-      );
-    default:
-      return <Badge variant="outline" className="opacity-20 h-6 px-2">{status}</Badge>;
+    case 'EXPIRED': return <Badge className="bg-destructive text-white border-none gap-1.5 h-6 px-2 rounded-md shadow-none"><AlertCircle className="h-3 w-3" /><span className="text-[9px] font-bold uppercase">{status === 'EXPIRED' ? 'Expired' : 'Failed'}</span></Badge>;
+    default: return <Badge variant="outline" className="opacity-20 h-6 px-2">{status}</Badge>;
   }
 }
 
@@ -1165,6 +1003,7 @@ function ActionIcon({ type, className }: { type: ActionType, className?: string 
     case 'LOCALE': return <Languages className={className} />;
     case 'CONTENT_REPORT_SWITCH': return <Film className={className} />;
     case 'CLEAR_CACHE': return <Trash2 className={className} />;
+    case 'SCREENSHOT': return <Monitor className={className} />;
   }
 }
 
@@ -1186,6 +1025,7 @@ function getDefaultParams(type: ActionType): any {
     case 'LOCALE': return { language: 'en', country: 'US' };
     case 'CONTENT_REPORT_SWITCH': return { status: 1, programReportStatus: 1 };
     case 'CLEAR_CACHE': return {};
+    case 'SCREENSHOT': return {};
     default: return {};
   }
 }
