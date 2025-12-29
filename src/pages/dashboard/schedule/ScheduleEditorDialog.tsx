@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
+import { parseResolution } from '@/lib/resolution';
 import { getDevices } from '@/services/deviceApi';
 import type { 
   ScheduleRecord, 
@@ -880,7 +881,9 @@ function DeviceBindingTab({ boundCount, scheduleId }: { boundCount: number, sche
                    </div>
                    <ScrollArea className="flex-1">
                       <div className="p-4 space-y-2 px-8">
-                         {devices.slice(0, 4).map((d, i) => (
+                         {devices.slice(0, 4).map((d, i) => {
+                            const res = parseResolution(d.resolution, { width: 0, height: 0 });
+                            return (
                             <div key={d.id} className="p-5 rounded-[1.5rem] border-2 border-transparent hover:border-muted-foreground/10 hover:bg-muted/10 transition-all flex items-center justify-between group">
                                <div className="flex items-center gap-4">
                                   <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center border shadow-inner">
@@ -895,11 +898,12 @@ function DeviceBindingTab({ boundCount, scheduleId }: { boundCount: number, sche
                                   </div>
                                </div>
                                <div className="flex items-center gap-20">
-                                  <span className="w-24 font-mono text-[10px] font-bold">{d.resolution.width}x{d.resolution.height}</span>
+                                  <span className="w-24 font-mono text-[10px] font-bold">{res.width}x{res.height}</span>
                                   <span className="w-24 text-[10px] font-black text-muted-foreground/40 italic">JUST NOW</span>
                                </div>
                             </div>
-                         ))}
+                         );
+                         })}
                       </div>
                    </ScrollArea>
                 </>

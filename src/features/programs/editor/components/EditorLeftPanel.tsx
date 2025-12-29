@@ -162,7 +162,7 @@ export function EditorLeftPanel({
       </p>
 
       <ScrollArea className="flex-1">
-        <div className="space-y-4 p-4">
+        <div className="space-y-4 p-4 pr-8">
           <div className="space-y-3">
             <div className="space-y-2">
             <Input value={searchQuery || ''} onChange={(e) => onSearchChange?.(e.target.value)} placeholder="Search media…" />

@@ -798,15 +798,16 @@ const RegionContent = React.memo(function RegionContent({
         video.playbackRate = speed;
       }
 
-      if (isPlaying && video.paused) {
-        video.play().catch(() => {});
-      } else if (!isPlaying && !video.paused) {
+      if (isPlaying) {
+        if (video.paused) {
+          video.play().catch(() => {});
+        }
+        // Sync video time if drift is > 0.3s (playing only; avoids range refetch on selection while paused)
+        if (Math.abs(video.currentTime - internalTime) > 0.3) {
+          video.currentTime = Math.max(0, internalTime);
+        }
+      } else if (!video.paused) {
         video.pause();
-      }
-
-      // Sync video time if drift is > 0.3s
-      if (Math.abs(video.currentTime - internalTime) > 0.3) {
-        video.currentTime = Math.max(0, internalTime);
       }
     }
   }, [currentTime, itemStartTime, item?.Type, isPlaying, playbackSpeed]);
@@ -855,6 +856,7 @@ const RegionContent = React.memo(function RegionContent({
           poster={material.coverUrl}
           muted
           playsInline
+          preload="metadata"
           loop={item.Loop === '1'}
         />
       );

@@ -61,7 +61,7 @@ export interface Device {
   model: string;
   version: string;
   firmwareVersion?: string; // compatibility
-  resolution: Resolution; // Changed from string to object
+  resolution: Resolution | string; // backend may return string like "1024 x 512"
 
   // Network
   networkType: NetworkType;

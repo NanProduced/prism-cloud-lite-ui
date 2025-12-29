@@ -36,6 +36,7 @@ import {
 import { getItems, getPages, getRegions } from '../vsnOps';
 import { DeviceResolutionPicker } from './DeviceResolutionPicker';
 import { PopoverColorPicker } from '@/components/ui/popover-color-picker';
+import { parseResolution } from '@/lib/resolution';
 
 type MaterialIndex = Record<string, EditorMaterial>;
 
@@ -206,7 +207,7 @@ function ProgramInspector({
         />
       </Field>
 
-      <Field label="Target device (resolution)">
+          <Field label="Target device (resolution)">
         <DeviceResolutionPicker
           devices={devices}
           value={targetDeviceId}
@@ -217,22 +218,11 @@ function ProgramInspector({
             }
             const device = devices.find((d) => String(d.deviceId || d.id) === deviceId);
             if (!device) return;
-
-            let w = 1920, h = 1080;
-            if (typeof device.resolution === 'string') {
-              const parts = (device.resolution as string).split(/[xX*]/);
-              if (parts.length === 2) {
-                w = Number.parseInt(parts[0].trim(), 10) || 1920;
-                h = Number.parseInt(parts[1].trim(), 10) || 1080;
-              }
-            } else if (device.resolution && typeof device.resolution === 'object') {
-              w = (device.resolution as any).width || 1920;
-              h = (device.resolution as any).height || 1080;
-            }
+            const res = parseResolution(device.resolution, { width: programWidth, height: programHeight });
 
             onSetProgramResolution({
-              width: w,
-              height: h,
+              width: res.width,
+              height: res.height,
               targetDeviceId: deviceId,
             });
           }}

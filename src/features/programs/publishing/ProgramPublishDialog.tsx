@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { parseResolution } from '@/lib/resolution';
 import type { Device, Tag } from '@/types/device';
 import { getDevices } from '@/services/deviceApi';
 
@@ -98,7 +99,7 @@ export function ProgramPublishDialog({
     return devices.filter((device) => {
       if (onlineOnly && device.status !== 'online') return false;
       
-      const res = parseResolution(device.resolution);
+      const res = parseResolution(device.resolution, { width: 0, height: 0 });
       if (resolutionOnly === 'match' && (res.width !== program.width || res.height !== program.height)) return false;
       
       if (tagFilters.size > 0) {
@@ -548,7 +549,7 @@ function DeviceSelectStep({
                <div className="divide-y divide-foreground/[0.03]">
                   {filteredDevices.map((d) => {
                      const isSelected = selectedDeviceIds.has(d.id);
-                     const res = parseResolution(d.resolution);
+                     const res = parseResolution(d.resolution, { width: 0, height: 0 });
                      const isConflict = res.width !== programResolution.width || res.height !== programResolution.height;
                      const deployed = deploymentsByDeviceId.get(d.id);
                      
@@ -853,27 +854,4 @@ function formatDeviceId(id: any): string {
   const str = String(id).trim();
   if (str.length <= 12) return str;
   return `${str.slice(0, 8)}…${str.slice(-4)}`;
-}
-
-function parseResolution(resolution: any): { width: number; height: number } {
-  if (!resolution) return { width: 1920, height: 1080 };
-  
-  if (typeof resolution === 'string') {
-    const parts = resolution.split(/[xX*]/);
-    if (parts.length === 2) {
-      return {
-        width: Number.parseInt(parts[0].trim(), 10) || 1920,
-        height: Number.parseInt(parts[1].trim(), 10) || 1080,
-      };
-    }
-  }
-  
-  if (typeof resolution === 'object') {
-    return {
-      width: resolution.width || 1920,
-      height: resolution.height || 1080,
-    };
-  }
-  
-  return { width: 1920, height: 1080 };
 }

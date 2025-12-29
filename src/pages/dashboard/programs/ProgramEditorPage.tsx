@@ -233,7 +233,7 @@ export default function ProgramEditorPage() {
 
   const maxPageDurationMs = useMemo(() => {
     const page = pages[selection.pageIndex];
-    const pageDur = Number.parseInt(page?.Duration ?? '10', 10) * 1000 || 10000;
+    const pageDur = Number.parseInt(page?.AppointDuration ?? '', 10) || 10000;
     
     let contentMax = 0;
     regions.forEach((r) => {
@@ -334,6 +334,17 @@ export default function ProgramEditorPage() {
     setSessionHasChanges(true);
   };
 
+  const vsnRef = useRef(vsn);
+  const selectionRef = useRef(selection);
+  const applyVsnRef = useRef(applyVsn);
+  const undoRef = useRef<() => void>(() => {});
+  const redoRef = useRef<() => void>(() => {});
+  const togglePlaybackRef = useRef<() => void>(() => {});
+
+  useEffect(() => { vsnRef.current = vsn; }, [vsn]);
+  useEffect(() => { selectionRef.current = selection; }, [selection]);
+  useEffect(() => { applyVsnRef.current = applyVsn; }, [applyVsn]);
+
   const undo = useCallback(() => {
     if (past.length === 0 || !vsn) return;
     const previous = past[past.length - 1];
@@ -356,42 +367,57 @@ export default function ProgramEditorPage() {
     setSessionHasChanges(true);
   }, [future, vsn]);
 
+  useEffect(() => { undoRef.current = undo; }, [undo]);
+  useEffect(() => { redoRef.current = redo; }, [redo]);
+  useEffect(() => { togglePlaybackRef.current = togglePlayback; }, [togglePlayback]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
-      if (e.code === 'Space' && !isInput) {
+      const target = e.target as HTMLElement | null;
+      const isEditable =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        !!target?.isContentEditable;
+
+      if (e.code === 'Space' && !isEditable) {
         e.preventDefault();
-        togglePlayback();
+        togglePlaybackRef.current();
       }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && !isInput) {
-        if (vsn && selection.regionIndex != null) {
-          if (selection.itemIndex != null) {
-             const next = deleteItem(vsn, selection.pageIndex, selection.regionIndex, selection.itemIndex);
-             if (next !== vsn) {
-               applyVsn(next);
-               setSelection((prev) => ({ ...prev, itemIndex: null }));
-             }
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !isEditable) {
+        e.preventDefault();
+        const currentVsn = vsnRef.current;
+        const sel = selectionRef.current;
+        if (currentVsn && sel.regionIndex != null) {
+          if (sel.itemIndex != null) {
+            const next = deleteItem(currentVsn, sel.pageIndex, sel.regionIndex, sel.itemIndex);
+            if (next !== currentVsn) {
+              applyVsnRef.current(next);
+              setSelection((prev) => ({ ...prev, itemIndex: null }));
+            }
           } else {
-             // Delete the whole region if no item is selected
-             const next = deleteRegion(vsn, selection.pageIndex, selection.regionIndex);
-             if (next !== vsn) {
-               applyVsn(next);
-               setSelection((prev) => ({ ...prev, regionIndex: null, itemIndex: null }));
-             }
+            const next = deleteRegion(currentVsn, sel.pageIndex, sel.regionIndex);
+            if (next !== currentVsn) {
+              applyVsnRef.current(next);
+              setSelection((prev) => ({ ...prev, regionIndex: null, itemIndex: null }));
+            }
           }
         }
       }
+
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         e.preventDefault();
-        if (e.shiftKey) redo(); else undo();
+        if (e.shiftKey) redoRef.current();
+        else undoRef.current();
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
         e.preventDefault();
-        redo();
+        redoRef.current();
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo, togglePlayback, selection, vsn]);
+  }, []);
 
   if (programQuery.isLoading || isInitializing) {
     return (
@@ -524,7 +550,32 @@ export default function ProgramEditorPage() {
         let rIdx = selection.regionIndex;
         const source = material.source as MediaAssetNode;
         if (rIdx == null) {
-          const res = createRegionForInsert({ name: material.name, x: 200, y: 200, width: 640, height: 360 });
+          const hasDim = Number.isFinite(material.width) && material.width! > 0 && Number.isFinite(material.height) && material.height! > 0;
+
+          let w = hasDim ? material.width! : Math.round(canvasWidth * 0.5);
+          let h = hasDim ? material.height! : Math.round(canvasHeight * 0.5);
+
+          if (hasDim && material.width === canvasWidth && material.height === canvasHeight) {
+            w = canvasWidth;
+            h = canvasHeight;
+          } else {
+            const maxW = canvasWidth * 0.8;
+            const maxH = canvasHeight * 0.8;
+            if (w > maxW || h > maxH) {
+              const ratio = w / h;
+              if (w / maxW > h / maxH) {
+                w = maxW;
+                h = w / ratio;
+              } else {
+                h = maxH;
+                w = h * ratio;
+              }
+            }
+          }
+
+          const x = (canvasWidth - w) / 2;
+          const y = (canvasHeight - h) / 2;
+          const res = createRegionForInsert({ name: material.name, x, y, width: w, height: h });
           if (!res) return;
           doc = res.doc;
           rIdx = res.regionIndex;
@@ -675,11 +726,19 @@ export default function ProgramEditorPage() {
                />
             </div>
             <div className="min-h-0 overflow-hidden rounded-2xl border bg-zinc-950">
-               <AdvancedTimeline
+                 <AdvancedTimeline
                  regions={regions} selection={selection} materialIndex={materialIndex}
                  currentTime={currentTime} isPlaying={isPlaying} playbackSpeed={playbackSpeed}
                  onCurrentTimeChange={setCurrentTime} onPlaybackSpeedChange={setPlaybackSpeed}
-                 onSelectItem={(rIdx, iIdx) => setSelection(prev => ({ ...prev, regionIndex: rIdx, itemIndex: iIdx }))}
+                 onSelectItem={(rIdx, iIdx) => {
+                   setSelection((prev) => ({ ...prev, regionIndex: rIdx, itemIndex: iIdx }));
+                   const region = regions[rIdx];
+                   const items = region?.Items?.Item ?? [];
+                   if (Array.isArray(items) && iIdx >= 0 && iIdx < items.length) {
+                     const start = items.slice(0, iIdx).reduce((sum, it) => sum + (Number(it.Duration) || 0), 0);
+                     setCurrentTime(start);
+                   }
+                 }}
                  onSelectRegion={(rIdx) => setSelection(prev => ({ ...prev, regionIndex: rIdx, itemIndex: null }))}
                  onPatchItem={(rIdx, iIdx, patch) => vsn && applyVsn(patchItem(vsn, selection.pageIndex, rIdx, iIdx, patch))}
                  onDeleteItem={(rIdx, iIdx) => {

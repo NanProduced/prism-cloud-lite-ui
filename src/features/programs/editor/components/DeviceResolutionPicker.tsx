@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { parseResolution } from '@/lib/resolution';
 
 export function DeviceResolutionPicker({
   devices,
@@ -23,8 +24,9 @@ export function DeviceResolutionPicker({
   const [open, setOpen] = useState(false);
 
   const selected = useMemo(() => (value ? devices.find((d) => String(d.deviceId || d.id) === value) ?? null : null), [devices, value]);
+  const selectedResolution = useMemo(() => (selected ? parseResolution(selected.resolution, { width: 0, height: 0 }) : { width: 0, height: 0 }), [selected]);
   const label = selected 
-    ? `${selected.deviceName} · ${selected.resolution?.width ?? '?' }×${selected.resolution?.height ?? '?'}` 
+    ? `${selected.deviceName} · ${selectedResolution.width > 0 ? selectedResolution.width : '?'}×${selectedResolution.height > 0 ? selectedResolution.height : '?'}`
     : placeholder;
 
   return (
@@ -70,8 +72,9 @@ export function DeviceResolutionPicker({
               {devices.map((device) => {
                 const id = String(device.deviceId || device.id);
                 const isSelected = id === value;
-                const w = device.resolution?.width ?? 0;
-                const h = device.resolution?.height ?? 0;
+                const res = parseResolution(device.resolution, { width: 0, height: 0 });
+                const w = res.width ?? 0;
+                const h = res.height ?? 0;
 
                 return (
                   <CommandItem
@@ -104,4 +107,3 @@ export function DeviceResolutionPicker({
     </Popover>
   );
 }
-
