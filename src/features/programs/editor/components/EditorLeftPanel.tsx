@@ -223,7 +223,7 @@ export function EditorLeftPanel({
                         </span>
                       )}
                       {m.kind === 'video' && m.durationMs && (
-                        <span className="flex items-center gap-1 text-[9px] text-primary font-bold ml-auto bg-primary/10 px-1 rounded">
+                        <span className="flex items-center gap-1 text-[9px] text-primary font-bold ml-auto bg-primary/10 px-1.5 py-0.5 rounded shrink-0 whitespace-nowrap">
                           <Clock className="h-2 w-2" />
                           {formatDurationSimple(m.durationMs)}
                         </span>

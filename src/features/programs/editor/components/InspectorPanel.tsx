@@ -217,9 +217,22 @@ function ProgramInspector({
             }
             const device = devices.find((d) => String(d.deviceId || d.id) === deviceId);
             if (!device) return;
+
+            let w = 1920, h = 1080;
+            if (typeof device.resolution === 'string') {
+              const parts = (device.resolution as string).split(/[xX*]/);
+              if (parts.length === 2) {
+                w = Number.parseInt(parts[0].trim(), 10) || 1920;
+                h = Number.parseInt(parts[1].trim(), 10) || 1080;
+              }
+            } else if (device.resolution && typeof device.resolution === 'object') {
+              w = (device.resolution as any).width || 1920;
+              h = (device.resolution as any).height || 1080;
+            }
+
             onSetProgramResolution({
-              width: device.resolution?.width || 1920,
-              height: device.resolution?.height || 1080,
+              width: w,
+              height: h,
               targetDeviceId: deviceId,
             });
           }}
@@ -239,9 +252,9 @@ function ProgramInspector({
               inputMode="numeric"
               min={1}
               max={8192}
-              value={selectedDevice ? String(selectedDevice.resolution.width) : widthDraft}
-              disabled={Boolean(selectedDevice)}
+              value={widthDraft}
               onChange={(e) => setWidthDraft(e.target.value)}
+              onBlur={commitResolution}
             />
           </Field>
           <Field label="Height">
@@ -250,9 +263,9 @@ function ProgramInspector({
               inputMode="numeric"
               min={1}
               max={4096}
-              value={selectedDevice ? String(selectedDevice.resolution.height) : heightDraft}
-              disabled={Boolean(selectedDevice)}
+              value={heightDraft}
               onChange={(e) => setHeightDraft(e.target.value)}
+              onBlur={commitResolution}
             />
           </Field>
         </div>

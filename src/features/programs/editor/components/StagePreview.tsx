@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { Grid3x3, Image as ImageIcon, Magnet, Maximize2, Minus, MousePointer2, Plus, SquareDashed, Type as TypeIcon, Video as VideoIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -499,7 +499,7 @@ export function StagePreview({
             )}
 
             {regions.map((region, regionIndex) => {
-              const { item, startTime } = pickActiveItem(region, regionIndex, selection, currentTime);
+              const { item, startTime } = pickActiveItem(region, regionIndex, selection, currentTime, isPlaying);
               return (
                 <RegionBox
                   key={`region-${regionIndex}`}
@@ -590,42 +590,52 @@ function pickActiveItem(
   regionIndex: number,
   selection: EditorSelection,
   currentTime: number,
+  isPlaying: boolean,
 ): { item: VsnItem | null; startTime: number } {
   const items = region.Items?.Item ?? [];
   if (!Array.isArray(items) || items.length === 0) return { item: null, startTime: 0 };
 
-  // Prioritize selection
-  if (selection.regionIndex === regionIndex && selection.itemIndex != null) {
-    const match = items[selection.itemIndex];
-    let offset = 0;
-    for (let i = 0; i < selection.itemIndex; i++) {
-      offset += Number(items[i].Duration) || 0;
-    }
-    if (match) return { item: match as VsnItem, startTime: offset };
-  }
+  // Calculate total duration of the track
+  let trackDuration = 0;
+  items.forEach(it => trackDuration += Number(it.Duration) || 0);
 
-  let accumulated = 0;
-  for (const item of items) {
-    const duration = Number(item.Duration) || 0;
-    if (currentTime >= accumulated && currentTime < accumulated + duration) {
-      return { item: item as VsnItem, startTime: accumulated };
-    }
-    accumulated += duration;
-  }
-
-  if (accumulated > 0) {
-    const loopedTime = currentTime % accumulated;
-    let loopAccumulated = 0;
-    for (const item of items) {
-      const duration = Number(item.Duration) || 0;
-      if (loopedTime >= loopAccumulated && loopedTime < loopAccumulated + duration) {
-        return { item: item as VsnItem, startTime: loopAccumulated };
+  // Helper to find item at specific time
+  const findItemAt = (time: number) => {
+    let accumulated = 0;
+    const seekTime = trackDuration > 0 ? time % trackDuration : 0;
+    for (let i = 0; i < items.length; i++) {
+      const duration = Number(items[i].Duration) || 0;
+      if (seekTime >= accumulated && seekTime < accumulated + duration) {
+        return { item: items[i] as VsnItem, startTime: accumulated, index: i };
       }
-      loopAccumulated += duration;
+      accumulated += duration;
+    }
+    return { item: items[0] as VsnItem, startTime: 0, index: 0 };
+  };
+
+  // If we are playing, strictly follow the playhead
+  if (isPlaying) {
+    return findItemAt(currentTime);
+  }
+
+  // If not playing, and we have a selection:
+  if (selection.regionIndex === regionIndex && selection.itemIndex != null) {
+    const selectedItem = items[selection.itemIndex] as VsnItem;
+    let selectedStartTime = 0;
+    for (let i = 0; i < selection.itemIndex; i++) {
+      selectedStartTime += Number(items[i].Duration) || 0;
+    }
+    const selectedEndTime = selectedStartTime + (Number(selectedItem.Duration) || 0);
+
+    // If the playhead (currentTime) is currently WITHIN the selected item, 
+    // or very close to the start, prioritize the selected item's state.
+    if (currentTime >= selectedStartTime && currentTime < selectedEndTime) {
+       return { item: selectedItem, startTime: selectedStartTime };
     }
   }
 
-  return { item: (items[0] as VsnItem) ?? null, startTime: 0 };
+  // Fallback: Default to following the playhead
+  return findItemAt(currentTime);
 }
 
 function RegionBox({
@@ -761,7 +771,7 @@ function ResizeHandleDot({
   );
 }
 
-function RegionContent({
+const RegionContent = React.memo(function RegionContent({
   item,
   materialIndex,
   currentTime,
@@ -794,6 +804,7 @@ function RegionContent({
         video.pause();
       }
 
+      // Sync video time if drift is > 0.3s
       if (Math.abs(video.currentTime - internalTime) > 0.3) {
         video.currentTime = Math.max(0, internalTime);
       }
@@ -809,14 +820,21 @@ function RegionContent({
     );
   }
 
+  const materialId = item.FileSource?.Resource_ID;
+  const material = materialId ? materialIndex[materialId] : undefined;
+
   if (item.Type === '2' || item.Type === '6') {
-    const materialId = item.FileSource?.Resource_ID;
-    const material = materialId ? materialIndex[materialId] : undefined;
     const src = material?.coverUrl ?? material?.assetUrl ?? undefined;
     const fit = item.ReserveAS === '1' ? 'contain' : 'fill';
 
     return src ? (
-      <img className="h-full w-full" style={{ objectFit: fit }} src={src} alt={material?.name ?? 'Image'} />
+      <img 
+        key={materialId || src}
+        className="h-full w-full" 
+        style={{ objectFit: fit }} 
+        src={src} 
+        alt={material?.name ?? 'Image'} 
+      />
     ) : (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <ImageIcon className="h-4 w-4" />
@@ -826,11 +844,10 @@ function RegionContent({
   }
 
   if (item.Type === '3') {
-    const materialId = item.FileSource?.Resource_ID;
-    const material = materialId ? materialIndex[materialId] : undefined;
     if (material?.assetUrl) {
       return (
         <video
+          key={materialId || material.assetUrl}
           ref={videoRef}
           className="h-full w-full"
           style={{ objectFit: item.ReserveAS === '1' ? 'contain' : 'fill' }}
@@ -881,7 +898,7 @@ function RegionContent({
       Type {item.Type}
     </div>
   );
-}
+});
 
 function parseRect(region: VsnRegion): { x: number; y: number; w: number; h: number } {
   const rect = region.Rect;

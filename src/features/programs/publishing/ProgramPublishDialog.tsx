@@ -97,7 +97,9 @@ export function ProgramPublishDialog({
     const q = deviceQuery.trim().toLowerCase();
     return devices.filter((device) => {
       if (onlineOnly && device.status !== 'online') return false;
-      if (resolutionOnly === 'match' && (device.resolution.width !== program.width || device.resolution.height !== program.height)) return false;
+      
+      const res = parseResolution(device.resolution);
+      if (resolutionOnly === 'match' && (res.width !== program.width || res.height !== program.height)) return false;
       
       if (tagFilters.size > 0) {
         const deviceTagIds = device.tags.map(t => t.id);
@@ -546,7 +548,8 @@ function DeviceSelectStep({
                <div className="divide-y divide-foreground/[0.03]">
                   {filteredDevices.map((d) => {
                      const isSelected = selectedDeviceIds.has(d.id);
-                     const isConflict = d.resolution.width !== programResolution.width || d.resolution.height !== programResolution.height;
+                     const res = parseResolution(d.resolution);
+                     const isConflict = res.width !== programResolution.width || res.height !== programResolution.height;
                      const deployed = deploymentsByDeviceId.get(d.id);
                      
                      return (
@@ -573,7 +576,7 @@ function DeviceSelectStep({
                                        </TooltipTrigger>
                                        <TooltipContent className="bg-amber-900 text-amber-50 border-amber-800 p-3 rounded-xl shadow-xl max-w-[280px]">
                                           <p className="font-bold flex items-center gap-2 mb-1 uppercase text-[10px] tracking-widest"><AlertCircle className="h-3 w-3" /> Resolution Mismatch</p>
-                                          <p className="text-[11px] opacity-80 leading-relaxed">This hardware runs at {d.resolution.width}x{d.resolution.height}, but your program is {programResolution.width}x{programResolution.height}. Content scaling may occur.</p>
+                                          <p className="text-[11px] opacity-80 leading-relaxed">This hardware runs at {res.width}x{res.height}, but your program is {programResolution.width}x{programResolution.height}. Content scaling may occur.</p>
                                        </TooltipContent>
                                     </Tooltip>
                                  </TooltipProvider>
@@ -582,7 +585,7 @@ function DeviceSelectStep({
                            <div className="flex items-center gap-3 mt-1.5">
                               <p className="text-[9px] text-muted-foreground font-mono opacity-50 tracking-tighter uppercase">{formatDeviceId(d.id)}</p>
                               <div className="h-2 w-px bg-muted" />
-                              <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">{d.resolution.width}×{d.resolution.height}</span>
+                              <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">{res.width}×{res.height}</span>
                            </div>
                         </div>
                         <div className="flex items-center gap-4">
@@ -845,8 +848,32 @@ function collectDeviceTags(devices: Device[]): Tag[] {
   return [...map.values()].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 }
 
-function formatDeviceId(deviceId: string): string {
-  const id = deviceId.trim();
-  if (id.length <= 12) return id;
-  return `${id.slice(0, 8)}…${id.slice(-4)}`;
+function formatDeviceId(id: any): string {
+  if (id === null || id === undefined) return '';
+  const str = String(id).trim();
+  if (str.length <= 12) return str;
+  return `${str.slice(0, 8)}…${str.slice(-4)}`;
+}
+
+function parseResolution(resolution: any): { width: number; height: number } {
+  if (!resolution) return { width: 1920, height: 1080 };
+  
+  if (typeof resolution === 'string') {
+    const parts = resolution.split(/[xX*]/);
+    if (parts.length === 2) {
+      return {
+        width: Number.parseInt(parts[0].trim(), 10) || 1920,
+        height: Number.parseInt(parts[1].trim(), 10) || 1080,
+      };
+    }
+  }
+  
+  if (typeof resolution === 'object') {
+    return {
+      width: resolution.width || 1920,
+      height: resolution.height || 1080,
+    };
+  }
+  
+  return { width: 1920, height: 1080 };
 }

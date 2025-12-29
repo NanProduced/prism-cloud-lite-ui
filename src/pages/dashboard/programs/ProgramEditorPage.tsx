@@ -233,9 +233,16 @@ export default function ProgramEditorPage() {
 
   const maxPageDurationMs = useMemo(() => {
     const page = pages[selection.pageIndex];
-    if (!page) return 10000;
-    return Number.parseInt(page.Duration ?? '10', 10) * 1000 || 10000;
-  }, [pages, selection.pageIndex]);
+    const pageDur = Number.parseInt(page?.Duration ?? '10', 10) * 1000 || 10000;
+    
+    let contentMax = 0;
+    regions.forEach((r) => {
+      const total = r.Items.Item.reduce((sum, item) => sum + (Number(item.Duration) || 0), 0);
+      if (total > contentMax) contentMax = total;
+    });
+
+    return Math.max(pageDur, contentMax);
+  }, [pages, selection.pageIndex, regions]);
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -357,11 +364,20 @@ export default function ProgramEditorPage() {
         togglePlayback();
       }
       if ((e.key === 'Delete' || e.key === 'Backspace') && !isInput) {
-        if (selection.regionIndex != null && selection.itemIndex != null && vsn) {
-          const next = deleteItem(vsn, selection.pageIndex, selection.regionIndex, selection.itemIndex);
-          if (next !== vsn) {
-            applyVsn(next);
-            setSelection((prev) => ({ ...prev, itemIndex: null }));
+        if (vsn && selection.regionIndex != null) {
+          if (selection.itemIndex != null) {
+             const next = deleteItem(vsn, selection.pageIndex, selection.regionIndex, selection.itemIndex);
+             if (next !== vsn) {
+               applyVsn(next);
+               setSelection((prev) => ({ ...prev, itemIndex: null }));
+             }
+          } else {
+             // Delete the whole region if no item is selected
+             const next = deleteRegion(vsn, selection.pageIndex, selection.regionIndex);
+             if (next !== vsn) {
+               applyVsn(next);
+               setSelection((prev) => ({ ...prev, regionIndex: null, itemIndex: null }));
+             }
           }
         }
       }
@@ -617,13 +633,30 @@ export default function ProgramEditorPage() {
                           setSelection({ pageIndex: selection.pageIndex, regionIndex, itemIndex: res.itemIndex });
                        }
                     } else {
-                       // Create new region for drop
+                       // Create new region for drop - try to respect material dimensions
+                       let w = material.width || 640;
+                       let h = material.height || 360;
+                       
+                       // If material is too large for canvas, scale it down to fit 50% of canvas
+                       const maxW = canvasWidth * 0.8;
+                       const maxH = canvasHeight * 0.8;
+                       if (w > maxW || h > maxH) {
+                         const ratio = w / h;
+                         if (w / maxW > h / maxH) {
+                           w = maxW;
+                           h = w / ratio;
+                         } else {
+                           h = maxH;
+                           w = h * ratio;
+                         }
+                       }
+
                        const res = createRegionForInsert({ 
                           name: material.name, 
-                          x: point.x - 320, 
-                          y: point.y - 180, 
-                          width: 640, 
-                          height: 360 
+                          x: point.x - w / 2, 
+                          y: point.y - h / 2, 
+                          width: w, 
+                          height: h 
                        });
                        if (res && res.doc) {
                           const itemRes = addItem(res.doc, selection.pageIndex, res.regionIndex, createItemFromMedia(material.source as MediaAssetNode, { materialId }));
@@ -649,6 +682,18 @@ export default function ProgramEditorPage() {
                  onSelectItem={(rIdx, iIdx) => setSelection(prev => ({ ...prev, regionIndex: rIdx, itemIndex: iIdx }))}
                  onSelectRegion={(rIdx) => setSelection(prev => ({ ...prev, regionIndex: rIdx, itemIndex: null }))}
                  onPatchItem={(rIdx, iIdx, patch) => vsn && applyVsn(patchItem(vsn, selection.pageIndex, rIdx, iIdx, patch))}
+                 onDeleteItem={(rIdx, iIdx) => {
+                    if (!vsn) return;
+                    const next = deleteItem(vsn, selection.pageIndex, rIdx, iIdx);
+                    applyVsn(next);
+                    setSelection(prev => ({ ...prev, itemIndex: null }));
+                 }}
+                 onMoveItem={(fromR, fromI, toR, toI) => {
+                    if (!vsn) return;
+                    const next = moveItemToRegion(vsn, selection.pageIndex, fromR, fromI, toR, toI);
+                    applyVsn(next);
+                    setSelection({ pageIndex: selection.pageIndex, regionIndex: toR, itemIndex: toI });
+                 }}
                />
             </div>
           </div>
