@@ -42,13 +42,14 @@ export function AnalyticsDeviceTable({ data, className }: AnalyticsDeviceTablePr
         const vp = grid.state.viewport.get() ?? undefined;
         return measureText(text, vp).width + 36;
       },
-      cellRenderer: ({ row, grid }: CellRendererParams<AnalyticsDeviceItem>) => {
+      cellRenderer: ({ row }: CellRendererParams<AnalyticsDeviceItem>) => {
         if (!row.data) return null;
+        const deviceId = String(row.data.deviceId);
         return (
           <div className="flex items-center gap-2 px-1">
              <Monitor className="h-3 w-3 opacity-40" />
              <span className="text-xs font-bold font-mono text-foreground/80 truncate">
-               {row.data.deviceId}
+               {deviceId}
              </span>
           </div>
         );
@@ -65,11 +66,12 @@ export function AnalyticsDeviceTable({ data, className }: AnalyticsDeviceTablePr
         resizable: true,
         movable: false,
       },
-      cellRenderer: ({ row, grid }: CellRendererParams<AnalyticsDeviceItem>) => {
+      cellRenderer: ({ row }: CellRendererParams<AnalyticsDeviceItem>) => {
         if (!row.data) return null;
+        const playCount = Number(row.data.playCount || 0);
         return (
           <span className="text-xs font-bold text-primary tabular-nums px-1">
-            {row.data.playCount.toLocaleString()}
+            {playCount.toLocaleString()}
           </span>
         );
       },
@@ -99,7 +101,7 @@ export function AnalyticsDeviceTable({ data, className }: AnalyticsDeviceTablePr
   });
 
   return (
-    <div className={cn("w-full h-full min-h-[300px] border rounded-xl overflow-hidden bg-background", className)}>
+    <div className={cn("w-full h-full min-h-[300px] border rounded-lg overflow-hidden bg-background shadow-sm", className)}>
       <LyteNyte grid={grid} />
     </div>
   );

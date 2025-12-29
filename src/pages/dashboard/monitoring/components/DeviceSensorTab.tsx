@@ -65,22 +65,6 @@ export function DeviceSensorTab({
     []
   );
 
-  // Handler to open history drawer for receive card data
-  const handleViewReceiveCardHistory = useCallback(
-    (netPortNum: number, receiveCardNum: number) => {
-      setHistoryState({
-        open: true,
-        reportType: 'bitErrorRate',
-        sourceType: 'DEVICE_SENSOR',
-        title: `Receive Card - Port ${netPortNum}, Card ${receiveCardNum}`,
-        isReceiveCard: true,
-        netPortNum,
-        receiveCardNum,
-      });
-    },
-    []
-  );
-
   // Close history drawer
   const handleCloseHistory = useCallback(() => {
     setHistoryState((prev) => ({ ...prev, open: false }));

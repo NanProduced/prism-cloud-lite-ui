@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Activity,
@@ -13,9 +13,9 @@ import {
   AlertCircle,
   Cpu,
   Gauge,
+  Bug,
 } from 'lucide-react';
 import { getDevices } from '@/services/deviceApi';
-import { type SensorSourceType } from '@/services/telemetryApi';
 import { type Device, resolveDeviceStatus } from '@/types/device';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,12 +26,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 
-import type { TelemetryItem, RealtimeMetric, SSEState, MonitoringFilters } from './monitoring/types';
-import { getSourceTab, type MonitoringTab } from './monitoring/constants';
+import type { RealtimeMetric, SSEState } from './monitoring/types';
+import { type MonitoringTab } from './monitoring/constants';
 import { DeviceSensorTab, M2SensorTab } from './monitoring/components';
-
-const LRU_LIMIT = 500;
-const REFRESH_INTERVAL = 1000;
+import { useMonitoringSSE } from '@/hooks/use-monitoring-sse';
 
 export default function MonitoringPage() {
   const queryClient = useQueryClient();
@@ -40,17 +38,10 @@ export default function MonitoringPage() {
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<MonitoringTab>('device');
+  const [showDebug, setShowDebug] = useState(false);
 
   // SSE & Real-time State
-  const [sseState, setSseState] = useState<SSEState>({
-    metrics: {},
-    lastUpdate: 0,
-    status: 'idle',
-    diagnostics: [],
-  });
-
-  const traceIdBuffer = useRef<Set<string>>(new Set());
-  const pendingUpdates = useRef<Record<string, RealtimeMetric>>({});
+  const sseState = useMonitoringSSE(selectedDeviceIds);
 
   // --- Queries ---
 
@@ -67,115 +58,6 @@ export default function MonitoringPage() {
         d.id.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [devicesRes, searchQuery]);
-
-  // --- SSE Logic ---
-
-  useEffect(() => {
-    if (selectedDeviceIds.length === 0) {
-      setSseState((prev) => ({ ...prev, status: 'idle', metrics: {} }));
-      return;
-    }
-
-    const url = `/api/sse/monitoring/stream?deviceIds=${selectedDeviceIds.join(',')}`;
-    const eventSource = new EventSource(url, { withCredentials: true });
-
-    setSseState((prev) => ({ ...prev, status: 'connected' }));
-
-    eventSource.addEventListener('prism', (event: any) => {
-      try {
-        const envelope = JSON.parse(event.data);
-        if (envelope.type === 'telemetry.sensor.reported') {
-          // De-duplication
-          if (envelope.traceId && traceIdBuffer.current.has(envelope.traceId)) return;
-          if (envelope.traceId) {
-            traceIdBuffer.current.add(envelope.traceId);
-            if (traceIdBuffer.current.size > LRU_LIMIT) {
-              const first = traceIdBuffer.current.values().next().value;
-              traceIdBuffer.current.delete(first);
-            }
-          }
-
-          const items = (envelope.data?.items || []) as TelemetryItem[];
-
-          items.forEach((item) => {
-            const deviceId = item.deviceId || envelope.deviceId || 'unknown';
-            const sensorType = item.sensorType;
-            const sensorId = item.sensorId;
-
-            // Determine source type based on sensorId
-            const sourceType: SensorSourceType =
-              sensorType === 'bitErrorRate'
-                ? 'DEVICE_SENSOR'
-                : sensorId >= 1000
-                  ? 'M2_SENSOR'
-                  : 'DEVICE_SENSOR';
-
-            // Get the tab this metric belongs to
-            const tab = getSourceTab(sensorType, sensorId);
-
-            // Determine reportType
-            let reportType = sensorType;
-
-            const metricKey = `${sourceType}:${reportType}:${deviceId}`;
-
-            const val = item.sensorValue !== undefined ? item.sensorValue : item;
-            const numVal = typeof val === 'number' ? val : 0;
-
-            const existing = pendingUpdates.current[metricKey] || sseState.metrics[metricKey];
-            const history = existing?.history || [];
-            const newHistory = [...history, { at: envelope.occurredAt, val: numVal }].slice(-30);
-
-            pendingUpdates.current[metricKey] = {
-              value: val,
-              at: envelope.occurredAt,
-              sourceType,
-              reportType,
-              metricKey,
-              deviceId,
-              history: newHistory,
-              traceId: envelope.traceId,
-            };
-          });
-
-          // Diagnostics
-          if (envelope.traceId) {
-            setSseState((prev) => ({
-              ...prev,
-              diagnostics: [
-                { traceId: envelope.traceId, occurredAt: envelope.occurredAt },
-                ...prev.diagnostics,
-              ].slice(0, 20),
-            }));
-          }
-        }
-      } catch (e) {
-        console.error('[SSE Monitoring] Error', e);
-      }
-    });
-
-    eventSource.onerror = () => {
-      setSseState((prev) => ({ ...prev, status: 'error' }));
-    };
-
-    return () => {
-      eventSource.close();
-    };
-  }, [selectedDeviceIds]);
-
-  // Throttled UI Update
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (Object.keys(pendingUpdates.current).length > 0) {
-        setSseState((prev) => ({
-          ...prev,
-          metrics: { ...prev.metrics, ...pendingUpdates.current },
-          lastUpdate: Date.now(),
-        }));
-        pendingUpdates.current = {};
-      }
-    }, REFRESH_INTERVAL);
-    return () => clearInterval(timer);
-  }, []);
 
   // --- Helpers ---
 
@@ -197,7 +79,6 @@ export default function MonitoringPage() {
   const filteredMetrics = useMemo(() => {
     const result: Record<string, RealtimeMetric> = {};
     Object.entries(sseState.metrics).forEach(([key, metric]) => {
-      const tab = getSourceTab(metric.reportType, metric.reportType === 'bitErrorRate' ? 0 : metric.sourceType === 'M2_SENSOR' ? 1000 : 0);
       if (
         (activeTab === 'device' && (metric.sourceType === 'DEVICE_SENSOR' || metric.reportType === 'bitErrorRate')) ||
         (activeTab === 'm2' && metric.sourceType === 'M2_SENSOR' && metric.reportType !== 'bitErrorRate')
@@ -225,7 +106,7 @@ export default function MonitoringPage() {
 
   if (isDevicesLoading) {
     return (
-      <div className="flex h-[70vh] items-center justify-center text-muted-foreground font-bold uppercase tracking-widest text-[10px]">
+      <div className="flex h-[70vh] items-center justify-center text-muted-foreground font-semibold tracking-wider text-xs">
         Initializing Fleet Monitoring...
       </div>
     );
@@ -234,47 +115,57 @@ export default function MonitoringPage() {
   return (
     <div className="flex flex-col gap-4 p-6 h-full overflow-hidden">
       {/* Unified Toolbar */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-3 flex-wrap bg-card border rounded-lg p-2 px-4 shadow-sm">
         <div className="flex items-center gap-2">
+          <Activity className="h-4 w-4 text-primary" />
+          <h1 className="text-sm font-bold tracking-tight">Live Monitoring</h1>
+          <Separator orientation="vertical" className="h-4 mx-2" />
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="h-9 rounded-xl font-semibold text-[11px] tracking-tight gap-2 px-4 border-2"
+            className="h-8 rounded-md font-medium text-xs gap-2 px-3"
             onClick={() => queryClient.invalidateQueries({ queryKey: ['devices'] })}
           >
-            <RefreshCw className="h-3.5 w-3.5 text-primary" />
+            <RefreshCw className="h-3 w-3" />
             Refresh Fleet
           </Button>
-          <Separator orientation="vertical" className="h-6 mx-1" />
-          <div className="flex items-center gap-2 text-[11px] font-bold tracking-tight text-muted-foreground/60">
-            <Activity className="h-3.5 w-3.5 text-primary" />
-            Live Monitoring
-          </div>
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
           <SSEStatus status={sseState.status} />
+          <Separator orientation="vertical" className="h-4 mx-1" />
           <Button
-            variant="outline"
+            variant={showDebug ? "secondary" : "ghost"}
             size="icon"
-            className="h-9 w-9 rounded-xl"
-            onClick={copyDiagnostics}
-            title="Copy Diagnostics"
+            className="h-8 w-8 rounded-md"
+            onClick={() => setShowDebug(!showDebug)}
+            title="Toggle Debug Info"
           >
-            <Copy className="h-3.5 w-3.5" />
+            <Bug className="h-3.5 w-3.5" />
           </Button>
+          {showDebug && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-md"
+              onClick={copyDiagnostics}
+              title="Copy Diagnostics"
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       </div>
 
-      <div className="flex flex-1 min-h-[calc(100vh-11rem)] gap-6 overflow-hidden">
+      <div className="flex flex-1 min-h-[calc(100vh-11rem)] gap-4 overflow-hidden">
         {/* LEFT: FLEET NAVIGATOR */}
-        <Card className="flex w-[300px] flex-col overflow-hidden border-none bg-muted/10 shadow-none ring-1 ring-muted/50 shrink-0">
-          <div className="p-4 space-y-4 border-b bg-muted/5">
+        <Card className="flex w-[280px] flex-col overflow-hidden border bg-card shadow-sm shrink-0">
+          <div className="p-3 space-y-3 border-b bg-muted/30">
             <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50 transition-colors group-focus-within:text-primary" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50 transition-colors group-focus-within:text-primary" />
               <Input
                 placeholder="Search devices..."
-                className="pl-9 h-10 bg-background border-muted/50 text-sm font-medium"
+                className="pl-8 h-8 bg-background text-xs"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -304,7 +195,7 @@ export default function MonitoringPage() {
             </div>
           </div>
           <ScrollArea className="flex-1">
-            <div className="p-2 space-y-1">
+            <div className="p-2 space-y-0.5">
               {devices.map((d) => {
                 const isSelected = selectedDeviceIds.includes(d.id);
                 return (
@@ -312,15 +203,15 @@ export default function MonitoringPage() {
                     key={d.id}
                     onClick={() => toggleDevice(d.id)}
                     className={cn(
-                      'w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left group border border-transparent',
+                      'w-full flex items-center gap-2.5 p-2 rounded-md transition-all text-left border border-transparent',
                       isSelected
-                        ? 'bg-background border-primary/20 shadow-sm'
-                        : 'hover:bg-background/50 text-muted-foreground'
+                        ? 'bg-primary/5 border-primary/10 shadow-sm'
+                        : 'hover:bg-muted/50 text-muted-foreground'
                     )}
                   >
                     <div
                       className={cn(
-                        'h-2 w-2 rounded-full',
+                        'h-2 w-2 rounded-full shrink-0',
                         resolveDeviceStatus(d as Device) === 'online'
                           ? 'bg-emerald-500'
                           : 'bg-slate-300'
@@ -329,7 +220,7 @@ export default function MonitoringPage() {
                     <div className="flex-1 min-w-0">
                       <p
                         className={cn(
-                          'text-xs font-bold truncate',
+                          'text-xs font-semibold truncate',
                           isSelected ? 'text-primary' : 'text-foreground/80'
                         )}
                       >
@@ -348,12 +239,12 @@ export default function MonitoringPage() {
         {/* MAIN AREA */}
         <div className="flex-1 flex flex-col gap-4 overflow-hidden">
           {selectedDeviceIds.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center opacity-40 bg-muted/5 rounded-[2rem] border border-dashed">
-              <Monitor className="h-16 w-16 mb-4" />
-              <h2 className="text-xl font-bold uppercase tracking-tight">
+            <div className="flex-1 flex flex-col items-center justify-center text-center opacity-40 bg-muted/10 rounded-lg border border-dashed">
+              <Monitor className="h-12 w-12 mb-3" />
+              <h2 className="text-lg font-bold tracking-tight">
                 No Active Subscriptions
               </h2>
-              <p className="text-sm">
+              <p className="text-xs max-w-xs">
                 Select one or more devices from the fleet list to start receiving real-time
                 telemetry.
               </p>
@@ -365,11 +256,11 @@ export default function MonitoringPage() {
               className="flex-1 flex flex-col overflow-hidden"
             >
               {/* Tab Header */}
-              <div className="bg-card border rounded-2xl p-4 flex items-center justify-between gap-4">
-                <TabsList className="bg-muted/50 p-1 h-10">
+              <div className="bg-card border rounded-lg p-2 px-4 flex items-center justify-between gap-4 shadow-sm">
+                <TabsList className="bg-muted/50 h-8">
                   <TabsTrigger
                     value="device"
-                    className="h-8 px-4 text-[11px] font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2"
+                    className="h-6 px-3 text-xs font-semibold data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2"
                   >
                     <Cpu className="h-3.5 w-3.5" />
                     Device & Receive Card
@@ -381,7 +272,7 @@ export default function MonitoringPage() {
                   </TabsTrigger>
                   <TabsTrigger
                     value="m2"
-                    className="h-8 px-4 text-[11px] font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2"
+                    className="h-6 px-3 text-xs font-semibold data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2"
                   >
                     <Gauge className="h-3.5 w-3.5" />
                     M2 External Sensors
@@ -406,7 +297,7 @@ export default function MonitoringPage() {
               {/* Tab Content */}
               <TabsContent
                 value="device"
-                className="flex-1 mt-4 overflow-auto data-[state=inactive]:hidden"
+                className="flex-1 mt-3 overflow-auto data-[state=inactive]:hidden"
               >
                 {Object.keys(filteredMetrics).length === 0 ? (
                   <EmptyState
@@ -424,7 +315,7 @@ export default function MonitoringPage() {
 
               <TabsContent
                 value="m2"
-                className="flex-1 mt-4 overflow-auto data-[state=inactive]:hidden"
+                className="flex-1 mt-3 overflow-auto data-[state=inactive]:hidden"
               >
                 {Object.keys(filteredMetrics).length === 0 ? (
                   <EmptyState
@@ -449,24 +340,25 @@ export default function MonitoringPage() {
 
 // --- Internal UI Helpers ---
 
-function SSEStatus({ status }: { status: SSEState['status'] }) {
+function SSEStatus({ status }: { status: 'connected' | 'reconnecting' | 'error' | 'idle' }) {
   const configs = {
-    connected: { color: 'text-emerald-500', label: 'SSE Connected', icon: Wifi },
+    connected: { color: 'text-emerald-500', label: 'Connected', icon: Wifi },
     reconnecting: { color: 'text-amber-500', label: 'Reconnecting', icon: RefreshCw },
-    error: { color: 'text-rose-500', label: 'SSE Error', icon: AlertTriangle },
+    error: { color: 'text-rose-500', label: 'Error', icon: AlertTriangle },
     idle: { color: 'text-muted-foreground', label: 'Disconnected', icon: Wifi },
-  };
-  const config = configs[status];
+  } as const;
+  
+  const config = configs[status as keyof typeof configs] || configs.idle;
   const Icon = config.icon;
 
   return (
     <div
       className={cn(
-        'flex items-center gap-2 px-3 h-9 rounded-xl border bg-background text-[10px] font-bold uppercase tracking-tight',
+        'flex items-center gap-2 px-2.5 h-8 rounded-md border bg-background text-[10px] font-bold uppercase tracking-tight',
         config.color
       )}
     >
-      <Icon className={cn('h-3.5 w-3.5', status === 'reconnecting' && 'animate-spin')} />
+      <Icon className={cn('h-3 w-3', status === 'reconnecting' && 'animate-spin')} />
       {config.label}
     </div>
   );
@@ -477,15 +369,16 @@ function EmptyState({
   title,
   description,
 }: {
-  icon: typeof AlertCircle;
+  icon: any;
   title: string;
   description: string;
 }) {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center text-center opacity-40 bg-muted/5 rounded-[2rem] border border-dashed h-full min-h-[400px]">
-      <Icon className="h-16 w-16 mb-4" />
-      <h2 className="text-xl font-bold uppercase tracking-tight">{title}</h2>
-      <p className="text-sm">{description}</p>
+    <div className="flex-1 flex flex-col items-center justify-center text-center opacity-40 bg-muted/5 rounded-lg border border-dashed h-full min-h-[300px]">
+      <Icon className="h-12 w-12 mb-3" />
+      <h2 className="text-lg font-bold tracking-tight">{title}</h2>
+      <p className="text-xs max-w-xs">{description}</p>
     </div>
   );
 }
+

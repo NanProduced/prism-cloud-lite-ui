@@ -106,18 +106,18 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
     <div className={cn('space-y-6', className)}>
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
+        <Card className="rounded-lg border bg-card shadow-sm overflow-hidden">
           <div className="h-1 w-full bg-indigo-500" />
-          <CardContent className="p-6">
+          <CardContent className="p-4 px-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-indigo-500/10">
+              <div className="p-2 rounded-md bg-indigo-500/10">
                 <MonitorPlay className="h-5 w-5 text-indigo-500" />
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
                   Total Plays
                 </p>
-                <p className="text-2xl font-bold tracking-tighter tabular-nums">
+                <p className="text-xl font-bold tracking-tight tabular-nums">
                   {kpis.totalCount.toLocaleString()}
                 </p>
               </div>
@@ -125,18 +125,18 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
+        <Card className="rounded-lg border bg-card shadow-sm overflow-hidden">
           <div className="h-1 w-full bg-pink-500" />
-          <CardContent className="p-6">
+          <CardContent className="p-4 px-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-pink-500/10">
+              <div className="p-2 rounded-md bg-pink-500/10">
                 <Clock className="h-5 w-5 text-pink-500" />
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
                   Total Air Time
                 </p>
-                <p className="text-2xl font-bold tracking-tighter tabular-nums">
+                <p className="text-xl font-bold tracking-tight tabular-nums">
                   {formatDuration(kpis.totalSeconds)}
                 </p>
               </div>
@@ -144,18 +144,18 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
+        <Card className="rounded-lg border bg-card shadow-sm overflow-hidden">
           <div className="h-1 w-full bg-emerald-500" />
-          <CardContent className="p-6">
+          <CardContent className="p-4 px-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-emerald-500/10">
+              <div className="p-2 rounded-md bg-emerald-500/10">
                 <Layers className="h-5 w-5 text-emerald-500" />
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
                   Active Programs
                 </p>
-                <p className="text-2xl font-bold tracking-tighter tabular-nums">
+                <p className="text-xl font-bold tracking-tight tabular-nums">
                   {kpis.uniquePrograms}
                 </p>
               </div>
@@ -167,9 +167,9 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Programs Table */}
-        <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
-          <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
-            <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+        <Card className="rounded-lg border bg-card shadow-sm overflow-hidden">
+          <CardHeader className="p-3 pb-2 bg-muted/30 border-b">
+            <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
               <Layers className="h-4 w-4 text-primary" />
               Top Programs
             </CardTitle>
@@ -190,11 +190,11 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
           {selectedProgram ? (
             <>
               {/* Selected Program Header */}
-              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none">
+              <Card className="rounded-lg border bg-card shadow-sm">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
+                      <div className="p-1.5 rounded-md bg-primary/10">
                         <Layers className="h-4 w-4 text-primary" />
                       </div>
                       <div>
@@ -207,7 +207,7 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
                         </p>
                       </div>
                     </div>
-                    <Badge variant="secondary" className="text-[9px] font-bold">
+                    <Badge variant="secondary" className="text-[9px] font-bold h-5 px-2 rounded-full">
                       TOP {topPrograms.findIndex((p) => p.id === selectedProgram.id) + 1}
                     </Badge>
                   </div>
@@ -215,9 +215,9 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
               </Card>
 
               {/* Trend Chart */}
-              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none">
+              <Card className="rounded-lg border bg-card shadow-sm">
                 <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                  <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
                     <TrendingUp className="h-4 w-4 text-primary" />
                     Playback Trend
                   </CardTitle>
@@ -258,9 +258,9 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
                           <Tooltip
                             labelFormatter={(val) => formatDateTime(val)}
                             contentStyle={{
-                              borderRadius: '12px',
-                              border: 'none',
-                              boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                              borderRadius: '8px',
+                              border: '1px solid #e2e8f0',
+                              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                               fontSize: '10px',
                             }}
                           />
@@ -279,9 +279,9 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
               </Card>
 
               {/* Device Distribution */}
-              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none">
+              <Card className="rounded-lg border bg-card shadow-sm overflow-hidden">
                 <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                  <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
                     <Monitor className="h-4 w-4 text-primary" />
                     Device Distribution
                   </CardTitle>
@@ -302,7 +302,7 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
               </Card>
             </>
           ) : (
-            <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none h-full min-h-[400px]">
+            <Card className="rounded-lg border bg-card shadow-sm h-full min-h-[400px]">
               <CardContent className="h-full flex flex-col items-center justify-center text-center opacity-40">
                 <Layers className="h-12 w-12 mb-3" />
                 <p className="text-sm font-bold">Select a Program</p>

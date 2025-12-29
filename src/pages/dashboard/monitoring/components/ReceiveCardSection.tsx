@@ -157,7 +157,7 @@ export function ReceiveCardSection({
     return 'healthy';
   };
 
-  const statusColors = {
+  const statusColors: Record<string, string> = {
     healthy: 'text-emerald-500 bg-emerald-500/10',
     warning: 'text-amber-500 bg-amber-500/10',
     critical: 'text-rose-500 bg-rose-500/10',
@@ -174,16 +174,16 @@ export function ReceiveCardSection({
   return (
     <Card
       className={cn(
-        'rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden',
+        'rounded-lg border bg-card shadow-sm overflow-hidden',
         className
       )}
     >
       <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between space-y-0">
         <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-indigo-500/10">
-            <Cpu className="h-4 w-4 text-indigo-500" />
+          <div className="p-1.5 rounded-md bg-indigo-500/10">
+            <Cpu className="h-3.5 w-3.5 text-indigo-500" />
           </div>
-          <CardTitle className="text-xs font-bold uppercase tracking-widest">
+          <CardTitle className="text-xs font-bold uppercase tracking-widest text-foreground/70">
             Receive Cards
           </CardTitle>
         </div>
@@ -191,7 +191,7 @@ export function ReceiveCardSection({
           <Badge
             variant="outline"
             className={cn(
-              'text-[9px] font-bold',
+              'text-[9px] font-bold h-5 px-2 rounded-full',
               statusColors[summary.status]
             )}
           >
@@ -215,21 +215,21 @@ export function ReceiveCardSection({
           // Summary View
           <div className="space-y-4">
             {/* Summary Stats */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="p-3 rounded-xl bg-muted/30 text-center">
-                <p className="text-2xl font-bold tracking-tighter">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 rounded-lg bg-muted/30 text-center border">
+                <p className="text-xl font-bold tracking-tight">
                   {summary.totalCards}
                 </p>
                 <p className="text-[9px] font-bold uppercase opacity-40">Cards</p>
               </div>
-              <div className="p-3 rounded-xl bg-muted/30 text-center">
-                <p className="text-2xl font-bold tracking-tighter">
+              <div className="p-3 rounded-lg bg-muted/30 text-center border">
+                <p className="text-xl font-bold tracking-tight">
                   {summary.totalPorts}
                 </p>
                 <p className="text-[9px] font-bold uppercase opacity-40">Ports</p>
               </div>
-              <div className="p-3 rounded-xl bg-muted/30 text-center">
-                <p className="text-2xl font-bold tracking-tighter">
+              <div className="p-3 rounded-lg bg-muted/30 text-center border">
+                <p className="text-xl font-bold tracking-tight">
                   {Object.keys(receiveCardData).length}
                 </p>
                 <p className="text-[9px] font-bold uppercase opacity-40">Devices</p>
@@ -239,7 +239,7 @@ export function ReceiveCardSection({
             {/* Port/Card Grid */}
             {deviceIds.length > 1 && (
               <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
-                <SelectTrigger className="h-8 text-[10px] font-bold">
+                <SelectTrigger className="h-8 text-[10px] font-bold rounded-md">
                   <SelectValue placeholder="Select Device" />
                 </SelectTrigger>
                 <SelectContent>
@@ -273,7 +273,7 @@ export function ReceiveCardSection({
                               setShowHistory(true);
                             }}
                             className={cn(
-                              'p-2 rounded-lg text-left transition-all hover:ring-2 hover:ring-primary/20',
+                              'p-2 rounded-md text-left transition-all border hover:border-primary/50',
                               statusColors[status]
                             )}
                           >
@@ -310,7 +310,7 @@ export function ReceiveCardSection({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 text-[10px] font-bold"
+                className="h-7 text-[10px] font-bold rounded-md"
                 onClick={() => setShowHistory(false)}
               >
                 ← Back
@@ -323,7 +323,7 @@ export function ReceiveCardSection({
                   setSelectedCard(null);
                 }}
               >
-                <SelectTrigger className="h-7 w-24 text-[10px] font-bold">
+                <SelectTrigger className="h-7 w-24 text-[10px] font-bold rounded-md">
                   <SelectValue placeholder="Port" />
                 </SelectTrigger>
                 <SelectContent>
@@ -344,7 +344,7 @@ export function ReceiveCardSection({
                 onValueChange={(val) => setSelectedCard(Number(val))}
                 disabled={selectedPort === null}
               >
-                <SelectTrigger className="h-7 w-24 text-[10px] font-bold">
+                <SelectTrigger className="h-7 w-24 text-[10px] font-bold rounded-md">
                   <SelectValue placeholder="Card" />
                 </SelectTrigger>
                 <SelectContent>

@@ -4,7 +4,6 @@ import type { PlaybackBucket } from '@/services/telemetryApi';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
 import { ProgramTab, MediaTab, FleetUptimeTab } from './analytics/components';
 import type { AnalyticsTab } from './analytics/types';
 
@@ -35,39 +34,43 @@ export default function AnalyticsPage() {
 
   return (
     <div className="flex flex-col gap-4 p-6 h-full">
-      {/* GLOBAL CONTROLS */}
-      <div className="flex items-center gap-4 flex-wrap bg-card border rounded-[1.5rem] p-3 px-6 shadow-sm">
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-primary" />
-          <div className="flex items-center gap-1">
-            <Input
-              type="date"
-              value={timeRange.from}
-              onChange={(e) => setTimeRange((prev) => ({ ...prev, from: e.target.value }))}
-              className="h-8 w-32 border-none bg-transparent font-bold text-xs p-0 focus-visible:ring-0"
-            />
-            <span className="text-[10px] font-bold opacity-30">TO</span>
-            <Input
-              type="date"
-              value={timeRange.to}
-              onChange={(e) => setTimeRange((prev) => ({ ...prev, to: e.target.value }))}
-              className="h-8 w-32 border-none bg-transparent font-bold text-xs p-0 focus-visible:ring-0"
-            />
+      {/* GLOBAL CONTROLS / TOOLBAR */}
+      <div className="flex items-center gap-4 flex-wrap bg-card border rounded-lg p-2 px-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-muted/50 rounded-md px-2 py-1">
+            <Calendar className="h-3.5 w-3.5 text-primary" />
+            <div className="flex items-center gap-1">
+              <input
+                type="date"
+                value={timeRange.from}
+                onChange={(e) => setTimeRange((prev) => ({ ...prev, from: e.target.value }))}
+                className="bg-transparent border-none p-0 text-[11px] font-bold focus:ring-0 outline-none w-24"
+              />
+              <span className="text-[10px] font-bold opacity-30 px-1">TO</span>
+              <input
+                type="date"
+                value={timeRange.to}
+                onChange={(e) => setTimeRange((prev) => ({ ...prev, to: e.target.value }))}
+                className="bg-transparent border-none p-0 text-[11px] font-bold focus:ring-0 outline-none w-24"
+              />
+            </div>
+          </div>
+          
+          <Separator orientation="vertical" className="h-6 mx-1" />
+          
+          <div className="flex items-center gap-2">
+            <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground">{tz}</span>
           </div>
         </div>
-        <Separator orientation="vertical" className="h-6" />
-        <div className="flex items-center gap-2">
-          <Globe className="h-4 w-4 text-muted-foreground" />
-          <span className="text-[10px] font-bold uppercase tracking-tight">{tz}</span>
-        </div>
-        <Separator orientation="vertical" className="h-6" />
-        <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+
+        <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-md ml-4">
           {BUCKETS.map((b) => (
             <Button
               key={b.value}
               variant={bucket === b.value ? 'secondary' : 'ghost'}
               size="sm"
-              className="h-7 text-[9px] font-bold rounded-md px-3"
+              className="h-6 text-[9px] font-bold rounded-sm px-2.5"
               onClick={() => setBucket(b.value)}
             >
               {b.label}
@@ -79,10 +82,10 @@ export default function AnalyticsPage() {
           <Button
             variant="default"
             size="sm"
-            className="h-9 rounded-xl font-bold text-[10px] uppercase tracking-widest px-6 shadow-xl shadow-primary/20 gap-2"
+            className="h-8 rounded-md font-bold text-[10px] uppercase tracking-wider px-4 gap-2"
           >
             <Download className="h-3.5 w-3.5" />
-            Export
+            Export Data
           </Button>
         </div>
       </div>
@@ -90,26 +93,26 @@ export default function AnalyticsPage() {
       <Tabs
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as AnalyticsTab)}
-        className="space-y-6 flex-1 flex flex-col min-h-0"
+        className="space-y-4 flex-1 flex flex-col min-h-0"
       >
-        <TabsList className="bg-muted/40 p-1 rounded-xl border shadow-inner w-fit">
+        <TabsList className="bg-muted/40 p-1 rounded-lg border shadow-inner w-fit h-9">
           <TabsTrigger
             value="program"
-            className="rounded-lg px-6 text-[10px] font-bold uppercase tracking-widest data-[state=active]:bg-background gap-1.5"
+            className="rounded-md px-4 text-[10px] font-bold uppercase tracking-wider data-[state=active]:bg-background gap-1.5 h-7"
           >
             <Layers className="h-3.5 w-3.5" />
             Program
           </TabsTrigger>
           <TabsTrigger
             value="media"
-            className="rounded-lg px-6 text-[10px] font-bold uppercase tracking-widest data-[state=active]:bg-background gap-1.5"
+            className="rounded-md px-4 text-[10px] font-bold uppercase tracking-wider data-[state=active]:bg-background gap-1.5 h-7"
           >
             <Film className="h-3.5 w-3.5" />
             Media
           </TabsTrigger>
           <TabsTrigger
             value="fleet"
-            className="rounded-lg px-6 text-[10px] font-bold uppercase tracking-widest data-[state=active]:bg-background gap-1.5"
+            className="rounded-md px-4 text-[10px] font-bold uppercase tracking-wider data-[state=active]:bg-background gap-1.5 h-7"
           >
             <Wifi className="h-3.5 w-3.5" />
             Fleet Uptime
@@ -131,3 +134,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+

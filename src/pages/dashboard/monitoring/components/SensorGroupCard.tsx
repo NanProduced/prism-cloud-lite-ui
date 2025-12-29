@@ -178,16 +178,16 @@ export function SensorGroupCard({
   return (
     <Card
       className={cn(
-        'rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden',
+        'rounded-lg border bg-card shadow-sm overflow-hidden',
         className
       )}
     >
       <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between space-y-0">
         <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <Icon className="h-4 w-4 text-primary" />
+          <div className="p-1.5 rounded-md bg-primary/10">
+            <Icon className="h-3.5 w-3.5 text-primary" />
           </div>
-          <CardTitle className="text-xs font-bold uppercase tracking-widest">
+          <CardTitle className="text-xs font-bold uppercase tracking-widest text-foreground/70">
             {group.title}
           </CardTitle>
         </div>
@@ -195,7 +195,7 @@ export function SensorGroupCard({
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 text-[10px] font-bold gap-1"
+            className="h-7 text-[10px] font-bold gap-1 px-2"
             onClick={() =>
               onViewHistory(activeSensor.reportType, activeSensor.metricKeys)
             }
@@ -224,12 +224,12 @@ export function SensorGroupCard({
               }
             }}
           >
-            <TabsList className="bg-muted/50 p-0.5 h-7 mb-3">
+            <TabsList className="bg-muted/50 p-0.5 h-7 mb-3 rounded-md">
               {sensorTabs.map((tab) => (
                 <TabsTrigger
                   key={tab.key}
                   value={tab.key}
-                  className="text-[9px] font-bold h-6 px-3 data-[state=active]:bg-background"
+                  className="text-[9px] font-bold h-6 px-3 rounded-sm data-[state=active]:bg-background"
                 >
                   {tab.label}
                 </TabsTrigger>
