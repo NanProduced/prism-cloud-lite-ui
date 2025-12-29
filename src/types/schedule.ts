@@ -106,6 +106,38 @@ export interface ScheduleBinding {
   errorMessage?: string;
 }
 
+export type ScheduleBindingDevice = ScheduleBinding;
+
+export interface SchedulePushResp {
+  totalTargets: number;
+  accepted: number;
+  results: Array<{
+    deviceId: string;
+    commandId?: string;
+    accepted: boolean;
+    queuedId?: number;
+    errorMessage?: string;
+  }>;
+}
+
+export interface CreateScheduleReq {
+  name: string;
+  description?: string;
+  enabled?: boolean;
+  timezone?: string;
+  contentsRules?: ProgramScheduleRule[] | null;
+  commandRules?: CommandScheduleRule[] | null;
+}
+
+export interface UpdateScheduleReq {
+  name?: string;
+  description?: string;
+  enabled?: boolean;
+  timezone?: string;
+  contentsRules?: ProgramScheduleRule[] | null;
+  commandRules?: CommandScheduleRule[] | null;
+}
+
 /**
  * Combined data for device visibility (AllowList)
  * Used in Device Details -> Playback Plan

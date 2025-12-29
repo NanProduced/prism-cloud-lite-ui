@@ -128,7 +128,7 @@ export default function ProgramsPage() {
   const filteredTemplates = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = q ? templates.filter((t) => t.name.toLowerCase().includes(q)) : [...templates];
-    return list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    return list.sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
   }, [query, templates]);
 
   const openPublishDialog = async (program: ProgramListResp) => {

@@ -148,6 +148,16 @@ export default function ProgramEditorPage() {
 
     const load = async () => {
       try {
+        // Reset ephemeral editor state when switching drafts/base versions.
+        if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
+        setPast([]);
+        setFuture([]);
+        setDirty(false);
+        setAutosavePending(false);
+        setSelection({ pageIndex: 0, regionIndex: null, itemIndex: null });
+        setCurrentTime(0);
+        setIsPlaying(false);
+
         const res = await ensureDraftApi(programId, baseVersion ?? undefined);
         if (res.data) {
           setDraft(res.data);
@@ -189,7 +199,7 @@ export default function ProgramEditorPage() {
       if (res.data) setDraft(res.data);
       queryClient.invalidateQueries({ queryKey: ['programs', programId] });
     },
-    onError: (err) => toast.error(`Autosave failed: ${getErrorMessage(err)}`),
+    onError: (err) => toast.error(`Save failed: ${getErrorMessage(err)}`),
   });
 
   const renameMutation = useMutation({
@@ -203,8 +213,9 @@ export default function ProgramEditorPage() {
   // Handle Save
   const handleSaveManually = useCallback(() => {
     if (!vsn || !draft) return;
-    saveMutation.mutate(vsn);
-    toast.success('Workspace saved');
+    saveMutation.mutate(vsn, {
+      onSuccess: () => toast.success('Draft saved'),
+    });
   }, [vsn, draft, saveMutation]);
 
   // Autosave Logic
@@ -212,9 +223,9 @@ export default function ProgramEditorPage() {
     if (!dirty || !vsn || !draft?.id) return;
     
     const policy = getProgramDraftSavePolicy();
-    if (policy === 'manual') return;
+    if (policy !== 'always') return;
 
-    const delay = policy === 'aggressive' ? 2000 : 10000;
+    const delay = 10000;
     
     if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
     
@@ -266,28 +277,71 @@ export default function ProgramEditorPage() {
   
   const [previewOpen, setPreviewOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
-  const [sessionHasChanges, setSessionHasChanges] = useState(false);
   const [draftPromptOpen, setDraftPromptOpen] = useState(false);
   const [draftPromptIntent, setDraftPromptIntent] = useState<DraftPromptIntent | null>(null);
 
-  const navigationBlocker = useBlocker(sessionHasChanges);
+  const shouldBlockNavigation = useMemo(() => {
+    const policy = getProgramDraftSavePolicy();
+    if (policy === 'never') return false;
+    return dirty || saveMutation.isPending;
+  }, [dirty, saveMutation.isPending]);
 
-  const requestBaseVersionChange = (next: number | null) => {
+  const navigationBlocker = useBlocker(shouldBlockNavigation);
+
+  const requestBaseVersionChange = async (next: number | null) => {
     if (next === baseVersion) return;
-    if (!sessionHasChanges) {
+
+    const policy = getProgramDraftSavePolicy();
+    const hasUnsaved = dirty || saveMutation.isPending;
+
+    if (!hasUnsaved || policy === 'never') {
       setBaseVersion(next);
       setIsInitializing(true); // Re-trigger load
       return;
     }
+
+    if (policy === 'always') {
+      try {
+        if (vsn && dirty) await saveMutation.mutateAsync(vsn);
+        setBaseVersion(next);
+        setIsInitializing(true);
+      } catch (err) {
+        toast.error(`Failed to save draft: ${getErrorMessage(err)}`);
+        setDraftPromptIntent({ type: 'switch', nextBaseVersion: next });
+        setDraftPromptOpen(true);
+      }
+      return;
+    }
+
+    // policy === 'ask'
     setDraftPromptIntent({ type: 'switch', nextBaseVersion: next });
     setDraftPromptOpen(true);
   };
 
   useEffect(() => {
     if (navigationBlocker.state !== 'blocked') return;
-    setDraftPromptIntent({ type: 'navigate' });
-    setDraftPromptOpen(true);
-  }, [navigationBlocker]);
+
+    const policy = getProgramDraftSavePolicy();
+
+    if (policy === 'always') {
+      (async () => {
+        try {
+          if (vsn && dirty) await saveMutation.mutateAsync(vsn);
+          navigationBlocker.proceed?.();
+        } catch (err) {
+          toast.error(`Failed to save draft: ${getErrorMessage(err)}`);
+          setDraftPromptIntent({ type: 'navigate' });
+          setDraftPromptOpen(true);
+        }
+      })();
+      return;
+    }
+
+    if (policy === 'ask') {
+      setDraftPromptIntent({ type: 'navigate' });
+      setDraftPromptOpen(true);
+    }
+  }, [navigationBlocker, dirty, saveMutation, vsn]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -331,7 +385,6 @@ export default function ProgramEditorPage() {
     vsnRevisionRef.current += 1;
     setVsn(next);
     setDirty(true);
-    setSessionHasChanges(true);
   };
 
   const vsnRef = useRef(vsn);
@@ -353,7 +406,6 @@ export default function ProgramEditorPage() {
     vsnRevisionRef.current += 1;
     setVsn(previous);
     setDirty(true);
-    setSessionHasChanges(true);
   }, [past, vsn]);
 
   const redo = useCallback(() => {
@@ -364,7 +416,6 @@ export default function ProgramEditorPage() {
     vsnRevisionRef.current += 1;
     setVsn(next);
     setDirty(true);
-    setSessionHasChanges(true);
   }, [future, vsn]);
 
   useEffect(() => { undoRef.current = undo; }, [undo]);
@@ -441,14 +492,24 @@ export default function ProgramEditorPage() {
     );
   }
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!draft || !vsn) return;
+    if (saveMutation.isPending) {
+      toast.info('Saving draft, please wait...');
+      return;
+    }
     const res = validateVsnDocument(vsn, 'publish');
     if (!res.isValid) {
       toast.error(`Fix ${res.issues.filter((i) => i.severity === 'error').length} error(s) before publishing.`);
       return;
     }
-    if (dirty) saveMutation.mutate(vsn);
+    if (dirty) {
+      try {
+        await saveMutation.mutateAsync(vsn);
+      } catch (err) {
+        return;
+      }
+    }
     setPublishOpen(true);
   };
 
@@ -655,9 +716,9 @@ export default function ProgramEditorPage() {
           <Button variant="ghost" size="icon" onClick={undo} disabled={past.length === 0}><Undo2 className="h-4 w-4" /></Button>
           <Button variant="ghost" size="icon" onClick={redo} disabled={future.length === 0}><Redo2 className="h-4 w-4" /></Button>
           
-          <Button variant="outline" size="sm" onClick={handleSaveManually} disabled={!dirty && !autosavePending} className="font-bold text-[10px] uppercase h-9 px-4">Save</Button>
+          <Button variant="outline" size="sm" onClick={handleSaveManually} disabled={saveMutation.isPending || (!dirty && !autosavePending)} className="font-bold text-[10px] uppercase h-9 px-4">Save</Button>
           <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)} className="font-bold text-[10px] uppercase h-9 px-4">Preview</Button>
-          <Button size="sm" onClick={handlePublish} className="font-bold text-[10px] uppercase h-9 px-6 shadow-lg shadow-primary/20">Publish</Button>
+          <Button size="sm" onClick={handlePublish} disabled={saveMutation.isPending} className="font-bold text-[10px] uppercase h-9 px-6 shadow-lg shadow-primary/20">Publish</Button>
         </div>
       </div>
 
@@ -778,14 +839,16 @@ export default function ProgramEditorPage() {
           <div className="flex justify-end gap-3 mt-8">
             <Button variant="ghost" onClick={() => { setDraftPromptOpen(false); if (draftPromptIntent?.type === 'navigate') navigationBlocker.reset?.(); }}>Cancel</Button>
             <Button variant="destructive" onClick={() => {
-              setSessionHasChanges(false);
               setDraftPromptOpen(false);
               if (draftPromptIntent?.type === 'switch') { setBaseVersion(draftPromptIntent.nextBaseVersion); setIsInitializing(true); }
               else navigationBlocker.proceed?.();
             }}>Discard</Button>
             <Button onClick={async () => {
-               if (vsn) await saveMutation.mutateAsync(vsn);
-               setSessionHasChanges(false);
+               try {
+                 if (vsn) await saveMutation.mutateAsync(vsn);
+               } catch (err) {
+                 return;
+               }
                setDraftPromptOpen(false);
                if (draftPromptIntent?.type === 'switch') { setBaseVersion(draftPromptIntent.nextBaseVersion); setIsInitializing(true); }
                else navigationBlocker.proceed?.();

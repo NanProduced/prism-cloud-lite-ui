@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { 
   Trash2, 
   Clock, 
@@ -65,7 +65,7 @@ export function ScreenshotManagerDialog({
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Sync local state with props when refreshed
-  useMemo(() => {
+  useEffect(() => {
     setLocalScreenshots(initialScreenshots);
   }, [initialScreenshots]);
 
@@ -247,7 +247,7 @@ export function ScreenshotManagerDialog({
                    <Separator orientation="vertical" className="h-3.5 mx-0.5 opacity-50" />
 
                    <Button 
-                      variant={viewMode === 'grid' ? "background" : "ghost"} 
+                      variant={viewMode === 'grid' ? "secondary" : "ghost"} 
                       size="icon" 
                       className={cn("h-7 w-7 rounded-md", viewMode === 'grid' && "bg-background shadow-sm")}
                       onClick={() => setViewMode('grid')}
@@ -255,7 +255,7 @@ export function ScreenshotManagerDialog({
                       <LayoutGrid className="h-3.5 w-3.5" />
                    </Button>
                    <Button 
-                      variant={viewMode === 'list' ? "background" : "ghost"} 
+                      variant={viewMode === 'list' ? "secondary" : "ghost"} 
                       size="icon" 
                       className={cn("h-7 w-7 rounded-md", viewMode === 'list' && "bg-background shadow-sm")}
                       onClick={() => setViewMode('list')}

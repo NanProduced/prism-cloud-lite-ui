@@ -13,11 +13,12 @@ export function useAIAssistant() {
     // 在前端模拟 Tools 的定义
     maxSteps: 5,
     async onToolCall({ toolCall }) {
-      if (toolCall.toolName === 'navigateToPage') {
-        const { path, label } = toolCall.args as { path: string, label: string };
-        navigate(path);
-        toast.success(`已为你跳转到 ${label}`);
-        return `Successfully navigated to ${label}`;
+      const tc = toolCall as any;
+      if (tc?.toolName === 'navigateToPage') {
+        const args = tc.args ?? tc.arguments ?? {};
+        const { path, label } = args as { path: string; label: string };
+        if (path) navigate(path);
+        toast.success(`已为你跳转到 ${label || path}`);
       }
     },
     initialMessages: [
@@ -29,7 +30,8 @@ export function useAIAssistant() {
     ],
   });
 
-  return chatHelpers;
+  // @ai-sdk/react typings changed; cast for now to keep UI compiling until backend is implemented.
+  return chatHelpers as any;
 }
 
 // 定义工具 schema (供参考，实际需后端同步)

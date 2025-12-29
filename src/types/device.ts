@@ -36,6 +36,14 @@ export interface CurrentProgram {
   version: string;
 }
 
+export interface HistoricalScreenshot {
+  id: string;
+  url?: string;
+  screenshotUrl?: string;
+  timestamp: string;
+  size: number;
+}
+
 export interface Device {
   // Primary IDs
   id: string; // compatibility (e.g. "device-001")

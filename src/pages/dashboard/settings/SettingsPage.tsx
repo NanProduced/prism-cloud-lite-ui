@@ -286,10 +286,19 @@ export default function SettingsPage() {
     };
   });
 
-  const securityHistory: SecurityEvent[] = (securityHistoryData?.data?.items || []).map(e => ({
+  const normalizeSecurityEventType = (type: string): SecurityEvent['type'] => {
+    const t = (type || '').toLowerCase();
+    if (t.includes('logout')) return 'logout';
+    if (t.includes('password')) return 'password_change';
+    if (t.includes('2fa') && t.includes('enable')) return '2fa_enabled';
+    if (t.includes('2fa') && t.includes('disable')) return '2fa_disabled';
+    return 'login';
+  };
+
+  const securityHistory: SecurityEvent[] = (securityHistoryData?.data?.items || []).map((e) => ({
     id: e.id.toString(),
-    type: e.type,
-    description: e.type, // Map type to description if needed
+    type: normalizeSecurityEventType(e.type),
+    description: e.type, // Keep raw type for now
     ipAddress: e.ipAddress || '',
     location: 'Unknown',
     timestamp: new Date(e.createdAt),

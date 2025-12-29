@@ -91,6 +91,7 @@ export function TagPicker({
   };
 
   const previewTag: Tag = {
+    id: 'draft',
     tagName: draftName.trim() || 'New tag',
     tagSlug: '',
     color: draftColor,

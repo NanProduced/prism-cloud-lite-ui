@@ -51,6 +51,7 @@ export interface ProgramDetailResp {
   name: string;
   width: number;
   height: number;
+  targetDeviceId?: string | null;
   drafts: ProgramDraftResp[];
   versions: ProgramVersionResp[];
   deployments: ProgramDeploymentResp[];

@@ -18,9 +18,9 @@ import { parseResolution } from '@/lib/resolution';
 import type { Device, Tag } from '@/types/device';
 import { getDevices } from '@/services/deviceApi';
 
-import { publishProgram } from '@/services/programApi';
+import { ensureDraft as ensureDraftApi, publishProgram } from '@/services/programApi';
 import { getErrorMessage } from '@/services/authApi';
-import type { ProgramDetailResp, ProgramDeploymentResp, ProgramPublishReq } from '@/types/program';
+import type { ProgramDetailResp, ProgramDeploymentResp, ProgramDraftResp, ProgramPublishReq } from '@/types/program';
 
 type PublishScope = 'SELECTED' | 'RUNNING';
 type PublishMode = 'APPEND' | 'OVERWRITE';
@@ -47,6 +47,7 @@ export function ProgramPublishDialog({
 }: ProgramPublishDialogProps) {
   const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
+  const [ensuredDraftId, setEnsuredDraftId] = useState<string | null>(null);
 
   // --- Queries ---
   const { data: devicesRes } = useQuery({
@@ -60,10 +61,40 @@ export function ProgramPublishDialog({
   const deploymentsByDeviceId = useMemo(() => new Map(deployments.map((d) => [d.deviceId, d])), [deployments]);
   const allTags = useMemo(() => collectDeviceTags(devices), [devices]);
   const latestPublished = useMemo(() => [...(program.versions || [])].sort((a, b) => b.version - a.version)[0], [program.versions]);
+  const sortedDrafts = useMemo(() => [...(program.drafts || [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)), [program.drafts]);
+  const latestDraft = useMemo(() => sortedDrafts[0] ?? null, [sortedDrafts]);
+  const hasUnpublishedDraft = useMemo(() => {
+    if (!latestDraft) return false;
+    if (!latestPublished) return true;
+    return latestDraft.updatedAt > latestPublished.createdAt;
+  }, [latestDraft, latestPublished]);
+
+  const preferredDraft = useMemo(() => {
+    if (!preferredDraftId) return null;
+    return sortedDrafts.find((d) => d.id === preferredDraftId) ?? null;
+  }, [preferredDraftId, sortedDrafts]);
+
+  const suggestedCreateDraft = useMemo(() => {
+    if (preferredDraft) return preferredDraft;
+
+    if (latestPublished) {
+      const baseMatch = sortedDrafts.find((d) => d.baseVersion === latestPublished.version);
+      if (baseMatch) return baseMatch;
+    }
+
+    const blank = sortedDrafts.find((d) => d.baseVersion == null || d.baseVersion === 0);
+    if (blank) return blank;
+
+    return latestDraft;
+  }, [latestDraft, latestPublished, preferredDraft, sortedDrafts]);
   
   const defaultVersionMode = useMemo(
-    () => (preferredDraftId ? 'CREATE' : (program.versions?.length || 0) === 0 ? 'CREATE' : 'EXISTING'),
-    [preferredDraftId, program.versions?.length],
+    () => {
+      if (preferredDraftId) return 'CREATE';
+      if (hasUnpublishedDraft) return 'CREATE';
+      return (program.versions?.length || 0) === 0 ? 'CREATE' : 'EXISTING';
+    },
+    [hasUnpublishedDraft, preferredDraftId, program.versions?.length],
   );
 
   const [deviceQuery, setDeviceQuery] = useState('');
@@ -81,6 +112,15 @@ export function ProgramPublishDialog({
   const predictedNewVersion = useMemo(() => Math.max(0, ...(program.versions || []).map((v) => v.version)) + 1, [program.versions]);
 
   // --- Mutations ---
+  const ensureDraftMutation = useMutation({
+    mutationFn: (baseVersion?: number) => ensureDraftApi(program.id, baseVersion),
+    onSuccess: (res) => {
+      const draftId = res.data?.id ?? null;
+      setEnsuredDraftId(draftId);
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+
   const publishMutation = useMutation({
     mutationFn: (data: ProgramPublishReq) => publishProgram(program.id, data),
     onSuccess: (res) => {
@@ -177,6 +217,7 @@ export function ProgramPublishDialog({
     setTagFilters(new Set());
     setOnlineOnly(false);
     setResolutionOnly('any');
+    setEnsuredDraftId(null);
     const initialSelected = (initialSelectedDeviceIds ?? []).filter(Boolean);
     setSelectedDeviceIds(new Set(initialSelected));
     setVersionMode(defaultVersionMode);
@@ -189,7 +230,7 @@ export function ProgramPublishDialog({
   useEffect(() => {
     if (!open) return;
     resetDialog();
-  }, [open, program.id, latestPublished]);
+  }, [open, program.id, latestPublished, defaultVersionMode, initialSelectedDeviceIds]);
 
   const close = () => {
     onOpenChange(false);
@@ -206,16 +247,34 @@ export function ProgramPublishDialog({
     return true;
   }, [deployments.length, scope, selectedDeviceIds.size, step]);
 
-  const onConfirm = () => {
-    const draftId = preferredDraftId || [...(program.drafts || [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0]?.id;
+  const onConfirm = async () => {
+    let draftId = preferredDraftId ?? ensuredDraftId ?? suggestedCreateDraft?.id ?? null;
+
+    if (versionMode === 'CREATE' && !draftId) {
+      // If publishing without having opened the editor, ensure a draft exists first.
+      try {
+        const base = latestPublished?.version;
+        const res = await ensureDraftMutation.mutateAsync(base);
+        draftId = res.data?.id ?? null;
+      } catch {
+        return;
+      }
+    }
+
+    if (versionMode === 'CREATE' && !draftId) {
+      toast.error('No draft found. Please open the editor to create a draft.');
+      return;
+    }
+
+    const finalDraftId = draftId ?? undefined;
 
     publishMutation.mutate({
       versionMode,
       existingVersion: versionMode === 'EXISTING' ? existingVersion : undefined,
-      draftId: versionMode === 'CREATE' ? draftId : undefined,
+      draftId: versionMode === 'CREATE' ? finalDraftId : undefined,
       scope,
       deviceIds: scope === 'SELECTED' ? [...selectedDeviceIds] : undefined,
-      mode
+      mode,
     });
   };
 
@@ -290,6 +349,8 @@ export function ProgramPublishDialog({
                       versionMode={versionMode}
                       selectedCount={selectedDeviceIds.size}
                       latest={latestPublished}
+                      createDraft={suggestedCreateDraft}
+                      isFromEditor={Boolean(preferredDraftId)}
                     />
                   )}
                   {step === 2 && (
@@ -307,10 +368,10 @@ export function ProgramPublishDialog({
                   </Button>
                   <Button 
                     onClick={step === 2 ? onConfirm : () => setStep(s => s + 1)} 
-                    disabled={!canNext || publishMutation.isPending}
+                    disabled={!canNext || publishMutation.isPending || ensureDraftMutation.isPending}
                     className="px-10 font-bold gap-2 h-10 shadow-lg shadow-primary/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
                   >
-                    {publishMutation.isPending ? (
+                    {publishMutation.isPending || ensureDraftMutation.isPending ? (
                       <><RefreshCw className="h-4 w-4 animate-spin" /> Processing...</>
                     ) : step === 2 ? (
                       <><ShieldCheck className="h-4 w-4" /> Finalize & Deploy</>
@@ -639,6 +700,8 @@ interface StrategyStepProps {
   onVersionModeChange: (v: VersionMode) => void;
   predictedNewVersion: number;
   program: ProgramDetailResp;
+  createDraft: ProgramDraftResp | null;
+  isFromEditor: boolean;
   existingVersion: number;
   onExistingVersionChange: (v: number) => void;
   latest: any | null;
@@ -650,7 +713,11 @@ interface StrategyStepProps {
   onModeChange: (v: PublishMode) => void;
 }
 
-function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, program, existingVersion, onExistingVersionChange, latest, scope, onScopeChange, selectedCount, deployments, mode, onModeChange }: StrategyStepProps) {
+function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, program, createDraft, isFromEditor, existingVersion, onExistingVersionChange, latest, scope, onScopeChange, selectedCount, deployments, mode, onModeChange }: StrategyStepProps) {
+  const draftBaseLabel = createDraft?.baseVersion == null || createDraft?.baseVersion === 0 ? 'Blank' : `v${createDraft?.baseVersion}`;
+  const draftSourceLabel = isFromEditor ? 'current editor draft' : 'latest saved draft';
+  const draftHint = createDraft ? `${draftSourceLabel} · base ${draftBaseLabel}` : `No draft yet · will create from ${latest?.version ? `v${latest.version}` : 'Blank'}`;
+
   return (
     <ScrollArea className="h-full scrollbar-thin">
       <div className="space-y-10 animate-in fade-in slide-in-from-right-2 duration-300 py-4 pr-4">
@@ -679,7 +746,8 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
              >
                 {versionMode === 'CREATE' && <div className="absolute top-5 right-5 h-7 w-7 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="h-4 w-4 text-white" /></div>}
                 <span className="text-lg font-black mb-1.5 tracking-tight group-hover:text-primary transition-colors">Issue Production Release</span>
-                <p className="text-[13px] text-muted-foreground leading-relaxed">Snapshot the current editor workspace as <span className="font-black text-foreground underline decoration-primary/30 underline-offset-2">v{predictedNewVersion}</span>. This release becomes the new baseline for global distribution.</p>
+                <p className="text-[13px] text-muted-foreground leading-relaxed">Snapshot the draft as <span className="font-black text-foreground underline decoration-primary/30 underline-offset-2">v{predictedNewVersion}</span>. This release becomes the new baseline for global distribution.</p>
+                <p className="mt-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{draftHint}</p>
                 <div className="mt-8 flex items-center gap-2">
                    <div className="px-2.5 py-1 rounded-lg bg-primary text-white text-[9px] font-black uppercase tracking-widest shadow-md shadow-primary/20">Recommended Path</div>
                 </div>

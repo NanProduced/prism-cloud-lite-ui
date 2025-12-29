@@ -52,8 +52,8 @@ const mockResponse = <T>(data?: T): Promise<BffResponse<T>> => {
       resolve({
         success: true,
         data: data as T,
-        requestId: 'mock-req-id-' + Date.now(),
-        timestamp: new Date().toISOString(),
+        error: null,
+        traceId: 'mock-trace-id-' + Date.now(),
       });
     }, MOCK_DELAY);
   });
@@ -246,8 +246,26 @@ async function handleBffRequest<T>(
 /**
  * Helper to extract error message from BffResponse
  */
-export function getErrorMessage(response: BffResponse): string {
-  return response.error?.displayMessage || response.error?.message || 'Unknown error';
+export function getErrorMessage(input: unknown): string {
+  const fallback = 'Unknown error';
+
+  if (typeof input === 'string') return input;
+  if (input == null) return fallback;
+
+  const maybeResp = input as Partial<BffResponse>;
+  if (typeof maybeResp === 'object' && 'success' in maybeResp && 'error' in maybeResp) {
+    return maybeResp.error?.displayMessage || maybeResp.error?.message || fallback;
+  }
+
+  const maybeAxiosError = input as AxiosError<BffResponse>;
+  const respData = maybeAxiosError.response?.data;
+  if (respData) {
+    return respData.error?.displayMessage || respData.error?.message || fallback;
+  }
+
+  if (input instanceof Error) return input.message || fallback;
+
+  return fallback;
 }
 
 /**
@@ -275,4 +293,3 @@ export function logout(): void {
   // 必须使用整页跳转，因为登出包含多次 302 重定向
   window.location.assign('/logout');
 }
-

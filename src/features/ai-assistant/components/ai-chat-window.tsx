@@ -19,7 +19,7 @@ interface AIChatWindowProps {
 export function AIChatWindow({ isOpen }: AIChatWindowProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   
-  const { messages, input, handleInputChange, handleSubmit, isLoading, reload } = useAIAssistant();
+  const { messages, input, handleInputChange, handleSubmit, isLoading, reload } = useAIAssistant() as any;
 
   if (!isOpen) return null;
 
@@ -99,9 +99,8 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                   )}>
                     <ReactMarkdown 
                       remarkPlugins={[remarkGfm]}
-                      className="prose prose-sm dark:prose-invert break-words"
                     >
-                      {m.content}
+                      {String((m as any).content ?? '')}
                     </ReactMarkdown>
                   </div>
                 </div>

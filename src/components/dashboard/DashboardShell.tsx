@@ -290,7 +290,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
           <StoragePanel 
             tier={user?.subscriptionTier} 
             navigate={navigate} 
-            usage={usageData?.data}
+            usage={usageData?.data ?? undefined}
             onUpgrade={() => setIsBillingOpen(true)}
           />
         </SidebarFooter>
@@ -550,5 +550,4 @@ function getToneColorByStatus(status?: string) {
       return "text-foreground";
   }
 }
-
 

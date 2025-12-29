@@ -56,7 +56,21 @@ export function DialogTrigger({ children, asChild }: { children: ReactNode; asCh
   );
 }
 
-export function DialogContent({ children, className = "", zIndex = 50 }: { children: ReactNode; className?: string; zIndex?: number }) {
+export type DialogPointerDownOutsideEvent = {
+  preventDefault: () => void;
+};
+
+export function DialogContent({
+  children,
+  className = "",
+  zIndex = 50,
+  onPointerDownOutside,
+}: {
+  children: ReactNode;
+  className?: string;
+  zIndex?: number;
+  onPointerDownOutside?: (e: DialogPointerDownOutsideEvent) => void;
+}) {
   const context = React.useContext(DialogContext);
   if (!context) throw new Error("DialogContent must be used within Dialog");
 
@@ -67,7 +81,15 @@ export function DialogContent({ children, className = "", zIndex = 50 }: { child
       <div 
         className="fixed inset-0 bg-black/40" 
         style={{ zIndex: zIndex }} 
-        onClick={() => context.setOpen(false)} 
+        onClick={() => {
+          let prevented = false;
+          onPointerDownOutside?.({
+            preventDefault: () => {
+              prevented = true;
+            },
+          });
+          if (!prevented) context.setOpen(false);
+        }} 
       />
       <div
         role="dialog"

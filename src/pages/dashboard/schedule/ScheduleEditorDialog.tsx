@@ -527,7 +527,7 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
                                             </Select>
                                          </div>
                                       )}
-                                      {(selectedCommandRule.operation.type === 'REBOOT' || selectedCommandRule.operation.type === 'CLEAR_CACHE') && (
+                                      {selectedCommandRule.operation.type === 'CLEAR_CACHE' && (
                                          <div className="flex items-center gap-3 text-muted-foreground italic">
                                             <Info className="h-4 w-4" />
                                             <p className="text-[10px] font-bold uppercase tracking-tighter">No parameters required.</p>
@@ -708,7 +708,7 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
                </div>
              </>
            ) : activeTab === 'devices' ? (
-              <DeviceBindingTab boundCount={draft?.boundDeviceCount || 0} scheduleId={draft?.id || 'Draft'} />
+              <DeviceBindingTab devices={devices} boundCount={draft?.boundDeviceCount || 0} scheduleId={draft?.id || 'Draft'} />
            ) : (
               <ExecutionPreviewTab schedule={draft} />
            )}
@@ -803,7 +803,7 @@ function ConstraintGroup({ label, icon, enabled, onToggle, children }: { label: 
   );
 }
 
-function DeviceBindingTab({ boundCount, scheduleId }: { boundCount: number, scheduleId: string }) {
+function DeviceBindingTab({ devices, boundCount, scheduleId }: { devices: Array<{ id: string; deviceName: string; resolution: unknown }>, boundCount: number, scheduleId: string }) {
   const [isPushing, setIsPushing] = useState(false);
   const [pushResults, setPushResults] = useState<any[]>([]);
   const { formatDateTime } = useTimeFormatter();
@@ -813,7 +813,7 @@ function DeviceBindingTab({ boundCount, scheduleId }: { boundCount: number, sche
     setPushResults([]);
     
     setTimeout(() => {
-      const results = devices.slice(0, 4).map(d => ({
+      const results = devices.slice(0, 4).map((d) => ({
         deviceId: d.id,
         deviceName: d.deviceName,
         status: Math.random() > 0.2 ? 'success' : 'failed',
