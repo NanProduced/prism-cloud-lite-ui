@@ -10,6 +10,8 @@ export type PendingUploadFile = {
   durationMs?: number;
   parseError?: string;
   cover?: Blob;
+  coverWidth?: number;
+  coverHeight?: number;
 };
 
 export type UploadTaskStatus =
@@ -34,6 +36,11 @@ export type UploadTask = {
   throughputBps?: number;
   md5?: string;
   coverMd5?: string;
+  width?: number;
+  height?: number;
+  durationMs?: number;
+  coverWidth?: number;
+  coverHeight?: number;
   createdAt: number;
   error?: string;
   cover?: Blob;

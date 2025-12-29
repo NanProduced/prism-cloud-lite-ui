@@ -27,6 +27,16 @@ import {
 } from '@/services/programApi';
 import { getErrorMessage } from '@/services/authApi';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ProgramPublishDialog } from '@/features/programs/publishing/ProgramPublishDialog';
 
 export default function ProgramDetailsPage() {
@@ -37,6 +47,9 @@ export default function ProgramDetailsPage() {
   
   const [publishOpen, setPublishOpen] = useState(false);
   const [deviceQuery, setDeviceQuery] = useState('');
+
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [unpublishConfirmOpen, setUnpublishConfirmOpen] = useState(false);
 
   // --- Queries ---
   const { data: programData, isLoading: isProgramLoading, isError } = useQuery({
@@ -148,21 +161,13 @@ export default function ProgramDetailsPage() {
                  <DropdownMenuSeparator />
                  <DropdownMenuItem 
                     className="text-destructive" 
-                    onClick={() => {
-                       if (confirm('Undeploy this program from all devices?')) {
-                          unpublishMutation.mutate();
-                       }
-                    }}
+                    onClick={() => setUnpublishConfirmOpen(true)}
                  >
                     <XCircle className="mr-2 h-4 w-4" /> Undeploy All
                  </DropdownMenuItem>
                  <DropdownMenuItem 
                     className="text-destructive" 
-                    onClick={() => {
-                       if (confirm('Delete program permanently?')) {
-                          deleteMutation.mutate();
-                       }
-                    }}
+                    onClick={() => setDeleteConfirmOpen(true)}
                  >
                     <AlertCircle className="mr-2 h-4 w-4" /> Delete Program
                  </DropdownMenuItem>
@@ -346,6 +351,43 @@ export default function ProgramDetailsPage() {
         deployments={deployments}
         onAfterPublish={() => queryClient.invalidateQueries({ queryKey: ['programs', programId] })}
       />
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Program Permanently?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete the program and all its versions. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => deleteMutation.mutate()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={unpublishConfirmOpen} onOpenChange={setUnpublishConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Undeploy from All Devices?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will stop the program on all currently assigned devices.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => unpublishMutation.mutate()}>
+              Undeploy All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

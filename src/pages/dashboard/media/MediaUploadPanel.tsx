@@ -128,13 +128,25 @@ export const MediaUploadPanel = forwardRef<
               const dims = await getImageDimensions(file);
               base.width = dims.width;
               base.height = dims.height;
-              base.cover = await generateMediaCover(file);
+              const coverBlob = await generateMediaCover(file);
+              if (coverBlob) {
+                base.cover = coverBlob;
+                const cDims = await getImageDimensions(coverBlob);
+                base.coverWidth = cDims.width;
+                base.coverHeight = cDims.height;
+              }
             } else if (kind === 'video') {
               const info = await getVideoMetadata(file);
               base.width = info.width;
               base.height = info.height;
               base.durationMs = info.durationMs;
-              base.cover = await generateMediaCover(file);
+              const coverBlob = await generateMediaCover(file);
+              if (coverBlob) {
+                base.cover = coverBlob;
+                const cDims = await getImageDimensions(coverBlob);
+                base.coverWidth = cDims.width;
+                base.coverHeight = cDims.height;
+              }
             }
           } catch (error) {
             base.parseError = error instanceof Error ? error.message : 'Failed to parse file info.';
@@ -156,6 +168,8 @@ export const MediaUploadPanel = forwardRef<
             height: item.height,
             durationMs: item.durationMs,
             cover: item.cover,
+            coverWidth: item.coverWidth,
+            coverHeight: item.coverHeight,
             parseError: item.parseError,
           };
         }
@@ -454,6 +468,9 @@ export const MediaUploadPanel = forwardRef<
           type: task.original.type,
           originalName: task.original.name,
           md5,
+          width: task.width,
+          height: task.height,
+          durationMs: task.durationMs,
         },
       ];
 
@@ -466,6 +483,8 @@ export const MediaUploadPanel = forwardRef<
           type: 'image/jpeg',
           originalName: 'cover.jpg',
           md5: coverMd5,
+          width: task.coverWidth,
+          height: task.coverHeight,
         });
       }
 
@@ -578,6 +597,11 @@ export const MediaUploadPanel = forwardRef<
         bytesUploaded: 0,
         createdAt: Date.now(),
         cover: p.cover,
+        width: p.width,
+        height: p.height,
+        durationMs: p.durationMs,
+        coverWidth: p.coverWidth,
+        coverHeight: p.coverHeight,
       };
     });
 
@@ -923,7 +947,7 @@ function estimateCoverBytes(file: File): number {
   return 0;
 }
 
-async function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
+async function getImageDimensions(file: File | Blob): Promise<{ width: number; height: number }> {
   const bitmap = await createImageBitmap(file);
   const width = bitmap.width;
   const height = bitmap.height;
@@ -945,12 +969,12 @@ async function getVideoMetadata(file: File): Promise<{ width: number; height: nu
         video.src = '';
       };
       const onLoaded = () => {
+        const width = video.videoWidth || 0;
+        const height = video.videoHeight || 0;
+        const durationMs = Number.isFinite(video.duration) ? Math.round(video.duration * 1000) : 0;
+        
         cleanup();
-        resolve({
-          width: video.videoWidth || 0,
-          height: video.videoHeight || 0,
-          durationMs: Number.isFinite(video.duration) ? Math.round(video.duration * 1000) : 0,
-        });
+        resolve({ width, height, durationMs });
       };
       const onError = () => {
         cleanup();

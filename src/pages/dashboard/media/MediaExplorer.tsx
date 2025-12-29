@@ -12,7 +12,6 @@ import {
   List,
   MoreVertical,
   Search,
-  Table,
   Upload,
   Video,
 } from 'lucide-react';
@@ -40,17 +39,27 @@ import { deleteNode, renameNode, moveNodes, createTranscodeTask } from '@/servic
 import { getErrorMessage } from '@/services/authApi';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { MediaAssetPreviewDialog } from './MediaAssetPreviewDialog';
 import { MoveNodesDialog } from './MoveNodesDialog';
 
 type MediaFilter = 'all' | 'folders' | 'image' | 'video' | 'document' | 'other';
 type MediaSort = 'updatedAt' | 'name' | 'size';
-type MediaViewMode = 'thumbnails' | 'list' | 'details';
+type MediaViewMode = 'thumbnails' | 'list';
 
 const MEDIA_VIEW_MODE_STORAGE_KEY = 'prism.mediaLibrary.viewMode';
 
 function parseMediaViewMode(value: string): MediaViewMode | null {
-  if (value === 'thumbnails' || value === 'list' || value === 'details') return value;
+  if (value === 'thumbnails' || value === 'list') return value;
   return null;
 }
 
@@ -95,6 +104,9 @@ export function MediaExplorer({
   
   const [moveNodesOpen, setMoveNodesOpen] = useState(false);
   const [movingNodes, setMovingNodes] = useState<{ ids: string[]; names: string[] }>({ ids: [], names: [] });
+
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [nodeToDelete, setNodeToDelete] = useState<MediaNode | null>(null);
 
   // --- Mutations ---
 
@@ -177,9 +189,8 @@ export function MediaExplorer({
     }
 
     if (action === 'Delete') {
-      if (confirm(`Are you sure you want to delete "${node.name}"?`)) {
-        deleteMutation.mutate(node.id);
-      }
+      setNodeToDelete(node);
+      setDeleteConfirmOpen(true);
       return;
     }
 
@@ -361,10 +372,6 @@ export function MediaExplorer({
                     <List className="h-4 w-4" />
                     List
                   </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="details">
-                    <Table className="h-4 w-4" />
-                    Details
-                  </DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -440,6 +447,26 @@ export function MediaExplorer({
         currentParentId={currentFolderId}
         onConfirm={(targetId) => moveMutation.mutate(targetId)}
       />
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete <strong>{nodeToDelete?.name}</strong> and remove its data from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => nodeToDelete && deleteMutation.mutate(nodeToDelete.id)}
+              className="bg-rose-600 hover:bg-rose-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
@@ -455,10 +482,6 @@ function MediaNodeCollection({
   onOpenFolder: (id: string) => void;
   onAction: (action: string, node: MediaNode) => void;
 }) {
-  if (viewMode === 'details') {
-    return <MediaNodeDetailsTable nodes={nodes} onOpenFolder={onOpenFolder} onAction={onAction} />;
-  }
-
   if (viewMode === 'list') {
     return (
       <div className="overflow-hidden rounded-lg border bg-background">
@@ -642,106 +665,6 @@ function MediaNodeListRow({
   );
 }
 
-function MediaNodeDetailsTable({
-  nodes,
-  onOpenFolder,
-  onAction,
-}: {
-  nodes: MediaNode[];
-  onOpenFolder: (id: string) => void;
-  onAction: (action: string, node: MediaNode) => void;
-}) {
-  return (
-    <div className="overflow-hidden rounded-lg border bg-background">
-      <div className="grid grid-cols-[minmax(180px,1fr)_90px_44px] sm:grid-cols-[minmax(240px,1fr)_120px_90px_44px] md:grid-cols-[minmax(280px,1fr)_140px_100px_160px_44px] items-center gap-3 bg-muted/20 px-3 py-2 text-xs font-semibold text-muted-foreground">
-        <div>Name</div>
-        <div className="hidden sm:block">Type</div>
-        <div className="text-right">Size</div>
-        <div className="hidden md:block text-right">Updated</div>
-        <div className="flex justify-end">
-          <span className="sr-only">Actions</span>
-        </div>
-      </div>
-
-      <div className="divide-y">
-        {nodes.map((node) => (
-          <MediaNodeDetailsRow key={node.id} node={node} onOpenFolder={onOpenFolder} onAction={onAction} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function MediaNodeDetailsRow({
-  node,
-  onOpenFolder,
-  onAction,
-}: {
-  node: MediaNode;
-  onOpenFolder: (id: string) => void;
-  onAction: (action: string, node: MediaNode) => void;
-}) {
-  const isMobile = useIsMobile();
-  const { formatRelative } = useTimeFormatter();
-  const handleOpen = () => {
-    if (node.type === 'folder') onOpenFolder(node.id);
-    else onAction('Preview', node);
-  };
-
-  const subtitle = formatDetailsSubtitle(node);
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      className={cn(
-        'group grid grid-cols-[minmax(180px,1fr)_90px_44px] sm:grid-cols-[minmax(240px,1fr)_120px_90px_44px] md:grid-cols-[minmax(280px,1fr)_140px_100px_160px_44px] items-center gap-3 px-3 py-2 outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-        node.type === 'folder' && 'hover:bg-primary/5',
-      )}
-      onClick={isMobile ? handleOpen : undefined}
-      onDoubleClick={!isMobile ? handleOpen : undefined}
-      onKeyDown={(event) => {
-        if (event.target !== event.currentTarget) return;
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          handleOpen();
-        }
-      }}
-    >
-      <div className="flex min-w-0 items-center gap-3">
-        <div
-          className={cn(
-            'flex h-9 w-9 items-center justify-center rounded-md bg-muted/20',
-            node.type !== 'folder' && 'ring-1 ring-inset ring-border/60',
-          )}
-        >
-          {renderNodeIcon(node, 'h-5 w-5 text-muted-foreground')}
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium" title={node.name}>
-            {node.name}
-          </p>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground">{subtitle}</p>
-        </div>
-      </div>
-
-      <div className="hidden text-xs text-muted-foreground sm:block">{formatDetailsTypeLabel(node)}</div>
-
-      <div className="text-right text-xs text-muted-foreground tabular-nums">
-        {node.type === 'asset' ? formatBytes(node.sizeBytes) : '—'}
-      </div>
-
-      <div className="hidden text-right text-xs text-muted-foreground tabular-nums md:block">
-        {node.type === 'folder' ? '—' : formatRelative(node.updatedAt)}
-      </div>
-
-      <div className="flex justify-end opacity-100 transition-opacity group-focus-within:opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
-        <MediaNodeActionsMenu node={node} onAction={onAction} />
-      </div>
-    </div>
-  );
-}
-
 function MediaNodeActionsMenu({
   node,
   onAction,
@@ -916,8 +839,6 @@ function formatSortLabel(sort: MediaSort): string {
 
 function formatViewModeLabel(mode: MediaViewMode): string {
   switch (mode) {
-    case 'details':
-      return 'Details';
     case 'list':
       return 'List';
     case 'thumbnails':

@@ -126,6 +126,8 @@ export default function ProgramEditorPage() {
   const mediaNodesQuery = useQuery({
     queryKey: ['media-library', 'assets', debouncedMediaQuery],
     queryFn: () => getMediaAssets({ q: debouncedMediaQuery || undefined, kinds: 'image,video', limit: 100 }),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
   });
 
   const program = programQuery.data?.data;

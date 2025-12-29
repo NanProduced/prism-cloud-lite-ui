@@ -33,17 +33,20 @@ export default function MediaLibraryPage() {
     setNextCursor(null);
   }, [currentFolderId]);
 
-  const { isLoading: isNodesLoading } = useQuery({
+  const { data: nodesData, isLoading: isNodesLoading } = useQuery({
     queryKey: ['media', 'nodes', currentFolderId],
-    queryFn: async () => {
-      const res = await getMediaNodes({ parentId: currentFolderId, limit: 100 });
-      if (res.success && res.data) {
-        setNodes(res.data.items);
-        setNextCursor(res.data.nextCursor);
-      }
-      return res;
-    },
+    queryFn: () => getMediaNodes({ parentId: currentFolderId, limit: 100 }),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
   });
+
+  // Sync initial query data to state
+  useEffect(() => {
+    if (nodesData?.success && nodesData.data) {
+      setNodes(nodesData.data.items);
+      setNextCursor(nodesData.data.nextCursor);
+    }
+  }, [nodesData]);
 
   const handleLoadMore = async () => {
     if (!nextCursor || isLoadingMore) return;

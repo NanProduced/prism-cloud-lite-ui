@@ -53,11 +53,15 @@ export default function ProgramsPage() {
   const { data: programsData, isLoading: isProgramsLoading } = useQuery({
     queryKey: ['programs'],
     queryFn: getPrograms,
+    staleTime: 2 * 60 * 1000, // 2 minutes for program list
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: templatesData, isLoading: isTemplatesLoading } = useQuery({
     queryKey: ['programs', 'templates'],
     queryFn: getProgramTemplates,
+    staleTime: 10 * 60 * 1000, // 10 minutes for templates
+    gcTime: 30 * 60 * 1000,
   });
 
   const programs = programsData?.data || [];
