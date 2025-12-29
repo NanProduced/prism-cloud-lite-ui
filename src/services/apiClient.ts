@@ -20,10 +20,11 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<BffResponse>) => {
     // Check for 401 Unauthorized or specific Auth error codes
-    // Skip logout redirect for auth check endpoint to avoid infinite loop
-    const isAuthCheck = error.config?.url?.includes('/user/me');
+    // Skip logout redirect for auth check endpoints to avoid infinite loop
+    const authEndpoints = ['/user/me', '/auth/refresh', '/auth/status'];
+    const isAuthEndpoint = authEndpoints.some(ep => error.config?.url?.includes(ep));
 
-    if (error.response?.status === 401 && !isAuthCheck) {
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       // 检查是否已经在登出中，如果是，则忽略该错误，不再重复触发登出
       if (sessionStorage.getItem('prism_logout_in_progress')) {
         return Promise.reject(error);

@@ -59,7 +59,7 @@ export function DeviceStatusBadge({
     <Badge
       variant="outline"
       className={cn(
-        'flex items-center gap-2 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-300',
+        'flex items-center gap-2 px-2.5 py-0.5 text-[10px] font-bold tracking-wider transition-all duration-300',
         config.bgColor,
         config.borderColor,
         className

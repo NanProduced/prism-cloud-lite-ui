@@ -8,6 +8,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { useBreadcrumbStore } from "@/store/breadcrumbStore";
 
 // Route to breadcrumb label mapping
 const routeMap: Record<string, string> = {
@@ -29,12 +30,7 @@ export function BreadcrumbNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const pathname = location.pathname;
-
-  const formatProgramFallback = (id: string) => {
-    if (!id) return "Program";
-    if (id.length <= 10) return `Program ${id}`;
-    return `Program ${id.slice(0, 8)}…`;
-  };
+  const { overrides } = useBreadcrumbStore();
 
   // Generate breadcrumb paths
   const generateBreadcrumbs = () => {
@@ -49,9 +45,10 @@ export function BreadcrumbNav() {
     for (let i = 0; i < paths.length; i++) {
       currentPath += `/${paths[i]}`;
       const mapped = routeMap[currentPath];
-      let label = mapped || paths[i];
+      const override = overrides[currentPath];
+      let label = override || mapped || paths[i];
 
-      if (!mapped) {
+      if (!mapped && !override) {
         const segment = paths[i];
         const prevSegment = paths[i - 1] ?? "";
         const prevPrevSegment = paths[i - 2] ?? "";

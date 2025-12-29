@@ -96,3 +96,48 @@ export async function executeBatchActions(request: {
     apiClient.post('/devices/actions/batch', request)
   );
 }
+
+/**
+ * Get device historical screenshots
+ */
+export async function getDeviceScreenshots(deviceId: string | number): Promise<BffResponse<any[]>> {
+  return handleRequest<any[]>(
+    apiClient.get(`/devices/${deviceId}/screenshots`)
+  );
+}
+
+/**
+ * Delete a specific screenshot
+ */
+export async function deleteScreenshot(deviceId: string | number, screenshotId: string): Promise<BffResponse<void>> {
+  return handleRequest<void>(
+    apiClient.delete(`/devices/${deviceId}/screenshots/${screenshotId}`)
+  );
+}
+
+/**
+ * Clear all screenshots for a device
+ */
+export async function clearScreenshots(deviceId: string | number): Promise<BffResponse<void>> {
+  return handleRequest<void>(
+    apiClient.delete(`/devices/${deviceId}/screenshots`)
+  );
+}
+
+/**
+ * Get device bound schedule
+ */
+export async function getDeviceSchedule(deviceId: string | number): Promise<BffResponse<any>> {
+  return handleRequest<any>(
+    apiClient.get(`/devices/${deviceId}/schedule`)
+  );
+}
+
+/**
+ * Get device program visibility rules (Allowlist)
+ */
+export async function getDeviceProgramAllowlist(deviceId: string | number): Promise<BffResponse<any[]>> {
+  return handleRequest<any[]>(
+    apiClient.get(`/devices/${deviceId}/program-allowlist`)
+  );
+}

@@ -206,7 +206,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
                       <span className="text-base font-bold">Prism Cloud</span>
                       <Badge className="text-sm font-bold px-1.5 py-0.5 bg-primary text-white">Lite</Badge>
                     </div>
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mt-1">Workspace</p>
+                    <p className="text-[10px] tracking-[0.2em] text-muted-foreground mt-1">Workspace</p>
                   </div>
                 </div>
               </SidebarMenuButton>

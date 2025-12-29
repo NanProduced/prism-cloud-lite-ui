@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   ArrowLeft, 
   Monitor, 
@@ -31,7 +32,16 @@ import {
   Info,
   X,
   CalendarDays,
-  Send
+  Send,
+  History as HistoryIcon,
+  AlertTriangle,
+  Activity,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Lock,
+  Unlock,
+  Power
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -68,229 +78,245 @@ import { SlideToUnlock } from "@/components/ui/slide-to-unlock";
 import { BatchCommandDialog } from "@/features/devices/commands/BatchCommandDialog";
 import { ScreenshotManagerDialog } from "@/components/devices/ScreenshotManagerDialog";
 import type { DeviceDetails } from "@/types/device-details";
-import { type HistoricalScreenshot, resolveDeviceStatus } from "@/types/device";
-import { mockDevices, mockTags } from "@/lib/mock/devices";
+import { resolveDeviceStatus } from "@/types/device";
+import { 
+  getDevice, 
+  getDeviceScreenshots, 
+  executeDeviceAction, 
+  deleteScreenshot, 
+  clearScreenshots,
+  getDeviceSchedule,
+  getDeviceProgramAllowlist
+} from "@/services/deviceApi";
+import { getDeviceCommandLogs } from "@/services/logApi";
+import { useMessageStore } from "@/store/messageStore";
+import { useBreadcrumbStore } from "@/store/breadcrumbStore";
 import { cn } from "@/lib/utils";
 import { useTimeFormatter } from "@/hooks/use-time-formatter";
 
 export default function DeviceDetailsPage() {
   const { deviceId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { formatRelative, formatDateTime } = useTimeFormatter();
-  const [device, setDevice] = useState<DeviceDetails | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const sseConnected = useMessageStore(state => state.sseConnected);
+  const setBreadcrumbOverride = useBreadcrumbStore(state => state.setOverride);
+  const removeBreadcrumbOverride = useBreadcrumbStore(state => state.removeOverride);
+
+  const { data: bffResponse, isLoading: isDeviceLoading, isFetching: isRefreshing } = useQuery({
+    queryKey: ['device', deviceId],
+    queryFn: () => getDevice(deviceId!),
+    enabled: !!deviceId,
+  });
+
+  const { data: screenshotsResponse } = useQuery({
+    queryKey: ['device-screenshots', deviceId],
+    queryFn: () => getDeviceScreenshots(deviceId!),
+    enabled: !!deviceId,
+  });
+
+  const { data: commandLogsResponse, refetch: refetchCommandLogs } = useQuery({
+    queryKey: ['device-command-logs', deviceId],
+    queryFn: () => getDeviceCommandLogs({ deviceId: Number(deviceId), size: 5 }),
+    enabled: !!deviceId,
+  });
+
+  const { data: scheduleResponse } = useQuery({
+    queryKey: ['device-schedule', deviceId],
+    queryFn: () => getDeviceSchedule(deviceId!),
+    enabled: !!deviceId,
+  });
+
+  const { data: allowlistResponse } = useQuery({
+    queryKey: ['device-allowlist', deviceId],
+    queryFn: () => getDeviceProgramAllowlist(deviceId!),
+    enabled: !!deviceId,
+  });
+
+  const device = bffResponse?.data as DeviceDetails | undefined;
+  const historicalScreenshots = useMemo(() => screenshotsResponse?.data || [], [screenshotsResponse]);
+  const recentOperations = useMemo(() => commandLogsResponse?.data?.items || [], [commandLogsResponse]);
+  const deviceSchedule = scheduleResponse?.data;
+  const programAllowlist = allowlistResponse?.data || [];
+
   const [isCapturing, setIsCapturing] = useState(false);
   const [showBatchCommand, setShowBatchCommand] = useState(false);
   const [showScreenshotManager, setShowScreenshotManager] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  // Mock Historical Screenshots
-  const [historicalScreenshots, setHistoricalScreenshots] = useState<HistoricalScreenshot[]>([
-    { id: "s1", url: "https://picsum.photos/seed/s1/800/450", timestamp: "2025-12-22T10:00:00Z", size: 245000 },
-    { id: "s2", url: "https://picsum.photos/seed/s2/800/450", timestamp: "2025-12-22T09:45:00Z", size: 280000 },
-    { id: "s3", url: "https://picsum.photos/seed/s3/800/450", timestamp: "2025-12-22T09:00:00Z", size: 210000 },
-    { id: "s4", url: "https://picsum.photos/seed/s4/800/450", timestamp: "2025-12-22T08:00:00Z", size: 310000 },
-    { id: "s5", url: "https://picsum.photos/seed/s5/800/450", timestamp: "2025-12-22T05:00:00Z", size: 255000 },
-  ]);
+  useEffect(() => {
+    if (device?.deviceName) {
+      setBreadcrumbOverride(`/dashboard/devices/${deviceId}`, device.deviceName);
+    }
+    return () => {
+      removeBreadcrumbOverride(`/dashboard/devices/${deviceId}`);
+    };
+  }, [device?.deviceName, deviceId, setBreadcrumbOverride, removeBreadcrumbOverride]);
 
-  // Interactive States (Mapped to UI requirements)
-  const [brightnessPct, setBrightnessPct] = useState(0); // 0-100%
-  const [volumeLevel, setVolumeLevel] = useState(0);     // 0-15
-  const [colorTemp, setColorTemp] = useState(6500);      // 2000-10000K
+  useEffect(() => {
+    const handleOperationUpdate = () => {
+      refetchCommandLogs();
+    };
+    window.addEventListener('prism.operation.updated' as any, handleOperationUpdate);
+    return () => window.removeEventListener('prism.operation.updated' as any, handleOperationUpdate);
+  }, [refetchCommandLogs]);
+
+  // Interactive States
+  const [brightnessPct, setBrightnessPct] = useState(0);
+  const [volumeLevel, setVolumeLevel] = useState(0);
+  const [colorTemp, setColorTemp] = useState(6500);
   const [inputMode, setInputMode] = useState("internal");
 
-  // Track original values to show "Apply/Reset"
+  // Lock States
+  const [isBrightnessLocked, setIsBrightnessLocked] = useState(true);
+  const [isVolumeLocked, setIsVolumeLocked] = useState(true);
+  const [isColorTempLocked, setIsColorTempLocked] = useState(true);
+
   const [originalValues, setOriginalValues] = useState({
     brightness: 0,
     volume: 0,
     colorTemp: 6500
   });
 
+  useEffect(() => {
+    if (device?.deviceProperties) {
+      const props = device.deviceProperties;
+      const b = Math.round((props.brightnessandcolortemp?.brightness || 0) / 255 * 100);
+      const v = Math.round((props.volume?.musicvolume || 0) / 100 * 15);
+      const c = props.brightnessandcolortemp?.colortemperature || 6500;
+      
+      setBrightnessPct(b);
+      setVolumeLevel(v);
+      setColorTemp(c);
+      setInputMode(props.inputmode?.inputmode || "internal");
+      setOriginalValues({ brightness: b, volume: v, colorTemp: c });
+    }
+  }, [device]);
+
   const hasChanges = brightnessPct !== originalValues.brightness || 
                      volumeLevel !== originalValues.volume || 
                      colorTemp !== originalValues.colorTemp;
   
-  // Danger Action States
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean, type: 'sleep' | 'reboot' | null }>({ open: false, type: null });
 
-  useEffect(() => {
-    // Simulate Data Sync
-    const findDevice = mockDevices.find(d => d.id === deviceId);
-    if (findDevice) {
-      // STRICT ALIGNMENT WITH device_properties.txt
-      const enhancedDevice: DeviceDetails = {
-        ...findDevice,
-        deviceProperties: {
-          terminal: { 
-            name: findDevice.deviceName, 
-            leddescription: "Commercial Hall LED Display Node", 
-            reportTime: Date.now() / 1000 
-          },
-          WebSocketStatus: { status: 1 },
-          powerstatus: { powerstatus: 1, reportTime: Date.now() / 1000 },
-          info: {
-            info: {
-              vername: "v3.2.1-stable",
-              serialno: findDevice.serialNumber || "CL-SN-1029384756",
-              model: findDevice.model,
-              up: 144113, 
-              mem: { total: 2147483648, free: 1073741824 },
-              storage: { total: findDevice.storageTotal, free: findDevice.storageTotal - findDevice.storageUsed },
-              playing: { name: findDevice.currentProgram?.name || "IDLE", path: "/data/vsns/001.vsn", source: "internet" }
-            },
-            reportTime: Date.now() / 1000
-          },
-          vsns: {
-            contents: [
-              {
-                type: "program",
-                ressize: 617494741,
-                unused: 52428800,
-                content: [
-                  { md5: "a1b2c3d4e5f6", name: "Summer_Sale_Campaign.vsn", publishedmd5: "p1", size: 616695227 },
-                  { md5: "f1g2h3i4j5k6", name: "Night_Background.vsn", publishedmd5: "p2", size: 161608 }
-                ]
-              }
-            ],
-            playing: { name: findDevice.currentProgram?.name || "Summer_Sale_Campaign.vsn", path: "/data/vsns/001.vsn", source: "internet", type: "rotation" },
-            reportTime: Date.now() / 1000
-          },
-          dimension: {
-            width: findDevice.resolution.width,
-            height: findDevice.resolution.height,
-            fps: 60,
-            dclk: 148500,
-            hsync: 44,
-            real_width: findDevice.resolution.width,
-            real_height: findDevice.resolution.height,
-            real_dclk: 148500,
-            reportTime: Date.now() / 1000
-          },
-          volume: { musicvolume: findDevice.volume, reportTime: Date.now() / 1000 },
-          inputmode: { inputmode: "internal", inputmodeactive: "internal", reportTime: Date.now() / 1000 },
-          ifstatus: {
-            types: [
-              {
-                type: "eth",
-                enabled: 1,
-                connected: 1,
-                operstate: "up",
-                mode: "static",
-                mac: findDevice.macAddress || "00:11:22:33:44:55",
-                ips: { ip: findDevice.ipAddress || "192.168.1.100", mask: "255.255.255.0", gateway: "192.168.1.1", dns1: "8.8.8.8", dns2: "8.8.4.4" },
-                speed: 1000
-              },
-              {
-                type: "wifi",
-                enabled: 1,
-                connected: 0,
-                operstate: "down",
-                mode: "dhcp",
-                mac: "AA:BB:CC:DD:EE:FF",
-                SSID: "PRISM_OFFICE_IOT",
-                strength: 75
-              },
-              {
-                type: "ap",
-                enabled: 1,
-                connected: 1,
-                operstate: "up",
-                mode: "bridge",
-                mac: "BB:CC:DD:EE:FF:00",
-                SSID: "PRISM_HOTSPOT_001",
-                strength: 100
-              },
-              {
-                type: "4g",
-                enabled: 1,
-                connected: 0,
-                operstate: "down",
-                mode: "ppp",
-                mac: "CC:DD:EE:FF:00:11",
-                strength: 60
-              }
-            ]
-          },
-          brightnessandcolortemp: { brightness: 180, colortemperature: 6500, reportTime: Date.now() / 1000 },
-          newrtc: { time: "2025-12-19 15:00:00", timezoneId: "Asia/Shanghai", timezone: 8, isautotime: 1, reportTime: Date.now() / 1000 },
-          screen_orientation: { orientation: "landscape" },
-          "4ginfo": { signal: -75, operator: "China Unicom", imei: "860000000000001", iccid: "8986000000000000001" },
-          reportswitch: { log_report: "on", complete_screen_status_report: "on", command_screenshot_report: "on", auto_vsns_report: "on" },
-          sync_program_mode: { sync_program_ntp_enable: 1, sync_program_ntp_server: "pool.ntp.org", sync_program_lan_role: "slave" }
-        }
-      };
-
-      const b = Math.round((enhancedDevice.deviceProperties?.brightnessandcolortemp?.brightness || 0) / 255 * 100);
-      const v = Math.round((enhancedDevice.deviceProperties?.volume?.musicvolume || 0) / 100 * 15);
-      const c = enhancedDevice.deviceProperties?.brightnessandcolortemp?.colortemperature || 6500;
+  const handleApplyChanges = async () => {
+    try {
+      if (brightnessPct !== originalValues.brightness) {
+        await executeDeviceAction(deviceId!, { 
+          type: 'BRIGHTNESS', 
+          body: { brightness: Math.round(brightnessPct * 2.55) } 
+        });
+      }
+      if (volumeLevel !== originalValues.volume) {
+        await executeDeviceAction(deviceId!, { 
+          type: 'VOLUME', 
+          body: { musicvolume: Math.round(volumeLevel * 100 / 15) } 
+        });
+      }
+      if (colorTemp !== originalValues.colorTemp) {
+        await executeDeviceAction(deviceId!, { 
+          type: 'COLOR_TEMP', 
+          body: { colortemp: colorTemp } 
+        });
+      }
       
-      setDevice(enhancedDevice);
-      
-      // Initialize interactive states from real props
-      setBrightnessPct(b);
-      setVolumeLevel(v);
-      setColorTemp(c);
-      setInputMode(enhancedDevice.deviceProperties?.inputmode?.inputmode || "internal");
-
-      setOriginalValues({ brightness: b, volume: v, colorTemp: c });
+      setOriginalValues({ brightness: brightnessPct, volume: volumeLevel, colorTemp: colorTemp });
+      setIsBrightnessLocked(true);
+      setIsVolumeLocked(true);
+      setIsColorTempLocked(true);
+      toast.success('Parameters dispatched');
+      queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
+    } catch (err) {
+      toast.error('Failed to dispatch commands');
     }
-    const timer = setTimeout(() => setLoading(false), 300);
-    return () => clearTimeout(timer);
-  }, [deviceId]);
-
-  const handleApplyChanges = () => {
-    toast.promise(new Promise(r => setTimeout(r, 1000)), {
-      loading: 'Applying adjustments...',
-      success: () => {
-        setOriginalValues({ brightness: brightnessPct, volume: volumeLevel, colorTemp: colorTemp });
-        return 'Parameters applied successfully';
-      },
-      error: 'Failed to apply changes',
-    });
   };
 
   const handleResetChanges = () => {
     setBrightnessPct(originalValues.brightness);
     setVolumeLevel(originalValues.volume);
     setColorTemp(originalValues.colorTemp);
+    setIsBrightnessLocked(true);
+    setIsVolumeLocked(true);
+    setIsColorTempLocked(true);
     toast.info('Adjustments reverted');
   };
 
   const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => { 
-      setIsRefreshing(false); 
-      toast.success("Real-time data synchronized"); 
-    }, 1000);
+    queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
   };
 
-  const executeDangerousAction = () => {
-    const action = confirmDialog.type === 'sleep' ? "TERMINAL_SLEEP" : "SYSTEM_REBOOT";
-    toast.promise(new Promise(r => setTimeout(r, 2000)), {
-      loading: `Dispatching ${action}...`,
-      success: `Command ${action} accepted by node`,
-      error: 'Dispatch failed',
-    });
+  const handleCapture = async () => {
+    setIsCapturing(true);
+    try {
+      await executeDeviceAction(deviceId!, { type: 'SCREENSHOT' });
+      toast.success('Capture command dispatched');
+    } catch (err) {
+      toast.error('Failed to dispatch capture command');
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
+  const executeDangerousAction = async () => {
+    const actionType = confirmDialog.type === 'sleep' ? 'POWER' : 'POWER';
+    const command = confirmDialog.type === 'sleep' ? 'sleep' : 'reboot';
+    
+    try {
+      await executeDeviceAction(deviceId!, { 
+        type: actionType, 
+        body: { command } 
+      });
+      toast.success(`Command ${command} accepted`);
+    } catch (err) {
+      toast.error('Dispatch failed');
+    }
     setConfirmDialog({ open: false, type: null });
   };
 
-  if (loading) return (
+  const handleDeleteScreenshot = async (ids: string[]) => {
+    try {
+      for (const id of ids) {
+        await deleteScreenshot(deviceId!, id);
+      }
+      queryClient.invalidateQueries({ queryKey: ['device-screenshots', deviceId] });
+      toast.success('Screenshot(s) deleted');
+    } catch (err) {
+      toast.error('Failed to delete screenshots');
+    }
+  };
+
+  const handleClearScreenshots = async () => {
+    try {
+      await clearScreenshots(deviceId!);
+      queryClient.invalidateQueries({ queryKey: ['device-screenshots', deviceId] });
+      toast.success('History cleared');
+    } catch (err) {
+      toast.error('Failed to clear history');
+    }
+  };
+
+  if (isDeviceLoading) return (
     <div className="flex flex-col items-center justify-center h-[70vh] gap-4">
       <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      <p className="font-black text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Initializing Command Channel</p>
+      <p className="font-bold text-[10px] tracking-[0.2em] text-muted-foreground">Initializing Command Channel</p>
     </div>
   );
 
-  if (!device) return <div>Terminal Missing</div>;
+  if (!device || !device.deviceProperties) return (
+    <div className="flex flex-col items-center justify-center h-[70vh] gap-4">
+      <AlertTriangle className="h-12 w-12 text-amber-500" />
+      <p className="font-bold text-[10px] tracking-[0.2em]">Terminal Data Missing or Unavailable</p>
+      <Button variant="outline" onClick={() => navigate("/dashboard/devices")}>Back to List</Button>
+    </div>
+  );
 
-  const realProps = device.deviceProperties!;
-  const activeInterface = realProps.ifstatus?.types.find(i => i.connected === 1)?.type || 'eth';
+  const realProps = device.deviceProperties;
+  const activeInterface = realProps.ifstatus?.types?.find(i => i.connected === 1)?.type || 'eth';
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
       
-      {/* SECTION 1: CORE IDENTITY (TOP BAR) - CRITICAL DATA ONLY */}
+      {/* SECTION 1: CORE IDENTITY (TOP BAR) */}
       <header className="grid grid-cols-1 lg:grid-cols-4 gap-4">
          <Card className="lg:col-span-3 rounded-2xl border-none shadow-sm ring-1 ring-muted/60 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-center gap-6">
@@ -299,14 +325,13 @@ export default function DeviceDetailsPage() {
                </div>
                <div className="space-y-1.5">
                   <div className="flex items-center gap-3">
-                     <h1 className="text-2xl font-black tracking-tight">{device.deviceName}</h1>
-                     <DeviceStatusBadge status={resolveDeviceStatus(device)} />
-                     <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                        <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[10px] font-mono font-bold">READY</span>
+                     <h1 className="text-2xl font-bold tracking-tight">{device.deviceName}</h1>
+                     <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-muted-foreground tracking-wider mb-0.5">Device Status</span>
+                        <DeviceStatusBadge status={resolveDeviceStatus(device)} />
                      </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-[11px] font-bold text-muted-foreground tracking-wide">
                      <span className="flex items-center gap-1.5"><Database className="h-3.5 w-3.5" /> SN: <span className="text-foreground font-mono">{realProps.info?.info.serialno}</span></span>
                      <span className="flex items-center gap-1.5"><Layout className="h-3.5 w-3.5" /> {realProps.info?.info.model}</span>
                      <span className="flex items-center gap-1.5"><Settings className="h-3.5 w-3.5" /> OS: {realProps.info?.info.vername}</span>
@@ -322,7 +347,7 @@ export default function DeviceDetailsPage() {
                     <TooltipTrigger asChild>
                        <Button 
                           variant="outline" 
-                          className="h-10 rounded-xl font-black text-xs gap-2" 
+                          className="h-10 rounded-xl font-bold text-xs gap-2" 
                           onClick={() => setShowBatchCommand(true)}
                        >
                           <Zap className="h-4 w-4 text-amber-500" /> Advanced Command
@@ -333,92 +358,143 @@ export default function DeviceDetailsPage() {
                     </TooltipContent>
                   </Tooltip>
                </TooltipProvider>
-               <Button variant="outline" className="h-10 rounded-xl font-black text-xs gap-2" onClick={handleRefresh} disabled={isRefreshing}>
-                  <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} /> SYNC
+               <Button variant="outline" className="h-10 rounded-xl font-bold text-xs gap-2" onClick={handleRefresh} disabled={isRefreshing}>
+                  <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} /> Sync
                </Button>
             </div>
          </Card>
          
          <Card className="rounded-2xl border-none ring-1 ring-muted/60 bg-muted/20 p-5 flex flex-col justify-center">
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Last Seen</p>
-            <p className="text-lg font-black tracking-tight uppercase">{formatRelative(device.lastReportTime)}</p>
-            <div className="flex items-center gap-2 mt-2 opacity-50">
-               <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-               <span className="text-[9px] font-bold uppercase tracking-tighter">Live Connection Active</span>
+            <p className="text-[10px] font-bold text-muted-foreground tracking-widest mb-1">Last Seen</p>
+            <p className="text-lg font-bold tracking-tight">{device.lastReportTime ? formatRelative(device.lastReportTime) : 'N/A'}</p>
+            <div className="flex items-center gap-2 mt-2">
+               <div className={cn("h-1.5 w-1.5 rounded-full", sseConnected ? "bg-emerald-500 animate-pulse" : "bg-slate-400")} />
+               <span className="text-[9px] font-bold tracking-tighter text-muted-foreground">
+                  Console Connected: {sseConnected ? "Active" : "Disconnected"}
+               </span>
             </div>
          </Card>
       </header>
 
       {/* SECTION 2: COCKPIT (SCREEN + CONTROLS) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Monitor & Player (8/12) */}
+        {/* Left: Monitor & Player */}
         <div className="lg:col-span-8">
            <Card className="overflow-hidden border-none shadow-2xl bg-black h-full flex flex-col ring-1 ring-white/10">
               <CardHeader className="p-4 flex flex-row items-center justify-between space-y-0 bg-zinc-950/80 border-b border-white/5">
-                <CardTitle className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Live View
-                </CardTitle>
                 <div className="flex items-center gap-3">
-                   <Badge variant="outline" className="text-[9px] h-5 border-zinc-800 text-zinc-400 font-mono tracking-tighter">
-                      Captured: {device.latestScreenshot?.timestamp ? formatDateTime(device.latestScreenshot.timestamp) : 'N/A'}
-                   </Badge>
+                  <CardTitle className="text-[10px] font-bold tracking-widest text-zinc-500 flex items-center gap-2">
+                    <Camera className="h-4 w-4" />
+                    Latest Screenshot
+                  </CardTitle>
+                </div>
+                <div className="flex items-center gap-3">
+                   {device.latestScreenshot?.timestamp ? (
+                      <Badge variant="outline" className="text-[9px] h-5 border-zinc-800 text-zinc-400 font-mono tracking-tighter">
+                         Captured: {formatDateTime(device.latestScreenshot.timestamp)}
+                      </Badge>
+                   ) : (
+                      <Badge variant="outline" className="text-[9px] h-5 border-zinc-800 text-amber-500/80 font-bold tracking-tight">
+                         No screenshot reported
+                      </Badge>
+                   )}
                    <Badge variant="outline" className="text-[9px] h-5 border-zinc-800 text-zinc-600 font-mono tracking-tighter">
                       {realProps.dimension?.real_width}x{realProps.dimension?.real_height}
                    </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="p-0 flex-1 relative flex items-center justify-center bg-zinc-900/30">
-                <div className="relative w-full h-full group">
-                  <DeviceScreenshot
-                    src={device.latestScreenshot?.url}
-                    deviceName={device.deviceName}
-                    className="w-full h-full object-contain"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60 pointer-events-none" />
+              <CardContent className="p-0 flex-1 relative flex items-center justify-center bg-zinc-900/30 overflow-hidden">
+                <div className="relative w-full aspect-video group">
+                  {device.latestScreenshot?.url ? (
+                    <>
+                      <DeviceScreenshot
+                        src={device.latestScreenshot.url}
+                        deviceName={device.deviceName}
+                        className="w-full h-full object-contain"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60 pointer-events-none" />
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-zinc-600 gap-4">
+                      <div className="p-6 rounded-full bg-zinc-800/50">
+                        <Monitor className="h-12 w-12 opacity-20" />
+                      </div>
+                      <p className="text-xs font-bold tracking-[0.2em] opacity-40">Visual data unavailable</p>
+                    </div>
+                  )}
+
+                  {/* Device Status Warning Overlay */}
+                  {resolveDeviceStatus(device) === 'offline' && (
+                    <div className="absolute top-4 left-4 right-4 animate-in slide-in-from-top-4 duration-500 z-20">
+                      <div className="bg-amber-500/90 backdrop-blur-md border border-amber-400/50 rounded-xl p-3 flex items-center gap-3 shadow-2xl">
+                        <AlertTriangle className="h-4 w-4 text-amber-950 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-bold text-amber-950 tracking-tight">Device Offline</p>
+                          <p className="text-[9px] text-amber-900 leading-tight truncate">
+                             Commands will be queued and may expire if the device doesn't reconnect soon.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Now Playing HUD */}
                   <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between">
-                     <div className="flex items-center gap-5 p-5 bg-black/40 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl">
-                        <div className="h-12 w-12 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg">
-                           <Play className="h-6 w-6 text-white fill-white/10" />
-                        </div>
-                        <div className="text-white min-w-0">
-                           <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-0.5">Now Playing: {realProps.vsns?.playing.type === 'rotation' ? 'Rotation' : 'Spot'}</p>
-                           <p className="text-lg font-black tracking-tight truncate max-w-[300px]">{realProps.vsns?.playing.name}</p>
-                           <div className="flex items-center gap-3 mt-1">
-                              <Badge className="bg-white/10 text-white border-none text-[9px] h-4 font-bold">Source: {realProps.vsns?.playing.source === 'internet' ? 'Cloud' : 'Local'}</Badge>
+                     {realProps.vsns?.playing ? (
+                        <div className="flex items-center gap-5 p-5 bg-black/40 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl animate-in fade-in slide-in-from-left-4 duration-500">
+                           <div className="h-12 w-12 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg">
+                              <Play className="h-6 w-6 text-white fill-white/10" />
+                           </div>
+                           <div className="text-white min-w-0">
+                              <p className="text-[10px] font-bold tracking-widest text-white/40 mb-0.5">
+                                 Playing: {realProps.vsns.playing.type === 'rotation' ? 'Rotation' : 'Spot'}
+                              </p>
+                              <p className="text-lg font-bold tracking-tight truncate max-w-[300px]">{realProps.vsns.playing.name}</p>
+                              <div className="flex items-center gap-3 mt-1">
+                                 <Badge className="bg-white/10 text-white border-none text-[9px] h-4 font-bold">
+                                    Source: {realProps.vsns.playing.source === 'internet' ? 'Cloud' : 'Local'}
+                                 </Badge>
+                              </div>
                            </div>
                         </div>
-                     </div>
+                     ) : <div />}
+
+                     {/* Screenshot Actions */}
                      <div className="hidden xl:flex flex-col gap-2 items-end">
+                        {device.latestScreenshot?.url && (
+                           <TooltipProvider>
+                              <Tooltip>
+                                 <TooltipTrigger asChild>
+                                    <Button 
+                                       size="icon" 
+                                       variant="secondary" 
+                                       className="h-10 w-10 rounded-full shadow-2xl hover:scale-110 transition-transform" 
+                                       onClick={() => setPreviewImage(device.latestScreenshot?.url || null)}
+                                    >
+                                       <Maximize2 className="h-5 w-5" />
+                                    </Button>
+                                 </TooltipTrigger>
+                                 <TooltipContent side="left">
+                                    <p className="text-xs font-bold">Full Screen View</p>
+                                 </TooltipContent>
+                              </Tooltip>
+                           </TooltipProvider>
+                        )}
+
                         <TooltipProvider>
                            <Tooltip>
                               <TooltipTrigger asChild>
                                  <Button 
                                     size="icon" 
                                     variant="secondary" 
-                                    className="h-10 w-10 rounded-full shadow-2xl" 
-                                    onClick={() => setPreviewImage(device.latestScreenshot?.url || null)}
+                                    className="h-10 w-10 rounded-full shadow-2xl hover:scale-110 transition-transform" 
+                                    onClick={() => setShowScreenshotManager(true)}
                                  >
-                                    <Maximize2 className="h-5 w-5" />
-                                 </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="left">
-                                 <p className="text-xs font-bold">Full Screen View</p>
-                              </TooltipContent>
-                           </Tooltip>
-                        </TooltipProvider>
-
-                        <TooltipProvider>
-                           <Tooltip>
-                              <TooltipTrigger asChild>
-                                 <Button size="icon" variant="secondary" className="h-10 w-10 rounded-full shadow-2xl" onClick={() => setShowScreenshotManager(true)}>
                                     <Layers className="h-5 w-5" />
                                  </Button>
                               </TooltipTrigger>
                               <TooltipContent side="left">
-                                 <p className="text-xs font-bold">Manage History</p>
+                                 <p className="text-xs font-bold">Screenshot History</p>
                               </TooltipContent>
                            </Tooltip>
                         </TooltipProvider>
@@ -426,12 +502,18 @@ export default function DeviceDetailsPage() {
                         <TooltipProvider>
                            <Tooltip>
                               <TooltipTrigger asChild>
-                                 <Button size="icon" variant="secondary" className="h-10 w-10 rounded-full shadow-2xl" onClick={() => setIsCapturing(true)}>
-                                    <Camera className={cn("h-5 w-5", isCapturing && "animate-pulse text-primary")} />
+                                 <Button 
+                                    size="icon" 
+                                    variant="secondary" 
+                                    className="h-10 w-10 rounded-full shadow-2xl hover:scale-110 transition-transform" 
+                                    onClick={handleCapture} 
+                                    disabled={isCapturing}
+                                 >
+                                    {isCapturing ? <RefreshCw className="h-5 w-5 animate-spin text-primary" /> : <Camera className="h-5 w-5" />}
                                  </Button>
                               </TooltipTrigger>
                               <TooltipContent side="left">
-                                 <p className="text-xs font-bold">Capture Frame</p>
+                                 <p className="text-xs font-bold">Refresh Screenshot</p>
                               </TooltipContent>
                            </Tooltip>
                         </TooltipProvider>
@@ -442,95 +524,158 @@ export default function DeviceDetailsPage() {
            </Card>
         </div>
 
-        {/* Right: Command Center (4/12) */}
+        {/* Right: Command Center */}
         <div className="lg:col-span-4 flex flex-col gap-6">
-           <Card className="shadow-xl border-none ring-1 ring-muted/60 h-full">
-              <CardHeader className="pb-5 border-b bg-muted/5 px-6">
-                 <CardTitle className="text-[11px] font-black flex items-center gap-2 uppercase tracking-[0.15em] text-slate-500">
+           <Card className="shadow-xl border-none ring-1 ring-muted/60 h-full flex flex-col overflow-hidden">
+              <CardHeader className="pb-5 border-b bg-muted/5 px-6 shrink-0">
+                 <CardTitle className="text-[11px] font-bold flex items-center gap-2 tracking-[0.15em] text-slate-500">
                     <Zap className="h-4 w-4 text-amber-500 fill-amber-500/10" /> Command Center
                  </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-8 pt-8 px-8">
-                 {/* Quick Actions */}
+              <CardContent className="flex-1 overflow-y-auto space-y-8 pt-6 px-6 scrollbar-none">
+                 {/* Power Control */}
                  <div className="space-y-4">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Quick Actions</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <p className="text-[10px] font-bold text-muted-foreground tracking-widest">Power Control</p>
+                    <div className="grid grid-cols-1 gap-2">
                        <Button 
                           variant="outline" 
-                          className="h-14 rounded-2xl font-black text-[10px] uppercase tracking-widest gap-2 border-amber-500/20 bg-amber-500/[0.03] hover:bg-amber-500/10 text-amber-700"
+                          className="h-12 justify-start rounded-xl font-bold text-xs gap-3 border-amber-500/10 bg-amber-500/[0.02] hover:bg-amber-500/5 text-amber-700 group transition-all"
                           onClick={() => setConfirmDialog({ open: true, type: 'sleep' })}
                        >
-                          <Moon className="h-4 w-4" /> Sleep
+                          <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                             <Moon className="h-4 w-4" />
+                          </div>
+                          <div className="text-left">
+                             <p>Enter Standby</p>
+                             <p className="text-[9px] font-normal text-amber-600/60 leading-none mt-0.5">Suspend content rendering</p>
+                          </div>
                        </Button>
                        <Button 
                           variant="outline" 
-                          className="h-14 rounded-2xl font-black text-[10px] uppercase tracking-widest gap-2 border-rose-500/20 bg-rose-500/[0.03] hover:bg-rose-500/10 text-rose-700"
+                          className="h-12 justify-start rounded-xl font-bold text-xs gap-3 border-rose-500/10 bg-rose-500/[0.02] hover:bg-rose-500/5 text-rose-700 group transition-all"
                           onClick={() => setConfirmDialog({ open: true, type: 'reboot' })}
                        >
-                          <RotateCw className="h-4 w-4" /> Reboot
+                          <div className="h-8 w-8 rounded-lg bg-rose-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                             <RotateCw className="h-4 w-4" />
+                          </div>
+                          <div className="text-left">
+                             <p>Hard Reboot</p>
+                             <p className="text-[9px] font-normal text-rose-600/60 leading-none mt-0.5">Force power cycle terminal</p>
+                          </div>
                        </Button>
                     </div>
                  </div>
 
-                 {/* Signal Source Selection */}
-                 <div className="space-y-4 bg-muted/30 p-5 rounded-2xl border border-dashed hover:border-primary/30 transition-colors">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Input Source Selection</p>
+                 {/* Input Source */}
+                 <div className="space-y-4 bg-muted/20 p-5 rounded-2xl border border-muted/20 transition-colors">
+                    <p className="text-[10px] font-bold text-muted-foreground tracking-widest">Input Source</p>
                     <Select value={inputMode} onValueChange={setInputMode}>
-                       <SelectTrigger className="h-6 text-xs font-black uppercase bg-transparent border-none p-0 focus:ring-0 shadow-none">
-                          <SelectValue />
+                       <SelectTrigger className="h-9 text-xs font-bold bg-background border shadow-sm rounded-xl">
+                          <div className="flex items-center gap-2">
+                             <Power className="h-3.5 w-3.5 text-primary" />
+                             <SelectValue />
+                          </div>
                        </SelectTrigger>
                        <SelectContent>
-                          <SelectItem value="internal" className="text-xs font-bold uppercase">Built-in Player</SelectItem>
-                          <SelectItem value="hdmi" className="text-xs font-bold uppercase">HDMI Input</SelectItem>
+                          <SelectItem value="internal" className="text-xs font-bold text-slate-700">Internal Player</SelectItem>
+                          <SelectItem value="hdmi" className="text-xs font-bold text-slate-700">HDMI Input</SelectItem>
                        </SelectContent>
                     </Select>
                  </div>
 
                  {/* Display Adjustments */}
-                 <div className="space-y-9 px-1">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Display Adjustments</p>
+                 <div className="space-y-8 px-1">
+                    <p className="text-[10px] font-bold text-muted-foreground tracking-widest">Adjustments</p>
+                    
+                    {/* Brightness */}
                     <div className="space-y-4">
-                       <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                       <div className="flex justify-between items-center text-[10px] font-bold tracking-widest text-muted-foreground">
                           <span className="flex items-center gap-2">
                              <Sun className="h-4 w-4 text-amber-500" /> Brightness
                              {brightnessPct !== originalValues.brightness && <Badge className="ml-2 bg-amber-500/10 text-amber-600 border-none text-[8px] h-4">Pending</Badge>}
                           </span>
-                          <span className="font-mono bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-md border border-amber-500/10">{brightnessPct}%</span>
+                          <div className="flex items-center gap-3">
+                             <span className="font-mono bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-md border border-amber-500/10">{brightnessPct}%</span>
+                             <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className={cn("h-6 w-6 rounded-md", !isBrightnessLocked && "bg-amber-500/10 text-amber-600")}
+                                onClick={() => setIsBrightnessLocked(!isBrightnessLocked)}
+                             >
+                                {isBrightnessLocked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                             </Button>
+                          </div>
                        </div>
-                       <Slider value={[brightnessPct]} max={100} onValueChange={(v) => setBrightnessPct(v[0])} className="cursor-pointer" />
+                       <Slider 
+                          value={[brightnessPct]} 
+                          max={100} 
+                          onValueChange={(v) => setBrightnessPct(v[0])} 
+                          className={cn("transition-opacity", isBrightnessLocked ? "opacity-40 pointer-events-none" : "cursor-pointer")} 
+                       />
                     </div>
 
+                    {/* Volume */}
                     <div className="space-y-4">
-                       <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                       <div className="flex justify-between items-center text-[10px] font-bold tracking-widest text-muted-foreground">
                           <span className="flex items-center gap-2">
                              <Volume2 className="h-4 w-4 text-blue-500" /> Volume
                              {volumeLevel !== originalValues.volume && <Badge className="ml-2 bg-blue-500/10 text-blue-600 border-none text-[8px] h-4">Pending</Badge>}
                           </span>
-                          <span className="font-mono bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded-md border border-blue-500/10">{volumeLevel} / 15</span>
+                          <div className="flex items-center gap-3">
+                             <span className="font-mono bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded-md border border-blue-500/10">{volumeLevel} / 15</span>
+                             <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className={cn("h-6 w-6 rounded-md", !isVolumeLocked && "bg-blue-500/10 text-blue-600")}
+                                onClick={() => setIsVolumeLocked(!isVolumeLocked)}
+                             >
+                                {isVolumeLocked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                             </Button>
+                          </div>
                        </div>
-                       <Slider value={[volumeLevel]} max={15} step={1} onValueChange={(v) => setVolumeLevel(v[0])} className="cursor-pointer" />
+                       <Slider 
+                          value={[volumeLevel]} 
+                          max={15} 
+                          step={1} 
+                          onValueChange={(v) => setVolumeLevel(v[0])} 
+                          className={cn("transition-opacity", isVolumeLocked ? "opacity-40 pointer-events-none" : "cursor-pointer")} 
+                       />
                     </div>
 
+                    {/* Color Temp */}
                     <div className="space-y-4">
-                       <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                       <div className="flex justify-between items-center text-[10px] font-bold tracking-widest text-muted-foreground">
                           <span className="flex items-center gap-2">
                              <ThermometerSnowflake className="h-4 w-4 text-emerald-500" /> Color Temp
                              {colorTemp !== originalValues.colorTemp && <Badge className="ml-2 bg-emerald-500/10 text-emerald-600 border-none text-[8px] h-4">Pending</Badge>}
                           </span>
                           <div className="flex items-center gap-3">
-                             <span className="text-[8px] font-black opacity-30">WARM</span>
                              <span className="font-mono bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-md border border-emerald-500/10">{colorTemp}K</span>
-                             <span className="text-[8px] font-black opacity-30">COOL</span>
+                             <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className={cn("h-6 w-6 rounded-md", !isColorTempLocked && "bg-emerald-500/10 text-emerald-600")}
+                                onClick={() => setIsColorTempLocked(!isColorTempLocked)}
+                             >
+                                {isColorTempLocked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                             </Button>
                           </div>
                        </div>
-                       <Slider value={[colorTemp]} min={2000} max={10000} step={100} onValueChange={(v) => setColorTemp(v[0])} className="cursor-pointer" />
+                       <Slider 
+                          value={[colorTemp]} 
+                          min={2000} 
+                          max={10000} 
+                          step={100} 
+                          onValueChange={(v) => setColorTemp(v[0])} 
+                          className={cn("transition-opacity", isColorTempLocked ? "opacity-40 pointer-events-none" : "cursor-pointer")} 
+                       />
                     </div>
                  </div>
 
                  {hasChanges && (
-                   <div className="flex gap-2 animate-in slide-in-from-bottom-2">
-                      <Button onClick={handleApplyChanges} className="flex-1 h-12 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20">Apply Changes</Button>
-                      <Button onClick={handleResetChanges} variant="outline" className="h-12 rounded-xl font-black text-[10px] uppercase tracking-[0.2em]">Cancel</Button>
+                   <div className="flex gap-2 animate-in slide-in-from-bottom-2 pb-2">
+                      <Button onClick={handleApplyChanges} className="flex-1 h-12 rounded-xl font-bold text-[10px] tracking-[0.2em] shadow-lg shadow-primary/20">Apply Changes</Button>
+                      <Button onClick={handleResetChanges} variant="outline" className="h-12 rounded-xl font-bold text-[10px] tracking-[0.2em]">Cancel</Button>
                    </div>
                  )}
               </CardContent>
@@ -540,11 +685,11 @@ export default function DeviceDetailsPage() {
 
       {/* SECTION 3: SYSTEM OVERVIEW & NETWORK */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-         {/* Hardware Information (8/12 - Shared with Network) */}
+         {/* Hardware Information */}
          <div className="xl:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4">
             <InfoGroup title="Device Information" icon={Layers}>
-               <InfoItem label="Device Name" value={realProps.terminal?.name} />
-               <InfoItem label="Hardware Model" value={realProps.info?.info.model} highlight />
+               <InfoItem label="Device Name" value={device.deviceName} highlight />
+               <InfoItem label="Hardware Model" value={realProps.info?.info.model} />
                <InfoItem label="System Uptime" value={formatUptime(realProps.info?.info.up || 0)} highlight />
                <InfoItem label="Firmware Version" value={realProps.info?.info.vername} />
                <InfoGroupSeparator />
@@ -555,10 +700,10 @@ export default function DeviceDetailsPage() {
             <InfoGroup title="Network Status" icon={Network}>
                <Tabs defaultValue={activeInterface} className="w-full">
                   <TabsList className="grid grid-cols-4 h-8 bg-muted/50 p-1 rounded-xl mb-6">
-                     <TabsTrigger value="eth" className="rounded-lg text-[9px] font-black uppercase tracking-tighter data-[state=active]:bg-background data-[state=active]:shadow-sm">LAN</TabsTrigger>
-                     <TabsTrigger value="wifi" className="rounded-lg text-[9px] font-black uppercase tracking-tighter data-[state=active]:bg-background data-[state=active]:shadow-sm">WiFi</TabsTrigger>
-                     <TabsTrigger value="ap" className="rounded-lg text-[9px] font-black uppercase tracking-tighter data-[state=active]:bg-background data-[state=active]:shadow-sm">AP</TabsTrigger>
-                     <TabsTrigger value="4g" className="rounded-lg text-[9px] font-black uppercase tracking-tighter data-[state=active]:bg-background data-[state=active]:shadow-sm">4G</TabsTrigger>
+                     <TabsTrigger value="eth" className="rounded-lg text-[9px] font-bold tracking-tighter data-[state=active]:bg-background data-[state=active]:shadow-sm">LAN</TabsTrigger>
+                     <TabsTrigger value="wifi" className="rounded-lg text-[9px] font-bold tracking-tighter data-[state=active]:bg-background data-[state=active]:shadow-sm">WiFi</TabsTrigger>
+                     <TabsTrigger value="ap" className="rounded-lg text-[9px] font-bold tracking-tighter data-[state=active]:bg-background data-[state=active]:shadow-sm">AP</TabsTrigger>
+                     <TabsTrigger value="4g" className="rounded-lg text-[9px] font-bold tracking-tighter data-[state=active]:bg-background data-[state=active]:shadow-sm">4G</TabsTrigger>
                   </TabsList>
 
                   {realProps.ifstatus?.types.map((iface) => (
@@ -570,12 +715,12 @@ export default function DeviceDetailsPage() {
                                  {iface.type === 'wifi' && <Wifi className="h-3 w-3 text-primary" />}
                                  {iface.type === 'ap' && <Share2 className="h-3 w-3 text-primary" />}
                                  {iface.type === '4g' && <Signal className="h-3 w-3 text-primary" />}
-                                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                 <span className="text-[10px] font-bold tracking-widest text-slate-500">
                                     {iface.type === 'eth' ? 'Ethernet Port' : iface.type === 'ap' ? 'WiFi Hotspot' : iface.type.toUpperCase() + ' Module'}
                                  </span>
                               </div>
                               <Badge variant="outline" className={cn(
-                                 "text-[8px] font-black h-4 border-none",
+                                 "text-[8px] font-bold h-4 border-none",
                                  iface.connected === 1 ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"
                               )}>
                                  {iface.connected === 1 ? 'ACTIVE' : 'INACTIVE'}
@@ -601,7 +746,7 @@ export default function DeviceDetailsPage() {
                            ) : (
                               <div className="py-8 flex flex-col items-center justify-center gap-2 opacity-20">
                                  <Network className="h-8 w-8" />
-                                 <p className="text-[8px] font-black uppercase tracking-[0.2em]">Interface Inactive</p>
+                                 <p className="text-[8px] font-bold tracking-[0.2em]">Interface Inactive</p>
                               </div>
                            )}
                         </div>
@@ -611,25 +756,25 @@ export default function DeviceDetailsPage() {
             </InfoGroup>
          </div>
 
-         {/* System Resources (4/12) */}
+         {/* System Resources */}
          <Card className="xl:col-span-4 rounded-3xl border-none ring-1 ring-muted/60 bg-slate-50 dark:bg-slate-900/50 p-6 flex flex-col justify-between">
             <CardHeader className="p-0 pb-6">
-               <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
+               <CardTitle className="text-[10px] font-bold tracking-[0.2em] text-slate-500 flex items-center gap-2">
                   <Cpu className="h-4 w-4 text-primary" /> System Resources
                </CardTitle>
             </CardHeader>
             <CardContent className="p-0 space-y-8 flex-1">
                <ResourceProgress 
                   label="Storage Space" 
-                  used={realProps.info?.info.storage.total! - realProps.info?.info.storage.free!} 
-                  total={realProps.info?.info.storage.total!} 
+                  used={(realProps.info?.info?.storage?.total || 0) - (realProps.info?.info?.storage?.free || 0)} 
+                  total={realProps.info?.info?.storage?.total || 1} 
                   unit="GB" 
                   color="bg-emerald-500"
                />
                <ResourceProgress 
                   label="System Memory" 
-                  used={realProps.info?.info.mem.total! - realProps.info?.info.mem.free!} 
-                  total={realProps.info?.info.mem.total!} 
+                  used={(realProps.info?.info?.mem?.total || 0) - (realProps.info?.info?.mem?.free || 0)} 
+                  total={realProps.info?.info?.mem?.total || 1} 
                   unit="MB"
                   color="bg-blue-500"
                />
@@ -638,7 +783,7 @@ export default function DeviceDetailsPage() {
                      <Info className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                     <p className="text-[9px] font-black text-muted-foreground uppercase">Status Note</p>
+                     <p className="text-[9px] font-bold text-muted-foreground ">Status Note</p>
                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">All modules functioning within normal parameters.</p>
                   </div>
                </div>
@@ -648,118 +793,81 @@ export default function DeviceDetailsPage() {
 
       {/* SECTION 4: DEEP ASSETS & SYSTEM POLICIES */}
       <Tabs defaultValue="assets" className="w-full">
-         <TabsList className="bg-muted/40 p-1 rounded-2xl border h-11 mb-6 flex w-full md:w-auto">
-            <TabsTrigger value="assets" className="rounded-xl flex-1 md:px-12 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Storage Content</TabsTrigger>
-            <TabsTrigger value="schedule" className="rounded-xl flex-1 md:px-12 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Playback Plan</TabsTrigger>
-            <TabsTrigger value="policy" className="rounded-xl flex-1 md:px-12 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Device Policy</TabsTrigger>
+         <TabsList className="bg-muted/40 p-1 rounded-2xl border h-11 mb-6 flex w-full md:w-auto overflow-x-auto scrollbar-none">
+            <TabsTrigger value="assets" className="rounded-xl flex-1 md:px-10 font-bold text-[10px] tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Asset Inventory</TabsTrigger>
+            <TabsTrigger value="operations" className="rounded-xl flex-1 md:px-10 font-bold text-[10px] tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Recent Operations</TabsTrigger>
+            <TabsTrigger value="schedule" className="rounded-xl flex-1 md:px-10 font-bold text-[10px] tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Schedule</TabsTrigger>
+            <TabsTrigger value="policy" className="rounded-xl flex-1 md:px-10 font-bold text-[10px] tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Device Policy</TabsTrigger>
          </TabsList>
 
-         <TabsContent value="schedule" className="mt-0">
-            <Card className="rounded-[3rem] border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
-               <CardHeader className="px-10 py-8 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
+         <TabsContent value="operations" className="mt-0">
+            <Card className="rounded-3xl border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
+               <CardHeader className="px-8 py-6 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
                   <div className="space-y-1">
-                     <CardTitle className="text-xl font-black tracking-tight uppercase">Current Playback Plan</CardTitle>
-                     <CardDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Active schedule & device visibility rules</CardDescription>
+                     <CardTitle className="text-lg font-bold tracking-tighter">Recent Operations</CardTitle>
+                     <CardDescription className="text-[10px] font-bold text-muted-foreground tracking-wider">Audit trail of commands dispatched to this device</CardDescription>
                   </div>
-                  <div className="flex items-center gap-3">
-                     <Button variant="outline" className="h-10 rounded-xl font-black text-xs gap-2 border-2 uppercase">
-                        <RotateCw className="h-4 w-4" /> Sync Rules
-                     </Button>
-                     <Button className="h-10 rounded-xl font-black text-xs gap-2 bg-zinc-900 text-white uppercase px-6" onClick={() => navigate('/dashboard/schedule')}>
-                        Manage Schedules
-                     </Button>
-                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="rounded-xl font-bold text-xs gap-2"
+                    onClick={() => navigate('/dashboard/logs', { state: { deviceId: device?.deviceId } })}
+                  >
+                    <HistoryIcon className="h-4 w-4" /> Full Logs
+                  </Button>
                </CardHeader>
-               <CardContent className="p-10 space-y-10">
-                  {/* Schedule Binding Info */}
-                  <div className="flex flex-col md:flex-row gap-6">
-                     <div className="flex-1 p-8 rounded-[2rem] bg-muted/20 border-2 border-dashed border-muted flex flex-col gap-4">
-                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Bound Schedule</p>
-                        <div className="flex items-center gap-4">
-                           <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20">
-                              <CalendarDays className="h-6 w-6" />
+               <CardContent className="p-8">
+                  <div className="space-y-3">
+                     {recentOperations.length > 0 ? (
+                        recentOperations.map((op) => (
+                           <div key={op.id} className="p-4 rounded-2xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-colors flex items-center justify-between group">
+                              <div className="flex items-center gap-4">
+                                 <div className={cn(
+                                    "h-10 w-10 rounded-xl flex items-center justify-center border shadow-sm",
+                                    op.status === 'SUCCESS' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+                                    op.status === 'FAILED' ? "bg-rose-500/10 text-rose-600 border-rose-500/20" :
+                                    "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                 )}>
+                                    <Activity className="h-5 w-5" />
+                                 </div>
+                                 <div>
+                                    <div className="flex items-center gap-2">
+                                       <span className="font-bold text-sm text-slate-800 dark:text-slate-100">{op.actionType}</span>
+                                       <Badge variant="outline" className={cn(
+                                          "text-[8px] h-4 border-none px-1.5 font-bold",
+                                          op.status === 'SUCCESS' ? "bg-emerald-500/10 text-emerald-600" :
+                                          op.status === 'FAILED' ? "bg-rose-500/10 text-rose-600" :
+                                          "bg-amber-500/10 text-amber-600"
+                                       )}>
+                                          {op.status}
+                                       </Badge>
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground font-mono mt-0.5">ID: {op.logId}</p>
+                                 </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-8 text-right">
+                                 {op.errorMessage && (
+                                    <p className="text-[10px] text-rose-500 font-medium max-w-[200px] truncate">{op.errorMessage}</p>
+                                 )}
+                                 <div className="space-y-0.5">
+                                    <p className="text-[10px] font-bold text-slate-500">{op.createdAt ? formatRelative(op.createdAt) : 'N/A'}</p>
+                                    <button 
+                                       className="text-[10px] font-bold text-primary hover:underline"
+                                       onClick={() => navigate(`/dashboard/logs?tab=terminal&id=${op.id}`)}
+                                    >
+                                       View Details
+                                    </button>
+                                 </div>
+                              </div>
                            </div>
-                           <div>
-                              <h4 className="text-xl font-black uppercase tracking-tighter">Standard Business Day</h4>
-                              <p className="text-xs text-muted-foreground font-medium mt-1">Status: <span className="text-emerald-600 font-bold">ENABLED & SYNCED</span></p>
-                           </div>
+                        ))
+                     ) : (
+                        <div className="py-20 flex flex-col items-center justify-center gap-4 text-muted-foreground opacity-30">
+                           <Activity className="h-12 w-12" />
+                           <p className="text-sm font-bold tracking-[0.2em]">No command history available</p>
                         </div>
-                     </div>
-                     <div className="md:w-64 p-8 rounded-[2rem] bg-muted/20 border-2 border-dashed border-muted flex flex-col justify-center gap-1">
-                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Rule Summary</p>
-                        <div className="flex items-center justify-between mt-2">
-                           <span className="text-xs font-bold">Programs</span>
-                           <Badge variant="secondary" className="font-black text-[10px]">2 Rules</Badge>
-                        </div>
-                        <div className="flex items-center justify-between">
-                           <span className="text-xs font-bold">Commands</span>
-                           <Badge variant="secondary" className="font-black text-[10px]">3 Actions</Badge>
-                        </div>
-                     </div>
-                  </div>
-
-                  {/* Device Visibility (AllowList) */}
-                  <div className="space-y-6">
-                     <div className="flex items-center justify-between px-2">
-                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">Device Visibility (AllowList)</h3>
-                        <div className="flex items-center gap-4 text-[9px] font-bold text-muted-foreground/40 uppercase">
-                           <span className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-blue-500/20 border border-blue-500/40" /> From Schedule</span>
-                           <span className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-emerald-500/20 border border-emerald-500/40" /> Direct Publish</span>
-                        </div>
-                     </div>
-                     
-                     <div className="rounded-[2rem] border overflow-hidden">
-                        <table className="w-full text-left border-collapse">
-                           <thead>
-                              <tr className="bg-muted/30 border-b text-[9px] font-black uppercase tracking-widest text-muted-foreground">
-                                 <th className="px-6 py-4">Release Program</th>
-                                 <th className="px-4 py-4 text-center">ID</th>
-                                 <th className="px-4 py-4">Source</th>
-                                 <th className="px-4 py-4">Status</th>
-                                 <th className="px-6 py-4 text-right">Progress</th>
-                              </tr>
-                           </thead>
-                           <tbody className="divide-y">
-                              <VisibilityRow 
-                                 name="Lobby Loop V4" 
-                                 id={1001} 
-                                 source="schedule" 
-                                 status="downloaded" 
-                                 progress={100} 
-                              />
-                              <VisibilityRow 
-                                 name="Summer Sale Campaign" 
-                                 id={205} 
-                                 source="direct" 
-                                 status="downloading" 
-                                 progress={74} 
-                              />
-                              <VisibilityRow 
-                                 name="Flash Sale Alert" 
-                                 id={1002} 
-                                 source="schedule" 
-                                 status="downloaded" 
-                                 progress={100} 
-                              />
-                           </tbody>
-                        </table>
-                     </div>
-                  </div>
-
-                  {/* Visual Timeline (Simplified Preview) */}
-                  <div className="space-y-4">
-                     <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest px-2">Execution Timeline (Today)</p>
-                     <div className="relative h-24 bg-muted/10 border-2 border-dashed border-muted rounded-[2rem] overflow-hidden">
-                        <div className="absolute inset-0 flex">
-                           {Array.from({ length: 24 }).map((_, i) => (
-                              <div key={i} className="flex-1 border-r border-muted/30 last:border-r-0" />
-                           ))}
-                        </div>
-                        <div className="absolute top-1/2 -translate-y-1/2 left-[35%] right-[15%] h-8 bg-blue-500/10 border-2 border-blue-500/30 rounded-xl flex items-center px-4">
-                           <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 truncate">Lobby Loop (Active)</span>
-                        </div>
-                        <div className="absolute top-0 bottom-0 w-0.5 bg-rose-500 z-10" style={{ left: '65%' }} />
-                     </div>
+                     )}
                   </div>
                </CardContent>
             </Card>
@@ -769,40 +877,160 @@ export default function DeviceDetailsPage() {
             <Card className="rounded-3xl border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
                <CardHeader className="px-8 py-6 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
                   <div className="space-y-1">
-                     <CardTitle className="text-lg font-black tracking-tighter uppercase">Local Storage</CardTitle>
-                     <CardDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Cached media resources on device partitions</CardDescription>
+                     <CardTitle className="text-lg font-bold tracking-tighter ">Media Cache</CardTitle>
+                     <CardDescription className="text-[10px] font-bold text-muted-foreground tracking-wider">Synchronized content stored in device local partitions</CardDescription>
                   </div>
                   <div className="relative">
                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                     <Input placeholder="Filter files..." className="pl-10 h-11 w-64 bg-muted/30 border-none rounded-xl text-xs font-bold" />
+                     <Input placeholder="Search cache..." className="pl-10 h-11 w-64 bg-muted/30 border-none rounded-xl text-xs font-bold" />
                   </div>
                </CardHeader>
                <CardContent className="p-0">
-                  <div className="grid grid-cols-12 px-8 py-5 bg-muted/20 text-[9px] font-black uppercase text-slate-500 tracking-widest border-b">
-                     <div className="col-span-7">File Name</div>
-                     <div className="col-span-2 text-center">Type</div>
-                     <div className="col-span-3 text-right">Size</div>
+                  <div className="grid grid-cols-12 px-8 py-5 bg-muted/20 text-[9px] font-bold text-slate-500 tracking-widest border-b">
+                     <div className="col-span-7">Resource Name</div>
+                     <div className="col-span-2 text-center">Category</div>
+                     <div className="col-span-3 text-right">Disk Size</div>
                   </div>
-                  <div className="divide-y divide-muted/40">
-                     {realProps.vsns?.contents.map(group => group.content.map(vsn => (
-                        <div key={vsn.md5} className="grid grid-cols-12 px-8 py-6 items-center hover:bg-primary/[0.02] transition-colors group">
-                           <div className="col-span-7 flex items-center gap-5">
-                              <div className="h-12 w-12 rounded-2xl bg-card border flex items-center justify-center text-muted-foreground shadow-sm group-hover:scale-105 transition-transform">
-                                 <FileText className="h-6 w-6" />
+                  <div className="divide-y divide-muted/40 max-h-[600px] overflow-y-auto">
+                     {realProps.vsns?.contents && realProps.vsns.contents.length > 0 ? (
+                        realProps.vsns.contents.map(group => group.content.map(vsn => (
+                           <div key={vsn.md5} className="grid grid-cols-12 px-8 py-6 items-center hover:bg-primary/[0.02] transition-colors group">
+                              <div className="col-span-7 flex items-center gap-5">
+                                 <div className="h-12 w-12 rounded-2xl bg-card border flex items-center justify-center text-muted-foreground shadow-sm group-hover:scale-105 transition-transform">
+                                    <FileText className="h-6 w-6" />
+                                 </div>
+                                 <div className="min-w-0 space-y-0.5">
+                                    <p className="font-bold text-sm tracking-tight text-slate-800 dark:text-slate-100">{vsn.name}</p>
+                                    <p className="text-[10px] font-mono text-muted-foreground opacity-40 truncate max-w-[400px]">{vsn.md5}</p>
+                                 </div>
                               </div>
-                              <div className="min-w-0 space-y-0.5">
-                                 <p className="font-black text-sm uppercase tracking-tight text-slate-800 dark:text-slate-100">{vsn.name}</p>
-                                 <p className="text-[10px] font-mono text-muted-foreground opacity-30 truncate max-w-[400px]">CRC32/MD5 ID</p>
+                              <div className="col-span-2 text-center">
+                                 <Badge variant="outline" className="text-[9px] font-bold rounded-lg border-none bg-indigo-500/10 text-indigo-600 px-3">{group.type}</Badge>
+                              </div>
+                              <div className="col-span-3 text-right">
+                                 <p className="text-xs font-bold tabular-nums">{(vsn.size / 1024 / 1024).toFixed(1)} <span className="text-[10px] font-medium opacity-40 ml-1">MB</span></p>
                               </div>
                            </div>
-                           <div className="col-span-2 text-center">
-                              <Badge variant="outline" className="text-[9px] font-black uppercase rounded-lg border-none bg-indigo-500/10 text-indigo-600 px-3">{group.type}</Badge>
-                           </div>
-                           <div className="col-span-3 text-right">
-                              <p className="text-xs font-black tabular-nums">{(vsn.size / 1024 / 1024).toFixed(1)} <span className="text-[10px] font-bold opacity-40 ml-1">MB</span></p>
-                           </div>
+                        )))
+                     ) : (
+                        <div className="py-20 flex flex-col items-center justify-center gap-4 text-muted-foreground opacity-30">
+                           <Database className="h-12 w-12" />
+                           <p className="text-sm font-bold tracking-[0.2em]">No cached assets found</p>
                         </div>
-                     )))}
+                     )}
+                  </div>
+               </CardContent>
+            </Card>
+         </TabsContent>
+
+         <TabsContent value="schedule" className="mt-0">
+            <Card className="rounded-[3rem] border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
+               <CardHeader className="px-10 py-8 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
+                  <div className="space-y-1">
+                     <CardTitle className="text-xl font-bold tracking-tight">Current Schedule</CardTitle>
+                     <CardDescription className="text-[10px] font-bold text-muted-foreground tracking-widest">Active schedule and program visibility rules</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-3">
+                     <Button 
+                        variant="outline" 
+                        className="h-10 rounded-xl font-bold text-xs gap-2 border-2"
+                        onClick={() => queryClient.invalidateQueries({ queryKey: ['device-schedule', deviceId] })}
+                     >
+                        <RefreshCw className="h-4 w-4" /> Sync Status
+                     </Button>
+                     <Button className="h-10 rounded-xl font-bold text-xs gap-2 bg-zinc-900 text-white px-6" onClick={() => navigate('/dashboard/schedule')}>
+                        Manage Schedules
+                     </Button>
+                  </div>
+               </CardHeader>
+               <CardContent className="p-10 space-y-10">
+                  {/* Schedule Binding Info */}
+                  <div className="flex flex-col md:flex-row gap-6">
+                     <div className="flex-1 p-8 rounded-[2rem] bg-muted/20 border-2 border-dashed border-muted flex flex-col gap-4">
+                        <p className="text-[10px] font-bold text-muted-foreground tracking-widest">Bound Schedule</p>
+                        {deviceSchedule ? (
+                           <div className="flex items-center gap-4">
+                              <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20">
+                                 <CalendarDays className="h-6 w-6" />
+                              </div>
+                              <div>
+                                 <h4 className="text-xl font-bold tracking-tighter">{deviceSchedule.name}</h4>
+                                 <p className="text-xs text-muted-foreground font-medium mt-1">
+                                    Status: <span className={cn("font-bold", deviceSchedule.enabled ? "text-emerald-600" : "text-amber-600")}>
+                                       {deviceSchedule.enabled ? 'Enabled' : 'Disabled'}
+                                    </span>
+                                 </p>
+                              </div>
+                           </div>
+                        ) : (
+                           <div className="flex items-center gap-4 opacity-50">
+                              <div className="p-3 rounded-2xl bg-muted text-muted-foreground border">
+                                 <CalendarDays className="h-6 w-6" />
+                              </div>
+                              <p className="text-sm font-bold">No schedule bound</p>
+                           </div>
+                        )}
+                     </div>
+                     <div className="md:w-64 p-8 rounded-[2rem] bg-muted/20 border-2 border-dashed border-muted flex flex-col justify-center gap-1">
+                        <p className="text-[10px] font-bold text-muted-foreground tracking-widest">Rule Summary</p>
+                        <div className="flex items-center justify-between mt-2">
+                           <span className="text-xs font-bold">Programs</span>
+                           <Badge variant="secondary" className="font-bold text-[10px]">
+                              {deviceSchedule?.contentsRules?.length || 0} Rules
+                           </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                           <span className="text-xs font-bold">Commands</span>
+                           <Badge variant="secondary" className="font-bold text-[10px]">
+                              {deviceSchedule?.commandRules?.length || 0} Actions
+                           </Badge>
+                        </div>
+                     </div>
+                  </div>
+
+                  {/* Device Visibility (AllowList) */}
+                  <div className="space-y-6">
+                     <div className="flex items-center justify-between px-2">
+                        <h3 className="text-[11px] font-bold tracking-[0.2em] text-muted-foreground">Program Allowlist</h3>
+                        <div className="flex items-center gap-4 text-[9px] font-bold text-muted-foreground/40">
+                           <span className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-blue-500/20 border border-blue-500/40" /> From Schedule</span>
+                           <span className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-emerald-500/20 border border-emerald-500/40" /> Direct Publish</span>
+                        </div>
+                     </div>
+                     
+                     <div className="rounded-[2rem] border overflow-hidden">
+                        <table className="w-full text-left border-collapse">
+                           <thead>
+                              <tr className="bg-muted/30 border-b text-[9px] font-bold tracking-widest text-muted-foreground">
+                                 <th className="px-6 py-4">Release Program</th>
+                                 <th className="px-4 py-4 text-center">Version</th>
+                                 <th className="px-4 py-4">Source</th>
+                                 <th className="px-4 py-4">Status</th>
+                                 <th className="px-6 py-4 text-right">Progress</th>
+                              </tr>
+                           </thead>
+                           <tbody className="divide-y">
+                              {programAllowlist.length > 0 ? (
+                                 programAllowlist.map((item: any) => (
+                                    <VisibilityRow 
+                                       key={`${item.programId}-${item.version}`}
+                                       name={item.programName} 
+                                       id={item.version} 
+                                       source={item.source} 
+                                       status={item.deploymentStatus || 'unknown'} 
+                                       progress={item.progress || (item.deploymentStatus === 'DOWNLOADED' ? 100 : 0)} 
+                                    />
+                                 ))
+                              ) : (
+                                 <tr>
+                                    <td colSpan={5} className="py-12 text-center text-muted-foreground opacity-50">
+                                       <p className="text-xs font-bold">No programs currently assigned to this device</p>
+                                    </td>
+                                 </tr>
+                              )}
+                           </tbody>
+                        </table>
+                     </div>
                   </div>
                </CardContent>
             </Card>
@@ -812,15 +1040,15 @@ export default function DeviceDetailsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                <Card className="rounded-3xl border-none ring-1 ring-muted/60 shadow-sm overflow-hidden lg:col-span-1">
                   <CardHeader className="bg-muted/5 border-b py-6 px-8">
-                     <CardTitle className="text-[10px] font-black uppercase tracking-widest flex items-center gap-3 text-slate-500">
+                     <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-3 text-slate-500">
                         <Clock className="h-4 w-4 text-primary" /> System Clock
                      </CardTitle>
                   </CardHeader>
                   <CardContent className="p-10 space-y-10">
                      <div className="bg-primary/5 p-8 rounded-[2.5rem] border border-primary/10 text-center shadow-inner ring-1 ring-primary/5">
-                        <p className="text-[10px] font-black text-primary/60 uppercase tracking-[0.3em] mb-2">Current Time</p>
-                        <p className="text-6xl font-black tracking-tighter text-primary tabular-nums drop-shadow-sm">{realProps.newrtc?.time.split(' ')[1]}</p>
-                        <p className="text-xs font-black text-muted-foreground uppercase mt-4 tracking-widest opacity-60">{realProps.newrtc?.time.split(' ')[0]}</p>
+                        <p className="text-[10px] font-bold text-primary/60 tracking-[0.3em] mb-2">Current Time</p>
+                        <p className="text-6xl font-bold tracking-tighter text-primary tabular-nums drop-shadow-sm">{realProps.newrtc?.time?.split(' ')[1] || '--:--'}</p>
+                        <p className="text-xs font-bold text-muted-foreground mt-4 tracking-widest opacity-60">{realProps.newrtc?.time?.split(' ')[0] || '--'}</p>
                      </div>
                      <div className="space-y-5 px-4">
                         <PolicyData label="Timezone" value={realProps.newrtc?.timezoneId} />
@@ -832,7 +1060,7 @@ export default function DeviceDetailsPage() {
 
                <Card className="rounded-3xl border-none ring-1 ring-muted/60 shadow-sm overflow-hidden lg:col-span-2">
                   <CardHeader className="bg-muted/5 border-b py-6 px-8">
-                     <CardTitle className="text-[10px] font-black uppercase tracking-widest flex items-center gap-3 text-slate-500">
+                     <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-3 text-slate-500">
                         <ShieldCheck className="h-4 w-4 text-emerald-500" /> Security Settings
                      </CardTitle>
                   </CardHeader>
@@ -847,7 +1075,7 @@ export default function DeviceDetailsPage() {
          </TabsContent>
       </Tabs>
 
-      {/* DANGEROUS ACTION CONFIRMATION (WITH SLIDE-TO-UNLOCK) */}
+      {/* DANGEROUS ACTION CONFIRMATION */}
       <Dialog open={confirmDialog.open} onOpenChange={(open) => !open && setConfirmDialog({ open: false, type: null })}>
         <DialogContent className="sm:max-w-[440px] rounded-[2.5rem] p-10 overflow-hidden border-none shadow-2xl ring-1 ring-muted/50">
           <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
@@ -860,7 +1088,7 @@ export default function DeviceDetailsPage() {
              )}>
                 {confirmDialog.type === 'sleep' ? <Moon className="h-10 w-10" /> : <RotateCw className="h-10 w-10" />}
              </div>
-            <DialogTitle className="text-3xl font-black tracking-tighter uppercase leading-none">
+            <DialogTitle className="text-3xl font-bold tracking-tighter leading-none">
                {confirmDialog.type === 'sleep' ? "Confirm Standby" : "Confirm Reboot"}
             </DialogTitle>
             <DialogDescription className="text-sm font-bold leading-relaxed text-slate-500">
@@ -875,7 +1103,7 @@ export default function DeviceDetailsPage() {
                 onUnlock={executeDangerousAction} 
                 label={confirmDialog.type === 'sleep' ? "Slide to suspend" : "Slide to hard reset"} 
              />
-             <Button variant="ghost" className="font-black text-[10px] uppercase tracking-widest text-muted-foreground/60 hover:text-foreground" onClick={() => setConfirmDialog({ open: false, type: null })}>
+             <Button variant="ghost" className="font-bold text-[10px] tracking-widest text-muted-foreground/60 hover:text-foreground" onClick={() => setConfirmDialog({ open: false, type: null })}>
                 Abort Operation
              </Button>
           </div>
@@ -885,8 +1113,8 @@ export default function DeviceDetailsPage() {
       <BatchCommandDialog
         open={showBatchCommand}
         onOpenChange={setShowBatchCommand}
-        devices={mockDevices}
-        initialSelectedDeviceIds={device ? [device.id] : []}
+        devices={device ? [device] : []}
+        initialSelectedDeviceIds={device ? [String(device.deviceId)] : []}
         mode="single-device"
       />
 
@@ -894,8 +1122,8 @@ export default function DeviceDetailsPage() {
         open={showScreenshotManager}
         onOpenChange={setShowScreenshotManager}
         screenshots={historicalScreenshots}
-        onDelete={(ids) => setHistoricalScreenshots(prev => prev.filter(s => !ids.includes(s.id)))}
-        onClearAll={() => setHistoricalScreenshots([])}
+        onDelete={handleDeleteScreenshot}
+        onClearAll={handleClearScreenshots}
       />
 
       {/* Full Size Preview Dialog */}
@@ -903,7 +1131,6 @@ export default function DeviceDetailsPage() {
          <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
             <DialogContent 
                className="max-w-[98vw] w-auto h-auto p-0 bg-transparent border-none shadow-none flex items-center justify-center focus-visible:outline-none scale-100 transition-all"
-               zIndex={10100}
             >
                <div className="relative group animate-in zoom-in-95 duration-300 flex flex-col items-center">
                   <img 
@@ -920,7 +1147,7 @@ export default function DeviceDetailsPage() {
                      <X className="h-6 w-6" />
                   </Button>
                   
-                  <div className="mt-6 px-8 py-3 bg-white/10 backdrop-blur-2xl rounded-full border border-white/10 text-white/90 text-xs font-black uppercase tracking-[0.3em] shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
+                  <div className="mt-6 px-8 py-3 bg-white/10 backdrop-blur-2xl rounded-full border border-white/10 text-white/90 text-xs font-bold tracking-[0.3em] shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
                      Press ESC or Click Outside to exit
                   </div>
                </div>
@@ -935,7 +1162,7 @@ export default function DeviceDetailsPage() {
 function PolicyData({ label, value, active = false }: { label: string, value: any, active?: boolean }) {
   return (
     <div className="flex justify-between items-center text-[10px] group">
-       <span className="font-black text-muted-foreground uppercase tracking-widest group-hover:text-primary transition-colors">{label}</span>
+       <span className="font-bold text-muted-foreground tracking-widest group-hover:text-primary transition-colors">{label}</span>
        <div className="flex items-center gap-2">
           <span className="font-bold">{value}</span>
           {active && <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />}
@@ -948,7 +1175,7 @@ function InfoGroup({ title, icon: Icon, children }: { title: string, icon: any, 
   return (
     <Card className="border-none shadow-sm bg-card rounded-[2rem] overflow-hidden ring-1 ring-muted/60">
       <CardHeader className="py-5 border-b bg-muted/5 px-10">
-        <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-3 text-slate-500">
+        <CardTitle className="text-[10px] font-bold tracking-[0.2em] flex items-center gap-3 text-slate-500">
           <Icon className="h-4 w-4 text-primary" />
           {title}
         </CardTitle>
@@ -963,10 +1190,10 @@ function InfoGroup({ title, icon: Icon, children }: { title: string, icon: any, 
 function InfoItem({ label, value, copyable = false, highlight = false, fontMono = false }: { label: string, value: any, copyable?: boolean, highlight?: boolean, fontMono?: boolean }) {
   return (
     <div className="flex justify-between items-center gap-6 group/item">
-      <span className="text-muted-foreground font-black text-[9px] uppercase tracking-[0.15em] shrink-0">{label}</span>
+      <span className="text-muted-foreground font-bold text-[9px] tracking-[0.15em] shrink-0">{label}</span>
       <div className="flex items-center gap-2 min-w-0">
         <span className={cn(
-          "font-black truncate text-xs tracking-tight uppercase", 
+          "font-bold truncate text-xs tracking-tight", 
           highlight ? "text-primary" : "text-slate-800 dark:text-slate-200",
           fontMono && "font-mono normal-case tracking-tighter"
         )}>
@@ -992,7 +1219,7 @@ function PolicyItem({ label, desc, active, last = false }: { label: string, desc
     <div className={cn("space-y-4", !last && "pb-6 border-b border-muted")}>
        <div className="flex items-center justify-between">
           <div className="space-y-1.5">
-             <p className="text-sm font-black uppercase tracking-tight text-slate-800 dark:text-slate-200">{label}</p>
+             <p className="text-sm font-bold tracking-tight text-slate-800 dark:text-slate-200">{label}</p>
              <p className="text-[10px] font-bold text-muted-foreground">{desc}</p>
           </div>
           <Switch checked={active} disabled={label.includes("OTA")} className="data-[state=checked]:bg-emerald-500" />
@@ -1010,13 +1237,13 @@ function ResourceProgress({ label, used, total, unit, color = "bg-primary" }: { 
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-end">
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</span>
-        <span className={cn("font-mono font-black text-xs", isHigh ? "text-rose-500" : "text-slate-700 dark:text-slate-300")}>{percentage.toFixed(0)}%</span>
+        <span className="text-[10px] font-bold tracking-widest text-slate-500">{label}</span>
+        <span className={cn("font-mono font-bold text-xs", isHigh ? "text-rose-500" : "text-slate-700 dark:text-slate-300")}>{percentage.toFixed(0)}%</span>
       </div>
       <div className="relative h-2 bg-muted rounded-full overflow-hidden">
          <div className={cn("absolute inset-y-0 left-0 rounded-full transition-all duration-700 shadow-[0_0_8px_rgba(var(--primary),0.5)]", color, isHigh && "bg-rose-500")} style={{ width: `${percentage}%` }} />
       </div>
-      <div className="flex justify-between text-[9px] font-bold text-muted-foreground/60 uppercase tracking-tighter">
+      <div className="flex justify-between text-[9px] font-bold text-muted-foreground/60 tracking-tighter">
         <span>Mapped: {formattedUsed} {unit}</span>
         <span>Capacity: {formattedTotal} {unit}</span>
       </div>
@@ -1032,25 +1259,25 @@ function VisibilityRow({ name, id, source, status, progress }: { name: string, i
                <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center border shadow-sm", source === 'schedule' ? "bg-blue-500/5 text-blue-600 border-blue-500/10" : "bg-emerald-500/5 text-emerald-600 border-emerald-500/10")}>
                   {source === 'schedule' ? <CalendarDays className="h-4 w-4" /> : <Send className="h-4 w-4" />}
                </div>
-               <span className="text-xs font-black uppercase tracking-tight">{name}</span>
+               <span className="text-xs font-bold tracking-tight">{name}</span>
             </div>
          </td>
          <td className="px-4 py-4 text-center">
             <code className="text-[10px] font-mono font-bold bg-muted px-1.5 py-0.5 rounded">{id}</code>
          </td>
          <td className="px-4 py-4">
-            <Badge variant="outline" className={cn("text-[9px] font-black uppercase tracking-widest border-none", source === 'schedule' ? "bg-blue-500/10 text-blue-600" : "bg-emerald-500/10 text-emerald-600")}>
+            <Badge variant="outline" className={cn("text-[9px] font-bold tracking-widest border-none", source === 'schedule' ? "bg-blue-500/10 text-blue-600" : "bg-emerald-500/10 text-emerald-600")}>
                {source}
             </Badge>
          </td>
          <td className="px-4 py-4">
             <div className="flex items-center gap-2">
                <div className={cn("h-1.5 w-1.5 rounded-full", status === 'downloaded' ? "bg-emerald-500" : "bg-amber-500 animate-pulse")} />
-               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{status}</span>
+               <span className="text-[10px] font-bold tracking-widest text-muted-foreground">{status}</span>
             </div>
          </td>
          <td className="px-6 py-4 text-right">
-            <span className="text-xs font-black tabular-nums">{progress}%</span>
+            <span className="text-xs font-bold tabular-nums">{progress}%</span>
          </td>
       </tr>
    );

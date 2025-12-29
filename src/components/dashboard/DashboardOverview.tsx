@@ -46,31 +46,16 @@ import {
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
-const storageData = [
+import { getActiveDeviceCountBuckets, getPlaybackOverview } from '@/services/telemetryApi';
+
+const storageDataMock = [
   { name: "Media", value: 1.2, color: "#6366f1" },
   { name: "Programs", value: 0.15, color: "#ec4899" },
   { name: "Snapshots", value: 0.05, color: "#eab308" },
   { name: "Free", value: 0.6, color: "#e2e8f0" },
 ];
 
-const onlineTrendData = [
-  { time: "Mon", online: 14, offline: 2 },
-  { time: "Tue", online: 15, offline: 1 },
-  { time: "Wed", online: 16, offline: 0 },
-  { time: "Thu", online: 15, offline: 1 },
-  { time: "Fri", online: 12, offline: 4 },
-  { time: "Sat", online: 14, offline: 2 },
-  { time: "Sun", online: 15, offline: 1 },
-];
-
-const playbackData = [
-  { name: "Summer Sale", value: 45 },
-  { name: "Lobby Loop", value: 30 },
-  { name: "Menu Board", value: 15 },
-  { name: "Emergency", value: 10 },
-];
-
-const publishedPrograms = [
+const publishedProgramsMock = [
   { name: "Summer Campaign", version: "v1.2", devices: 12, status: "live" },
   { name: "Daily Notices", version: "v2.0", devices: 4, status: "draft_changes" },
   { name: "Emergency Override", version: "v1.0", devices: 0, status: "inactive" },
@@ -83,11 +68,6 @@ export function DashboardOverview() {
   const { formatRelative } = useTimeFormatter();
   const { recentMessages } = useMessageStore();
 
-  const selectedAvatar = useMemo(() => 
-    getAvatarById(user?.avatarId || 'm-1'), 
-    [user?.avatarId]
-  );
-
   const { data: bffResponse } = useQuery({
     queryKey: ['devices'],
     queryFn: () => getDevices(),
@@ -96,6 +76,25 @@ export function DashboardOverview() {
   const { data: usageRes } = useQuery({
     queryKey: ['media', 'usage'],
     queryFn: getMediaUsage,
+  });
+
+  const { data: trendRes } = useQuery({
+    queryKey: ['telemetry', 'active-device-count'],
+    queryFn: () => getActiveDeviceCountBuckets({
+      from: new Date(Date.now() - 7 * 86400000).toISOString(),
+      to: new Date().toISOString(),
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      bucket: 'DAY'
+    }),
+  });
+
+  const { data: playbackRes } = useQuery({
+    queryKey: ['telemetry', 'playback-overview'],
+    queryFn: () => getPlaybackOverview({
+      from: new Date(Date.now() - 30 * 86400000).toISOString(),
+      to: new Date().toISOString(),
+      top: 5
+    }),
   });
 
   const devices = useMemo(() => bffResponse?.data || [], [bffResponse]);
@@ -107,6 +106,29 @@ export function DashboardOverview() {
   const storageUsedLabel = usage ? formatBytes(usage.usedBytes) : '0 GB';
   const storageQuotaLabel = usage ? formatBytes(usage.quotaBytes) : '2 GB';
   const storagePercentage = usage ? Math.round((usage.usedBytes / usage.quotaBytes) * 100) : 0;
+
+  const onlineTrendData = useMemo(() => {
+    if (!Array.isArray(trendRes?.data)) return [];
+    return trendRes.data.map((item: any) => ({
+      time: item?.bucket ? String(item.bucket).slice(5, 10) : 'N/A', // MM-DD
+      online: item?.activeCount || 0,
+      offline: Math.max(0, totalCount - (item?.activeCount || 0))
+    }));
+  }, [trendRes, totalCount]);
+
+  const playbackData = useMemo(() => {
+    if (!Array.isArray(playbackRes?.data?.topPrograms)) return [];
+    const total = playbackRes.data.totalSeconds || 1;
+    return playbackRes.data.topPrograms.map(p => ({
+      name: p.name,
+      value: Math.round(((p.playSeconds || 0) / total) * 100)
+    }));
+  }, [playbackRes]);
+
+  const selectedAvatar = useMemo(() => 
+    getAvatarById(user?.avatarId || 'm-1'), 
+    [user?.avatarId]
+  );
 
   const pendingTasksList = useMemo(() => {
     const tasks = recentMessages.filter(m => m.kind === 'TASK' && m.status === 'RUNNING').slice(0, 2);
@@ -292,8 +314,8 @@ export function DashboardOverview() {
               {isMounted && (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={storageData} dataKey="value" innerRadius={50} outerRadius={70}>
-                      {storageData.map((entry) => (
+                    <Pie data={storageDataMock} dataKey="value" innerRadius={50} outerRadius={70}>
+                      {storageDataMock.map((entry) => (
                         <Cell key={entry.name} fill={entry.color} />
                       ))}
                     </Pie>
@@ -302,7 +324,7 @@ export function DashboardOverview() {
               )}
             </div>
             <div className="space-y-2">
-              {storageData.map((segment) => (
+              {storageDataMock.map((segment) => (
                 <div key={segment.name} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full" style={{ backgroundColor: segment.color }} />
@@ -367,7 +389,7 @@ export function DashboardOverview() {
             <CardDescription>Version allocation across devices</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {publishedPrograms.map((program) => (
+            {publishedProgramsMock.map((program) => (
               <div key={program.name} className="flex items-center gap-4 rounded-xl border border-muted/60 p-4">
                 <div className="flex-1">
                   <div className="font-semibold">{program.name}</div>
