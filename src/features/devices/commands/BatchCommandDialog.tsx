@@ -32,6 +32,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -43,15 +44,14 @@ import { SlideToUnlock } from '@/components/ui/slide-to-unlock';
 // --- Types ---
 
 type ActionType = 
-  | 'POWER' 
-  | 'BRIGHTNESS' 
+  | 'DISPLAY'
   | 'VOLUME' 
-  | 'COLOR_TEMP' 
   | 'INPUT_MODE'
   | 'TIMEZONE' 
   | 'LOCALE' 
   | 'CONTENT_REPORT_SWITCH' 
   | 'CLEAR_CACHE'
+  | 'POWER'
   | 'SCREENSHOT';
 
 interface ActionConfig {
@@ -68,6 +68,7 @@ interface BatchCommandDialogProps {
   devices: Device[];
   initialSelectedDeviceIds?: string[];
   mode?: 'multi-device' | 'single-device'; 
+  initialDeviceProps?: any;
 }
 
 // --- Logic Helpers ---
@@ -77,12 +78,14 @@ function formatActionParams(type: ActionType, params: any): string {
     case 'POWER':
       if (params.command === 'reboot') return 'System Reboot';
       return params.command === 'wakeup' ? 'Switch to Wake State' : 'Switch to Sleep State';
-    case 'BRIGHTNESS':
-      return `Brightness: ${params.brightness}%`;
+    case 'DISPLAY': {
+      const parts = [];
+      if (params.brightness !== undefined) parts.push(`Brightness: ${params.brightness}%`);
+      if (params.colortemp !== undefined) parts.push(`Temp: ${params.colortemp}K`);
+      return parts.join(' | ');
+    }
     case 'VOLUME':
       return `Volume: ${params.musicvolume}/15`;
-    case 'COLOR_TEMP':
-      return `Color Temp: ${params.colortemp}K`;
     case 'INPUT_MODE':
       return `Input Mode: ${(params.inputmode || '').toUpperCase()}`;
     case 'TIMEZONE':
@@ -92,7 +95,10 @@ function formatActionParams(type: ActionType, params: any): string {
       return `Language: ${langs[params.language] || params.language} (${params.country})`;
     }
     case 'CONTENT_REPORT_SWITCH':
-      return params.status === 1 ? 'Report Enabled' : 'Report Disabled';
+      const r = [];
+      if (params.status === 1) r.push('Material ON');
+      if (params.programReportStatus === 1) r.push('Program ON');
+      return r.length ? `Reporting: ${r.join(' & ')}` : 'Reporting Disabled';
     case 'CLEAR_CACHE':
       return 'Clear Terminal Cache';
     case 'SCREENSHOT':
@@ -109,7 +115,8 @@ export function BatchCommandDialog({
   onOpenChange,
   devices,
   initialSelectedDeviceIds = [],
-  mode: rawMode = 'multi-device'
+  mode: rawMode = 'multi-device',
+  initialDeviceProps
 }: BatchCommandDialogProps) {
   const mode: CommandMode = rawMode === 'multi-device' 
     ? 'MULTI_DEVICE_SINGLE_COMMAND' 
@@ -179,21 +186,37 @@ export function BatchCommandDialog({
     setStep(3);
     
     try {
-      const items = mode === 'MULTI_DEVICE_SINGLE_COMMAND' 
-        ? Array.from(selectedDeviceIds).map(id => ({
-            deviceId: id,
-            action: {
-              type: actions[0].type,
-              body: actions[0].params
-            }
-          }))
-        : actions.map(action => ({
-            deviceId: Array.from(selectedDeviceIds)[0],
-            action: {
-              type: action.type,
-              body: action.params
-            }
-          }));
+      const items: any[] = [];
+      const deviceIds = Array.from(selectedDeviceIds);
+
+      // Helper to scale brightness
+      const getScaledBrightness = (val: number) => Math.round(val * 2.55);
+
+      if (mode === 'MULTI_DEVICE_SINGLE_COMMAND') {
+        const action = actions[0];
+        deviceIds.forEach(id => {
+          if (action.type === 'DISPLAY') {
+             items.push({ deviceId: id, action: { type: 'BRIGHTNESS', body: { brightness: getScaledBrightness(action.params.brightness) } } });
+             items.push({ deviceId: id, action: { type: 'COLOR_TEMP', body: { colortemp: action.params.colortemp } } });
+          } else {
+             const body = { ...action.params };
+             if (action.type === 'BRIGHTNESS') body.brightness = getScaledBrightness(body.brightness);
+             items.push({ deviceId: id, action: { type: action.type, body } });
+          }
+        });
+      } else {
+        const targetId = deviceIds[0];
+        actions.forEach(action => {
+          if (action.type === 'DISPLAY') {
+             items.push({ deviceId: targetId, action: { type: 'BRIGHTNESS', body: { brightness: getScaledBrightness(action.params.brightness) } } });
+             items.push({ deviceId: targetId, action: { type: 'COLOR_TEMP', body: { colortemp: action.params.colortemp } } });
+          } else {
+             const body = { ...action.params };
+             if (action.type === 'BRIGHTNESS') body.brightness = getScaledBrightness(body.brightness);
+             items.push({ deviceId: targetId, action: { type: action.type, body } });
+          }
+        });
+      }
 
       const response = await executeBatchActions({ items });
       
@@ -202,9 +225,11 @@ export function BatchCommandDialog({
         const results: Record<string, any> = {};
         const apiResults = response.data.results || [];
         
+        // Note: With combined DISPLAY, there might be more apiResults than actions.
+        // We'll map them back by deviceId and key for simple tracking.
         items.forEach((item, i) => {
           const apiResult = apiResults[i] || {};
-          const key = mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? String(item.deviceId) : `${item.deviceId}-action-${i}`;
+          const key = mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? String(item.deviceId) : `${item.deviceId}-op-${i}`;
           results[key] = { 
             status: apiResult.status || 'DISPATCHED',
             operationId: apiResult.operationId,
@@ -280,6 +305,7 @@ export function BatchCommandDialog({
                 actions={actions}
                 onActionsChange={setActions}
                 mode={mode}
+                initialProps={initialDeviceProps}
               />
             )}
             {step === 2 && (
@@ -516,26 +542,27 @@ function DeviceSelectStep({
 function ActionConfigStep({
   actions,
   onActionsChange,
-  mode
+  mode,
+  initialProps
 }: {
   actions: ActionConfig[],
   onActionsChange: (actions: ActionConfig[]) => void,
-  mode: CommandMode
+  mode: CommandMode,
+  initialProps?: any
 }) {
   const ALL_ACTION_TYPES: { type: ActionType, label: string, desc: string, icon: any }[] = [
-    { type: 'POWER', label: 'Power', desc: 'Manage display power state', icon: Power },
-    { type: 'BRIGHTNESS', label: 'Brightness', desc: 'Adjust screen luminance', icon: Sun },
+    { type: 'DISPLAY', label: 'Display Settings', desc: 'Luminance & Color Temp', icon: Sun },
     { type: 'VOLUME', label: 'Volume', desc: 'Control acoustic output', icon: Volume2 },
-    { type: 'COLOR_TEMP', label: 'Color Temp', desc: 'Adjust display color temperature', icon: Thermometer },
     { type: 'INPUT_MODE', label: 'Input Mode', desc: 'Switch video input source', icon: Monitor },
-    { type: 'TIMEZONE', label: 'Timezone', desc: 'Sync system clock & region', icon: Clock },
+    { type: 'POWER', label: 'Power', desc: 'Manage display power state', icon: Power },
+    { type: 'TIMEZONE', label: 'Timezone', desc: 'Sync system clock', icon: Clock },
     { type: 'LOCALE', label: 'Locale', desc: 'Set interface core dialect', icon: Languages },
-    { type: 'CONTENT_REPORT_SWITCH', label: 'Reporting', desc: 'Material/Program stats report', icon: Film },
-    { type: 'CLEAR_CACHE', label: 'Clear Cache', desc: 'Clear terminal storage cache', icon: Trash2 },
+    { type: 'CONTENT_REPORT_SWITCH', label: 'Statistics', desc: 'Playback reporting switches', icon: Film },
+    { type: 'CLEAR_CACHE', label: 'Clear Cache', desc: 'Wipe terminal storage', icon: Trash2 },
   ];
 
   const addAction = (type: ActionType) => {
-    const defaultParams = getDefaultParams(type);
+    const defaultParams = getDefaultParams(type, initialProps);
     const defaultTimeout = 60; 
 
     if (mode === 'MULTI_DEVICE_SINGLE_COMMAND') {
@@ -617,6 +644,20 @@ function ActionConfigStep({
                 
                 <CardContent className="p-4 pt-2">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                    {action.type === 'DISPLAY' && (
+                      <>
+                        <ControlItem label={`Brightness: ${action.params.brightness}%`} className="col-span-2">
+                           <div className="pt-2 px-1">
+                              <Slider value={[action.params.brightness]} onValueChange={([v]) => updateParam(index, 'brightness', v)} max={100} step={1} />
+                           </div>
+                        </ControlItem>
+                        <ControlItem label={`Color Temperature: ${action.params.colortemp}K`} className="col-span-2">
+                           <div className="pt-2 px-1">
+                              <Slider value={[action.params.colortemp]} onValueChange={([v]) => updateParam(index, 'colortemp', v)} min={2000} max={10000} step={100} />
+                           </div>
+                        </ControlItem>
+                      </>
+                    )}
                     {action.type === 'POWER' && (
                       <div className="space-y-2 col-span-2">
                         <p className="text-[11px] font-bold uppercase text-muted-foreground">Command</p>
@@ -639,26 +680,12 @@ function ActionConfigStep({
                         </div>
                       </div>
                     )}
-                    {action.type === 'BRIGHTNESS' && (
-                      <ControlItem label={`Brightness: ${action.params.brightness}%`} className="col-span-2">
-                         <div className="pt-2 px-1">
-                            <Slider value={[action.params.brightness]} onValueChange={([v]) => updateParam(index, 'brightness', v)} max={100} step={1} />
-                         </div>
-                      </ControlItem>
-                    )}
                     {action.type === 'VOLUME' && (
                       <ControlItem label={`Volume Level: ${action.params.musicvolume}`} className="col-span-2">
                          <div className="flex items-center gap-6 bg-muted/20 p-3 rounded-md border">
                             <Volume2 className="h-4 w-4 text-primary" />
                             <Slider value={[action.params.musicvolume]} onValueChange={([v]) => updateParam(index, 'musicvolume', v)} max={15} step={1} className="flex-1" />
                             <span className="font-bold tabular-nums text-base w-6 text-primary">15</span>
-                         </div>
-                      </ControlItem>
-                    )}
-                    {action.type === 'COLOR_TEMP' && (
-                      <ControlItem label={`Color Temperature: ${action.params.colortemp}K`} className="col-span-2">
-                         <div className="pt-2 px-1">
-                            <Slider value={[action.params.colortemp]} onValueChange={([v]) => updateParam(index, 'colortemp', v)} min={2000} max={10000} step={100} />
                          </div>
                       </ControlItem>
                     )}
@@ -672,6 +699,7 @@ function ActionConfigStep({
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
                           <SelectContent position="popper" sideOffset={4} className="z-[101]">
+                            <SelectItem value="internal" className="text-xs">Internal Player</SelectItem>
                             <SelectItem value="hdmi" className="text-xs">HDMI</SelectItem>
                             <SelectItem value="dvi" className="text-xs">DVI</SelectItem>
                             <SelectItem value="vga" className="text-xs">VGA</SelectItem>
@@ -729,21 +757,22 @@ function ActionConfigStep({
                       </>
                     )}
                     {action.type === 'CONTENT_REPORT_SWITCH' && (
-                      <ControlItem label="Reporting Switches" className="col-span-2">
-                        <div className="flex items-center justify-between p-3 bg-primary/[0.02] border border-dashed rounded-md">
-                          <div>
-                             <p className="text-xs font-bold">Terminal Stats Report</p>
-                             <p className="text-[10px] text-muted-foreground mt-0.5">Collect playback and material telemetry</p>
+                      <ControlItem label="Statistics Switches" className="col-span-2">
+                        <div className="flex flex-col gap-3 p-4 bg-primary/[0.02] border border-dashed rounded-xl">
+                          <div className="flex items-center justify-between">
+                            <div>
+                               <p className="text-xs font-bold text-slate-700">Material Playback Stats</p>
+                               <p className="text-[10px] text-muted-foreground mt-0.5">Report individual file play duration and frequency</p>
+                            </div>
+                            <Switch checked={action.params.status === 1} onCheckedChange={(v) => updateParam(index, 'status', v ? 1 : 0)} />
                           </div>
-                          <div className="flex gap-4">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px]">General</span>
-                              <Switch checked={action.params.status === 1} onCheckedChange={(v) => updateParam(index, 'status', v ? 1 : 0)} className="scale-75" />
+                          <Separator className="opacity-40" />
+                          <div className="flex items-center justify-between">
+                            <div>
+                               <p className="text-xs font-bold text-slate-700">Program Playback Stats</p>
+                               <p className="text-[10px] text-muted-foreground mt-0.5">Track program-level execution timeline</p>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px]">Program</span>
-                              <Switch checked={action.params.programReportStatus === 1} onCheckedChange={(v) => updateParam(index, 'programReportStatus', v ? 1 : 0)} className="scale-75" />
-                            </div>
+                            <Switch checked={action.params.programReportStatus === 1} onCheckedChange={(v) => updateParam(index, 'programReportStatus', v ? 1 : 0)} />
                           </div>
                         </div>
                       </ControlItem>
@@ -1008,22 +1037,29 @@ function ActionIcon({ type, className }: { type: ActionType, className?: string 
 }
 
 function formatActionType(type: ActionType): string {
-  if (type === 'COLOR_TEMP') return 'Color Temp';
-  if (type === 'CONTENT_REPORT_SWITCH') return 'Reporting';
+  if (type === 'DISPLAY') return 'Display Settings';
+  if (type === 'CONTENT_REPORT_SWITCH') return 'Statistics';
   if (type === 'INPUT_MODE') return 'Input Mode';
   return type.charAt(0) + type.slice(1).toLowerCase().replace(/_/g, ' ');
 }
 
-function getDefaultParams(type: ActionType): any {
+function getDefaultParams(type: ActionType, props?: any): any {
+  // Extract values from real device properties if available
+  const currentB = Math.round((props?.brightnessandcolortemp?.brightness || 128) * 100 / 255);
+  const currentC = props?.brightnessandcolortemp?.colortemperature || 6500;
+  const currentV = props?.volume?.musicvolume || 10;
+  const currentIM = props?.inputmode?.inputmode || "internal";
+  const currentRS = props?.contentreport?.status || 0;
+  const currentPRS = props?.contentreport?.programReportStatus || 0;
+
   switch (type) {
     case 'POWER': return { command: 'wakeup' };
-    case 'BRIGHTNESS': return { brightness: 50 };
-    case 'VOLUME': return { musicvolume: 10 };
-    case 'COLOR_TEMP': return { colortemp: 5000 };
-    case 'INPUT_MODE': return { inputmode: 'hdmi' };
+    case 'DISPLAY': return { brightness: currentB, colortemp: currentC };
+    case 'VOLUME': return { musicvolume: currentV };
+    case 'INPUT_MODE': return { inputmode: currentIM };
     case 'TIMEZONE': return { timezoneId: 'Asia/Shanghai', timezone: 8 };
     case 'LOCALE': return { language: 'en', country: 'US' };
-    case 'CONTENT_REPORT_SWITCH': return { status: 1, programReportStatus: 1 };
+    case 'CONTENT_REPORT_SWITCH': return { status: currentRS, programReportStatus: currentPRS };
     case 'CLEAR_CACHE': return {};
     case 'SCREENSHOT': return {};
     default: return {};

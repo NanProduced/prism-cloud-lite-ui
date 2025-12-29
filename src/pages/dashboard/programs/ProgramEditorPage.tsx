@@ -59,8 +59,8 @@ import {
   normalizeVsnForEditor,
 } from '@/features/programs/editor/vsnOps';
 import { clampInt, getRegionMode, canRegionAcceptItemType } from '@/features/programs/editor/utils';
-import { mockDevices } from '@/lib/mock/devices';
-import { mockMediaLibraryNodes } from '@/lib/mock/media-library';
+import { getDevices } from '@/services/deviceApi';
+import { getMediaNodes } from '@/services/mediaApi';
 
 import { EditorLeftPanel } from '@/features/programs/editor/components/EditorLeftPanel';
 import { StagePreview } from '@/features/programs/editor/components/StagePreview';
@@ -90,7 +90,20 @@ export default function ProgramEditorPage() {
     enabled: !!programId,
   });
 
+  const { data: devicesRes } = useQuery({
+    queryKey: ['devices'],
+    queryFn: () => getDevices(),
+  });
+
+  const { data: mediaRes } = useQuery({
+    queryKey: ['media-library', 'all-nodes'],
+    queryFn: () => getMediaNodes({ limit: 100 }),
+  });
+
   const program = programData?.data;
+  const devices = useMemo(() => devicesRes?.data || [], [devicesRes]);
+  const materials = useMemo(() => buildEditorMaterials(mediaRes?.data?.items || []), [mediaRes]);
+  const materialIndex = useMemo(() => Object.fromEntries(materials.map((m) => [m.materialId, m])) as Record<string, EditorMaterial>, [materials]);
 
   // --- State ---
   const [baseVersion, setBaseVersion] = useState<number | null>(initialBaseVersion || null);
@@ -251,9 +264,6 @@ export default function ProgramEditorPage() {
     if (!program) return [];
     return [...program.versions].sort((a, b) => b.version - a.version).map((v) => v.version);
   }, [program]);
-
-  const materials = useMemo(() => buildEditorMaterials(mockMediaLibraryNodes), []);
-  const materialIndex = useMemo(() => Object.fromEntries(materials.map((m) => [m.materialId, m])) as Record<string, EditorMaterial>, [materials]);
 
   const canvasWidth = useMemo(() => {
     const w = Number.parseInt(vsn?.Programs?.Program?.Information?.Width ?? '', 10);
@@ -496,7 +506,7 @@ export default function ProgramEditorPage() {
             programWidth={canvasWidth}
             programHeight={canvasHeight}
             targetDeviceId={program.targetDeviceId ?? null}
-            devices={mockDevices}
+            devices={devices}
             materialIndex={materialIndex}
             showDevFields={devtoolsEnabled}
             onRenameProgram={(name) => renameMutation.mutate(name)}

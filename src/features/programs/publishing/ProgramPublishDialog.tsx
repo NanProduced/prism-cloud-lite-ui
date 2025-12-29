@@ -15,7 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { Device, Tag } from '@/types/device';
-import { mockDevices } from '@/lib/mock/devices';
+import { getDevices } from '@/services/deviceApi';
 
 import { publishProgram } from '@/services/programApi';
 import { getErrorMessage } from '@/services/authApi';
@@ -47,8 +47,17 @@ export function ProgramPublishDialog({
   const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
 
+  // --- Queries ---
+  const { data: devicesRes } = useQuery({
+    queryKey: ['devices'],
+    queryFn: getDevices,
+    enabled: open,
+  });
+
+  const devices = useMemo(() => devicesRes?.data || [], [devicesRes]);
+
   const deploymentsByDeviceId = useMemo(() => new Map(deployments.map((d) => [d.deviceId, d])), [deployments]);
-  const allTags = useMemo(() => collectDeviceTags(mockDevices), []);
+  const allTags = useMemo(() => collectDeviceTags(devices), [devices]);
   const latestPublished = useMemo(() => [...(program.versions || [])].sort((a, b) => b.version - a.version)[0], [program.versions]);
   
   const defaultVersionMode = useMemo(
@@ -86,7 +95,7 @@ export function ProgramPublishDialog({
 
   const filteredDevices = useMemo(() => {
     const q = deviceQuery.trim().toLowerCase();
-    return mockDevices.filter((device) => {
+    return devices.filter((device) => {
       if (onlineOnly && device.status !== 'online') return false;
       if (resolutionOnly === 'match' && (device.resolution.width !== program.width || device.resolution.height !== program.height)) return false;
       
@@ -101,14 +110,15 @@ export function ProgramPublishDialog({
 
       if (!q) return true;
       const name = (device.alias ?? device.deviceName).toLowerCase();
-      return name.includes(q) || device.id.toLowerCase().includes(q);
+      const idStr = String(device.deviceId || device.id || '').toLowerCase();
+      return name.includes(q) || idStr.includes(q);
     });
-  }, [deviceQuery, onlineOnly, program.height, program.width, resolutionOnly, tagFilters, tagMatchMode]);
+  }, [deviceQuery, onlineOnly, program.height, program.width, resolutionOnly, tagFilters, tagMatchMode, devices]);
 
   const selectedDevices = useMemo(() => {
-    const map = new Map(mockDevices.map((d) => [d.id, d]));
+    const map = new Map(devices.map((d) => [String(d.deviceId || d.id), d]));
     return [...selectedDeviceIds].map((id) => map.get(id)).filter(Boolean) as Device[];
-  }, [selectedDeviceIds]);
+  }, [selectedDeviceIds, devices]);
 
   const runningDeviceIds = useMemo(() => deployments.map((d) => d.deviceId), [deployments]);
 
@@ -125,7 +135,7 @@ export function ProgramPublishDialog({
   const plan = useMemo(() => {
     const targetVersion = versionMode === 'EXISTING' ? existingVersion : predictedNewVersion;
     const perDevice = baseTargetDeviceIds.map((deviceId) => {
-      const device = mockDevices.find(d => d.id === deviceId);
+      const device = devices.find(d => String(d.deviceId || d.id) === deviceId);
       const current = deploymentsByDeviceId.get(deviceId)?.version ?? null;
       const willDeploy = targetDeviceIds.includes(deviceId);
       
@@ -156,7 +166,7 @@ export function ProgramPublishDialog({
     );
 
     return { targetVersion, perDevice, counts };
-  }, [baseTargetDeviceIds, deploymentsByDeviceId, existingVersion, predictedNewVersion, targetDeviceIds, versionMode]);
+  }, [baseTargetDeviceIds, deploymentsByDeviceId, existingVersion, predictedNewVersion, targetDeviceIds, versionMode, devices]);
 
   const resetDialog = () => {
     setStep(0);
@@ -282,6 +292,7 @@ export function ProgramPublishDialog({
                   {step === 2 && (
                     <ReviewStep
                       plan={plan}
+                      devices={devices}
                     />
                   )}
                </div>
@@ -748,8 +759,8 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
   );
 }
 
-function ReviewStep({ plan }: { plan: any }) {
-  const deviceById = useMemo(() => new Map(mockDevices.map((d) => [d.id, d])), []);
+function ReviewStep({ plan, devices }: { plan: any; devices: Device[] }) {
+  const deviceById = useMemo(() => new Map(devices.map((d) => [String(d.deviceId || d.id), d])), [devices]);
   
   return (
     <div className="h-full flex flex-col gap-8 animate-in fade-in zoom-in-95 duration-500 py-2">

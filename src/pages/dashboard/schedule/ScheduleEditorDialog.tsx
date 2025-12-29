@@ -42,7 +42,7 @@ import {
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
-import { mockDevices } from '@/lib/mock/devices';
+import { getDevices } from '@/services/deviceApi';
 import type { 
   ScheduleRecord, 
   ProgramScheduleRule, 
@@ -84,7 +84,14 @@ export function ScheduleEditorDialog({ open, onOpenChange, schedule: initialSche
     enabled: open,
   });
 
+  const { data: devicesRes } = useQuery({
+    queryKey: ['devices'],
+    queryFn: getDevices,
+    enabled: open,
+  });
+
   const availablePrograms = programsData?.data || [];
+  const devices = devicesRes?.data || [];
 
   // Sync draft with initialSchedule
   useEffect(() => {
@@ -805,7 +812,7 @@ function DeviceBindingTab({ boundCount, scheduleId }: { boundCount: number, sche
     setPushResults([]);
     
     setTimeout(() => {
-      const results = mockDevices.slice(0, 4).map(d => ({
+      const results = devices.slice(0, 4).map(d => ({
         deviceId: d.id,
         deviceName: d.deviceName,
         status: Math.random() > 0.2 ? 'success' : 'failed',
@@ -873,7 +880,7 @@ function DeviceBindingTab({ boundCount, scheduleId }: { boundCount: number, sche
                    </div>
                    <ScrollArea className="flex-1">
                       <div className="p-4 space-y-2 px-8">
-                         {mockDevices.slice(0, 4).map((d, i) => (
+                         {devices.slice(0, 4).map((d, i) => (
                             <div key={d.id} className="p-5 rounded-[1.5rem] border-2 border-transparent hover:border-muted-foreground/10 hover:bg-muted/10 transition-all flex items-center justify-between group">
                                <div className="flex items-center gap-4">
                                   <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center border shadow-inner">

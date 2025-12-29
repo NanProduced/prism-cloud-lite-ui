@@ -217,31 +217,30 @@ export default function DeviceDetailsPage() {
   const [isVolumeLocked, setIsVolumeLocked] = useState(true);
   const [isColorTempLocked, setIsColorTempLocked] = useState(true);
 
-  const [originalValues, setOriginalValues] = useState({
-    brightness: 0,
-    volume: 0,
-    colorTemp: 6500
-  });
+  const [originalValues, setOriginalValues] = useState({ brightness: 0, volume: 0, colorTemp: 6500, inputMode: 'internal' });
 
+  // Sync state with device data
   useEffect(() => {
-    if (device?.deviceProperties) {
+    if (device && device.deviceProperties) {
       const props = device.deviceProperties;
-      const b = Math.round((props.brightnessandcolortemp?.brightness || 0) / 255 * 100);
-      const v = Math.round((props.volume?.musicvolume || 0) / 100 * 15);
+      const b = Math.round((props.brightnessandcolortemp?.brightness || 0) * 100 / 255);
+      const v = props.volume?.musicvolume || 0;
       const c = props.brightnessandcolortemp?.colortemperature || 6500;
+      const im = props.inputmode?.inputmode || "internal";
       
       setBrightnessPct(b);
       setVolumeLevel(v);
       setColorTemp(c);
-      setInputMode(props.inputmode?.inputmode || "internal");
-      setOriginalValues({ brightness: b, volume: v, colorTemp: c });
+      setInputMode(im);
+      setOriginalValues({ brightness: b, volume: v, colorTemp: c, inputMode: im });
     }
   }, [device]);
 
   const hasChanges = brightnessPct !== originalValues.brightness || 
                      volumeLevel !== originalValues.volume || 
-                     colorTemp !== originalValues.colorTemp;
-  
+                     colorTemp !== originalValues.colorTemp ||
+                     inputMode !== originalValues.inputMode;
+
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean, type: 'sleep' | 'reboot' | null }>({ open: false, type: null });
 
   const handleApplyChanges = async () => {
@@ -255,7 +254,7 @@ export default function DeviceDetailsPage() {
       if (volumeLevel !== originalValues.volume) {
         await executeDeviceAction(deviceId!, { 
           type: 'VOLUME', 
-          body: { musicvolume: Math.round(volumeLevel * 100 / 15) } 
+          body: { musicvolume: volumeLevel } 
         });
       }
       if (colorTemp !== originalValues.colorTemp) {
@@ -264,8 +263,14 @@ export default function DeviceDetailsPage() {
           body: { colortemp: colorTemp } 
         });
       }
+      if (inputMode !== originalValues.inputMode) {
+        await executeDeviceAction(deviceId!, {
+           type: 'INPUT_MODE',
+           body: { inputmode: inputMode }
+        });
+      }
       
-      setOriginalValues({ brightness: brightnessPct, volume: volumeLevel, colorTemp: colorTemp });
+      setOriginalValues({ brightness: brightnessPct, volume: volumeLevel, colorTemp: colorTemp, inputMode: inputMode });
       setIsBrightnessLocked(true);
       setIsVolumeLocked(true);
       setIsColorTempLocked(true);
@@ -280,6 +285,7 @@ export default function DeviceDetailsPage() {
     setBrightnessPct(originalValues.brightness);
     setVolumeLevel(originalValues.volume);
     setColorTemp(originalValues.colorTemp);
+    setInputMode(originalValues.inputMode);
     setIsBrightnessLocked(true);
     setIsVolumeLocked(true);
     setIsColorTempLocked(true);
@@ -638,6 +644,8 @@ export default function DeviceDetailsPage() {
                        <SelectContent>
                           <SelectItem value="internal" className="text-xs font-bold text-slate-700">Internal Player</SelectItem>
                           <SelectItem value="hdmi" className="text-xs font-bold text-slate-700">HDMI Input</SelectItem>
+                          <SelectItem value="dvi" className="text-xs font-bold text-slate-700">DVI Input</SelectItem>
+                          <SelectItem value="vga" className="text-xs font-bold text-slate-700">VGA Input</SelectItem>
                        </SelectContent>
                     </Select>
                  </div>
@@ -1204,12 +1212,13 @@ export default function DeviceDetailsPage() {
         </DialogContent>
       </Dialog>
 
-      <BatchCommandDialog
-        open={showBatchCommand}
+      <BatchCommandDialog 
+        open={showBatchCommand} 
         onOpenChange={setShowBatchCommand}
-        devices={device ? [device] : []}
-        initialSelectedDeviceIds={device ? [String(device.deviceId)] : []}
+        devices={[device]}
+        initialSelectedDeviceIds={[device.deviceId]}
         mode="single-device"
+        initialDeviceProps={realProps}
       />
 
       <ScreenshotManagerDialog
