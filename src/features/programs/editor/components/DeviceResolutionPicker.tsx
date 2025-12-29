@@ -22,8 +22,10 @@ export function DeviceResolutionPicker({
 }) {
   const [open, setOpen] = useState(false);
 
-  const selected = useMemo(() => (value ? devices.find((d) => d.id === value) ?? null : null), [devices, value]);
-  const label = selected ? `${selected.deviceName} · ${selected.resolution.width}×${selected.resolution.height}` : placeholder;
+  const selected = useMemo(() => (value ? devices.find((d) => String(d.deviceId || d.id) === value) ?? null : null), [devices, value]);
+  const label = selected 
+    ? `${selected.deviceName} · ${selected.resolution?.width ?? '?' }×${selected.resolution?.height ?? '?'}` 
+    : placeholder;
 
   return (
     <Popover open={open} onOpenChange={(next) => !disabled && setOpen(next)}>
@@ -66,13 +68,17 @@ export function DeviceResolutionPicker({
 
             <CommandGroup heading="Devices">
               {devices.map((device) => {
-                const isSelected = device.id === value;
+                const id = String(device.deviceId || device.id);
+                const isSelected = id === value;
+                const w = device.resolution?.width ?? 0;
+                const h = device.resolution?.height ?? 0;
+
                 return (
                   <CommandItem
-                    key={device.id}
-                    value={`${device.deviceName} ${device.alias ?? ''} ${device.id} ${device.resolution.width} ${device.resolution.height}`}
+                    key={id}
+                    value={`${device.deviceName} ${device.alias ?? ''} ${id} ${w} ${h}`}
                     onSelect={() => {
-                      onChange(device.id);
+                      onChange(id);
                       setOpen(false);
                     }}
                     className="gap-2"
@@ -84,7 +90,7 @@ export function DeviceResolutionPicker({
                       <div className="truncate text-sm">{device.deviceName}</div>
                       <div className="truncate text-xs text-muted-foreground">
                         {device.alias ? `${device.alias} · ` : ''}
-                        {device.resolution.width}×{device.resolution.height}
+                        {w > 0 ? `${w}×${h}` : 'Resolution unknown'}
                       </div>
                     </div>
                     {isSelected && <Check className="h-4 w-4 text-primary" />}

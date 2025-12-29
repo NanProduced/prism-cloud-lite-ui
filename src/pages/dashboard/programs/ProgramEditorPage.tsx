@@ -34,7 +34,7 @@ import { ProgramPublishDialog } from '@/features/programs/publishing/ProgramPubl
 import { getProgramDraftSavePolicy } from '@/features/programs/storage/draftPolicyDb';
 
 import { resolveMaterialId } from '@/features/programs/storage/materialId';
-import { createItemFromMedia, createScrollTextItem, createTextItem } from '@/features/programs/vsn/defaults';
+import { createBlankVsnDocument, createItemFromMedia, createScrollTextItem, createTextItem } from '@/features/programs/vsn/defaults';
 import type { VsnDocument } from '@/features/programs/vsn/types';
 import { validateVsnDocument } from '@/features/programs/vsn/validator';
 import type { MediaAssetNode } from '@/types/media-library';
@@ -60,7 +60,7 @@ import {
 } from '@/features/programs/editor/vsnOps';
 import { clampInt, getRegionMode, canRegionAcceptItemType } from '@/features/programs/editor/utils';
 import { getDevices } from '@/services/deviceApi';
-import { getMediaNodes } from '@/services/mediaApi';
+import { getMediaAssets } from '@/services/mediaApi';
 
 import { EditorLeftPanel } from '@/features/programs/editor/components/EditorLeftPanel';
 import { StagePreview } from '@/features/programs/editor/components/StagePreview';
@@ -83,32 +83,11 @@ export default function ProgramEditorPage() {
   const baseFromUrl = searchParams.get('base');
   const initialBaseVersion = baseFromUrl === 'blank' ? 0 : (Number.parseInt(baseFromUrl || '', 10) || 0);
 
-  // --- Queries ---
-  const { data: programData, isLoading: isProgramLoading } = useQuery({
-    queryKey: ['programs', programId],
-    queryFn: () => getProgramDetails(programId!),
-    enabled: !!programId,
-  });
-
-  const { data: devicesRes } = useQuery({
-    queryKey: ['devices'],
-    queryFn: () => getDevices(),
-  });
-
-  const { data: mediaRes } = useQuery({
-    queryKey: ['media-library', 'all-nodes'],
-    queryFn: () => getMediaNodes({ limit: 100 }),
-  });
-
-  const program = programData?.data;
-  const devices = useMemo(() => devicesRes?.data || [], [devicesRes]);
-  const materials = useMemo(() => buildEditorMaterials(mediaRes?.data?.items || []), [mediaRes]);
-  const materialIndex = useMemo(() => Object.fromEntries(materials.map((m) => [m.materialId, m])) as Record<string, EditorMaterial>, [materials]);
-
   // --- State ---
   const [baseVersion, setBaseVersion] = useState<number | null>(initialBaseVersion || null);
   const [draft, setDraft] = useState<ProgramDraftResp | null>(null);
   const [vsn, setVsn] = useState<VsnDocument | null>(null);
+  const [targetDeviceId, setTargetDeviceId] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   
   const [past, setPast] = useState<VsnDocument[]>([]);
@@ -123,9 +102,47 @@ export default function ProgramEditorPage() {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [rightTab, setRightTab] = useState<'inspector' | 'problems' | 'json'>('inspector');
 
+  // --- Media Search ---
+  const [mediaQuery, setMediaQuery] = useState('');
+  const [debouncedMediaQuery, setDebouncedMediaQuery] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedMediaQuery(mediaQuery), 500);
+    return () => clearTimeout(timer);
+  }, [mediaQuery]);
+
+  // --- Queries ---
+  const programQuery = useQuery({
+    queryKey: ['programs', programId],
+    queryFn: () => getProgramDetails(programId!),
+    enabled: !!programId,
+  });
+
+  const devicesQuery = useQuery({
+    queryKey: ['devices'],
+    queryFn: () => getDevices(),
+  });
+
+  const mediaNodesQuery = useQuery({
+    queryKey: ['media-library', 'assets', debouncedMediaQuery],
+    queryFn: () => getMediaAssets({ q: debouncedMediaQuery || undefined, kinds: 'image,video', limit: 100 }),
+  });
+
+  const program = programQuery.data?.data;
+  const devices = useMemo(() => devicesQuery.data?.data || [], [devicesQuery.data]);
+  const materials = useMemo(() => buildEditorMaterials(mediaNodesQuery.data?.data?.items || []), [mediaNodesQuery.data]);
+  const materialIndex = useMemo(() => Object.fromEntries(materials.map((m) => [m.materialId, m])) as Record<string, EditorMaterial>, [materials]);
+
+  // Sync targetDeviceId from program data
+  useEffect(() => {
+    if (program?.targetDeviceId) {
+      setTargetDeviceId(program.targetDeviceId);
+    }
+  }, [program?.targetDeviceId]);
+
   // --- Load Draft Logic ---
   useEffect(() => {
-    if (!programId || !isInitializing) return;
+    if (!programId || !isInitializing || programQuery.isLoading) return;
 
     const load = async () => {
       try {
@@ -133,7 +150,16 @@ export default function ProgramEditorPage() {
         if (res.data) {
           setDraft(res.data);
           try {
-            const parsedVsn = JSON.parse(res.data.vsnJson) as VsnDocument;
+            let parsedVsn = JSON.parse(res.data.vsnJson || '{}') as VsnDocument;
+            
+            // If VSN is empty or has no pages, initialize it with a blank page using program resolution
+            const pages = parsedVsn.Programs?.Program?.Pages?.Page;
+            if (!pages || !Array.isArray(pages) || pages.length === 0) {
+              const programWidth = programQuery.data?.data?.width || 1920;
+              const programHeight = programQuery.data?.data?.height || 1080;
+              parsedVsn = createBlankVsnDocument({ width: programWidth, height: programHeight });
+            }
+
             setVsn(normalizeVsnForEditor(parsedVsn));
           } catch (e) {
             toast.error('Failed to parse program content');
@@ -147,7 +173,7 @@ export default function ProgramEditorPage() {
       }
     };
     load();
-  }, [programId, baseVersion, isInitializing, navigate]);
+  }, [programId, baseVersion, isInitializing, navigate, programQuery.isLoading, programQuery.data]);
 
   // --- Mutations ---
   const saveMutation = useMutation({
@@ -347,7 +373,7 @@ export default function ProgramEditorPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo, togglePlayback, selection, vsn]);
 
-  if (isProgramLoading || isInitializing) {
+  if (programQuery.isLoading || isInitializing) {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center gap-4 bg-background">
         <RefreshCw className="h-10 w-10 animate-spin text-primary/40" />
@@ -435,6 +461,8 @@ export default function ProgramEditorPage() {
       regions={regions}
       materials={materials}
       selection={selection}
+      searchQuery={mediaQuery}
+      onSearchChange={setMediaQuery}
       onSelectPage={(pageIndex) => setSelection({ pageIndex, regionIndex: null, itemIndex: null })}
       onSelectRegion={(regionIndex) => setSelection((prev) => ({ ...prev, regionIndex, itemIndex: null }))}
       onAddPage={() => {
@@ -505,13 +533,14 @@ export default function ProgramEditorPage() {
             programName={program.name}
             programWidth={canvasWidth}
             programHeight={canvasHeight}
-            targetDeviceId={program.targetDeviceId ?? null}
+            targetDeviceId={targetDeviceId}
             devices={devices}
             materialIndex={materialIndex}
             showDevFields={devtoolsEnabled}
             onRenameProgram={(name) => renameMutation.mutate(name)}
             onSetProgramResolution={(res) => {
                if (!vsn) return;
+               setTargetDeviceId(res.targetDeviceId);
                applyVsn(resizeProgramCanvas(vsn, res));
             }}
             onPatchPage={(pageIndex, patch) => vsn && applyVsn(patchPage(vsn, pageIndex, patch))}
@@ -571,6 +600,41 @@ export default function ProgramEditorPage() {
                  materialIndex={materialIndex} currentTime={currentTime} isPlaying={isPlaying} playbackSpeed={playbackSpeed}
                  onSelectRegion={(rIdx) => setSelection(prev => ({ ...prev, regionIndex: rIdx, itemIndex: null }))}
                  onPatchRegionRect={(pIdx, rIdx, patch) => vsn && applyVsn(patchRegionRect(vsn, pIdx, rIdx, patch))}
+                 onDropMaterial={(materialId, point) => {
+                    const material = materialIndex[materialId];
+                    if (!material) return;
+                    
+                    const regionIndex = findRegionIndexAtPoint(point);
+                    if (regionIndex != null) {
+                       // Drop into existing region
+                       if (vsn) {
+                          const res = addItem(vsn, selection.pageIndex, regionIndex, createItemFromMedia(material.source as MediaAssetNode, { materialId }));
+                          applyVsn(res.doc);
+                          setSelection({ pageIndex: selection.pageIndex, regionIndex, itemIndex: res.itemIndex });
+                       }
+                    } else {
+                       // Create new region for drop
+                       const res = createRegionForInsert({ 
+                          name: material.name, 
+                          x: point.x - 320, 
+                          y: point.y - 180, 
+                          width: 640, 
+                          height: 360 
+                       });
+                       if (res && res.doc) {
+                          const itemRes = addItem(res.doc, selection.pageIndex, res.regionIndex, createItemFromMedia(material.source as MediaAssetNode, { materialId }));
+                          applyVsn(itemRes.doc);
+                          setSelection({ pageIndex: selection.pageIndex, regionIndex: res.regionIndex, itemIndex: itemRes.itemIndex });
+                       }
+                    }
+                 }}
+                 onCreateRegionRect={(pIdx, rect) => {
+                    const res = createRegionForInsert({ x: rect.x, y: rect.y, width: rect.width, height: rect.height });
+                    if (res) {
+                       applyVsn(res.doc);
+                       setSelection({ pageIndex: pIdx, regionIndex: res.regionIndex, itemIndex: null });
+                    }
+                 }}
                />
             </div>
             <div className="min-h-0 overflow-hidden rounded-2xl border bg-zinc-950">
@@ -637,13 +701,16 @@ function RightTabButton({ active, onClick, icon, children }: { active: boolean; 
 }
 
 function buildEditorMaterials(nodes: unknown[]): EditorMaterial[] {
-  const assets = (nodes as { type: string }[]).filter(n => n?.type === 'asset') as MediaAssetNode[];
-  return assets.filter(a => a.assetKind === 'image' || a.assetKind === 'video').map(asset => ({
+  const assets = (nodes as { type: string }[]).filter(n => n?.type?.toLowerCase() === 'asset') as MediaAssetNode[];
+  return assets.filter(a => {
+    const kind = a.assetKind?.toLowerCase();
+    return kind === 'image' || kind === 'video';
+  }).map(asset => ({
     assetId: asset.id,
     materialId: resolveMaterialId(asset.id),
     source: asset,
     name: asset.name,
-    kind: asset.assetKind as 'image' | 'video',
+    kind: asset.assetKind?.toLowerCase() as 'image' | 'video',
     extension: asset.extension,
     coverUrl: asset.coverUrl,
     assetUrl: asset.assetUrl,

@@ -22,12 +22,13 @@ import { cn } from '@/lib/utils';
 
 import {
   getPrograms,
+  getProgramDetails,
   getProgramTemplates,
   createProgram as createProgramApi,
   renameProgram as renameProgramApi,
   deleteProgram as deleteProgramApi,
 } from '@/services/programApi';
-import type { ProgramListResp, ProgramTemplateResp } from '@/types/program';
+import type { ProgramListResp, ProgramTemplateResp, ProgramDetailResp } from '@/types/program';
 import { getErrorMessage } from '@/services/authApi';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { ProgramPublishDialog } from '@/features/programs/publishing/ProgramPublishDialog';
@@ -103,7 +104,8 @@ export default function ProgramsPage() {
   const [deleteTarget, setDeleteTarget] = useState<ProgramListResp | null>(null);
 
   const [publishOpen, setPublishOpen] = useState(false);
-  const [publishTarget, setPublishTarget] = useState<ProgramListResp | null>(null);
+  const [publishTarget, setPublishTarget] = useState<ProgramDetailResp | null>(null);
+  const [isPublishLoading, setIsPublishLoading] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('New Program');
@@ -125,9 +127,19 @@ export default function ProgramsPage() {
     return list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [query, templates]);
 
-  const openPublishDialog = (program: ProgramListResp) => {
-    setPublishTarget(program);
-    setPublishOpen(true);
+  const openPublishDialog = async (program: ProgramListResp) => {
+    try {
+      setIsPublishLoading(true);
+      const res = await getProgramDetails(program.id);
+      if (res.data) {
+        setPublishTarget(res.data);
+        setPublishOpen(true);
+      }
+    } catch (err) {
+      toast.error('Failed to load program details');
+    } finally {
+      setIsPublishLoading(false);
+    }
   };
 
   const handleProgramRename = () => {
@@ -354,9 +366,14 @@ export default function ProgramsPage() {
                         size="sm"
                         className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors sm:h-9 sm:w-auto sm:px-3 sm:gap-2"
                         onClick={() => openPublishDialog(program)}
+                        disabled={isPublishLoading}
                       >
-                        <Send className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Publish</span>
+                        {isPublishLoading && publishTarget?.id === program.id ? (
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Send className="h-3.5 w-3.5" />
+                        )}
+                        <span className="hidden sm:inline">{isPublishLoading && publishTarget?.id === program.id ? 'Loading...' : 'Publish'}</span>
                       </Button>
 
                       <DropdownMenu>
@@ -466,8 +483,8 @@ export default function ProgramsPage() {
         <ProgramPublishDialog
           open={publishOpen}
           onOpenChange={(next) => { setPublishOpen(next); if (!next) setPublishTarget(null); }}
-          program={publishTarget as any}
-          deployments={[]}
+          program={publishTarget}
+          deployments={publishTarget.deployments || []}
           onAfterPublish={() => queryClient.invalidateQueries({ queryKey: ['programs'] })}
         />
       )}

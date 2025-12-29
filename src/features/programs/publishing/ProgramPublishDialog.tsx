@@ -842,25 +842,11 @@ function ReviewStep({ plan, devices }: { plan: any; devices: Device[] }) {
 function collectDeviceTags(devices: Device[]): Tag[] {
   const map = new Map<string, Tag>();
   for (const device of devices) for (const tag of device.tags) map.set(tag.id, tag);
-  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+  return [...map.values()].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 }
 
 function formatDeviceId(deviceId: string): string {
   const id = deviceId.trim();
   if (id.length <= 12) return id;
   return `${id.slice(0, 8)}…${id.slice(-4)}`;
-}
-
-function pickLatestPublished(program: ProgramDetailResp) {
-  if (!program.versions || !program.versions.length) return null;
-  return [...program.versions].sort((a, b) => b.version - a.version)[0];
-}
-
-function pickDraftForPublish(program: ProgramDetailResp, preferredDraftId?: string | null) {
-  if (preferredDraftId && program.drafts) {
-    const hit = program.drafts.find((d) => d.id === preferredDraftId);
-    if (hit) return hit;
-  }
-  if (!program.drafts || !program.drafts.length) return null;
-  return [...program.drafts].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0] || null;
 }

@@ -170,7 +170,7 @@ function ProgramInspector({
   useEffect(() => setHeightDraft(String(programHeight)), [programHeight]);
 
   const selectedDevice = useMemo(
-    () => (targetDeviceId ? devices.find((d) => d.id === targetDeviceId) ?? null : null),
+    () => (targetDeviceId ? devices.find((d) => String(d.deviceId || d.id) === targetDeviceId) ?? null : null),
     [devices, targetDeviceId],
   );
 
@@ -215,11 +215,11 @@ function ProgramInspector({
               onSetProgramResolution({ width: programWidth, height: programHeight, targetDeviceId: null });
               return;
             }
-            const device = devices.find((d) => d.id === deviceId);
+            const device = devices.find((d) => String(d.deviceId || d.id) === deviceId);
             if (!device) return;
             onSetProgramResolution({
-              width: device.resolution.width,
-              height: device.resolution.height,
+              width: device.resolution?.width || 1920,
+              height: device.resolution?.height || 1080,
               targetDeviceId: deviceId,
             });
           }}

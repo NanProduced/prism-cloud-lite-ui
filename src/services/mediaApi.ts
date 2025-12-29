@@ -40,6 +40,20 @@ export async function getMediaNodes(params?: {
 }
 
 /**
+ * Get a flattened list of media assets (for program editor, etc.)
+ */
+export async function getMediaAssets(params?: {
+  q?: string;
+  kinds?: string; // e.g., 'image,video'
+  limit?: number;
+  cursor?: string;
+}): Promise<BffResponse<MediaLibraryNodesResponse>> {
+  return handleRequest<MediaLibraryNodesResponse>(
+    apiClient.get('/media-library/assets', { params })
+  );
+}
+
+/**
  * Get all folders (for move/upload tree)
  */
 export async function getAllFolders(): Promise<BffResponse<MediaNode[]>> {

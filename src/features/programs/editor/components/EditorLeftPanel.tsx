@@ -16,6 +16,8 @@ export function EditorLeftPanel({
   regions,
   materials,
   selection,
+  searchQuery,
+  onSearchChange,
   onSelectPage,
   onSelectRegion,
   onAddPage,
@@ -29,6 +31,8 @@ export function EditorLeftPanel({
   regions: VsnRegion[];
   materials: EditorMaterial[];
   selection: EditorSelection;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
   onSelectPage: (pageIndex: number) => void;
   onSelectRegion: (regionIndex: number) => void;
   onAddPage: () => void;
@@ -38,17 +42,14 @@ export function EditorLeftPanel({
   onAddTextItem: () => void;
   onAddMaterialItem: (material: EditorMaterial) => void;
 }) {
-  const [mediaQuery, setMediaQuery] = useState('');
   const [mediaFilter, setMediaFilter] = useState<'all' | 'image' | 'video'>('all');
 
   const filteredMaterials = useMemo(() => {
-    const q = mediaQuery.trim().toLowerCase();
     return materials.filter((m) => {
       if (mediaFilter !== 'all' && m.kind !== mediaFilter) return false;
-      if (!q) return true;
-      return m.name.toLowerCase().includes(q);
+      return true;
     });
-  }, [materials, mediaFilter, mediaQuery]);
+  }, [materials, mediaFilter]);
 
   const hasSelectedRegion = selection.regionIndex != null;
 
@@ -164,7 +165,7 @@ export function EditorLeftPanel({
         <div className="space-y-4 p-4">
           <div className="space-y-3">
             <div className="space-y-2">
-            <Input value={mediaQuery} onChange={(e) => setMediaQuery(e.target.value)} placeholder="Search media…" />
+            <Input value={searchQuery || ''} onChange={(e) => onSearchChange?.(e.target.value)} placeholder="Search media…" />
             <div className="flex items-center gap-2">
               <FilterPill active={mediaFilter === 'all'} onClick={() => setMediaFilter('all')}>
                 All

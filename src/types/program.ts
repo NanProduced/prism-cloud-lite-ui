@@ -111,4 +111,5 @@ export interface ProgramTemplateResp {
   height: number;
   coverUrl: string;
   vsnJson: string;
+  updatedAt?: string;
 }
