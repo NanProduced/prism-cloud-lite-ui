@@ -1,6 +1,10 @@
 import apiClient, { handleRequest } from './apiClient';
 import type { BffResponse } from '@/types/auth';
 import type { Device } from '@/types/device';
+import type { 
+  DeviceCustomFieldDef, 
+  DeviceCustomFieldValue 
+} from '@/types/device-custom-field';
 
 /**
  * Get all devices for the current user
@@ -65,6 +69,65 @@ export async function createDevice(data: {
 }>> {
   return handleRequest<any>(
     apiClient.post('/devices', data)
+  );
+}
+
+/**
+ * Custom Field Management
+ */
+
+/**
+ * Get all custom field definitions
+ */
+export async function getCustomFieldDefs(): Promise<BffResponse<DeviceCustomFieldDef[]>> {
+  return handleRequest<DeviceCustomFieldDef[]>(
+    apiClient.get('/devices/custom-fields')
+  );
+}
+
+/**
+ * Create a new custom field definition
+ */
+export async function createCustomFieldDef(
+  data: Partial<DeviceCustomFieldDef>
+): Promise<BffResponse<DeviceCustomFieldDef>> {
+  return handleRequest<DeviceCustomFieldDef>(
+    apiClient.post('/devices/custom-fields', data)
+  );
+}
+
+/**
+ * Update an existing custom field definition
+ */
+export async function updateCustomFieldDef(
+  fieldId: number,
+  data: Partial<DeviceCustomFieldDef>
+): Promise<BffResponse<DeviceCustomFieldDef>> {
+  return handleRequest<DeviceCustomFieldDef>(
+    apiClient.post(`/devices/custom-fields/${fieldId}`, data)
+  );
+}
+
+/**
+ * Delete a custom field definition
+ */
+export async function deleteCustomFieldDef(fieldId: number): Promise<BffResponse<void>> {
+  return handleRequest<void>(
+    apiClient.post(`/devices/custom-fields/${fieldId}/delete`)
+  );
+}
+
+/**
+ * Patch custom field values for a specific device
+ * @param deviceId The backend device ID
+ * @param values Map of fieldId (as string) to value
+ */
+export async function updateDeviceCustomFieldValues(
+  deviceId: number | string,
+  values: Record<string, DeviceCustomFieldValue>
+): Promise<BffResponse<Record<string, any>>> {
+  return handleRequest<Record<string, any>>(
+    apiClient.post(`/devices/${deviceId}/custom-fields`, { values })
   );
 }
 

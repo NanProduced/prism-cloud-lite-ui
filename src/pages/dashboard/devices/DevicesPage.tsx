@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DeviceTable } from './DeviceTable';
 import { DeviceCardView } from './DeviceCardView';
-import { getDevices } from '@/services/deviceApi';
+import { 
+  getDevices, 
+  getCustomFieldDefs, 
+  createCustomFieldDef, 
+  deleteCustomFieldDef, 
+  updateDeviceCustomFieldValues 
+} from '@/services/deviceApi';
 import { type Device, type Tag, resolveDeviceStatus } from '@/types/device';
-import { mockDeviceCustomFieldDefs } from '@/lib/mock/device-custom-fields';
 import type { DeviceCustomFieldDef, DeviceCustomFieldValue } from '@/types/device-custom-field';
 import { DeviceFilters, type DeviceFilterState } from '@/components/devices/DeviceFilters';
 import { Input } from '@/components/ui/input';
@@ -14,17 +19,80 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Search, Grid3x3, LayoutGrid, Download, Loader2, Zap, Plus } from 'lucide-react';
 import { BatchCommandDialog } from '@/features/devices/commands/BatchCommandDialog';
 import { AddDeviceDialog } from '@/components/devices/AddDeviceDialog';
+import { toast } from '@/store/notificationStore';
+import { useAuthStore } from '@/store/authStore';
 
 type ViewMode = 'grid' | 'card';
 
 export default function DevicesPage() {
   const queryClient = useQueryClient();
-  const { data: bffResponse, isLoading: isQueryLoading } = useQuery({
+  const { user } = useAuthStore();
+  
+  const { data: bffResponse, isLoading: isDevicesLoading } = useQuery({
     queryKey: ['devices'],
     queryFn: () => getDevices(),
   });
 
+  const { data: cfResponse, isLoading: isCfLoading } = useQuery({
+    queryKey: ['device-custom-fields'],
+    queryFn: () => getCustomFieldDefs(),
+  });
+
   const devices = useMemo(() => bffResponse?.data || [], [bffResponse]);
+  const customFieldDefs = useMemo(() => cfResponse?.data || [], [cfResponse]);
+
+  // Determine if Pro features are active based on actual subscription
+  const isProActive = useMemo(() => {
+    return user?.subscriptionTier === 'PRO' || user?.subscriptionTier === 'ULTRA';
+  }, [user]);
+
+  // Mutations
+  const updateFieldValueMutation = useMutation({
+    mutationFn: ({ deviceId, fieldId, value }: { deviceId: string; fieldId: number; value: DeviceCustomFieldValue }) => 
+      updateDeviceCustomFieldValues(deviceId, { [String(fieldId)]: value }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
+    },
+    onError: (error: any) => {
+      toast('Update failed', { description: error.message || 'Failed to update custom field' });
+    }
+  });
+
+  const createFieldMutation = useMutation({
+    mutationFn: (def: Partial<DeviceCustomFieldDef>) => createCustomFieldDef(def),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['device-custom-fields'] });
+      toast('Success', { description: 'Custom field created' });
+    }
+  });
+
+  const deleteFieldMutation = useMutation({
+    mutationFn: (fieldId: number) => deleteCustomFieldDef(fieldId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['device-custom-fields'] });
+      toast('Success', { description: 'Custom field deleted' });
+    }
+  });
+
+  const updateFieldMutation = useMutation({
+    mutationFn: (def: DeviceCustomFieldDef) => updateCustomFieldDef(def.fieldId, def),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['device-custom-fields'] });
+    }
+  });
+
+  const handleCustomFieldDefsChange = async (nextDefs: DeviceCustomFieldDef[]) => {
+    // Basic implementation: find changed fields and update them
+    // In a real app, a bulk update API would be better
+    const changed = nextDefs.filter(next => {
+      const prev = customFieldDefs.find(p => p.fieldId === next.fieldId);
+      return JSON.stringify(prev) !== JSON.stringify(next);
+    });
+
+    for (const field of changed) {
+      await updateFieldMutation.mutateAsync(field);
+    }
+  };
 
   // Real-time updates via SSE
   useEffect(() => {
@@ -60,12 +128,6 @@ export default function DevicesPage() {
   }, [queryClient]);
 
   const [tags, setTags] = useState<Tag[]>([]);
-  const [customFieldDefs, setCustomFieldDefs] = useState<DeviceCustomFieldDef[]>(() => mockDeviceCustomFieldDefs);
-  const [isProActive, setIsProActive] = useState(() => {
-    const stored = window.localStorage.getItem('devices.planProActive');
-    if (stored == null) return false;
-    return stored === 'true';
-  });
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const stored = window.localStorage.getItem('devices.viewMode') as ViewMode | null;
     return stored ?? 'card';
@@ -101,10 +163,6 @@ export default function DevicesPage() {
     window.localStorage.setItem('devices.viewMode', viewMode);
   }, [viewMode]);
 
-  useEffect(() => {
-    window.localStorage.setItem('devices.planProActive', String(isProActive));
-  }, [isProActive]);
-
   const createTag = (draft: { name: string; color: string; icon?: string }): Tag => {
     const newTag: Tag = {
       tagName: draft.name.trim(),
@@ -122,16 +180,15 @@ export default function DevicesPage() {
   };
 
   const updateDeviceCustomFieldValue = (deviceId: string, fieldId: number, value: DeviceCustomFieldValue) => {
-    // This would need a PATCH call to /api/v1/devices/{deviceId}/custom-fields
-    console.log('Update custom field', deviceId, fieldId, value);
+    updateFieldValueMutation.mutate({ deviceId, fieldId, value });
   };
 
   const addCustomFieldDef = (def: DeviceCustomFieldDef) => {
-    setCustomFieldDefs((prev) => [...prev, def].sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0)));
+    createFieldMutation.mutate(def);
   };
 
   const deleteCustomFieldDef = (fieldId: number) => {
-    setCustomFieldDefs((prev) => prev.filter((d) => d.fieldId !== fieldId));
+    deleteFieldMutation.mutate(fieldId);
   };
 
   const filteredDevices = useMemo(() => {
@@ -201,7 +258,7 @@ export default function DevicesPage() {
     setViewMode('grid');
   };
 
-  if (isQueryLoading) {
+  if (isDevicesLoading || isCfLoading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -350,8 +407,7 @@ export default function DevicesPage() {
             pulsingDeviceIds={pulsingDeviceIds}
             onSelectionChange={setSelectedDeviceIds}
             onBatchCommand={() => setShowBatchCommandDialog(true)}
-            onProActiveChange={setIsProActive}
-            onCustomFieldDefsChange={setCustomFieldDefs}
+            onCustomFieldDefsChange={handleCustomFieldDefsChange}
             onCustomFieldCreate={addCustomFieldDef}
             onCustomFieldDelete={deleteCustomFieldDef}
             onCustomFieldValueChange={updateDeviceCustomFieldValue}

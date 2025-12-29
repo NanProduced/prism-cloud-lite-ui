@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import type { DeviceCustomFieldDef, DeviceCustomFieldOption, DeviceCustomFieldType } from '@/types/device-custom-field';
-import { FREE_CUSTOM_FIELD_QUOTA } from '@/lib/mock/device-custom-fields';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -34,8 +33,15 @@ import {
   Settings2
 } from 'lucide-react';
 import { toast } from '@/store/notificationStore';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';
+
+// Quotas per tier
+const QUOTAS = {
+  FREE: 3,
+  PRO: 20,
+  ULTRA: 100,
+};
 
 const FIELD_TYPES: Array<{ value: DeviceCustomFieldType; label: string }> = [
   { value: 'TEXT', label: 'Text' },
@@ -257,13 +263,20 @@ export function DeviceCustomFieldsSheet({
   onCustomFieldCreate: (def: DeviceCustomFieldDef) => void;
   onCustomFieldDelete: (fieldId: number) => void;
 }) {
+  const { user } = useAuthStore();
+  const currentQuota = useMemo(() => {
+    const tier = (user?.subscriptionTier || 'FREE') as keyof typeof QUOTAS;
+    return QUOTAS[tier] || QUOTAS.FREE;
+  }, [user]);
+
   const ordered = useMemo(
     () => customFieldDefs.slice().sort(sortBySequence),
     [customFieldDefs]
   );
 
   const freeCount = ordered.filter((d) => !d.planTierRequired).length;
-  const canCreate = isProActive || freeCount < FREE_CUSTOM_FIELD_QUOTA;
+  // User can create if total fields is less than their tier quota
+  const canCreate = ordered.length < currentQuota;
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -335,8 +348,8 @@ export function DeviceCustomFieldsSheet({
     optionsText?: string;
   }) => {
     if (!canCreate) {
-      toast('Upgrade to Pro to create more custom fields', {
-        description: `Free plan supports up to ${FREE_CUSTOM_FIELD_QUOTA} custom fields.`,
+      toast('Quota exceeded', {
+        description: `Your current plan supports up to ${currentQuota} custom fields.`,
       });
       return;
     }
@@ -355,7 +368,8 @@ export function DeviceCustomFieldsSheet({
     }
 
     const nextSeq = (Math.max(0, ...customFieldDefs.map((d) => d.sequence ?? 0)) + 1) || 1;
-    const planTierRequired = freeCount >= FREE_CUSTOM_FIELD_QUOTA;
+    // planTierRequired is true if it exceeds the FREE quota (3)
+    const planTierRequired = ordered.length >= QUOTAS.FREE;
 
     const options = (() => {
       if (draft.type !== 'SELECT' && draft.type !== 'MULTI_SELECT') return undefined;
@@ -486,19 +500,19 @@ export function DeviceCustomFieldsSheet({
 
             <div className="mt-4 flex items-center justify-between gap-3">
               <div className="text-sm text-muted-foreground">
-                Editable fields:{' '}
+                Usage:{' '}
                 <span className="font-medium text-foreground">
-                  {Math.min(freeCount, FREE_CUSTOM_FIELD_QUOTA)}
+                  {ordered.length}
                 </span>
-                /{FREE_CUSTOM_FIELD_QUOTA}
+                /{currentQuota} fields
               </div>
               <Button
                 size="sm"
                 className="gap-2"
                 onClick={() => {
                   if (!canCreate) {
-                    toast('Upgrade to Pro to create more custom fields', {
-                      description: `Free plan supports up to ${FREE_CUSTOM_FIELD_QUOTA} custom fields.`,
+                    toast(`Upgrade to increase your limit`, {
+                      description: `Current plan limit is ${currentQuota} custom fields.`,
                     });
                     return;
                   }
@@ -721,7 +735,7 @@ function CreateFieldForm({
   const [optionsText, setOptionsText] = useState('');
 
   const needsOptions = type === 'SELECT' || type === 'MULTI_SELECT';
-  const willBeProLocked = freeCount >= FREE_CUSTOM_FIELD_QUOTA;
+  const willBeProLocked = freeCount >= QUOTAS.FREE;
 
   return (
     <div className="grid gap-4">
@@ -774,10 +788,10 @@ function CreateFieldForm({
                 This field will become read-only when Pro expires.
               </span>
             ) : (
-              `Counts towards the ${FREE_CUSTOM_FIELD_QUOTA} editable fields quota.`
+              `Counts towards the ${QUOTAS.FREE} editable fields quota.`
             )
           ) : (
-            `Free plan supports up to ${FREE_CUSTOM_FIELD_QUOTA} editable fields.`
+            `Free plan supports up to ${QUOTAS.FREE} editable fields.`
           )}
         </div>
         <div className="flex items-center gap-2">
