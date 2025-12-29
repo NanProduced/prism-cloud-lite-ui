@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   ArrowLeft, 
@@ -212,85 +212,103 @@ export default function DeviceDetailsPage() {
   const [colorTemp, setColorTemp] = useState(6500);
   const [inputMode, setInputMode] = useState("internal");
 
-  // Lock States
-  const [isBrightnessLocked, setIsBrightnessLocked] = useState(true);
-  const [isVolumeLocked, setIsVolumeLocked] = useState(true);
-  const [isColorTempLocked, setIsColorTempLocked] = useState(true);
+  // Unified lock state for all adjustments (prevents accidental changes)
+  const [isControlsLocked, setIsControlsLocked] = useState(true);
 
-  const [originalValues, setOriginalValues] = useState({ brightness: 0, volume: 0, colorTemp: 6500, inputMode: 'internal' });
+  // Debounce refs for auto-apply
+  const brightnessDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const volumeDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const colorTempDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup debounce timers on unmount
+  useEffect(() => {
+    return () => {
+      if (brightnessDebounceRef.current) clearTimeout(brightnessDebounceRef.current);
+      if (volumeDebounceRef.current) clearTimeout(volumeDebounceRef.current);
+      if (colorTempDebounceRef.current) clearTimeout(colorTempDebounceRef.current);
+    };
+  }, []);
 
   // Sync state with device data
   useEffect(() => {
     if (device && device.deviceProperties) {
       const props = device.deviceProperties;
-      const b = Math.round((props.brightnessandcolortemp?.brightness || 0) * 100 / 255);
-      const v = props.volume?.musicvolume || 0;
-      const c = props.brightnessandcolortemp?.colortemperature || 6500;
-      const im = props.inputmode?.inputmode || "internal";
-      
-      setBrightnessPct(b);
-      setVolumeLevel(v);
-      setColorTemp(c);
-      setInputMode(im);
-      setOriginalValues({ brightness: b, volume: v, colorTemp: c, inputMode: im });
+      setBrightnessPct(Math.round((props.brightnessandcolortemp?.brightness || 0) * 100 / 255));
+      setVolumeLevel(props.volume?.musicvolume || 0);
+      setColorTemp(props.brightnessandcolortemp?.colortemperature || 6500);
+      setInputMode(props.inputmode?.inputmode || "internal");
     }
   }, [device]);
 
-  const hasChanges = brightnessPct !== originalValues.brightness || 
-                     volumeLevel !== originalValues.volume || 
-                     colorTemp !== originalValues.colorTemp ||
-                     inputMode !== originalValues.inputMode;
-
-  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean, type: 'sleep' | 'reboot' | null }>({ open: false, type: null });
-
-  const handleApplyChanges = async () => {
+  // Auto-apply handlers with debounce
+  const applyBrightness = useCallback(async (value: number) => {
     try {
-      if (brightnessPct !== originalValues.brightness) {
-        await executeDeviceAction(deviceId!, { 
-          type: 'BRIGHTNESS', 
-          body: { brightness: Math.round(brightnessPct * 2.55) } 
-        });
-      }
-      if (volumeLevel !== originalValues.volume) {
-        await executeDeviceAction(deviceId!, { 
-          type: 'VOLUME', 
-          body: { musicvolume: volumeLevel } 
-        });
-      }
-      if (colorTemp !== originalValues.colorTemp) {
-        await executeDeviceAction(deviceId!, { 
-          type: 'COLOR_TEMP', 
-          body: { colortemp: colorTemp } 
-        });
-      }
-      if (inputMode !== originalValues.inputMode) {
-        await executeDeviceAction(deviceId!, {
-           type: 'INPUT_MODE',
-           body: { inputmode: inputMode }
-        });
-      }
-      
-      setOriginalValues({ brightness: brightnessPct, volume: volumeLevel, colorTemp: colorTemp, inputMode: inputMode });
-      setIsBrightnessLocked(true);
-      setIsVolumeLocked(true);
-      setIsColorTempLocked(true);
-      toast.success('Parameters dispatched');
-      queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
+      await executeDeviceAction(deviceId!, {
+        type: 'BRIGHTNESS',
+        body: { brightness: Math.round(value * 2.55) }
+      });
+      toast.success('Brightness updated');
     } catch (err) {
-      toast.error('Failed to dispatch commands');
+      toast.error('Failed to update brightness');
+    }
+  }, [deviceId]);
+
+  const applyVolume = useCallback(async (value: number) => {
+    try {
+      await executeDeviceAction(deviceId!, {
+        type: 'VOLUME',
+        body: { musicvolume: value }
+      });
+      toast.success('Volume updated');
+    } catch (err) {
+      toast.error('Failed to update volume');
+    }
+  }, [deviceId]);
+
+  const applyColorTemp = useCallback(async (value: number) => {
+    try {
+      await executeDeviceAction(deviceId!, {
+        type: 'COLOR_TEMP',
+        body: { colortemp: value }
+      });
+      toast.success('Color temperature updated');
+    } catch (err) {
+      toast.error('Failed to update color temperature');
+    }
+  }, [deviceId]);
+
+  const handleBrightnessChange = (value: number) => {
+    setBrightnessPct(value);
+    if (brightnessDebounceRef.current) clearTimeout(brightnessDebounceRef.current);
+    brightnessDebounceRef.current = setTimeout(() => applyBrightness(value), 500);
+  };
+
+  const handleVolumeChange = (value: number) => {
+    setVolumeLevel(value);
+    if (volumeDebounceRef.current) clearTimeout(volumeDebounceRef.current);
+    volumeDebounceRef.current = setTimeout(() => applyVolume(value), 500);
+  };
+
+  const handleColorTempChange = (value: number) => {
+    setColorTemp(value);
+    if (colorTempDebounceRef.current) clearTimeout(colorTempDebounceRef.current);
+    colorTempDebounceRef.current = setTimeout(() => applyColorTemp(value), 500);
+  };
+
+  const handleInputModeChange = async (value: string) => {
+    setInputMode(value);
+    try {
+      await executeDeviceAction(deviceId!, {
+        type: 'INPUT_MODE',
+        body: { inputmode: value }
+      });
+      toast.success('Input source updated');
+    } catch (err) {
+      toast.error('Failed to update input source');
     }
   };
 
-  const handleResetChanges = () => {
-    setBrightnessPct(originalValues.brightness);
-    setVolumeLevel(originalValues.volume);
-    setColorTemp(originalValues.colorTemp);
-    setInputMode(originalValues.inputMode);
-    setIsBrightnessLocked(true);
-    setIsVolumeLocked(true);
-    setIsColorTempLocked(true);
-    toast.info('Adjustments reverted');
-  };
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean, type: 'sleep' | 'reboot' | null }>({ open: false, type: null });
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
@@ -354,15 +372,15 @@ export default function DeviceDetailsPage() {
   if (isDeviceLoading) return (
     <div className="flex flex-col items-center justify-center h-[70vh] gap-4">
       <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      <p className="font-bold text-[10px] tracking-[0.2em] text-muted-foreground">Initializing Command Channel</p>
+      <p className="text-sm font-medium text-muted-foreground">Loading device details...</p>
     </div>
   );
 
   if (!device || !device.deviceProperties) return (
     <div className="flex flex-col items-center justify-center h-[70vh] gap-4">
       <AlertTriangle className="h-12 w-12 text-amber-500" />
-      <p className="font-bold text-[10px] tracking-[0.2em]">Terminal Data Missing or Unavailable</p>
-      <Button variant="outline" onClick={() => navigate("/dashboard/devices")}>Back to List</Button>
+      <p className="text-sm font-medium">Device data unavailable</p>
+      <Button variant="outline" onClick={() => navigate("/dashboard/devices")}>Back to devices</Button>
     </div>
   );
 
@@ -381,25 +399,27 @@ export default function DeviceDetailsPage() {
   return (
     <div className="flex flex-col gap-6 p-6 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
       
-      {/* SECTION 1: CORE IDENTITY (TOP BAR) */}
+      {/* Header */}
       <header className="grid grid-cols-1 lg:grid-cols-4 gap-4">
          <Card className="lg:col-span-3 rounded-2xl border-none shadow-sm ring-1 ring-muted/60 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-5">
                <div className="p-4 bg-primary/5 rounded-2xl border shadow-inner">
                   <Monitor className="h-8 w-8 text-primary" />
                </div>
-               <div className="space-y-1.5">
+               <div className="space-y-2">
                   <div className="flex items-center gap-3">
                      <h1 className="text-2xl font-bold tracking-tight">{device.deviceName}</h1>
-                     <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-muted-foreground tracking-wider mb-0.5">Device Status</span>
-                        <DeviceStatusBadge status={resolveDeviceStatus(device)} />
-                     </div>
+                     <DeviceStatusBadge status={resolveDeviceStatus(device)} />
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-[11px] font-bold text-muted-foreground tracking-wide">
-                     <span className="flex items-center gap-1.5"><Database className="h-3.5 w-3.5" /> SN: <span className="text-foreground font-mono">{realProps.info?.info.serialno}</span></span>
-                     <span className="flex items-center gap-1.5"><Layout className="h-3.5 w-3.5" /> {realProps.info?.info.model}</span>
-                     <span className="flex items-center gap-1.5"><Settings className="h-3.5 w-3.5" /> OS: {realProps.info?.info.vername}</span>
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-muted-foreground">
+                     <span className="flex items-center gap-1.5">
+                        <Database className="h-3.5 w-3.5" />
+                        <span className="font-mono text-foreground">{realProps.info?.info.serialno}</span>
+                     </span>
+                     <span className="flex items-center gap-1.5">
+                        <Layout className="h-3.5 w-3.5" />
+                        {realProps.info?.info.model}
+                     </span>
                   </div>
                </div>
             </div>
@@ -410,32 +430,32 @@ export default function DeviceDetailsPage() {
                <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                       <Button 
-                          variant="outline" 
-                          className="h-10 rounded-xl font-bold text-xs gap-2" 
+                       <Button
+                          variant="outline"
+                          className="h-10 rounded-xl text-sm font-medium gap-2"
                           onClick={() => setShowBatchCommand(true)}
                        >
-                          <Zap className="h-4 w-4 text-amber-500" /> Advanced Command
+                          <Zap className="h-4 w-4 text-amber-500" /> Advanced
                        </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                       <p>Advanced Wizard: chain multiple commands sequentially</p>
+                       <p>Send multiple actions at once</p>
                     </TooltipContent>
                   </Tooltip>
                </TooltipProvider>
-               <Button variant="outline" className="h-10 rounded-xl font-bold text-xs gap-2" onClick={handleRefresh} disabled={isRefreshing}>
-                  <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} /> Sync
+               <Button variant="outline" className="h-10 rounded-xl text-sm font-medium gap-2" onClick={handleRefresh} disabled={isRefreshing}>
+                  <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} /> Refresh
                </Button>
             </div>
          </Card>
-         
+
          <Card className="rounded-2xl border-none ring-1 ring-muted/60 bg-muted/20 p-5 flex flex-col justify-center">
-            <p className="text-[10px] font-bold text-muted-foreground tracking-widest mb-1">Last Seen</p>
-            <p className="text-lg font-bold tracking-tight">{device.lastReportTime ? formatRelative(device.lastReportTime) : 'N/A'}</p>
+            <p className="text-xs font-medium text-muted-foreground mb-1">Last seen</p>
+            <p className="text-lg font-semibold">{device.lastReportTime ? formatRelative(device.lastReportTime) : 'Never'}</p>
             <div className="flex items-center gap-2 mt-2">
                <div className={cn("h-1.5 w-1.5 rounded-full", sseConnected ? "bg-emerald-500 animate-pulse" : "bg-slate-400")} />
-               <span className="text-[9px] font-bold tracking-tighter text-muted-foreground">
-                  Console Connected: {sseConnected ? "Active" : "Disconnected"}
+               <span className="text-xs text-muted-foreground">
+                  {sseConnected ? "Live updates active" : "Live updates paused"}
                </span>
             </div>
          </Card>
@@ -448,23 +468,23 @@ export default function DeviceDetailsPage() {
            <Card className="overflow-hidden border-none shadow-2xl bg-black h-full flex flex-col ring-1 ring-white/10">
               <CardHeader className="p-4 flex flex-row items-center justify-between space-y-0 bg-zinc-950/80 border-b border-white/5">
                 <div className="flex items-center gap-3">
-                  <CardTitle className="text-[10px] font-bold tracking-widest text-zinc-500 flex items-center gap-2">
+                  <CardTitle className="text-xs font-medium text-zinc-400 flex items-center gap-2">
                     <Camera className="h-4 w-4" />
-                    Latest Screenshot
+                    Screenshot
                   </CardTitle>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                    {screenshotUrl ? (
-                      <Badge variant="outline" className="text-[9px] h-5 border-zinc-800 text-zinc-400 font-mono tracking-tighter">
-                         Captured: {formatDateTime(screenshotTime)}
+                      <Badge variant="outline" className="text-xs h-6 border-zinc-800 text-zinc-400 font-mono">
+                         {formatDateTime(screenshotTime)}
                       </Badge>
                    ) : (
-                      <Badge variant="outline" className="text-[9px] h-5 border-zinc-800 text-amber-500/80 font-bold tracking-tight">
-                         No screenshot reported
+                      <Badge variant="outline" className="text-xs h-6 border-zinc-800 text-amber-500/80">
+                         No screenshot
                       </Badge>
                    )}
-                   <Badge variant="outline" className="text-[9px] h-5 border-zinc-800 text-zinc-600 font-mono tracking-tighter">
-                      {realProps.dimension?.real_width}x{realProps.dimension?.real_height}
+                   <Badge variant="outline" className="text-xs h-6 border-zinc-800 text-zinc-500 font-mono">
+                      {realProps.dimension?.real_width}×{realProps.dimension?.real_height}
                    </Badge>
                 </div>
               </CardHeader>
@@ -484,42 +504,35 @@ export default function DeviceDetailsPage() {
                       <div className="p-6 rounded-full bg-zinc-800/50">
                         <Monitor className="h-12 w-12 opacity-20" />
                       </div>
-                      <p className="text-xs font-bold tracking-[0.2em] opacity-40">Visual data unavailable</p>
+                      <p className="text-sm text-zinc-500">No screenshot available</p>
                     </div>
                   )}
 
-                  {/* Device Status Warning Overlay */}
+                  {/* Device Offline Warning */}
                   {resolveDeviceStatus(device) === 'offline' && (
                     <div className="absolute top-4 left-4 right-4 animate-in slide-in-from-top-4 duration-500 z-20">
                       <div className="bg-amber-500/90 backdrop-blur-md border border-amber-400/50 rounded-xl p-3 flex items-center gap-3 shadow-2xl">
                         <AlertTriangle className="h-4 w-4 text-amber-950 shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-bold text-amber-950 tracking-tight">Device Offline</p>
-                          <p className="text-[9px] text-amber-900 leading-tight truncate">
-                             Commands will be queued and may expire if the device doesn't reconnect soon.
+                          <p className="text-sm font-semibold text-amber-950">Device offline</p>
+                          <p className="text-xs text-amber-900">
+                             Actions will be queued until the device reconnects.
                           </p>
                         </div>
                       </div>
                     </div>
                   )}
                   
-                  {/* Now Playing HUD */}
+                  {/* Now Playing */}
                   <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between">
                      {realProps.vsns?.playing ? (
-                        <div className="flex items-center gap-5 p-5 bg-black/40 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl animate-in fade-in slide-in-from-left-4 duration-500">
-                           <div className="h-12 w-12 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg">
-                              <Play className="h-6 w-6 text-white fill-white/10" />
+                        <div className="flex items-center gap-4 p-4 bg-black/40 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl animate-in fade-in slide-in-from-left-4 duration-500">
+                           <div className="h-11 w-11 rounded-xl bg-emerald-500 flex items-center justify-center shadow-lg">
+                              <Play className="h-5 w-5 text-white fill-white/10" />
                            </div>
                            <div className="text-white min-w-0">
-                              <p className="text-[10px] font-bold tracking-widest text-white/40 mb-0.5">
-                                 Playing: {realProps.vsns.playing.type === 'rotation' ? 'Rotation' : 'Spot'}
-                              </p>
-                              <p className="text-lg font-bold tracking-tight truncate max-w-[300px]">{realProps.vsns.playing.name}</p>
-                              <div className="flex items-center gap-3 mt-1">
-                                 <Badge className="bg-white/10 text-white border-none text-[9px] h-4 font-bold">
-                                    Source: {realProps.vsns.playing.source === 'internet' ? 'Cloud' : 'Local'}
-                                 </Badge>
-                              </div>
+                              <p className="text-xs text-white/50 mb-0.5">Now playing</p>
+                              <p className="text-base font-semibold truncate max-w-[280px]">{realProps.vsns.playing.name}</p>
                            </div>
                         </div>
                      ) : <div />}
@@ -593,267 +606,206 @@ export default function DeviceDetailsPage() {
         <div className="lg:col-span-4 flex flex-col gap-6">
            <Card className="shadow-xl border-none ring-1 ring-muted/60 h-full flex flex-col overflow-hidden">
               <CardHeader className="pb-5 border-b bg-muted/5 px-6 shrink-0">
-                 <CardTitle className="text-[11px] font-bold flex items-center gap-2 tracking-[0.15em] text-slate-500">
-                    <Zap className="h-4 w-4 text-amber-500 fill-amber-500/10" /> Command Center
+                 <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+                    <Zap className="h-4 w-4 text-amber-500" /> Quick actions
                  </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 overflow-y-auto space-y-8 pt-6 px-6 scrollbar-none">
                  {/* Power Control */}
                  <div className="space-y-4">
-                    <p className="text-[10px] font-bold text-muted-foreground tracking-widest">Power Control</p>
-                    <div className="grid grid-cols-1 gap-2">
-                       <Button 
-                          variant="outline" 
-                          className="h-12 justify-start rounded-xl font-bold text-xs gap-3 border-amber-500/10 bg-amber-500/[0.02] hover:bg-amber-500/5 text-amber-700 group transition-all"
+                    <p className="text-xs font-semibold text-muted-foreground">Power</p>
+                    <div className="flex gap-2">
+                       <Button
+                          variant="outline"
+                          className="flex-1 h-10 rounded-xl text-sm font-medium gap-2 border-amber-200 hover:bg-amber-50 hover:border-amber-300 text-amber-700 dark:border-amber-800 dark:hover:bg-amber-950 dark:text-amber-400"
                           onClick={() => setConfirmDialog({ open: true, type: 'sleep' })}
                        >
-                          <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                             <Moon className="h-4 w-4" />
-                          </div>
-                          <div className="text-left">
-                             <p>Enter Standby</p>
-                             <p className="text-[9px] font-normal text-amber-600/60 leading-none mt-0.5">Suspend content rendering</p>
-                          </div>
+                          <Moon className="h-4 w-4" />
+                          Sleep
                        </Button>
-                       <Button 
-                          variant="outline" 
-                          className="h-12 justify-start rounded-xl font-bold text-xs gap-3 border-rose-500/10 bg-rose-500/[0.02] hover:bg-rose-500/5 text-rose-700 group transition-all"
+                       <Button
+                          variant="outline"
+                          className="flex-1 h-10 rounded-xl text-sm font-medium gap-2 border-rose-200 hover:bg-rose-50 hover:border-rose-300 text-rose-700 dark:border-rose-800 dark:hover:bg-rose-950 dark:text-rose-400"
                           onClick={() => setConfirmDialog({ open: true, type: 'reboot' })}
                        >
-                          <div className="h-8 w-8 rounded-lg bg-rose-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                             <RotateCw className="h-4 w-4" />
-                          </div>
-                          <div className="text-left">
-                             <p>Hard Reboot</p>
-                             <p className="text-[9px] font-normal text-rose-600/60 leading-none mt-0.5">Force power cycle terminal</p>
-                          </div>
+                          <RotateCw className="h-4 w-4" />
+                          Restart
                        </Button>
                     </div>
                  </div>
 
                  {/* Input Source */}
                  <div className="space-y-4 bg-muted/20 p-5 rounded-2xl border border-muted/20 transition-colors">
-                    <p className="text-[10px] font-bold text-muted-foreground tracking-widest">Input Source</p>
-                    <Select value={inputMode} onValueChange={setInputMode}>
-                       <SelectTrigger className="h-9 text-xs font-bold bg-background border shadow-sm rounded-xl">
+                    <p className="text-xs font-semibold text-muted-foreground">Input source</p>
+                    <Select value={inputMode} onValueChange={handleInputModeChange}>
+                       <SelectTrigger className="h-10 text-sm font-medium bg-background border shadow-sm rounded-xl">
                           <div className="flex items-center gap-2">
-                             <Power className="h-3.5 w-3.5 text-primary" />
+                             <Power className="h-4 w-4 text-primary" />
                              <SelectValue />
                           </div>
                        </SelectTrigger>
                        <SelectContent>
-                          <SelectItem value="internal" className="text-xs font-bold text-slate-700">Internal Player</SelectItem>
-                          <SelectItem value="hdmi" className="text-xs font-bold text-slate-700">HDMI Input</SelectItem>
-                          <SelectItem value="dvi" className="text-xs font-bold text-slate-700">DVI Input</SelectItem>
-                          <SelectItem value="vga" className="text-xs font-bold text-slate-700">VGA Input</SelectItem>
+                          <SelectItem value="internal" className="text-sm">Internal player</SelectItem>
+                          <SelectItem value="hdmi" className="text-sm">HDMI</SelectItem>
+                          <SelectItem value="dvi" className="text-sm">DVI</SelectItem>
+                          <SelectItem value="vga" className="text-sm">VGA</SelectItem>
                        </SelectContent>
                     </Select>
                  </div>
 
                  {/* Display Adjustments */}
-                 <div className="space-y-8 px-1">
-                    <p className="text-[10px] font-bold text-muted-foreground tracking-widest">Adjustments</p>
-                    
+                 <div className="space-y-6">
+                    {/* Section Header with Unified Lock */}
+                    <div className="flex items-center justify-between">
+                       <p className="text-xs font-semibold text-muted-foreground">Display adjustments</p>
+                       <Button
+                          variant={isControlsLocked ? "outline" : "default"}
+                          size="sm"
+                          className={cn(
+                             "h-8 rounded-lg font-medium text-xs gap-2 transition-all",
+                             !isControlsLocked && "bg-primary text-primary-foreground"
+                          )}
+                          onClick={() => setIsControlsLocked(!isControlsLocked)}
+                       >
+                          {isControlsLocked ? (
+                             <>
+                                <Lock className="h-3.5 w-3.5" />
+                                <span>Unlock to adjust</span>
+                             </>
+                          ) : (
+                             <>
+                                <Unlock className="h-3.5 w-3.5" />
+                                <span>Adjusting...</span>
+                             </>
+                          )}
+                       </Button>
+                    </div>
+
                     {/* Brightness */}
-                    <div className="space-y-4">
-                       <div className="flex justify-between items-center text-[10px] font-bold tracking-widest text-muted-foreground">
-                          <span className="flex items-center gap-2">
+                    <div className={cn("space-y-3 transition-opacity", isControlsLocked && "opacity-50")}>
+                       <div className="flex justify-between items-center">
+                          <span className="flex items-center gap-2 text-sm font-medium">
                              <Sun className="h-4 w-4 text-amber-500" /> Brightness
-                             {brightnessPct !== originalValues.brightness && <Badge className="ml-2 bg-amber-500/10 text-amber-600 border-none text-[8px] h-4">Pending</Badge>}
                           </span>
-                          <div className="flex items-center gap-3">
-                             <span className="font-mono bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-md border border-amber-500/10">{brightnessPct}%</span>
-                             <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className={cn("h-6 w-6 rounded-md", !isBrightnessLocked && "bg-amber-500/10 text-amber-600")}
-                                onClick={() => setIsBrightnessLocked(!isBrightnessLocked)}
-                             >
-                                {isBrightnessLocked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-                             </Button>
-                          </div>
+                          <span className="font-mono text-sm font-semibold text-amber-600 bg-amber-500/10 px-2.5 py-1 rounded-lg">{brightnessPct}%</span>
                        </div>
-                       <Slider 
-                          value={[brightnessPct]} 
-                          max={100} 
-                          onValueChange={(v) => setBrightnessPct(v[0])} 
-                          className={cn("transition-opacity", isBrightnessLocked ? "opacity-40 pointer-events-none" : "cursor-pointer")} 
+                       <Slider
+                          value={[brightnessPct]}
+                          max={100}
+                          onValueChange={(v) => handleBrightnessChange(v[0])}
+                          disabled={isControlsLocked}
+                          className={cn(isControlsLocked ? "pointer-events-none" : "cursor-pointer")}
                        />
                     </div>
 
                     {/* Volume */}
-                    <div className="space-y-4">
-                       <div className="flex justify-between items-center text-[10px] font-bold tracking-widest text-muted-foreground">
-                          <span className="flex items-center gap-2">
+                    <div className={cn("space-y-3 transition-opacity", isControlsLocked && "opacity-50")}>
+                       <div className="flex justify-between items-center">
+                          <span className="flex items-center gap-2 text-sm font-medium">
                              <Volume2 className="h-4 w-4 text-blue-500" /> Volume
-                             {volumeLevel !== originalValues.volume && <Badge className="ml-2 bg-blue-500/10 text-blue-600 border-none text-[8px] h-4">Pending</Badge>}
                           </span>
-                          <div className="flex items-center gap-3">
-                             <span className="font-mono bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded-md border border-blue-500/10">{volumeLevel} / 15</span>
-                             <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className={cn("h-6 w-6 rounded-md", !isVolumeLocked && "bg-blue-500/10 text-blue-600")}
-                                onClick={() => setIsVolumeLocked(!isVolumeLocked)}
-                             >
-                                {isVolumeLocked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-                             </Button>
-                          </div>
+                          <span className="font-mono text-sm font-semibold text-blue-600 bg-blue-500/10 px-2.5 py-1 rounded-lg">{Math.round(volumeLevel / 15 * 100)}%</span>
                        </div>
-                       <Slider 
-                          value={[volumeLevel]} 
-                          max={15} 
-                          step={1} 
-                          onValueChange={(v) => setVolumeLevel(v[0])} 
-                          className={cn("transition-opacity", isVolumeLocked ? "opacity-40 pointer-events-none" : "cursor-pointer")} 
+                       <Slider
+                          value={[volumeLevel]}
+                          max={15}
+                          step={1}
+                          onValueChange={(v) => handleVolumeChange(v[0])}
+                          disabled={isControlsLocked}
+                          className={cn(isControlsLocked ? "pointer-events-none" : "cursor-pointer")}
                        />
                     </div>
 
-                    {/* Color Temp */}
-                    <div className="space-y-4">
-                       <div className="flex justify-between items-center text-[10px] font-bold tracking-widest text-muted-foreground">
-                          <span className="flex items-center gap-2">
-                             <ThermometerSnowflake className="h-4 w-4 text-emerald-500" /> Color Temp
-                             {colorTemp !== originalValues.colorTemp && <Badge className="ml-2 bg-emerald-500/10 text-emerald-600 border-none text-[8px] h-4">Pending</Badge>}
+                    {/* Color Temperature */}
+                    <div className={cn("space-y-3 transition-opacity", isControlsLocked && "opacity-50")}>
+                       <div className="flex justify-between items-center">
+                          <span className="flex items-center gap-2 text-sm font-medium">
+                             <ThermometerSnowflake className="h-4 w-4 text-emerald-500" /> Color temperature
                           </span>
-                          <div className="flex items-center gap-3">
-                             <span className="font-mono bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-md border border-emerald-500/10">{colorTemp}K</span>
-                             <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className={cn("h-6 w-6 rounded-md", !isColorTempLocked && "bg-emerald-500/10 text-emerald-600")}
-                                onClick={() => setIsColorTempLocked(!isColorTempLocked)}
-                             >
-                                {isColorTempLocked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-                             </Button>
-                          </div>
+                          <span className="font-mono text-sm font-semibold text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-lg">{colorTemp}K</span>
                        </div>
-                       <Slider 
-                          value={[colorTemp]} 
-                          min={2000} 
-                          max={10000} 
-                          step={100} 
-                          onValueChange={(v) => setColorTemp(v[0])} 
-                          className={cn("transition-opacity", isColorTempLocked ? "opacity-40 pointer-events-none" : "cursor-pointer")} 
+                       <Slider
+                          value={[colorTemp]}
+                          min={2000}
+                          max={10000}
+                          step={100}
+                          onValueChange={(v) => handleColorTempChange(v[0])}
+                          disabled={isControlsLocked}
+                          className={cn(isControlsLocked ? "pointer-events-none" : "cursor-pointer")}
                        />
                     </div>
                  </div>
-
-                 {hasChanges && (
-                   <div className="flex gap-2 animate-in slide-in-from-bottom-2 pb-2">
-                      <Button onClick={handleApplyChanges} className="flex-1 h-12 rounded-xl font-bold text-[10px] tracking-[0.2em] shadow-lg shadow-primary/20">Apply Changes</Button>
-                      <Button onClick={handleResetChanges} variant="outline" className="h-12 rounded-xl font-bold text-[10px] tracking-[0.2em]">Cancel</Button>
-                   </div>
-                 )}
               </CardContent>
            </Card>
         </div>
       </div>
 
-      {/* SECTION 3: SYSTEM OVERVIEW & NETWORK */}
+      {/* System Details */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
          {/* Hardware Information */}
          <div className="xl:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InfoGroup title="Device Information" icon={Layers}>
-               <InfoItem label="Device Name" value={device.deviceName} highlight />
-               <InfoItem label="Hardware Model" value={realProps.info?.info.model} />
-               <InfoItem label="System Uptime" value={formatUptime(realProps.info?.info.up || 0)} highlight />
-               <InfoItem label="Firmware Version" value={realProps.info?.info.vername} />
-               <InfoGroupSeparator />
+            <InfoGroup title="System" icon={Layers}>
+               <InfoItem label="Uptime" value={formatUptime(realProps.info?.info.up || 0)} highlight />
+               <InfoItem label="Firmware" value={realProps.info?.info.vername} />
                <InfoItem label="Orientation" value={realProps.screen_orientation?.orientation === 'landscape' ? 'Landscape' : 'Portrait'} />
-               <InfoItem label="Frame Rate" value={`${realProps.dimension?.fps} FPS`} />
             </InfoGroup>
             
-            <InfoGroup title="Network Status" icon={Network}>
+            <InfoGroup title="Network" icon={Network}>
                <Tabs defaultValue={activeInterface} className="w-full">
-                  <TabsList className="grid grid-cols-4 h-8 bg-muted/50 p-1 rounded-xl mb-6">
-                     <TabsTrigger value="eth" className="rounded-lg text-[9px] font-bold tracking-tighter data-[state=active]:bg-background data-[state=active]:shadow-sm">LAN</TabsTrigger>
-                     <TabsTrigger value="wifi" className="rounded-lg text-[9px] font-bold tracking-tighter data-[state=active]:bg-background data-[state=active]:shadow-sm">WiFi</TabsTrigger>
-                     <TabsTrigger value="ap" className="rounded-lg text-[9px] font-bold tracking-tighter data-[state=active]:bg-background data-[state=active]:shadow-sm">AP</TabsTrigger>
-                     <TabsTrigger value="4g" className="rounded-lg text-[9px] font-bold tracking-tighter data-[state=active]:bg-background data-[state=active]:shadow-sm">4G</TabsTrigger>
+                  <TabsList className="grid grid-cols-4 h-8 bg-muted/50 p-1 rounded-xl mb-4">
+                     <TabsTrigger value="eth" className="rounded-lg text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm">LAN</TabsTrigger>
+                     <TabsTrigger value="wifi" className="rounded-lg text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm">WiFi</TabsTrigger>
+                     <TabsTrigger value="ap" className="rounded-lg text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm">AP</TabsTrigger>
+                     <TabsTrigger value="4g" className="rounded-lg text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm">4G</TabsTrigger>
                   </TabsList>
 
-                                    {realProps.ifstatus?.types.map((iface) => {
+                  {realProps.ifstatus?.types.map((iface) => {
+                     const normalized = normalizeIfaceType(iface.type);
+                     return (
+                        <TabsContent key={iface.type} value={normalized} className="mt-0 focus-visible:ring-0">
+                           <div className="space-y-4">
+                              <div className="flex justify-between items-center mb-2">
+                                 <div className="flex items-center gap-2">
+                                    {normalized === 'eth' && <Cable className="h-3.5 w-3.5 text-primary" />}
+                                    {normalized === 'wifi' && <Wifi className="h-3.5 w-3.5 text-primary" />}
+                                    {normalized === 'ap' && <Share2 className="h-3.5 w-3.5 text-primary" />}
+                                    {normalized === '4g' && <Signal className="h-3.5 w-3.5 text-primary" />}
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                       {normalized === 'eth' ? 'Ethernet' : normalized === 'ap' ? 'Hotspot' : normalized.toUpperCase()}
+                                    </span>
+                                 </div>
+                                 <Badge variant="outline" className={cn(
+                                    "text-xs h-5 border-none",
+                                    iface.connected === 1 ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"
+                                 )}>
+                                    {iface.connected === 1 ? 'Connected' : 'Disconnected'}
+                                 </Badge>
+                              </div>
 
-                                       const normalized = normalizeIfaceType(iface.type);
+                              <div className="space-y-3">
+                                 {(iface.SSID || iface.currentap) && <InfoItem label="Network" value={iface.SSID || iface.currentap} fontMono highlight />}
+                                 {iface.ips?.ip && <InfoItem label="IP address" value={iface.ips.ip} fontMono highlight />}
+                                 {iface.ips?.gateway && <InfoItem label="Gateway" value={iface.ips.gateway} fontMono />}
+                                 <InfoItem label="MAC" value={iface.mac} fontMono />
+                                 {iface.speed !== undefined && iface.speed > 0 && <InfoItem label="Speed" value={`${iface.speed} Mbps`} />}
+                                 {iface.strength !== undefined && iface.strength !== null && <InfoItem label="Signal" value={`${iface.strength}%`} highlight />}
 
-                                       return (
+                                 {normalized === '4g' && realProps["4ginfo"] && (
+                                    <>
+                                       <Separator className="my-2 opacity-30" />
+                                       <InfoItem label="Carrier" value={realProps["4ginfo"]?.operator} />
+                                       <InfoItem label="Signal" value={`${realProps["4ginfo"]?.signal} dBm`} highlight />
+                                    </>
+                                 )}
 
-                                          <TabsContent key={iface.type} value={normalized} className="mt-0 focus-visible:ring-0">
-
-                                             <div className="space-y-4">
-
-                                                <div className="flex justify-between items-center mb-2">
-
-                                                   <div className="flex items-center gap-2">
-
-                                                      {normalized === 'eth' && <Cable className="h-3 w-3 text-primary" />}
-
-                                                      {normalized === 'wifi' && <Wifi className="h-3 w-3 text-primary" />}
-
-                                                      {normalized === 'ap' && <Share2 className="h-3 w-3 text-primary" />}
-
-                                                      {normalized === '4g' && <Signal className="h-3 w-3 text-primary" />}
-
-                                                      <span className="text-[10px] font-bold tracking-widest text-slate-500">
-
-                                                         {normalized === 'eth' ? 'Ethernet Port' : normalized === 'ap' ? 'WiFi Hotspot' : normalized.toUpperCase() + ' Module'}
-
-                                                      </span>
-
-                                                   </div>
-
-                                                   <Badge variant="outline" className={cn(
-
-                                                      "text-[8px] font-bold h-4 border-none",
-
-                                                      iface.connected === 1 ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"
-
-                                                   )}>
-
-                                                      {iface.connected === 1 ? 'ACTIVE' : 'INACTIVE'}
-
-                                                   </Badge>
-
-                                                </div>
-
-                  
-
-                                                <div className="space-y-3 pl-1">
-                                                   {(iface.SSID || iface.currentap) && <InfoItem label="Network Name" value={iface.SSID || iface.currentap} fontMono highlight />}
-                                                   {iface.ips?.ip && <InfoItem label="IPv4 Address" value={iface.ips.ip} fontMono highlight />}
-                                                   {iface.ips?.mask && <InfoItem label="Subnet Mask" value={iface.ips.mask} fontMono />}
-                                                   {iface.ips?.gateway && <InfoItem label="Gateway" value={iface.ips.gateway} fontMono />}
-                                                   <InfoItem label="MAC Address" value={iface.mac} fontMono />
-                                                   {iface.speed !== undefined && iface.speed > 0 && <InfoItem label="Link Speed" value={`${iface.speed} Mbps`} />}
-                                                   {iface.strength !== undefined && iface.strength !== null && <InfoItem label="Signal Strength" value={`${iface.strength}%`} highlight />}
-                                                   
-                                                   {normalized === '4g' && (
-                                                      <>
-                                                         <Separator className="my-2 opacity-30" />
-                                                         <InfoItem label="Operator" value={realProps["4ginfo"]?.operator} />
-                                                         <InfoItem label="RSSI" value={`${realProps["4ginfo"]?.signal} dBm`} highlight />
-                                                         <InfoItem label="Modem IMEI" value={realProps["4ginfo"]?.imei} fontMono />
-                                                      </>
-                                                   )}
-
-                                                   {iface.connected !== 1 && (
-                                                      <div className="pt-4 flex items-center gap-2 opacity-40">
-                                                         <div className="h-1 w-1 rounded-full bg-muted-foreground" />
-                                                         <p className="text-[8px] font-bold tracking-widest text-muted-foreground italic uppercase">
-                                                            Standby / Disconnected
-                                                         </p>
-                                                      </div>
-                                                   )}
-                                                </div>
-
-                                             </div>
-
-                                          </TabsContent>
-
-                                       );
-
-                                    })}
+                                 {iface.connected !== 1 && (
+                                    <p className="pt-2 text-xs text-muted-foreground">Not connected</p>
+                                 )}
+                              </div>
+                           </div>
+                        </TabsContent>
+                     );
+                  })}
                </Tabs>
             </InfoGroup>
          </div>
@@ -861,71 +813,62 @@ export default function DeviceDetailsPage() {
          {/* System Resources */}
          <Card className="xl:col-span-4 rounded-3xl border-none ring-1 ring-muted/60 bg-slate-50 dark:bg-slate-900/50 p-6 flex flex-col justify-between">
             <CardHeader className="p-0 pb-6">
-               <CardTitle className="text-[10px] font-bold tracking-[0.2em] text-slate-500 flex items-center gap-2">
-                  <Cpu className="h-4 w-4 text-primary" /> System Resources
+               <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                  <Cpu className="h-4 w-4 text-primary" /> Resources
                </CardTitle>
             </CardHeader>
-            <CardContent className="p-0 space-y-8 flex-1">
-               <ResourceProgress 
-                  label="Storage Space" 
-                  used={(realProps.info?.info?.storage?.total || 0) - (realProps.info?.info?.storage?.free || 0)} 
-                  total={realProps.info?.info?.storage?.total || 1} 
-                  unit="GB" 
+            <CardContent className="p-0 space-y-6 flex-1">
+               <ResourceProgress
+                  label="Storage"
+                  used={(realProps.info?.info?.storage?.total || 0) - (realProps.info?.info?.storage?.free || 0)}
+                  total={realProps.info?.info?.storage?.total || 1}
+                  unit="GB"
                   color="bg-emerald-500"
                />
-               <ResourceProgress 
-                  label="System Memory" 
-                  used={(realProps.info?.info?.mem?.total || 0) - (realProps.info?.info?.mem?.free || 0)} 
-                  total={realProps.info?.info?.mem?.total || 1} 
+               <ResourceProgress
+                  label="Memory"
+                  used={(realProps.info?.info?.mem?.total || 0) - (realProps.info?.info?.mem?.free || 0)}
+                  total={realProps.info?.info?.mem?.total || 1}
                   unit="MB"
                   color="bg-blue-500"
                />
-               <div className="pt-4 p-5 bg-card rounded-2xl border shadow-sm flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                     <Info className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                     <p className="text-[9px] font-bold text-muted-foreground ">Status Note</p>
-                     <p className="text-xs font-bold text-slate-700 dark:text-slate-300">All modules functioning within normal parameters.</p>
-                  </div>
-               </div>
             </CardContent>
          </Card>
       </div>
 
-      {/* SECTION 4: DEEP ASSETS & SYSTEM POLICIES */}
+      {/* Additional Details */}
       <Tabs defaultValue="assets" className="w-full">
          <TabsList className="bg-muted/40 p-1 rounded-2xl border h-11 mb-6 flex w-full md:w-auto overflow-x-auto scrollbar-none">
-            <TabsTrigger value="assets" className="rounded-xl flex-1 md:px-10 font-bold text-[10px] tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Asset Inventory</TabsTrigger>
-            <TabsTrigger value="operations" className="rounded-xl flex-1 md:px-10 font-bold text-[10px] tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Recent Operations</TabsTrigger>
-            <TabsTrigger value="schedule" className="rounded-xl flex-1 md:px-10 font-bold text-[10px] tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Schedule</TabsTrigger>
-            <TabsTrigger value="policy" className="rounded-xl flex-1 md:px-10 font-bold text-[10px] tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Device Policy</TabsTrigger>
+            <TabsTrigger value="assets" className="rounded-xl flex-1 md:px-8 text-sm data-[state=active]:bg-card data-[state=active]:shadow-md">Local assets</TabsTrigger>
+            <TabsTrigger value="operations" className="rounded-xl flex-1 md:px-8 text-sm data-[state=active]:bg-card data-[state=active]:shadow-md">Activity</TabsTrigger>
+            <TabsTrigger value="schedule" className="rounded-xl flex-1 md:px-8 text-sm data-[state=active]:bg-card data-[state=active]:shadow-md">Schedule</TabsTrigger>
+            <TabsTrigger value="policy" className="rounded-xl flex-1 md:px-8 text-sm data-[state=active]:bg-card data-[state=active]:shadow-md">Settings</TabsTrigger>
          </TabsList>
 
          <TabsContent value="operations" className="mt-0">
             <Card className="rounded-3xl border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
                <CardHeader className="px-8 py-6 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
                   <div className="space-y-1">
-                     <CardTitle className="text-lg font-bold tracking-tighter">Recent Operations</CardTitle>
-                     <CardDescription className="text-[10px] font-bold text-muted-foreground tracking-wider">Audit trail of commands dispatched to this device</CardDescription>
+                     <CardTitle className="text-lg font-semibold">Recent activity</CardTitle>
+                     <CardDescription className="text-sm text-muted-foreground">Actions sent to this device</CardDescription>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="rounded-xl font-bold text-xs gap-2"
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-xl text-sm gap-2"
                     onClick={() => navigate('/dashboard/logs', { state: { deviceId: device?.deviceId } })}
                   >
-                    <HistoryIcon className="h-4 w-4" /> Full Logs
+                    <HistoryIcon className="h-4 w-4" /> View all
                   </Button>
                </CardHeader>
-               <CardContent className="p-8">
+               <CardContent className="p-6">
                   <div className="space-y-3">
                      {recentOperations.length > 0 ? (
                         recentOperations.map((op) => (
-                           <div key={op.id} className="p-4 rounded-2xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-colors flex items-center justify-between group">
+                           <div key={op.id} className="p-4 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-colors flex items-center justify-between">
                               <div className="flex items-center gap-4">
                                  <div className={cn(
-                                    "h-10 w-10 rounded-xl flex items-center justify-center border shadow-sm",
+                                    "h-10 w-10 rounded-xl flex items-center justify-center border",
                                     op.status === 'SUCCESS' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
                                     op.status === 'FAILED' ? "bg-rose-500/10 text-rose-600 border-rose-500/20" :
                                     "bg-amber-500/10 text-amber-600 border-amber-500/20"
@@ -934,40 +877,31 @@ export default function DeviceDetailsPage() {
                                  </div>
                                  <div>
                                     <div className="flex items-center gap-2">
-                                       <span className="font-bold text-sm text-slate-800 dark:text-slate-100">{op.actionType}</span>
+                                       <span className="font-medium text-sm">{op.actionType}</span>
                                        <Badge variant="outline" className={cn(
-                                          "text-[8px] h-4 border-none px-1.5 font-bold",
+                                          "text-xs h-5 border-none",
                                           op.status === 'SUCCESS' ? "bg-emerald-500/10 text-emerald-600" :
                                           op.status === 'FAILED' ? "bg-rose-500/10 text-rose-600" :
                                           "bg-amber-500/10 text-amber-600"
                                        )}>
-                                          {op.status}
+                                          {op.status === 'SUCCESS' ? 'Done' : op.status === 'FAILED' ? 'Failed' : 'Pending'}
                                        </Badge>
                                     </div>
-                                    <p className="text-[10px] text-muted-foreground font-mono mt-0.5">ID: {op.logId}</p>
+                                    {op.errorMessage && (
+                                       <p className="text-xs text-rose-500 mt-1 max-w-[200px] truncate">{op.errorMessage}</p>
+                                    )}
                                  </div>
                               </div>
-                              
-                              <div className="flex items-center gap-8 text-right">
-                                 {op.errorMessage && (
-                                    <p className="text-[10px] text-rose-500 font-medium max-w-[200px] truncate">{op.errorMessage}</p>
-                                 )}
-                                 <div className="space-y-0.5">
-                                    <p className="text-[10px] font-bold text-slate-500">{op.createdAt ? formatRelative(op.createdAt) : 'N/A'}</p>
-                                    <button 
-                                       className="text-[10px] font-bold text-primary hover:underline"
-                                       onClick={() => navigate(`/dashboard/logs?tab=terminal&id=${op.id}`)}
-                                    >
-                                       View Details
-                                    </button>
-                                 </div>
+
+                              <div className="text-right">
+                                 <p className="text-xs text-muted-foreground">{op.createdAt ? formatRelative(op.createdAt) : ''}</p>
                               </div>
                            </div>
                         ))
                      ) : (
-                        <div className="py-20 flex flex-col items-center justify-center gap-4 text-muted-foreground opacity-30">
-                           <Activity className="h-12 w-12" />
-                           <p className="text-sm font-bold tracking-[0.2em]">No command history available</p>
+                        <div className="py-16 flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                           <Activity className="h-10 w-10 opacity-30" />
+                           <p className="text-sm">No recent activity</p>
                         </div>
                      )}
                   </div>
@@ -979,45 +913,42 @@ export default function DeviceDetailsPage() {
             <Card className="rounded-3xl border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
                <CardHeader className="px-8 py-6 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
                   <div className="space-y-1">
-                     <CardTitle className="text-lg font-bold tracking-tighter ">Media Cache</CardTitle>
-                     <CardDescription className="text-[10px] font-bold text-muted-foreground tracking-wider">Synchronized content stored in device local partitions</CardDescription>
+                     <CardTitle className="text-lg font-semibold">Local assets</CardTitle>
+                     <CardDescription className="text-sm text-muted-foreground">Content cached on this device</CardDescription>
                   </div>
                   <div className="relative">
                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                     <Input placeholder="Search cache..." className="pl-10 h-11 w-64 bg-muted/30 border-none rounded-xl text-xs font-bold" />
+                     <Input placeholder="Search..." className="pl-10 h-10 w-56 bg-muted/30 border-none rounded-xl text-sm" />
                   </div>
                </CardHeader>
                <CardContent className="p-0">
-                  <div className="grid grid-cols-12 px-8 py-5 bg-muted/20 text-[9px] font-bold text-slate-500 tracking-widest border-b">
-                     <div className="col-span-7">Resource Name</div>
-                     <div className="col-span-2 text-center">Category</div>
-                     <div className="col-span-3 text-right">Disk Size</div>
+                  <div className="grid grid-cols-12 px-8 py-4 bg-muted/20 text-xs font-medium text-muted-foreground border-b">
+                     <div className="col-span-7">Name</div>
+                     <div className="col-span-2 text-center">Type</div>
+                     <div className="col-span-3 text-right">Size</div>
                   </div>
-                  <div className="divide-y divide-muted/40 max-h-[600px] overflow-y-auto">
+                  <div className="divide-y divide-muted/40 max-h-[500px] overflow-y-auto">
                      {realProps.vsns?.contents && realProps.vsns.contents.length > 0 ? (
                         realProps.vsns.contents.map(group => group.content.map(vsn => (
-                           <div key={vsn.md5} className="grid grid-cols-12 px-8 py-6 items-center hover:bg-primary/[0.02] transition-colors group">
-                              <div className="col-span-7 flex items-center gap-5">
-                                 <div className="h-12 w-12 rounded-2xl bg-card border flex items-center justify-center text-muted-foreground shadow-sm group-hover:scale-105 transition-transform">
-                                    <FileText className="h-6 w-6" />
+                           <div key={vsn.md5} className="grid grid-cols-12 px-8 py-4 items-center hover:bg-muted/10 transition-colors">
+                              <div className="col-span-7 flex items-center gap-4">
+                                 <div className="h-10 w-10 rounded-xl bg-card border flex items-center justify-center text-muted-foreground">
+                                    <FileText className="h-5 w-5" />
                                  </div>
-                                 <div className="min-w-0 space-y-0.5">
-                                    <p className="font-bold text-sm tracking-tight text-slate-800 dark:text-slate-100">{vsn.name}</p>
-                                    <p className="text-[10px] font-mono text-muted-foreground opacity-40 truncate max-w-[400px]">{vsn.md5}</p>
-                                 </div>
+                                 <p className="font-medium text-sm truncate">{vsn.name}</p>
                               </div>
                               <div className="col-span-2 text-center">
-                                 <Badge variant="outline" className="text-[9px] font-bold rounded-lg border-none bg-indigo-500/10 text-indigo-600 px-3">{group.type}</Badge>
+                                 <Badge variant="outline" className="text-xs border-none bg-indigo-500/10 text-indigo-600">{group.type}</Badge>
                               </div>
                               <div className="col-span-3 text-right">
-                                 <p className="text-xs font-bold tabular-nums">{(vsn.size / 1024 / 1024).toFixed(1)} <span className="text-[10px] font-medium opacity-40 ml-1">MB</span></p>
+                                 <p className="text-sm tabular-nums">{(vsn.size / 1024 / 1024).toFixed(1)} MB</p>
                               </div>
                            </div>
                         )))
                      ) : (
-                        <div className="py-20 flex flex-col items-center justify-center gap-4 text-muted-foreground opacity-30">
-                           <Database className="h-12 w-12" />
-                           <p className="text-sm font-bold tracking-[0.2em]">No cached assets found</p>
+                        <div className="py-16 flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                           <Database className="h-10 w-10 opacity-30" />
+                           <p className="text-sm">No cached assets</p>
                         </div>
                      )}
                   </div>
@@ -1026,107 +957,101 @@ export default function DeviceDetailsPage() {
          </TabsContent>
 
          <TabsContent value="schedule" className="mt-0">
-            <Card className="rounded-[3rem] border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
-               <CardHeader className="px-10 py-8 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
+            <Card className="rounded-3xl border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
+               <CardHeader className="px-8 py-6 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
                   <div className="space-y-1">
-                     <CardTitle className="text-xl font-bold tracking-tight">Current Schedule</CardTitle>
-                     <CardDescription className="text-[10px] font-bold text-muted-foreground tracking-widest">Active schedule and program visibility rules</CardDescription>
+                     <CardTitle className="text-lg font-semibold">Schedule</CardTitle>
+                     <CardDescription className="text-sm text-muted-foreground">Programs assigned to this device</CardDescription>
                   </div>
-                  <div className="flex items-center gap-3">
-                     <Button 
-                        variant="outline" 
-                        className="h-10 rounded-xl font-bold text-xs gap-2 border-2"
+                  <div className="flex items-center gap-2">
+                     <Button
+                        variant="outline"
+                        className="h-10 rounded-xl text-sm gap-2"
                         onClick={() => queryClient.invalidateQueries({ queryKey: ['device-schedule', deviceId] })}
                      >
-                        <RefreshCw className="h-4 w-4" /> Sync Status
+                        <RefreshCw className="h-4 w-4" /> Refresh
                      </Button>
-                     <Button className="h-10 rounded-xl font-bold text-xs gap-2 bg-zinc-900 text-white px-6" onClick={() => navigate('/dashboard/schedule')}>
-                        Manage Schedules
+                     <Button className="h-10 rounded-xl text-sm gap-2" onClick={() => navigate('/dashboard/schedule')}>
+                        Manage
                      </Button>
                   </div>
                </CardHeader>
-               <CardContent className="p-10 space-y-10">
-                  {/* Schedule Binding Info */}
-                  <div className="flex flex-col md:flex-row gap-6">
-                     <div className="flex-1 p-8 rounded-[2rem] bg-muted/20 border-2 border-dashed border-muted flex flex-col gap-4">
-                        <p className="text-[10px] font-bold text-muted-foreground tracking-widest">Bound Schedule</p>
+               <CardContent className="p-6 space-y-6">
+                  {/* Schedule Info */}
+                  <div className="flex flex-col md:flex-row gap-4">
+                     <div className="flex-1 p-6 rounded-2xl bg-muted/20 border border-dashed border-muted/60">
+                        <p className="text-xs font-medium text-muted-foreground mb-3">Assigned schedule</p>
                         {deviceSchedule ? (
-                           <div className="flex items-center gap-4">
-                              <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20">
-                                 <CalendarDays className="h-6 w-6" />
+                           <div className="flex items-center gap-3">
+                              <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
+                                 <CalendarDays className="h-5 w-5" />
                               </div>
                               <div>
-                                 <h4 className="text-xl font-bold tracking-tighter">{deviceSchedule.name}</h4>
-                                 <p className="text-xs text-muted-foreground font-medium mt-1">
-                                    Status: <span className={cn("font-bold", deviceSchedule.enabled ? "text-emerald-600" : "text-amber-600")}>
-                                       {deviceSchedule.enabled ? 'Enabled' : 'Disabled'}
+                                 <h4 className="text-base font-semibold">{deviceSchedule.name}</h4>
+                                 <p className="text-xs text-muted-foreground mt-0.5">
+                                    <span className={cn(deviceSchedule.enabled ? "text-emerald-600" : "text-amber-600")}>
+                                       {deviceSchedule.enabled ? 'Active' : 'Paused'}
                                     </span>
                                  </p>
                               </div>
                            </div>
                         ) : (
-                           <div className="flex items-center gap-4 opacity-50">
-                              <div className="p-3 rounded-2xl bg-muted text-muted-foreground border">
-                                 <CalendarDays className="h-6 w-6" />
+                           <div className="flex items-center gap-3 opacity-50">
+                              <div className="p-2.5 rounded-xl bg-muted text-muted-foreground border">
+                                 <CalendarDays className="h-5 w-5" />
                               </div>
-                              <p className="text-sm font-bold">No schedule bound</p>
+                              <p className="text-sm">No schedule assigned</p>
                            </div>
                         )}
                      </div>
-                     <div className="md:w-64 p-8 rounded-[2rem] bg-muted/20 border-2 border-dashed border-muted flex flex-col justify-center gap-1">
-                        <p className="text-[10px] font-bold text-muted-foreground tracking-widest">Rule Summary</p>
-                        <div className="flex items-center justify-between mt-2">
-                           <span className="text-xs font-bold">Programs</span>
-                           <Badge variant="secondary" className="font-bold text-[10px]">
-                              {deviceSchedule?.contentsRules?.length || 0} Rules
-                           </Badge>
-                        </div>
-                        <div className="flex items-center justify-between">
-                           <span className="text-xs font-bold">Commands</span>
-                           <Badge variant="secondary" className="font-bold text-[10px]">
-                              {deviceSchedule?.commandRules?.length || 0} Actions
-                           </Badge>
+                     <div className="md:w-48 p-6 rounded-2xl bg-muted/20 border border-dashed border-muted/60">
+                        <p className="text-xs font-medium text-muted-foreground mb-3">Summary</p>
+                        <div className="space-y-2">
+                           <div className="flex items-center justify-between">
+                              <span className="text-sm">Programs</span>
+                              <Badge variant="secondary" className="text-xs">
+                                 {deviceSchedule?.contentsRules?.length || 0}
+                              </Badge>
+                           </div>
+                           <div className="flex items-center justify-between">
+                              <span className="text-sm">Actions</span>
+                              <Badge variant="secondary" className="text-xs">
+                                 {deviceSchedule?.commandRules?.length || 0}
+                              </Badge>
+                           </div>
                         </div>
                      </div>
                   </div>
 
-                  {/* Device Visibility (AllowList) */}
-                  <div className="space-y-6">
-                     <div className="flex items-center justify-between px-2">
-                        <h3 className="text-[11px] font-bold tracking-[0.2em] text-muted-foreground">Program Allowlist</h3>
-                        <div className="flex items-center gap-4 text-[9px] font-bold text-muted-foreground/40">
-                           <span className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-blue-500/20 border border-blue-500/40" /> From Schedule</span>
-                           <span className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-emerald-500/20 border border-emerald-500/40" /> Direct Publish</span>
-                        </div>
-                     </div>
-                     
-                     <div className="rounded-[2rem] border overflow-hidden">
+                  {/* Programs List */}
+                  <div className="space-y-4">
+                     <p className="text-xs font-medium text-muted-foreground">Published programs</p>
+                     <div className="rounded-xl border overflow-hidden">
                         <table className="w-full text-left border-collapse">
                            <thead>
-                              <tr className="bg-muted/30 border-b text-[9px] font-bold tracking-widest text-muted-foreground">
-                                 <th className="px-6 py-4">Release Program</th>
-                                 <th className="px-4 py-4 text-center">Version</th>
-                                 <th className="px-4 py-4">Source</th>
-                                 <th className="px-4 py-4">Status</th>
-                                 <th className="px-6 py-4 text-right">Progress</th>
+                              <tr className="bg-muted/30 border-b text-xs font-medium text-muted-foreground">
+                                 <th className="px-4 py-3">Program</th>
+                                 <th className="px-4 py-3 text-center">Version</th>
+                                 <th className="px-4 py-3">Status</th>
+                                 <th className="px-4 py-3 text-right">Progress</th>
                               </tr>
                            </thead>
                            <tbody className="divide-y">
                               {programAllowlist.length > 0 ? (
                                  programAllowlist.map((item: any) => (
-                                    <VisibilityRow 
+                                    <VisibilityRow
                                        key={`${item.programId}-${item.version}`}
-                                       name={item.programName} 
-                                       id={item.version} 
-                                       source={item.source} 
-                                       status={item.deploymentStatus || 'unknown'} 
-                                       progress={item.progress || (item.deploymentStatus === 'DOWNLOADED' ? 100 : 0)} 
+                                       name={item.programName}
+                                       id={item.version}
+                                       source={item.source}
+                                       status={item.deploymentStatus || 'unknown'}
+                                       progress={item.progress || (item.deploymentStatus === 'DOWNLOADED' ? 100 : 0)}
                                     />
                                  ))
                               ) : (
                                  <tr>
-                                    <td colSpan={5} className="py-12 text-center text-muted-foreground opacity-50">
-                                       <p className="text-xs font-bold">No programs currently assigned to this device</p>
+                                    <td colSpan={4} className="py-10 text-center text-muted-foreground">
+                                       <p className="text-sm">No programs assigned</p>
                                     </td>
                                  </tr>
                               )}
@@ -1141,43 +1066,41 @@ export default function DeviceDetailsPage() {
          <TabsContent value="policy" className="mt-0">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                <Card className="rounded-3xl border-none ring-1 ring-muted/60 shadow-sm overflow-hidden lg:col-span-1">
-                  <CardHeader className="bg-muted/5 border-b py-6 px-8">
-                     <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-3 text-slate-500">
-                        <Clock className="h-4 w-4 text-primary" /> System Clock
+                  <CardHeader className="bg-muted/5 border-b py-5 px-6">
+                     <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+                        <Clock className="h-4 w-4 text-primary" /> Time
                      </CardTitle>
                   </CardHeader>
-                  <CardContent className="p-10 space-y-10">
-                     <div className="bg-primary/5 p-8 rounded-[2.5rem] border border-primary/10 text-center shadow-inner ring-1 ring-primary/5">
-                        <p className="text-[10px] font-bold text-primary/60 tracking-[0.3em] mb-2">Current Time</p>
-                        <p className="text-6xl font-bold tracking-tighter text-primary tabular-nums drop-shadow-sm">{realProps.newrtc?.time?.split(' ')[1] || '--:--'}</p>
-                        <p className="text-xs font-bold text-muted-foreground mt-4 tracking-widest opacity-60">{realProps.newrtc?.time?.split(' ')[0] || '--'}</p>
+                  <CardContent className="p-6 space-y-6">
+                     <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10 text-center">
+                        <p className="text-xs text-primary/60 mb-2">Device time</p>
+                        <p className="text-4xl font-bold text-primary tabular-nums">{realProps.newrtc?.time?.split(' ')[1] || '--:--'}</p>
+                        <p className="text-sm text-muted-foreground mt-2">{realProps.newrtc?.time?.split(' ')[0] || '--'}</p>
                      </div>
-                     <div className="space-y-5 px-4">
+                     <div className="space-y-3">
                         <PolicyData label="Timezone" value={realProps.newrtc?.timezoneId} />
-                        <PolicyData label="Offset" value="GMT +8:00" />
-                        <PolicyData label="Time Server" value="pool.ntp.org" active />
                      </div>
                   </CardContent>
                </Card>
 
                <Card className="rounded-3xl border-none ring-1 ring-muted/60 shadow-sm overflow-hidden lg:col-span-2">
-                  <CardHeader className="bg-muted/5 border-b py-6 px-8">
-                     <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-3 text-slate-500">
-                        <ShieldCheck className="h-4 w-4 text-emerald-500" /> Security Settings
+                  <CardHeader className="bg-muted/5 border-b py-5 px-6">
+                     <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+                        <ShieldCheck className="h-4 w-4 text-emerald-500" /> Security
                      </CardTitle>
                   </CardHeader>
-                  <CardContent className="p-10 grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12">
-                     <PolicyItem label="Inbound Firewall" desc="Reject unauthorized socket handshakes" active={realProps.inboundfirewall?.status === 'on'} />
-                     <PolicyItem label="Auto Update" desc="Self-apply security patches automatically" active />
-                     <PolicyItem label="USB Access" desc="Allow media ingestion via physical ports" active={false} />
-                     <PolicyItem label="Sync Mode" desc="Multi-screen frame synchronization" active={realProps.sync_program_mode?.sync_program_ntp_enable === 1} />
+                  <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                     <PolicyItem label="Firewall" desc="Block unauthorized connections" active={realProps.inboundfirewall?.status === 'on'} />
+                     <PolicyItem label="Auto update" desc="Apply updates automatically" active />
+                     <PolicyItem label="USB access" desc="Allow content from USB" active={false} />
+                     <PolicyItem label="Multi-screen sync" desc="Synchronize with other devices" active={realProps.sync_program_mode?.sync_program_ntp_enable === 1} />
                   </CardContent>
                </Card>
             </div>
          </TabsContent>
       </Tabs>
 
-      {/* DANGEROUS ACTION CONFIRMATION */}
+      {/* Power Action Confirmation */}
       <Dialog open={confirmDialog.open} onOpenChange={(open) => !open && setConfirmDialog({ open: false, type: null })}>
         <DialogContent className="sm:max-w-[440px] rounded-[2.5rem] p-10 overflow-hidden border-none shadow-2xl ring-1 ring-muted/50">
           <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
@@ -1190,23 +1113,23 @@ export default function DeviceDetailsPage() {
              )}>
                 {confirmDialog.type === 'sleep' ? <Moon className="h-10 w-10" /> : <RotateCw className="h-10 w-10" />}
              </div>
-            <DialogTitle className="text-3xl font-bold tracking-tighter leading-none">
-               {confirmDialog.type === 'sleep' ? "Confirm Standby" : "Confirm Reboot"}
+            <DialogTitle className="text-2xl font-bold tracking-tight">
+               {confirmDialog.type === 'sleep' ? "Put device to sleep?" : "Restart device?"}
             </DialogTitle>
-            <DialogDescription className="text-sm font-bold leading-relaxed text-slate-500">
-               {confirmDialog.type === 'sleep' 
-                  ? "This will put the display into low-power standby mode. Content rendering will stop immediately." 
-                  : "This will force a full hardware power cycle. Terminal will be inaccessible for roughly 90 seconds."}
+            <DialogDescription className="text-sm leading-relaxed">
+               {confirmDialog.type === 'sleep'
+                  ? "The device will enter sleep mode. Content playback will stop until the device is woken up."
+                  : "The device will restart. It may be unavailable for about 90 seconds."}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-10 flex flex-col items-center gap-6 relative z-10">
-             <SlideToUnlock 
-                onUnlock={executeDangerousAction} 
-                label={confirmDialog.type === 'sleep' ? "Slide to suspend" : "Slide to hard reset"} 
+             <SlideToUnlock
+                onUnlock={executeDangerousAction}
+                label={confirmDialog.type === 'sleep' ? "Slide to confirm sleep" : "Slide to confirm restart"}
              />
-             <Button variant="ghost" className="font-bold text-[10px] tracking-widest text-muted-foreground/60 hover:text-foreground" onClick={() => setConfirmDialog({ open: false, type: null })}>
-                Abort Operation
+             <Button variant="ghost" className="text-sm text-muted-foreground hover:text-foreground" onClick={() => setConfirmDialog({ open: false, type: null })}>
+                Cancel
              </Button>
           </div>
         </DialogContent>
@@ -1265,11 +1188,11 @@ export default function DeviceDetailsPage() {
 
 function PolicyData({ label, value, active = false }: { label: string, value: any, active?: boolean }) {
   return (
-    <div className="flex justify-between items-center text-[10px] group">
-       <span className="font-bold text-muted-foreground tracking-widest group-hover:text-primary transition-colors">{label}</span>
+    <div className="flex justify-between items-center text-sm">
+       <span className="text-muted-foreground">{label}</span>
        <div className="flex items-center gap-2">
-          <span className="font-bold">{value}</span>
-          {active && <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />}
+          <span className="font-medium">{value || 'Not set'}</span>
+          {active && <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />}
        </div>
     </div>
   );
@@ -1277,14 +1200,14 @@ function PolicyData({ label, value, active = false }: { label: string, value: an
 
 function InfoGroup({ title, icon: Icon, children }: { title: string, icon: any, children: React.ReactNode }) {
   return (
-    <Card className="border-none shadow-sm bg-card rounded-[2rem] overflow-hidden ring-1 ring-muted/60">
-      <CardHeader className="py-5 border-b bg-muted/5 px-10">
-        <CardTitle className="text-[10px] font-bold tracking-[0.2em] flex items-center gap-3 text-slate-500">
+    <Card className="border-none shadow-sm bg-card rounded-2xl overflow-hidden ring-1 ring-muted/60">
+      <CardHeader className="py-4 border-b bg-muted/5 px-6">
+        <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
           <Icon className="h-4 w-4 text-primary" />
           {title}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-5 pt-8 pb-10 px-10">
+      <CardContent className="space-y-3 py-5 px-6">
         {children}
       </CardContent>
     </Card>
@@ -1293,18 +1216,18 @@ function InfoGroup({ title, icon: Icon, children }: { title: string, icon: any, 
 
 function InfoItem({ label, value, copyable = false, highlight = false, fontMono = false }: { label: string, value: any, copyable?: boolean, highlight?: boolean, fontMono?: boolean }) {
   return (
-    <div className="flex justify-between items-center gap-6 group/item">
-      <span className="text-muted-foreground font-bold text-[9px] tracking-[0.15em] shrink-0">{label}</span>
+    <div className="flex justify-between items-center gap-4 group/item">
+      <span className="text-sm text-muted-foreground shrink-0">{label}</span>
       <div className="flex items-center gap-2 min-w-0">
         <span className={cn(
-          "font-bold truncate text-xs tracking-tight", 
-          highlight ? "text-primary" : "text-slate-800 dark:text-slate-200",
-          fontMono && "font-mono normal-case tracking-tighter"
+          "font-medium truncate text-sm",
+          highlight ? "text-primary" : "",
+          fontMono && "font-mono"
         )}>
-          {value || "N/A"}
+          {value || "—"}
         </span>
         {copyable && value && (
-          <button onClick={() => { navigator.clipboard.writeText(String(value)); toast.info("Copied to clipboard"); }} 
+          <button onClick={() => { navigator.clipboard.writeText(String(value)); toast.info("Copied"); }}
             className="p-1 opacity-0 group-hover/item:opacity-100 hover:bg-muted rounded text-primary transition-all">
             <Copy className="h-3 w-3" />
           </button>
@@ -1315,19 +1238,17 @@ function InfoItem({ label, value, copyable = false, highlight = false, fontMono 
 }
 
 function InfoGroupSeparator() {
-  return <Separator className="my-3 opacity-30 border-dashed" />;
+  return <Separator className="my-2 opacity-30" />;
 }
 
 function PolicyItem({ label, desc, active, last = false }: { label: string, desc: string, active: boolean, last?: boolean }) {
   return (
-    <div className={cn("space-y-4", !last && "pb-6 border-b border-muted")}>
-       <div className="flex items-center justify-between">
-          <div className="space-y-1.5">
-             <p className="text-sm font-bold tracking-tight text-slate-800 dark:text-slate-200">{label}</p>
-             <p className="text-[10px] font-bold text-muted-foreground">{desc}</p>
-          </div>
-          <Switch checked={active} disabled={label.includes("OTA")} className="data-[state=checked]:bg-emerald-500" />
+    <div className="flex items-center justify-between py-2">
+       <div className="space-y-0.5">
+          <p className="text-sm font-medium">{label}</p>
+          <p className="text-xs text-muted-foreground">{desc}</p>
        </div>
+       <Switch checked={active} disabled className="data-[state=checked]:bg-emerald-500" />
     </div>
   );
 }
@@ -1339,49 +1260,40 @@ function ResourceProgress({ label, used, total, unit, color = "bg-primary" }: { 
   const formattedTotal = unit === 'GB' ? (total / (1024 ** 3)).toFixed(0) : (total / (1024 ** 2)).toFixed(0);
 
   return (
-    <div className="space-y-3">
-      <div className="flex justify-between items-end">
-        <span className="text-[10px] font-bold tracking-widest text-slate-500">{label}</span>
-        <span className={cn("font-mono font-bold text-xs", isHigh ? "text-rose-500" : "text-slate-700 dark:text-slate-300")}>{percentage.toFixed(0)}%</span>
+    <div className="space-y-2">
+      <div className="flex justify-between items-center">
+        <span className="text-sm text-muted-foreground">{label}</span>
+        <span className={cn("text-sm font-medium tabular-nums", isHigh ? "text-rose-500" : "")}>{percentage.toFixed(0)}%</span>
       </div>
       <div className="relative h-2 bg-muted rounded-full overflow-hidden">
-         <div className={cn("absolute inset-y-0 left-0 rounded-full transition-all duration-700 shadow-[0_0_8px_rgba(var(--primary),0.5)]", color, isHigh && "bg-rose-500")} style={{ width: `${percentage}%` }} />
+         <div className={cn("absolute inset-y-0 left-0 rounded-full transition-all duration-500", color, isHigh && "bg-rose-500")} style={{ width: `${percentage}%` }} />
       </div>
-      <div className="flex justify-between text-[9px] font-bold text-muted-foreground/60 tracking-tighter">
-        <span>Mapped: {formattedUsed} {unit}</span>
-        <span>Capacity: {formattedTotal} {unit}</span>
+      <div className="flex justify-between text-xs text-muted-foreground">
+        <span>{formattedUsed} {unit} used</span>
+        <span>{formattedTotal} {unit} total</span>
       </div>
     </div>
   );
 }
 
 function VisibilityRow({ name, id, source, status, progress }: { name: string, id: number, source: 'direct' | 'schedule', status: string, progress: number }) {
+   const statusLabel = status === 'DOWNLOADED' || status === 'downloaded' ? 'Ready' : status === 'DOWNLOADING' ? 'Downloading' : 'Pending';
    return (
-      <tr className="hover:bg-muted/5 transition-colors group">
-         <td className="px-6 py-4">
-            <div className="flex items-center gap-3">
-               <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center border shadow-sm", source === 'schedule' ? "bg-blue-500/5 text-blue-600 border-blue-500/10" : "bg-emerald-500/5 text-emerald-600 border-emerald-500/10")}>
-                  {source === 'schedule' ? <CalendarDays className="h-4 w-4" /> : <Send className="h-4 w-4" />}
-               </div>
-               <span className="text-xs font-bold tracking-tight">{name}</span>
-            </div>
+      <tr className="hover:bg-muted/5 transition-colors">
+         <td className="px-4 py-3">
+            <span className="text-sm font-medium">{name}</span>
          </td>
-         <td className="px-4 py-4 text-center">
-            <code className="text-[10px] font-mono font-bold bg-muted px-1.5 py-0.5 rounded">{id}</code>
+         <td className="px-4 py-3 text-center">
+            <code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">{id}</code>
          </td>
-         <td className="px-4 py-4">
-            <Badge variant="outline" className={cn("text-[9px] font-bold tracking-widest border-none", source === 'schedule' ? "bg-blue-500/10 text-blue-600" : "bg-emerald-500/10 text-emerald-600")}>
-               {source}
-            </Badge>
-         </td>
-         <td className="px-4 py-4">
+         <td className="px-4 py-3">
             <div className="flex items-center gap-2">
-               <div className={cn("h-1.5 w-1.5 rounded-full", status === 'downloaded' ? "bg-emerald-500" : "bg-amber-500 animate-pulse")} />
-               <span className="text-[10px] font-bold tracking-widest text-muted-foreground">{status}</span>
+               <div className={cn("h-1.5 w-1.5 rounded-full", statusLabel === 'Ready' ? "bg-emerald-500" : "bg-amber-500 animate-pulse")} />
+               <span className="text-xs text-muted-foreground">{statusLabel}</span>
             </div>
          </td>
-         <td className="px-6 py-4 text-right">
-            <span className="text-xs font-bold tabular-nums">{progress}%</span>
+         <td className="px-4 py-3 text-right">
+            <span className="text-sm tabular-nums">{progress}%</span>
          </td>
       </tr>
    );
