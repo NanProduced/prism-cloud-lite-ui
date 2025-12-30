@@ -402,6 +402,7 @@ export default function DevicesPage() {
           <DeviceTable
             devices={fullDevices.length > 0 ? fullDevices : devices}
             customFieldDefs={customFieldDefs}
+            tags={tags}
             isProActive={isProActive}
             selectedDeviceIds={selectedDeviceIds}
             pulsingDeviceIds={pulsingDeviceIds}
@@ -411,6 +412,8 @@ export default function DevicesPage() {
             onCustomFieldCreate={addCustomFieldDef}
             onCustomFieldDelete={deleteCustomFieldDef}
             onCustomFieldValueChange={updateDeviceCustomFieldValue}
+            onToggleDeviceTag={toggleDeviceTag}
+            onCreateTag={createTag}
           />
         )
       ) : (

@@ -7,12 +7,13 @@ import type {
   Column,
 } from '@1771technologies/lytenyte-core/types';
 import { measureText } from '@1771technologies/lytenyte-shared';
-import { type Device, resolveDeviceStatus } from '@/types/device';
+import { type Device, type Tag, resolveDeviceStatus } from '@/types/device';
 import type { DeviceCustomFieldDef, DeviceCustomFieldValue } from '@/types/device-custom-field';
 import { DeviceStatusBadge } from '@/components/devices/DeviceStatusBadge';
 import { DeviceScreenshot } from '@/components/devices/DeviceScreenshot';
 import { Badge } from '@/components/ui/badge';
 import { TagChip } from '@/components/devices/TagChip';
+import { TagPicker } from '@/components/devices/TagPicker';
 import { getTagPresetClassName, hexToRgba, isHexColor } from '@/components/devices/tagging';
 import { DeviceGridToolbar } from './DeviceGridToolbar';
 import { DeviceGridFloatingFilterCell } from './DeviceGridFloatingFilterCell';
@@ -29,10 +30,12 @@ import { cn } from '@/lib/utils';
 import { CountryFlag } from '@/components/ui/country-flag';
 import { UrlGlimpseLink } from './UrlGlimpseLink';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
+import { Plus } from 'lucide-react';
 
 interface DeviceTableProps {
   devices: Device[];
   customFieldDefs: DeviceCustomFieldDef[];
+  tags: Tag[];
   isProActive: boolean;
   selectedDeviceIds: Set<string>;
   pulsingDeviceIds?: Set<string>;
@@ -43,6 +46,8 @@ interface DeviceTableProps {
   onCustomFieldCreate: (def: DeviceCustomFieldDef) => void;
   onCustomFieldDelete: (fieldId: number) => void;
   onCustomFieldValueChange: (deviceId: string, fieldId: number, value: DeviceCustomFieldValue) => void;   
+  onToggleDeviceTag: (deviceId: string, tag: Tag) => void;
+  onCreateTag: (draft: { name: string; color: string; icon?: string }) => Tag;
 }
 
 function CustomFieldOptionChip({
@@ -86,6 +91,7 @@ function CustomFieldOptionChip({
 export function DeviceTable({
   devices,
   customFieldDefs,
+  tags,
   isProActive,
   selectedDeviceIds,
   pulsingDeviceIds,
@@ -96,6 +102,8 @@ export function DeviceTable({
   onCustomFieldDelete,
   onCustomFieldValueChange,
   onBatchCommand,
+  onToggleDeviceTag,
+  onCreateTag,
 }: DeviceTableProps) {
   const gridId = useId();
   const navigate = useNavigate();
@@ -588,7 +596,10 @@ export function DeviceTable({
           return <span className="text-sm font-medium">{value.toFixed(0)}%</span>;
         }
         if (!row.data) return null;
+        
         const brightness = row.data.brightness;
+        if (brightness === null || brightness === undefined) return <span className="text-muted-foreground">—</span>;
+
         let barColor = 'bg-blue-500';
         let labelColor = 'text-gray-600';
         if (brightness < 20) {
@@ -616,10 +627,11 @@ export function DeviceTable({
       type: 'number',
       width: 220,
       field: ({ data }) => {
-        if (data.kind !== 'leaf' || !data.data) return 0;
+        if (data.kind !== 'leaf' || !data.data) return null;
         const d = data.data;
+        if (!d.totalStorage) return null;
         const storageUsed = d.totalStorage - d.freeStorage;
-        return d.totalStorage ? (storageUsed / d.totalStorage) * 100 : 0;
+        return (storageUsed / d.totalStorage) * 100;
       },
       floatingCellRenderer: DeviceGridFloatingFilterCell,
       uiHints: {
@@ -637,6 +649,8 @@ export function DeviceTable({
           return <span className="text-sm font-medium">{value.toFixed(0)}%</span>;
         }
         if (!row.data) return null;
+
+        if (!row.data.totalStorage) return <span className="text-muted-foreground">—</span>;
 
         const storageUsed = row.data.totalStorage - row.data.freeStorage;
         const used = (storageUsed / (1024 ** 3)).toFixed(1);
@@ -724,19 +738,45 @@ export function DeviceTable({
       },
       cellRenderer: ({ row, grid }: CellRendererParams<Device>) => {
         if (grid.api.rowIsGroup(row) || !row.data) return null;
-        const tags = row.data.tags;
-        if (tags.length === 0) return null;
+        const device = row.data;
+        const tagsList = device.tags || [];
+        const displayedTags = tagsList.slice(0, 3);
+        const remainingTagCount = Math.max(0, tagsList.length - displayedTags.length);
+
         return (
-          <div className="flex flex-wrap gap-1">
-            {tags.slice(0, 3).map((tag) => (
-              <TagChip key={tag.tagSlug} tag={tag} />
-            ))}
-            {tags.length > 3 && (
-              <Badge variant="outline" className="text-xs">
-                +{tags.length - 3}
-              </Badge>
-            )}
-          </div>
+          <TagPicker
+            allTags={tags}
+            selectedTagIds={tagsList.map((t) => t.tagSlug)}
+            onToggleTag={(tag) => onToggleDeviceTag(String(device.deviceId), tag)}
+            onCreateTag={onCreateTag}
+          >
+            <button
+              type="button"
+              className={cn(
+                'w-full h-full flex items-center gap-1.5 rounded-md px-1 text-left transition-colors hover:bg-muted/50 group/tag-trigger',
+                tagsList.length === 0 && 'text-muted-foreground',
+              )}
+              aria-label="Edit tags"
+            >
+              <div className="flex flex-wrap gap-1 min-w-0 flex-1">
+                {displayedTags.length > 0 ? (
+                  <>
+                    {displayedTags.map((tag) => (
+                      <TagChip key={tag.tagSlug} tag={tag} className="max-w-[120px]" />
+                    ))}
+                    {remainingTagCount > 0 && (
+                      <Badge variant="outline" className="text-xs h-5 px-1 font-normal">
+                        +{remainingTagCount}
+                      </Badge>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-[11px] opacity-0 group-hover/tag-trigger:opacity-100 transition-opacity">Add tags...</span>
+                )}
+              </div>
+              <Plus className="h-3 w-3 text-muted-foreground shrink-0 opacity-0 group-hover/tag-trigger:opacity-100" />
+            </button>
+          </TagPicker>
         );
       },
     },

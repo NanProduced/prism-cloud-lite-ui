@@ -127,7 +127,7 @@ export function TagPicker({
                 onValueChange={setQuery}
               />
               <CommandList className="max-h-72">
-                <CommandGroup heading={filteredTags.length > 0 ? 'Available' : undefined}>
+                <CommandGroup heading={(filteredTags?.length || 0) > 0 ? 'Available' : undefined}>
                   {canCreate && (
                     <CommandItem
                       value={`create-${normalizedQuery}`}
@@ -146,8 +146,8 @@ export function TagPicker({
                     </CommandItem>
                   )}
 
-                      {filteredTags.map((tag) => {
-                    const selected = selectedTagIds.includes(tag.tagSlug);
+                  {filteredTags?.map((tag) => {
+                    const selected = selectedTagIds?.includes(tag.tagSlug);
                     return (
                       <CommandItem
                         key={tag.tagSlug}
@@ -168,7 +168,7 @@ export function TagPicker({
                     );
                   })}
 
-                  {filteredTags.length === 0 && !canCreate && (
+                  {(filteredTags?.length || 0) === 0 && !canCreate && (
                     <div className="px-3 py-6 text-center text-sm text-muted-foreground">
                       No tags found
                     </div>
