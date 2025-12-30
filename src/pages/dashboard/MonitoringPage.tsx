@@ -30,9 +30,11 @@ import type { RealtimeMetric, SSEState } from './monitoring/types';
 import { type MonitoringTab } from './monitoring/constants';
 import { DeviceSensorTab, M2SensorTab, ReceiveCardTab } from './monitoring/components';
 import { useMonitoringSSE } from '@/hooks/use-monitoring-sse';
+import { useTimeFormatter } from '@/hooks/use-time-formatter';
 
 export default function MonitoringPage() {
   const queryClient = useQueryClient();
+  const { formatDateTime } = useTimeFormatter();
 
   // Selection & Filters - 单设备模式，使用 number 类型（契约要求）
   const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
@@ -113,7 +115,7 @@ export default function MonitoringPage() {
   if (isDevicesLoading) {
     return (
       <div className="flex h-[70vh] items-center justify-center text-muted-foreground font-semibold tracking-wider text-xs">
-        Initializing Fleet Monitoring...
+        Initializing Device Monitoring...
       </div>
     );
   }
@@ -133,7 +135,7 @@ export default function MonitoringPage() {
             onClick={() => queryClient.invalidateQueries({ queryKey: ['devices'] })}
           >
             <RefreshCw className="h-3 w-3" />
-            Refresh Fleet
+            Refresh Device
           </Button>
         </div>
 
@@ -164,7 +166,7 @@ export default function MonitoringPage() {
       </div>
 
       <div className="flex flex-1 min-h-[calc(100vh-11rem)] gap-4 overflow-hidden">
-        {/* LEFT: FLEET NAVIGATOR */}
+        {/* Device: Device NAVIGATOR */}
         <Card className="flex w-[280px] flex-col overflow-hidden border bg-card shadow-sm shrink-0">
           <div className="p-3 space-y-3 border-b bg-muted/30">
             <div className="relative group">
@@ -178,7 +180,7 @@ export default function MonitoringPage() {
             </div>
             <div className="flex items-center justify-between px-1">
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Fleet ({devices.length})
+                Device ({devices.length})
               </span>
               {/* 单选模式：显示当前选中状态 */}
               {selectedDeviceId !== null && (
@@ -300,7 +302,7 @@ export default function MonitoringPage() {
                   <span className="flex items-center gap-1.5">
                     <Clock className="h-3 w-3" /> Latest:{' '}
                     {sseState.lastUpdate > 0
-                      ? new Date(sseState.lastUpdate).toLocaleTimeString()
+                      ? formatDateTime(sseState.lastUpdate)
                       : '—'}
                   </span>
                 </div>

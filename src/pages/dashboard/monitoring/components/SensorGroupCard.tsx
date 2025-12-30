@@ -282,6 +282,7 @@ function SensorDisplay({
   getLatestValue,
   getAlertStatus,
 }: SensorDisplayProps) {
+  const { formatDateTime } = useTimeFormatter();
   // Get primary sensor for display
   const primarySensor = sensors[0];
   const latest = primarySensor ? getLatestValue(primarySensor.reportType) : null;
@@ -322,7 +323,7 @@ function SensorDisplay({
         </div>
         {latest && (
           <span className="text-[9px] font-mono text-muted-foreground">
-            {new Date(latest.at).toLocaleTimeString()}
+            {formatDateTime(latest.at)}
           </span>
         )}
       </div>
