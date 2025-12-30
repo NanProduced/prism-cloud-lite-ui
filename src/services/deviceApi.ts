@@ -132,6 +132,69 @@ export async function updateDeviceCustomFieldValues(
 }
 
 /**
+ * Tag Management
+ */
+
+/**
+ * Get all available tags for the current user
+ */
+export async function getTags(): Promise<BffResponse<Tag[]>> {
+  return handleRequest<Tag[]>(
+    apiClient.get('/devices/tags')
+  );
+}
+
+/**
+ * Create a new tag
+ */
+export async function createTag(data: Partial<Tag>): Promise<BffResponse<Tag>> {
+  return handleRequest<Tag>(
+    apiClient.post('/devices/tags', data)
+  );
+}
+
+/**
+ * Update an existing tag definition
+ */
+export async function updateTag(slug: string, data: Partial<Tag>): Promise<BffResponse<Tag>> {
+  return handleRequest<Tag>(
+    apiClient.post(`/devices/tags/${slug}`, data)
+  );
+}
+
+/**
+ * Delete a tag definition
+ */
+export async function deleteTag(slug: string): Promise<BffResponse<void>> {
+  return handleRequest<void>(
+    apiClient.post(`/devices/tags/${slug}/delete`)
+  );
+}
+
+/**
+ * Get tags for a specific device
+ */
+export async function getDeviceTags(deviceId: number | string): Promise<BffResponse<Tag[]>> {
+  return handleRequest<Tag[]>(
+    apiClient.get(`/devices/${deviceId}/tags`)
+  );
+}
+
+/**
+ * Update tags for a specific device (full replacement)
+ * @param deviceId The backend device ID
+ * @param tags Array of tag slugs
+ */
+export async function updateDeviceTags(
+  deviceId: number | string,
+  tags: string[]
+): Promise<BffResponse<Tag[]>> {
+  return handleRequest<Tag[]>(
+    apiClient.post(`/devices/${deviceId}/tags`, { tags })
+  );
+}
+
+/**
  * Execute action on a single device
  */
 export async function executeDeviceAction(

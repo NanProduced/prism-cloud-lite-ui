@@ -7,7 +7,11 @@ import {
   getCustomFieldDefs, 
   createCustomFieldDef, 
   deleteCustomFieldDef, 
-  updateDeviceCustomFieldValues 
+  updateDeviceCustomFieldValues,
+  updateCustomFieldDef,
+  getTags,
+  createTag as apiCreateTag,
+  updateDeviceTags
 } from '@/services/deviceApi';
 import { type Device, type Tag, resolveDeviceStatus } from '@/types/device';
 import type { DeviceCustomFieldDef, DeviceCustomFieldValue } from '@/types/device-custom-field';
@@ -38,8 +42,14 @@ export default function DevicesPage() {
     queryFn: () => getCustomFieldDefs(),
   });
 
+  const { data: tagsResponse, isLoading: isTagsLoading } = useQuery({
+    queryKey: ['tags'],
+    queryFn: () => getTags(),
+  });
+
   const devices = useMemo(() => bffResponse?.data || [], [bffResponse]);
   const customFieldDefs = useMemo(() => cfResponse?.data || [], [cfResponse]);
+  const tags = useMemo(() => tagsResponse?.data || [], [tagsResponse]);
 
   // Determine if Pro features are active based on actual subscription
   const isProActive = useMemo(() => {
@@ -78,6 +88,25 @@ export default function DevicesPage() {
     mutationFn: (def: DeviceCustomFieldDef) => updateCustomFieldDef(def.fieldId, def),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['device-custom-fields'] });
+    }
+  });
+
+  // Mutations for Tags
+  const createTagMutation = useMutation({
+    mutationFn: (draft: Partial<Tag>) => apiCreateTag(draft),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
+      toast('Success', { description: 'Tag created' });
+    }
+  });
+
+  const toggleTagMutation = useMutation({
+    mutationFn: ({ deviceId, tags }: { deviceId: string; tags: string[] }) => updateDeviceTags(deviceId, tags),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
+    },
+    onError: (error: any) => {
+      toast('Update failed', { description: error.message || 'Failed to update tags' });
     }
   });
 
@@ -127,7 +156,6 @@ export default function DevicesPage() {
     };
   }, [queryClient]);
 
-  const [tags, setTags] = useState<Tag[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const stored = window.localStorage.getItem('devices.viewMode') as ViewMode | null;
     return stored ?? 'card';
@@ -146,37 +174,33 @@ export default function DevicesPage() {
     return window.localStorage.getItem('devices.gridConfirmDismissed') === 'true';
   });
 
-  // Extract all unique tags from devices
-  useEffect(() => {
-    if (devices.length > 0) {
-      const allTags = new Map<string, Tag>();
-      devices.forEach(d => {
-        d.tags?.forEach(t => {
-          allTags.set(t.tagSlug, t);
-        });
-      });
-      setTags(Array.from(allTags.values()));
-    }
-  }, [devices]);
-
   useEffect(() => {
     window.localStorage.setItem('devices.viewMode', viewMode);
   }, [viewMode]);
 
-  const createTag = (draft: { name: string; color: string; icon?: string }): Tag => {
-    const newTag: Tag = {
+  const createTag = async (draft: { name: string; color: string; icon?: string }): Promise<Tag> => {
+    const response = await createTagMutation.mutateAsync({
       tagName: draft.name.trim(),
-      tagSlug: slugify(draft.name.trim()),
       color: draft.color,
       icon: draft.icon,
-    };
-    setTags((prev) => [newTag, ...prev]);
-    return newTag;
+    });
+    return response.data;
   };
 
   const toggleDeviceTag = (deviceId: string, tag: Tag) => {
-    // This now only affects local state or would need an API call
-    console.log('Toggle tag', deviceId, tag);
+    const device = devices.find(d => String(d.deviceId) === deviceId);
+    if (!device) return;
+
+    const currentTagSlugs = (device.tags || []).map(t => t.tagSlug);
+    let nextTagSlugs: string[];
+
+    if (currentTagSlugs.includes(tag.tagSlug)) {
+      nextTagSlugs = currentTagSlugs.filter(slug => slug !== tag.tagSlug);
+    } else {
+      nextTagSlugs = [...currentTagSlugs, tag.tagSlug];
+    }
+
+    toggleTagMutation.mutate({ deviceId, tags: nextTagSlugs });
   };
 
   const updateDeviceCustomFieldValue = (deviceId: string, fieldId: number, value: DeviceCustomFieldValue) => {
@@ -258,7 +282,7 @@ export default function DevicesPage() {
     setViewMode('grid');
   };
 
-  if (isDevicesLoading || isCfLoading) {
+  if (isDevicesLoading || isCfLoading || isTagsLoading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

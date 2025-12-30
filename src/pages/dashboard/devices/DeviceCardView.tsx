@@ -28,7 +28,7 @@ interface DeviceCardViewProps {
   pulsingDeviceIds?: Set<string>;
   onSelectionChange: (ids: Set<string>) => void;
   onToggleDeviceTag: (deviceId: string, tag: Tag) => void;
-  onCreateTag: (draft: { name: string; color: string; icon?: string }) => Tag;
+  onCreateTag: (draft: { name: string; color: string; icon?: string }) => Promise<Tag>;
 }
 
 export function DeviceCardView({
@@ -95,7 +95,7 @@ function DeviceCard({
   isPulsing?: boolean;
   onToggleSelection: () => void;
   onToggleDeviceTag: (deviceId: string, tag: Tag) => void;
-  onCreateTag: (draft: { name: string; color: string; icon?: string }) => Tag;
+  onCreateTag: (draft: { name: string; color: string; icon?: string }) => Promise<Tag>;
   onNavigate: () => void;
   formatRelative: (d: string) => string;
 }) {

@@ -20,7 +20,7 @@ interface TagPickerProps {
   allTags: Tag[];
   selectedTagIds: string[];
   onToggleTag: (tag: Tag) => void;
-  onCreateTag: (draft: CreateTagDraft) => Tag;
+  onCreateTag: (draft: CreateTagDraft) => Promise<Tag>;
   children: ReactNode;
 }
 
@@ -34,6 +34,7 @@ export function TagPicker({
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'select' | 'create'>('select');
   const [query, setQuery] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
 
   const [draftName, setDraftName] = useState('');
   const [draftIcon, setDraftIcon] = useState<string | undefined>(undefined);
@@ -63,6 +64,7 @@ export function TagPicker({
     setDraftName('');
     setDraftIcon(undefined);
     setDraftColor('slate');
+    setIsCreating(false);
   };
 
   const startCreate = (name: string) => {
@@ -72,17 +74,25 @@ export function TagPicker({
     setDraftColor('slate');
   };
 
-  const commitCreate = () => {
+  const commitCreate = async () => {
     const name = draftName.trim();
-    if (!name) return;
-    const created = onCreateTag({
-      name,
-      color: draftColor,
-      icon: draftIcon,
-    });
-    onToggleTag(created);
-    setOpen(false);
-    reset();
+    if (!name || isCreating) return;
+    
+    setIsCreating(true);
+    try {
+      const created = await onCreateTag({
+        name,
+        color: draftColor,
+        icon: draftIcon,
+      });
+      onToggleTag(created);
+      setOpen(false);
+      reset();
+    } catch (err) {
+      // Error handling is usually managed by the parent's toast
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleOpenChange = (next: boolean) => {

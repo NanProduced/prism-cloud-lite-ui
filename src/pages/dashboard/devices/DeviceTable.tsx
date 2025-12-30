@@ -47,7 +47,7 @@ interface DeviceTableProps {
   onCustomFieldDelete: (fieldId: number) => void;
   onCustomFieldValueChange: (deviceId: string, fieldId: number, value: DeviceCustomFieldValue) => void;   
   onToggleDeviceTag: (deviceId: string, tag: Tag) => void;
-  onCreateTag: (draft: { name: string; color: string; icon?: string }) => Tag;
+  onCreateTag: (draft: { name: string; color: string; icon?: string }) => Promise<Tag>;
 }
 
 function CustomFieldOptionChip({
