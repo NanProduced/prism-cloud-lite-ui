@@ -47,7 +47,7 @@ export function OverviewTab({ from, to, tz, bucket, className }: OverviewTabProp
     const buckets = activeCountRes?.data || [];
     if (buckets.length === 0) return 0;
     // Use the last bucket as current active count indicator
-    return buckets[buckets.length - 1].activeCount || 0;
+    return buckets[buckets.length - 1].activeDevices || 0;
   }, [activeCountRes]);
 
   // 3. Concurrency (Peak/Avg)
@@ -122,7 +122,7 @@ export function OverviewTab({ from, to, tz, bucket, className }: OverviewTabProp
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Air Time</p>
                 <p className="text-2xl font-bold tracking-tighter tabular-nums">
-                  {formatDuration(playbackOverview?.totalSeconds || 0)}
+                  {formatDuration(playbackOverview?.programTotal?.playSeconds || 0)}
                 </p>
               </div>
             </div>
@@ -140,7 +140,7 @@ export function OverviewTab({ from, to, tz, bucket, className }: OverviewTabProp
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Plays</p>
                 <p className="text-2xl font-bold tracking-tighter tabular-nums">
-                  {(playbackOverview?.totalCount || 0).toLocaleString()}
+                  {(playbackOverview?.programTotal?.playCount || 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -165,11 +165,11 @@ export function OverviewTab({ from, to, tz, bucket, className }: OverviewTabProp
             ) : (
               <PlaybackTopTable 
                 data={playbackOverview?.topPrograms.map(p => ({
-                  id: p.id,
-                  name: p.name,
+                  id: p.lan ? (p.lanProgramId || '') : p.programId!,
+                  name: p.programName,
                   playCount: p.playCount,
                   playSeconds: p.playSeconds,
-                  version: p.version
+                  version: p.releaseVersion?.toString()
                 })) || []} 
                 type="program" 
                 className="border-0 rounded-none h-[400px]"
@@ -193,8 +193,8 @@ export function OverviewTab({ from, to, tz, bucket, className }: OverviewTabProp
             ) : (
               <PlaybackTopTable 
                 data={playbackOverview?.topMedia.map(m => ({
-                  id: m.id,
-                  name: m.name,
+                  id: m.mediaId,
+                  name: m.mediaTitle || 'Unknown Media',
                   playCount: m.playCount,
                   playSeconds: m.playSeconds
                 })) || []} 

@@ -114,19 +114,54 @@ export interface PlaybackOverviewParams {
   sort?: 'playSeconds' | 'playCount';
 }
 
-export interface PlaybackSummaryItem {
-  id: string;
-  name: string;
+export interface PlaybackTotals {
   playCount: number;
   playSeconds: number;
-  version?: string;
+  deviceCount: number;
+}
+
+export interface ProgramPlaySummaryItem {
+  lan: boolean;
+  programId?: string;
+  releaseVersion?: number;
+  lanProgramId?: string;
+  programName: string;
+  playCount: number;
+  playSeconds: number;
+  deviceCount: number;
+}
+
+export interface MediaPlaySummaryItem {
+  mediaId: string;
+  mediaTitle: string;
+  itemType?: string;
+  playCount: number;
+  playSeconds: number;
+  deviceCount: number;
+  lastPlayedAt?: string;
 }
 
 export interface PlaybackOverviewResponse {
-  totalCount: number;
-  totalSeconds: number;
-  topPrograms: PlaybackSummaryItem[];
-  topMedia: PlaybackSummaryItem[];
+  programTotal: PlaybackTotals;
+  mediaTotal: PlaybackTotals;
+  topPrograms: ProgramPlaySummaryItem[];
+  topMedia: MediaPlaySummaryItem[];
+}
+
+export interface PlaybackBucketData {
+  bucketStart: string;
+  bucketEnd: string;
+  bucketSeconds: number;
+  playCount: number;
+  playSeconds: number;
+  deviceCount: number;
+}
+
+export interface DevicePlaySummaryItem {
+  deviceId: string | number;
+  playCount: number;
+  playSeconds: number;
+  lastPlayedAt: string;
 }
 
 export const getPlaybackOverview = (params: PlaybackOverviewParams) =>
@@ -142,212 +177,71 @@ export interface PlaybackSummaryParams {
   sort?: 'playSeconds' | 'playCount';
 }
 
-export interface ProgramSummaryItem {
-  programId: string;
-  name: string;
-  version: string;
-  playCount: number;
-  playSeconds: number;
-  deviceCount: number;
-  isLan: boolean;  // LAN节目标记
-}
-
-export interface MediaSummaryItem {
-  mediaId: string;
-  name: string;
-  type: string;  // image/video/etc
-  playCount: number;
-  playSeconds: number;
-  deviceCount: number;
-}
-
-export interface ProgramSummaryResponse {
-  items: ProgramSummaryItem[];
-  total: number;
-}
-
-export interface MediaSummaryResponse {
-  items: MediaSummaryItem[];
-  total: number;
-}
-
 // 节目榜单
 export const getProgramsSummary = (params: PlaybackSummaryParams) =>
-  handleRequest(apiClient.get<BffResponse<ProgramSummaryResponse>>('/telemetry/playback/programs/summary', { params }));
+  handleRequest(apiClient.get<BffResponse<ProgramPlaySummaryItem[]>>('/telemetry/playback/programs/summary', { params }));
 
 // 素材榜单
 export const getMediaSummary = (params: PlaybackSummaryParams) =>
-  handleRequest(apiClient.get<BffResponse<MediaSummaryResponse>>('/telemetry/playback/media/summary', { params }));
-
-
+  handleRequest(apiClient.get<BffResponse<MediaPlaySummaryItem[]>>('/telemetry/playback/media/summary', { params }));
 
 export const getProgramPlaybackBuckets = (params: { 
-
   programId: string; 
-
   version: string; 
-
   from: string; 
-
   to: string; 
-
   tz: string; 
-
   bucket: PlaybackBucket 
-
 }) =>
-
-  handleRequest(apiClient.get<BffResponse<any>>(`/telemetry/playback/programs/${params.programId}/versions/${params.version}/buckets`, { params }));
-
-
+  handleRequest(apiClient.get<BffResponse<PlaybackBucketData[]>>(`/telemetry/playback/programs/${params.programId}/versions/${params.version}/buckets`, { params }));
 
 export const getMediaPlaybackBuckets = (params: { 
-
   mediaId: string; 
-
   from: string; 
-
   to: string; 
-
   tz: string; 
-
   bucket: PlaybackBucket 
-
 }) =>
-
-  handleRequest(apiClient.get<BffResponse<any>>(`/telemetry/playback/media/${params.mediaId}/buckets`, { params }));
-
-
+  handleRequest(apiClient.get<BffResponse<PlaybackBucketData[]>>(`/telemetry/playback/media/${params.mediaId}/buckets`, { params }));
 
 export const getProgramPlaybackDevices = (params: { 
-
   programId: string; 
-
   version: string; 
-
   from: string; 
-
   to: string; 
-
   limit?: number; 
-
   sort?: string 
-
 }) =>
-
-  handleRequest(apiClient.get<BffResponse<any>>(`/telemetry/playback/programs/${params.programId}/versions/${params.version}/devices`, { params }));
-
-
+  handleRequest(apiClient.get<BffResponse<DevicePlaySummaryItem[]>>(`/telemetry/playback/programs/${params.programId}/versions/${params.version}/devices`, { params }));
 
 export const getMediaPlaybackDevices = (params: { 
-
-
-
   mediaId: string; 
-
-
-
   from: string; 
-
-
-
   to: string; 
-
-
-
   limit?: number; 
-
-
-
   sort?: string 
-
-
-
 }) =>
-
-
-
-  handleRequest(apiClient.get<BffResponse<any>>(`/telemetry/playback/media/${params.mediaId}/devices`, { params }));
-
-
-
-
-
-
+  handleRequest(apiClient.get<BffResponse<DevicePlaySummaryItem[]>>(`/telemetry/playback/media/${params.mediaId}/devices`, { params }));
 
 // --- LAN Program Telemetry ---
 
-
-
-
-
-
-
 export const getLanProgramPlaybackBuckets = (params: { 
-
-
-
   lanProgramId: string; 
-
-
-
   from: string; 
-
-
-
   to: string; 
-
-
-
   tz: string; 
-
-
-
   bucket: PlaybackBucket 
-
-
-
 }) =>
-
-
-
-  handleRequest(apiClient.get<BffResponse<any>>(`/telemetry/playback/programs/lan/${params.lanProgramId}/buckets`, { params }));
-
-
-
-
-
-
+  handleRequest(apiClient.get<BffResponse<PlaybackBucketData[]>>(`/telemetry/playback/programs/lan/${params.lanProgramId}/buckets`, { params }));
 
 export const getLanProgramPlaybackDevices = (params: { 
-
-
-
   lanProgramId: string; 
-
-
-
   from: string; 
-
-
-
   to: string; 
-
-
-
   limit?: number; 
-
-
-
   sort?: string 
-
-
-
 }) =>
-
-
-
-  handleRequest(apiClient.get<BffResponse<any>>(`/telemetry/playback/programs/lan/${params.lanProgramId}/devices`, { params }));
+  handleRequest(apiClient.get<BffResponse<DevicePlaySummaryItem[]>>(`/telemetry/playback/programs/lan/${params.lanProgramId}/devices`, { params }));
 
 
 
@@ -357,57 +251,47 @@ export const getLanProgramPlaybackDevices = (params: {
 
 // --- Online Time Telemetry ---
 
-
-
 export interface OnlineTimeSummaryItem {
-
   deviceId: string;
-
   onlineSeconds: number;
-
   offlineSeconds: number;
-
   onlineRate: number; // 0-1
-
 }
 
+export interface ActiveDeviceCountBucket {
+  bucketStart: string;
+  bucketEnd: string;
+  bucketSeconds: number;
+  activeDevices: number;
+}
 
+export interface DeviceConcurrencyBucket {
+  bucketStart: string;
+  bucketEnd: string;
+  bucketSeconds: number;
+  totalOnlineDeviceSeconds: number;
+  avgConcurrent: number;
+  maxConcurrent: number;
+}
 
 export const getOnlineTimeSummary = (params: { from: string; to: string }) =>
-
   handleRequest(apiClient.get<BffResponse<OnlineTimeSummaryItem[]>>('/telemetry/online-time/devices/summary', { params }));
 
-
-
 export const getActiveDeviceCountBuckets = (params: { 
-
   from: string; 
-
   to: string; 
-
   tz: string; 
-
   bucket: PlaybackBucket 
-
 }) =>
-
-  handleRequest(apiClient.get<BffResponse<any>>('/telemetry/online-time/devices/active-count/buckets', { params }));
-
-
+  handleRequest(apiClient.get<BffResponse<ActiveDeviceCountBucket[]>>('/telemetry/online-time/devices/active-count/buckets', { params }));
 
 export const getConcurrencyBuckets = (params: { 
-
   from: string; 
-
   to: string; 
-
   tz: string; 
-
   bucket: PlaybackBucket 
-
 }) =>
-
-  handleRequest(apiClient.get<BffResponse<any>>('/telemetry/online-time/devices/concurrency/buckets', { params }));
+  handleRequest(apiClient.get<BffResponse<DeviceConcurrencyBucket[]>>('/telemetry/online-time/devices/concurrency/buckets', { params }));
 
 
 

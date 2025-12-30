@@ -19,7 +19,7 @@ import {
   getMediaPlaybackBuckets,
   getMediaPlaybackDevices,
   type PlaybackBucket,
-  type MediaSummaryItem,
+  type MediaPlaySummaryItem,
 } from '@/services/telemetryApi';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { PlaybackTopTable } from './PlaybackTopTable';
@@ -35,7 +35,7 @@ interface MediaTabProps {
 
 export function MediaTab({ from, to, tz, bucket, className }: MediaTabProps) {
   const { formatDateTime } = useTimeFormatter();
-  const [selectedMedia, setSelectedMedia] = useState<MediaSummaryItem | null>(null);
+  const [selectedMedia, setSelectedMedia] = useState<MediaPlaySummaryItem | null>(null);
 
   // Query for summary list
   const { data: summaryRes, isLoading: isSummaryLoading } = useQuery({
@@ -43,7 +43,7 @@ export function MediaTab({ from, to, tz, bucket, className }: MediaTabProps) {
     queryFn: () => getMediaSummary({ from, to, limit: 50, sort: 'playSeconds' }),
   });
 
-  const mediaList = summaryRes?.data?.items || [];
+  const mediaList = summaryRes?.data || [];
 
   // Query for selected media trend
   const { data: trendRes, isLoading: isTrendLoading } = useQuery({
@@ -105,7 +105,7 @@ export function MediaTab({ from, to, tz, bucket, className }: MediaTabProps) {
             <PlaybackTopTable
               data={mediaList.map(m => ({
                 id: m.mediaId,
-                name: m.name,
+                name: m.mediaTitle || 'Unknown Media',
                 playCount: m.playCount,
                 playSeconds: m.playSeconds
               }))}
@@ -134,10 +134,10 @@ export function MediaTab({ from, to, tz, bucket, className }: MediaTabProps) {
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-bold truncate max-w-[250px]">
-                          {selectedMedia.name}
+                          {selectedMedia.mediaTitle || 'Unknown Media'}
                         </p>
                         <p className="text-[10px] font-mono text-muted-foreground">
-                          ID: {selectedMedia.mediaId} | Type: {selectedMedia.type}
+                          ID: {selectedMedia.mediaId} | Type: {selectedMedia.itemType}
                         </p>
                       </div>
                     </div>

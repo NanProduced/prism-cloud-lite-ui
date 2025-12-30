@@ -243,7 +243,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
                     />
                     <Area
                       type="monotone"
-                      dataKey="activeCount"
+                      dataKey="activeDevices"
                       stroke="#10b981"
                       strokeWidth={2}
                       fill="url(#colorActiveCount)"

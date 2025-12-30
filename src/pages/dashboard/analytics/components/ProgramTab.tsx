@@ -21,7 +21,7 @@ import {
   getLanProgramPlaybackBuckets,
   getLanProgramPlaybackDevices,
   type PlaybackBucket,
-  type ProgramSummaryItem,
+  type ProgramPlaySummaryItem,
 } from '@/services/telemetryApi';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { PlaybackTopTable } from './PlaybackTopTable';
@@ -37,7 +37,7 @@ interface ProgramTabProps {
 
 export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps) {
   const { formatDateTime } = useTimeFormatter();
-  const [selectedProgram, setSelectedProgram] = useState<ProgramSummaryItem | null>(null);
+  const [selectedProgram, setSelectedProgram] = useState<ProgramPlaySummaryItem | null>(null);
 
   // Query for summary list
   const { data: summaryRes, isLoading: isSummaryLoading } = useQuery({
@@ -45,15 +45,25 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
     queryFn: () => getProgramsSummary({ from, to, limit: 50, sort: 'playSeconds' }),
   });
 
-  const programs = summaryRes?.data?.items || [];
+  const programs = summaryRes?.data || [];
 
   // Query for selected program trend
   const { data: trendRes, isLoading: isTrendLoading } = useQuery({
-    queryKey: ['telemetry', 'playback', 'program', selectedProgram?.programId, selectedProgram?.version, from, to, bucket, tz],
+    queryKey: [
+      'telemetry', 
+      'playback', 
+      'program', 
+      selectedProgram?.lan ? selectedProgram?.lanProgramId : selectedProgram?.programId, 
+      selectedProgram?.releaseVersion, 
+      from, 
+      to, 
+      bucket, 
+      tz
+    ],
     queryFn: () => {
-      if (selectedProgram!.isLan) {
+      if (selectedProgram!.lan) {
         return getLanProgramPlaybackBuckets({
-          lanProgramId: selectedProgram!.programId,
+          lanProgramId: selectedProgram!.lanProgramId!,
           from,
           to,
           tz,
@@ -61,8 +71,8 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
         });
       }
       return getProgramPlaybackBuckets({
-        programId: selectedProgram!.programId,
-        version: selectedProgram!.version || '1',
+        programId: selectedProgram!.programId!,
+        version: selectedProgram!.releaseVersion?.toString() || '1',
         from,
         to,
         tz,
@@ -76,19 +86,27 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
 
   // Query for selected program device distribution
   const { data: devicesRes, isLoading: isDevicesLoading } = useQuery({
-    queryKey: ['telemetry', 'playback', 'program', selectedProgram?.programId, 'devices', from, to],
+    queryKey: [
+      'telemetry', 
+      'playback', 
+      'program', 
+      selectedProgram?.lan ? selectedProgram?.lanProgramId : selectedProgram?.programId, 
+      'devices', 
+      from, 
+      to
+    ],
     queryFn: () => {
-      if (selectedProgram!.isLan) {
+      if (selectedProgram!.lan) {
         return getLanProgramPlaybackDevices({
-          lanProgramId: selectedProgram!.programId,
+          lanProgramId: selectedProgram!.lanProgramId!,
           from,
           to,
           limit: 10,
         });
       }
       return getProgramPlaybackDevices({
-        programId: selectedProgram!.programId,
-        version: selectedProgram!.version || '1',
+        programId: selectedProgram!.programId!,
+        version: selectedProgram!.releaseVersion?.toString() || '1',
         from,
         to,
         limit: 10,
@@ -127,16 +145,16 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
           <CardContent className="p-0">
             <PlaybackTopTable
               data={programs.map(p => ({
-                id: p.programId,
-                name: p.name,
+                id: p.lan ? p.lanProgramId! : p.programId!,
+                name: p.programName,
                 playCount: p.playCount,
                 playSeconds: p.playSeconds,
-                version: p.version
+                version: p.releaseVersion?.toString()
               }))}
               type="program"
-              selectedId={selectedProgram?.programId}
+              selectedId={selectedProgram?.lan ? selectedProgram?.lanProgramId : selectedProgram?.programId}
               onSelect={(item) => {
-                const p = programs.find(p => p.programId === item.id);
+                const p = programs.find(p => (p.lan ? p.lanProgramId : p.programId) === item.id);
                 if (p) setSelectedProgram(p);
               }}
               className="h-[500px] border-0 rounded-none"
@@ -158,15 +176,15 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-bold truncate max-w-[250px]">
-                          {selectedProgram.name}
+                          {selectedProgram.programName}
                         </p>
                         <p className="text-[10px] font-mono text-muted-foreground">
-                          ID: {selectedProgram.programId}
-                          {selectedProgram.version && ` v${selectedProgram.version}`}
+                          ID: {selectedProgram.lan ? selectedProgram.lanProgramId : selectedProgram.programId}
+                          {selectedProgram.releaseVersion && ` v${selectedProgram.releaseVersion}`}
                         </p>
                       </div>
                     </div>
-                    {selectedProgram.isLan && (
+                    {selectedProgram.lan && (
                       <Badge variant="outline" className="text-[9px] font-bold h-5 px-2 bg-amber-500/5 text-amber-600 border-amber-200">
                         LAN PROGRAM
                       </Badge>
@@ -176,7 +194,7 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
               </Card>
 
               {/* LAN Safeguard Message */}
-              {selectedProgram.isLan && (
+              {selectedProgram.lan && (
                 <div className="p-3 bg-amber-500/5 border border-amber-200 rounded-xl flex items-start gap-2">
                   <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                   <p className="text-[10px] text-amber-700 leading-relaxed font-medium">
