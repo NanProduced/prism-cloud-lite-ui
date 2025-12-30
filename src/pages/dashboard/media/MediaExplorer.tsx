@@ -10,8 +10,12 @@ import {
   Image as ImageIcon,
   LayoutGrid,
   List,
+  Loader2,
   MoreVertical,
+  Pencil,
+  RefreshCw,
   Search,
+  Trash2,
   Upload,
   Video,
 } from 'lucide-react';
@@ -22,6 +26,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { ReactBitsFolder } from '@/components/react-bits/Folder';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -104,6 +109,10 @@ export function MediaExplorer({
   
   const [moveNodesOpen, setMoveNodesOpen] = useState(false);
   const [movingNodes, setMovingNodes] = useState<{ ids: string[]; names: string[] }>({ ids: [], names: [] });
+
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<MediaNode | null>(null);
+  const [renameValue, setRenameValue] = useState('');
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [nodeToDelete, setNodeToDelete] = useState<MediaNode | null>(null);
@@ -195,10 +204,9 @@ export function MediaExplorer({
     }
 
     if (action === 'Rename') {
-      const newName = prompt(`Enter new name for "${node.name}":`, node.name);
-      if (newName && newName !== node.name) {
-        renameMutation.mutate({ id: node.id, name: newName });
-      }
+      setRenameTarget(node);
+      setRenameValue(node.name);
+      setRenameOpen(true);
       return;
     }
 
@@ -214,6 +222,16 @@ export function MediaExplorer({
     }
 
     toast.message(`TODO: ${action}`);
+  };
+
+  const handleRenameSubmit = () => {
+    if (!renameTarget || !renameValue.trim() || renameValue === renameTarget.name) {
+      setRenameOpen(false);
+      return;
+    }
+    renameMutation.mutate({ id: renameTarget.id, name: renameValue.trim() }, {
+      onSuccess: () => setRenameOpen(false)
+    });
   };
 
   const currentFolder = useMemo(() => {
@@ -448,23 +466,64 @@ export function MediaExplorer({
         onConfirm={(targetId) => moveMutation.mutate(targetId)}
       />
 
+      <Dialog open={renameOpen} onOpenChange={(open) => { setRenameOpen(open); if (!open) setRenameTarget(null); }}>
+        <DialogContent className="max-w-[420px] p-0 overflow-hidden border-0 shadow-2xl rounded-2xl ring-1 ring-foreground/5 text-foreground">
+          <div className="p-8">
+            <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Pencil className="h-6 w-6" />
+            </div>
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold tracking-tight">Rename Item</DialogTitle>
+              <DialogDescription className="text-sm pt-2">Enter a new name for this {renameTarget?.type === 'folder' ? 'folder' : 'asset'}.</DialogDescription>
+            </DialogHeader>
+            <form className="mt-8 space-y-6" onSubmit={(e) => { e.preventDefault(); handleRenameSubmit(); }}>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60" htmlFor="media-rename-name">New Name</label>
+                <Input 
+                  id="media-rename-name" 
+                  value={renameValue} 
+                  onChange={(e) => setRenameValue(e.target.value)} 
+                  className="h-11 bg-muted/20 border-border/50 text-sm font-bold"
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button type="button" variant="ghost" onClick={() => setRenameOpen(false)} className="font-bold text-xs uppercase tracking-widest px-8">Cancel</Button>
+                <Button type="submit" disabled={renameMutation.isPending} className="font-bold text-xs uppercase tracking-widest px-10 h-11 shadow-xl">
+                  {renameMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-2" />} Save
+                </Button>
+              </div>
+            </form>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete <strong>{nodeToDelete?.name}</strong> and remove its data from our servers.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => nodeToDelete && deleteMutation.mutate(nodeToDelete.id)}
-              className="bg-rose-600 hover:bg-rose-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
+        <AlertDialogContent className="max-w-[420px] p-0 overflow-hidden border-0 shadow-2xl rounded-2xl ring-1 ring-foreground/5">
+          <div className="p-8">
+            <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+              <Trash2 className="h-6 w-6" />
+            </div>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-xl font-bold tracking-tight">Delete Permanently?</AlertDialogTitle>
+              <AlertDialogDescription className="text-sm pt-2 space-y-4">
+                <span className="block">This action cannot be undone. You are about to permanently delete:</span>
+                <span className="block rounded-xl bg-destructive/5 border border-destructive/10 p-4 font-bold text-destructive text-base truncate">
+                  {nodeToDelete?.name}
+                </span>
+                <span className="block">Removing this will free up space but it cannot be recovered.</span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="mt-8 gap-3">
+              <AlertDialogCancel className="font-bold text-xs uppercase tracking-widest px-8">Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => nodeToDelete && deleteMutation.mutate(nodeToDelete.id)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold text-xs uppercase tracking-widest px-10 h-10 shadow-xl shadow-destructive/20"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
     </>

@@ -10,6 +10,7 @@ import type {
   ProgramPublishResp,
   ProgramAuditLogResp,
   ProgramTemplateResp,
+  UpdateProgramReq,
 } from '@/types/program';
 
 /**
@@ -29,6 +30,12 @@ export const getProgramDetails = (programId: string) =>
  */
 export const createProgram = (data: CreateProgramReq) =>
   handleRequest(apiClient.post<BffResponse<ProgramListResp>>('/programs', data));
+
+/**
+ * Update program metadata (resolution, target device, etc.)
+ */
+export const updateProgram = (programId: string, data: UpdateProgramReq) =>
+  handleRequest(apiClient.post<BffResponse<ProgramDetailResp>>(`/programs/${programId}`, data));
 
 /**
  * Rename program
@@ -61,7 +68,7 @@ export const getProgramTemplates = () =>
  * If baseVersion is null/0, starts from blank.
  */
 export const ensureDraft = (programId: string, baseVersion?: number) => {
-  const url = baseVersion 
+  const url = baseVersion && baseVersion > 0
     ? `/programs/${programId}/drafts/ensure?baseVersion=${baseVersion}` 
     : `/programs/${programId}/drafts/ensure`;
   return handleRequest(apiClient.post<BffResponse<ProgramDraftResp>>(url));
@@ -90,5 +97,5 @@ export const publishProgram = (programId: string, data: ProgramPublishReq) =>
 /**
  * Unpublish program (remove assignment from devices)
  */
-export const unpublishProgram = (programId: string, deviceIds: string[]) =>
-  handleRequest(apiClient.post<BffResponse<any>>(`/programs/${programId}/unpublish`, { deviceIds }));
+export const unpublishProgram = (programId: string, data: { scope: 'SELECTED' | 'RUNNING'; deviceIds?: number[] }) =>
+  handleRequest(apiClient.post<BffResponse<any>>(`/programs/${programId}/unpublish`, data));

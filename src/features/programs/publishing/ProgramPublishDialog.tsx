@@ -18,9 +18,11 @@ import { parseResolution } from '@/lib/resolution';
 import type { Device, Tag } from '@/types/device';
 import { getDevices } from '@/services/deviceApi';
 
-import { ensureDraft as ensureDraftApi, publishProgram } from '@/services/programApi';
+import { deleteProgramDraft, publishProgram } from '@/services/programApi';
 import { getErrorMessage } from '@/services/authApi';
 import type { ProgramDetailResp, ProgramDeploymentResp, ProgramDraftResp, ProgramPublishReq } from '@/types/program';
+import type { VsnDocument } from '@/features/programs/vsn/types';
+import { sanitizeVsnForPersist } from '@/features/programs/vsn/sanitize';
 
 type PublishScope = 'SELECTED' | 'RUNNING';
 type PublishMode = 'APPEND' | 'OVERWRITE';
@@ -32,7 +34,14 @@ export type ProgramPublishDialogProps = {
   program: ProgramDetailResp;
   deployments: ProgramDeploymentResp[];
   preferredDraftId?: string | null;
-  initialSelectedDeviceIds?: string[] | null;
+  initialSelectedDeviceIds?: Array<string | number> | null;
+  initialVersionMode?: 'CREATE' | 'EXISTING' | null;
+  initialExistingVersion?: number | null;
+  lockVersionMode?: 'CREATE' | 'EXISTING' | null;
+  createVsnJson?: string | null;
+  coverBase64?: string | null;
+  coverContentType?: string | null;
+  cleanupDraftId?: string | null;
   onAfterPublish?: () => void;
 };
 
@@ -43,11 +52,17 @@ export function ProgramPublishDialog({
   deployments,
   preferredDraftId,
   initialSelectedDeviceIds,
+  initialVersionMode,
+  initialExistingVersion,
+  lockVersionMode,
+  createVsnJson,
+  coverBase64,
+  coverContentType,
+  cleanupDraftId,
   onAfterPublish,
 }: ProgramPublishDialogProps) {
   const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
-  const [ensuredDraftId, setEnsuredDraftId] = useState<string | null>(null);
 
   // --- Queries ---
   const { data: devicesRes } = useQuery({
@@ -71,7 +86,7 @@ export function ProgramPublishDialog({
 
   const preferredDraft = useMemo(() => {
     if (!preferredDraftId) return null;
-    return sortedDrafts.find((d) => d.id === preferredDraftId) ?? null;
+    return sortedDrafts.find((d) => (d.draftId ?? d.id) === preferredDraftId) ?? null;
   }, [preferredDraftId, sortedDrafts]);
 
   const suggestedCreateDraft = useMemo(() => {
@@ -82,7 +97,7 @@ export function ProgramPublishDialog({
       if (baseMatch) return baseMatch;
     }
 
-    const blank = sortedDrafts.find((d) => d.baseVersion == null || d.baseVersion === 0);
+    const blank = sortedDrafts.find((d) => d.baseVersion === 0);
     if (blank) return blank;
 
     return latestDraft;
@@ -102,7 +117,7 @@ export function ProgramPublishDialog({
   const [tagMatchMode, setTagMatchMode] = useState<'any' | 'all'>('any');
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [resolutionOnly, setResolutionOnly] = useState<'any' | 'match'>('any');
-  const [selectedDeviceIds, setSelectedDeviceIds] = useState<Set<string>>(() => new Set());
+  const [selectedDeviceIds, setSelectedDeviceIds] = useState<Set<number>>(() => new Set());
 
   const [versionMode, setVersionMode] = useState<VersionMode>(defaultVersionMode);
   const [existingVersion, setExistingVersion] = useState<number>(latestPublished?.version ?? 1);
@@ -112,22 +127,32 @@ export function ProgramPublishDialog({
   const predictedNewVersion = useMemo(() => Math.max(0, ...(program.versions || []).map((v) => v.version)) + 1, [program.versions]);
 
   // --- Mutations ---
-  const ensureDraftMutation = useMutation({
-    mutationFn: (baseVersion?: number) => ensureDraftApi(program.id, baseVersion),
-    onSuccess: (res) => {
-      const draftId = res.data?.id ?? null;
-      setEnsuredDraftId(draftId);
-    },
-    onError: (err) => toast.error(getErrorMessage(err)),
-  });
-
   const publishMutation = useMutation({
     mutationFn: (data: ProgramPublishReq) => publishProgram(program.id, data),
     onSuccess: (res) => {
       const syncMsg = plan.counts.pendingSync > 0 
         ? `. ${plan.counts.pendingSync} devices will sync when online.` 
         : '';
-      toast.success(`Published to ${res.data?.results.length || 0} devices${syncMsg}`);
+      const canCleanupDraft = res.data && res.data.version != null && cleanupDraftId && versionMode === 'CREATE';
+      toast.success(`Published to ${res.data?.results.length || 0} devices${syncMsg}`, {
+        action: canCleanupDraft
+          ? {
+              label: 'Delete draft',
+              onClick: () => {
+                void (async () => {
+                  try {
+                    await deleteProgramDraft(program.id, cleanupDraftId);
+                    queryClient.invalidateQueries({ queryKey: ['programs'] });
+                    queryClient.invalidateQueries({ queryKey: ['programs', program.id] });
+                    toast.success('Draft deleted');
+                  } catch (err) {
+                    toast.error(getErrorMessage(err));
+                  }
+                })();
+              },
+            }
+          : undefined,
+      });
       onAfterPublish?.();
       close();
     },
@@ -159,7 +184,7 @@ export function ProgramPublishDialog({
   }, [deviceQuery, onlineOnly, program.height, program.width, resolutionOnly, tagFilters, tagMatchMode, devices]);
 
   const selectedDevices = useMemo(() => {
-    const map = new Map(devices.map((d) => [String(d.deviceId || d.id), d]));
+    const map = new Map(devices.map((d) => [d.deviceId, d]));
     return [...selectedDeviceIds].map((id) => map.get(id)).filter(Boolean) as Device[];
   }, [selectedDeviceIds, devices]);
 
@@ -178,8 +203,8 @@ export function ProgramPublishDialog({
   const plan = useMemo(() => {
     const targetVersion = versionMode === 'EXISTING' ? existingVersion : predictedNewVersion;
     const perDevice = baseTargetDeviceIds.map((deviceId) => {
-      const device = devices.find(d => String(d.deviceId || d.id) === deviceId);
-      const current = deploymentsByDeviceId.get(deviceId)?.version ?? null;
+      const device = devices.find((d) => d.deviceId === deviceId);
+      const current = deploymentsByDeviceId.get(deviceId)?.releaseVersion ?? null;
       const willDeploy = targetDeviceIds.includes(deviceId);
       
       let action: 'deploy' | 'update' | 'rollback' | 'no-change' | 'skip' = 'skip';
@@ -217,11 +242,22 @@ export function ProgramPublishDialog({
     setTagFilters(new Set());
     setOnlineOnly(false);
     setResolutionOnly('any');
-    setEnsuredDraftId(null);
-    const initialSelected = (initialSelectedDeviceIds ?? []).filter(Boolean);
+    const initialSelected = (initialSelectedDeviceIds ?? []).map((v) => Number(v)).filter((v) => Number.isFinite(v) && v > 0);
     setSelectedDeviceIds(new Set(initialSelected));
-    setVersionMode(defaultVersionMode);
-    setExistingVersion(latestPublished?.version ?? 1);
+
+    const canUseExisting = (program.versions?.length || 0) > 0;
+    const nextVersionMode: VersionMode =
+      lockVersionMode === 'EXISTING' && canUseExisting ? 'EXISTING'
+      : lockVersionMode === 'CREATE' ? 'CREATE'
+      : initialVersionMode === 'EXISTING' && canUseExisting ? 'EXISTING'
+      : initialVersionMode === 'CREATE' ? 'CREATE'
+      : defaultVersionMode;
+
+    setVersionMode(nextVersionMode);
+
+    const nextExisting = initialExistingVersion ?? latestPublished?.version ?? 1;
+    setExistingVersion(nextExisting);
+
     setScope('SELECTED');
     const anyRunningSelected = initialSelected.some((id) => deploymentsByDeviceId.has(id));
     setMode(anyRunningSelected ? 'OVERWRITE' : 'APPEND');
@@ -230,7 +266,12 @@ export function ProgramPublishDialog({
   useEffect(() => {
     if (!open) return;
     resetDialog();
-  }, [open, program.id, latestPublished, defaultVersionMode, initialSelectedDeviceIds]);
+  }, [open, program.id, latestPublished, defaultVersionMode, initialSelectedDeviceIds, initialExistingVersion, initialVersionMode, lockVersionMode]);
+
+  useEffect(() => {
+    if (scope !== 'RUNNING') return;
+    if (mode === 'APPEND') setMode('OVERWRITE');
+  }, [mode, scope]);
 
   const close = () => {
     onOpenChange(false);
@@ -248,30 +289,46 @@ export function ProgramPublishDialog({
   }, [deployments.length, scope, selectedDeviceIds.size, step]);
 
   const onConfirm = async () => {
-    let draftId = preferredDraftId ?? ensuredDraftId ?? suggestedCreateDraft?.id ?? null;
-
-    if (versionMode === 'CREATE' && !draftId) {
-      // If publishing without having opened the editor, ensure a draft exists first.
-      try {
-        const base = latestPublished?.version;
-        const res = await ensureDraftMutation.mutateAsync(base);
-        draftId = res.data?.id ?? null;
-      } catch {
-        return;
-      }
-    }
-
-    if (versionMode === 'CREATE' && !draftId) {
-      toast.error('No draft found. Please open the editor to create a draft.');
+    if (versionMode === 'EXISTING') {
+      publishMutation.mutate({
+        versionMode: 'EXISTING',
+        existingVersion,
+        scope,
+        deviceIds: scope === 'SELECTED' ? [...selectedDeviceIds] : undefined,
+        mode,
+      });
       return;
     }
 
-    const finalDraftId = draftId ?? undefined;
+    const trySanitizeVsnJson = (raw: string): string | null => {
+      const trimmed = (raw ?? '').trim();
+      if (!trimmed) return null;
+      try {
+        const parsed = JSON.parse(trimmed) as VsnDocument;
+        return JSON.stringify(sanitizeVsnForPersist(parsed));
+      } catch {
+        return null;
+      }
+    };
+
+    const normalizedVsnJson = (createVsnJson ?? '').trim();
+    const selectedDraft = preferredDraft ?? suggestedCreateDraft ?? null;
+    const selectedDraftId = selectedDraft ? (selectedDraft.draftId ?? selectedDraft.id ?? null) : null;
+
+    const finalVsnJson = normalizedVsnJson || (selectedDraft?.vsnJson ? trySanitizeVsnJson(selectedDraft.vsnJson) : null);
+    const finalDraftId = preferredDraftId ?? selectedDraftId;
+
+    if (!finalVsnJson && !finalDraftId) {
+      toast.error('No draft snapshot found. Please open the editor to create a draft, then publish again.');
+      return;
+    }
 
     publishMutation.mutate({
-      versionMode,
-      existingVersion: versionMode === 'EXISTING' ? existingVersion : undefined,
-      draftId: versionMode === 'CREATE' ? finalDraftId : undefined,
+      versionMode: 'CREATE',
+      vsnJson: finalVsnJson || undefined,
+      draftId: finalVsnJson ? undefined : finalDraftId ?? undefined,
+      coverBase64: coverBase64 ?? undefined,
+      coverContentType: coverContentType ?? undefined,
       scope,
       deviceIds: scope === 'SELECTED' ? [...selectedDeviceIds] : undefined,
       mode,
@@ -350,7 +407,9 @@ export function ProgramPublishDialog({
                       selectedCount={selectedDeviceIds.size}
                       latest={latestPublished}
                       createDraft={suggestedCreateDraft}
-                      isFromEditor={Boolean(preferredDraftId)}
+                      createVsnJsonProvided={Boolean((createVsnJson ?? '').trim())}
+                      isFromEditor={Boolean(preferredDraftId) || Boolean((createVsnJson ?? '').trim())}
+                      lockVersionMode={lockVersionMode ?? null}
                     />
                   )}
                   {step === 2 && (
@@ -368,10 +427,10 @@ export function ProgramPublishDialog({
                   </Button>
                   <Button 
                     onClick={step === 2 ? onConfirm : () => setStep(s => s + 1)} 
-                    disabled={!canNext || publishMutation.isPending || ensureDraftMutation.isPending}
+                    disabled={!canNext || publishMutation.isPending}
                     className="px-10 font-bold gap-2 h-10 shadow-lg shadow-primary/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
                   >
-                    {publishMutation.isPending || ensureDraftMutation.isPending ? (
+                    {publishMutation.isPending ? (
                       <><RefreshCw className="h-4 w-4 animate-spin" /> Processing...</>
                     ) : step === 2 ? (
                       <><ShieldCheck className="h-4 w-4" /> Finalize & Deploy</>
@@ -410,8 +469,8 @@ export function ProgramPublishDialog({
                      </div>
                      <ScrollArea className="flex-1 -mx-2 px-2 scrollbar-thin">
                         <div className="space-y-2 pb-8">
-                           {selectedDevices.map(d => (
-                              <div key={d.id} className="group relative p-3 rounded-xl border bg-background shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
+                           {selectedDevices.map((d) => (
+                              <div key={d.deviceId} className="group relative p-3 rounded-xl border bg-background shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
                                  <p className="text-xs font-bold truncate pr-6 leading-tight tracking-tight">{d.alias || d.deviceName}</p>
                                  <div className="flex items-center gap-3 mt-2">
                                     <div className="flex items-center gap-1.5">
@@ -419,12 +478,12 @@ export function ProgramPublishDialog({
                                        <span className="text-[9px] font-black text-muted-foreground/60 uppercase tracking-tighter">{d.status}</span>
                                     </div>
                                     <div className="h-2.5 w-px bg-muted" />
-                                    <span className="text-[9px] font-mono text-muted-foreground/40">{formatDeviceId(d.id)}</span>
+                                    <span className="text-[9px] font-mono text-muted-foreground/40">{formatDeviceId(d.deviceId)}</span>
                                  </div>
                                  <button 
                                     onClick={() => setSelectedDeviceIds(prev => {
                                       const n = new Set(prev);
-                                      n.delete(d.id);
+                                      n.delete(d.deviceId);
                                       return n;
                                     })}
                                     className="absolute right-2 top-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all"
@@ -480,18 +539,18 @@ interface DeviceSelectStepProps {
   onlineOnly: boolean;
   onOnlineOnlyChange: (v: boolean) => void;
   onResolutionOnlyChange: (v: 'any' | 'match') => void;
-  onSelectedDeviceIdsChange: Dispatch<SetStateAction<Set<string>>>;
+  onSelectedDeviceIdsChange: Dispatch<SetStateAction<Set<number>>>;
   onTagFiltersChange: Dispatch<SetStateAction<Set<string>>>;
   tagMatchMode: 'any' | 'all';
   onTagMatchModeChange: (v: 'any' | 'all') => void;
   programResolution: { width: number; height: number };
   resolutionOnly: 'any' | 'match';
-  selectedDeviceIds: Set<string>;
+  selectedDeviceIds: Set<number>;
   tagFilters: Set<string>;
   allTags: Tag[];
   deviceQuery: string;
   onDeviceQueryChange: (v: string) => void;
-  deploymentsByDeviceId: Map<string, ProgramDeploymentResp>;
+  deploymentsByDeviceId: Map<number, ProgramDeploymentResp>;
 }
 
 function DeviceSelectStep({
@@ -512,7 +571,7 @@ function DeviceSelectStep({
   onDeviceQueryChange,
   deploymentsByDeviceId
 }: DeviceSelectStepProps) {
-  const filteredIds = filteredDevices.map((d) => d.id);
+  const filteredIds = filteredDevices.map((d) => d.deviceId).filter((id) => Number.isFinite(id) && id > 0);
   const allSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedDeviceIds.has(id));
 
   return (
@@ -609,15 +668,15 @@ function DeviceSelectStep({
             <ScrollArea className="flex-1 scrollbar-thin">
                <div className="divide-y divide-foreground/[0.03]">
                   {filteredDevices.map((d) => {
-                     const isSelected = selectedDeviceIds.has(d.id);
+                     const isSelected = selectedDeviceIds.has(d.deviceId);
                      const res = parseResolution(d.resolution, { width: 0, height: 0 });
                      const isConflict = res.width !== programResolution.width || res.height !== programResolution.height;
-                     const deployed = deploymentsByDeviceId.get(d.id);
+                     const deployed = deploymentsByDeviceId.get(d.deviceId);
                      
                      return (
-                        <div key={d.id} className={cn("group flex items-center gap-6 px-10 py-4 transition-all cursor-pointer relative", isSelected ? "bg-primary/[0.04]" : "hover:bg-muted/10")} onClick={() => onSelectedDeviceIdsChange((prev: Set<string>) => {
+                        <div key={d.deviceId} className={cn("group flex items-center gap-6 px-10 py-4 transition-all cursor-pointer relative", isSelected ? "bg-primary/[0.04]" : "hover:bg-muted/10")} onClick={() => onSelectedDeviceIdsChange((prev) => {
                         const next = new Set(prev);
-                        if (isSelected) next.delete(d.id); else next.add(d.id);
+                        if (isSelected) next.delete(d.deviceId); else next.add(d.deviceId);
                         return next;
                         })}>
                         <div className={cn("absolute left-0 top-0 bottom-0 w-1.5 transition-all rounded-r-full", isSelected ? "bg-primary shadow-[0_0_12px_rgba(59,130,246,0.4)]" : "bg-transparent")} />
@@ -627,7 +686,7 @@ function DeviceSelectStep({
                               <span className="text-sm font-black tracking-tight group-hover:text-primary transition-colors">{d.alias || d.deviceName}</span>
                               {deployed && (
                                  <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 px-1.5 h-4.5 text-[9px] font-black">
-                                    v{deployed.version}
+                                    v{deployed.releaseVersion}
                                  </Badge>
                               )}
                               {isConflict && (
@@ -645,7 +704,7 @@ function DeviceSelectStep({
                               )}
                            </div>
                            <div className="flex items-center gap-3 mt-1.5">
-                              <p className="text-[9px] text-muted-foreground font-mono opacity-50 tracking-tighter uppercase">{formatDeviceId(d.id)}</p>
+                              <p className="text-[9px] text-muted-foreground font-mono opacity-50 tracking-tighter uppercase">{formatDeviceId(d.deviceId)}</p>
                               <div className="h-2 w-px bg-muted" />
                               <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">{res.width}×{res.height}</span>
                            </div>
@@ -701,6 +760,7 @@ interface StrategyStepProps {
   predictedNewVersion: number;
   program: ProgramDetailResp;
   createDraft: ProgramDraftResp | null;
+  createVsnJsonProvided: boolean;
   isFromEditor: boolean;
   existingVersion: number;
   onExistingVersionChange: (v: number) => void;
@@ -711,12 +771,22 @@ interface StrategyStepProps {
   deployments: ProgramDeploymentResp[];
   mode: PublishMode;
   onModeChange: (v: PublishMode) => void;
+  lockVersionMode: VersionMode | null;
 }
 
-function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, program, createDraft, isFromEditor, existingVersion, onExistingVersionChange, latest, scope, onScopeChange, selectedCount, deployments, mode, onModeChange }: StrategyStepProps) {
+function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, program, createDraft, createVsnJsonProvided, isFromEditor, existingVersion, onExistingVersionChange, latest, scope, onScopeChange, selectedCount, deployments, mode, onModeChange, lockVersionMode }: StrategyStepProps) {
   const draftBaseLabel = createDraft?.baseVersion == null || createDraft?.baseVersion === 0 ? 'Blank' : `v${createDraft?.baseVersion}`;
   const draftSourceLabel = isFromEditor ? 'current editor draft' : 'latest saved draft';
-  const draftHint = createDraft ? `${draftSourceLabel} · base ${draftBaseLabel}` : `No draft yet · will create from ${latest?.version ? `v${latest.version}` : 'Blank'}`;
+  const draftHint = createVsnJsonProvided
+    ? 'current editor snapshot'
+    : createDraft
+      ? `${draftSourceLabel} · base ${draftBaseLabel}`
+      : 'No draft snapshot available · open editor to create one';
+
+  const canUseExisting = (program.versions?.length || 0) > 0;
+  const canCreate = createVsnJsonProvided || Boolean(createDraft);
+  const shouldShowCreate = lockVersionMode == null || lockVersionMode === 'CREATE';
+  const shouldShowExisting = lockVersionMode == null || lockVersionMode === 'EXISTING';
 
   return (
     <ScrollArea className="h-full scrollbar-thin">
@@ -728,54 +798,70 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
              </h4>
              <Badge variant="outline" className="font-mono text-[10px] opacity-30 border-dashed">VCS: ACTIVE</Badge>
           </div>
-          <div className="grid grid-cols-2 gap-6">
+          <div className={cn('grid gap-6', shouldShowCreate && shouldShowExisting ? 'grid-cols-2' : 'grid-cols-1')}>
+             {shouldShowCreate && (
              <div
-               role="button"
-               tabIndex={0}
-               aria-pressed={versionMode === 'CREATE'}
-               onClick={() => onVersionModeChange('CREATE')}
-               onKeyDown={(e) => {
-                 if (e.key !== 'Enter' && e.key !== ' ') return;
-                 e.preventDefault();
-                 onVersionModeChange('CREATE');
-               }}
-               className={cn(
-                 "flex flex-col p-8 rounded-[2.5rem] border-2 text-left transition-all relative overflow-hidden group shadow-sm cursor-pointer select-none",
-                 versionMode === 'CREATE' ? "border-primary bg-primary/[0.02] ring-8 ring-primary/5" : "bg-card hover:border-muted-foreground/30",
-               )}
-             >
-                {versionMode === 'CREATE' && <div className="absolute top-5 right-5 h-7 w-7 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="h-4 w-4 text-white" /></div>}
-                <span className="text-lg font-black mb-1.5 tracking-tight group-hover:text-primary transition-colors">Issue Production Release</span>
-                <p className="text-[13px] text-muted-foreground leading-relaxed">Snapshot the draft as <span className="font-black text-foreground underline decoration-primary/30 underline-offset-2">v{predictedNewVersion}</span>. This release becomes the new baseline for global distribution.</p>
-                <p className="mt-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{draftHint}</p>
-                <div className="mt-8 flex items-center gap-2">
-                   <div className="px-2.5 py-1 rounded-lg bg-primary text-white text-[9px] font-black uppercase tracking-widest shadow-md shadow-primary/20">Recommended Path</div>
-                </div>
-             </div>
+                role="button"
+                tabIndex={canCreate ? 0 : -1}
+                aria-pressed={versionMode === 'CREATE'}
+                aria-disabled={!canCreate}
+                onClick={() => {
+                  if (!canCreate) return;
+                  onVersionModeChange('CREATE');
+                }}
+                onKeyDown={(e) => {
+                  if (!canCreate) return;
+                  if (e.key !== 'Enter' && e.key !== ' ') return;
+                  e.preventDefault();
+                  onVersionModeChange('CREATE');
+                }}
+                className={cn(
+                  "flex flex-col p-8 rounded-[2.5rem] border-2 text-left transition-all relative overflow-hidden group shadow-sm cursor-pointer select-none",
+                  !canCreate ? "opacity-40 grayscale cursor-not-allowed" : "",
+                  versionMode === 'CREATE' ? "border-primary bg-primary/[0.02] ring-8 ring-primary/5" : canCreate ? "bg-card hover:border-muted-foreground/30" : "bg-card",
+                )}
+              >
+                 {versionMode === 'CREATE' && <div className="absolute top-5 right-5 h-7 w-7 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="h-4 w-4 text-white" /></div>}
+                 <span className="text-lg font-black mb-1.5 tracking-tight group-hover:text-primary transition-colors">Issue Production Release</span>
+                 <p className="text-[13px] text-muted-foreground leading-relaxed">Snapshot the draft as <span className="font-black text-foreground underline decoration-primary/30 underline-offset-2">v{predictedNewVersion}</span>. This release becomes the new baseline for global distribution.</p>
+                 <p className="mt-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{draftHint}</p>
+                 <div className="mt-8 flex items-center gap-2">
+                    <div
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-md",
+                        canCreate ? "bg-primary text-white shadow-primary/20" : "bg-muted text-muted-foreground shadow-none",
+                      )}
+                    >
+                      {canCreate ? 'Release' : 'Requires draft'}
+                    </div>
+                 </div>
+              </div>
+             )}
+             {shouldShowExisting && (
              <div
-               role="button"
-               tabIndex={(program.versions?.length || 0) === 0 ? -1 : 0}
-               aria-disabled={(program.versions?.length || 0) === 0}
-               aria-pressed={versionMode === 'EXISTING'}
-               onClick={() => {
-                 if ((program.versions?.length || 0) === 0) return;
-                 onVersionModeChange('EXISTING');
-               }}
-               onKeyDown={(e) => {
-                 if ((program.versions?.length || 0) === 0) return;
-                 if (e.key !== 'Enter' && e.key !== ' ') return;
-                 e.preventDefault();
-                 onVersionModeChange('EXISTING');
-               }}
-               className={cn(
-                 "flex flex-col p-8 rounded-[2.5rem] border-2 text-left transition-all relative overflow-hidden group shadow-sm select-none",
-                 (program.versions?.length || 0) === 0 ? "opacity-40 grayscale cursor-not-allowed" : "cursor-pointer",
-                 versionMode === 'EXISTING' ? "border-primary bg-primary/[0.02] ring-8 ring-primary/5" : "bg-card hover:border-muted-foreground/30",
-               )}
-             >
-                {versionMode === 'EXISTING' && <div className="absolute top-5 right-5 h-7 w-7 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="h-4 w-4 text-white" /></div>}
-                <span className="text-lg font-black mb-1.5 tracking-tight group-hover:text-primary transition-colors">Redeploy Stable Archive</span>
-                <p className="text-[13px] text-muted-foreground leading-relaxed mb-6">Access the version library to redistribute or roll back nodes to a previously validated and immutable release snapshot.</p>
+                role="button"
+                tabIndex={canUseExisting ? 0 : -1}
+                aria-disabled={!canUseExisting}
+                aria-pressed={versionMode === 'EXISTING'}
+                onClick={() => {
+                  if (!canUseExisting) return;
+                  onVersionModeChange('EXISTING');
+                }}
+                onKeyDown={(e) => {
+                  if (!canUseExisting) return;
+                  if (e.key !== 'Enter' && e.key !== ' ') return;
+                  e.preventDefault();
+                  onVersionModeChange('EXISTING');
+                }}
+                className={cn(
+                  "flex flex-col p-8 rounded-[2.5rem] border-2 text-left transition-all relative overflow-hidden group shadow-sm select-none",
+                  !canUseExisting ? "opacity-40 grayscale cursor-not-allowed" : "cursor-pointer",
+                  versionMode === 'EXISTING' ? "border-primary bg-primary/[0.02] ring-8 ring-primary/5" : canUseExisting ? "bg-card hover:border-muted-foreground/30" : "bg-card",
+                )}
+              >
+                 {versionMode === 'EXISTING' && <div className="absolute top-5 right-5 h-7 w-7 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="h-4 w-4 text-white" /></div>}
+                 <span className="text-lg font-black mb-1.5 tracking-tight group-hover:text-primary transition-colors">Redeploy Stable Archive</span>
+                 <p className="text-[13px] text-muted-foreground leading-relaxed mb-6">Access the version library to redistribute or roll back nodes to a previously validated and immutable release snapshot.</p>
                 
                 <div className="mt-auto">
                    <Select 
@@ -794,10 +880,11 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
                          ))}
                       </SelectContent>
                    </Select>
-                </div>
-             </div>
+                 </div>
+              </div>
+             )}
           </div>
-       </div>
+        </div>
 
        <div className="space-y-6 pt-10 border-t border-dashed">
           <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-3 px-1">
@@ -832,7 +919,7 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
 }
 
 function ReviewStep({ plan, devices }: { plan: any; devices: Device[] }) {
-  const deviceById = useMemo(() => new Map(devices.map((d) => [String(d.deviceId || d.id), d])), [devices]);
+  const deviceById = useMemo(() => new Map(devices.map((d) => [d.deviceId, d])), [devices]);
   
   return (
     <div className="h-full flex flex-col gap-8 animate-in fade-in zoom-in-95 duration-500 py-2">

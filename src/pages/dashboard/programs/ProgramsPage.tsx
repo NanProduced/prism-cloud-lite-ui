@@ -8,6 +8,16 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { 
@@ -110,6 +120,9 @@ export default function ProgramsPage() {
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishTarget, setPublishTarget] = useState<ProgramDetailResp | null>(null);
   const [isPublishLoading, setIsPublishLoading] = useState(false);
+  const [publishInitialVersionMode, setPublishInitialVersionMode] = useState<'CREATE' | 'EXISTING' | null>(null);
+  const [publishInitialExistingVersion, setPublishInitialExistingVersion] = useState<number | null>(null);
+  const [publishLockVersionMode, setPublishLockVersionMode] = useState<'CREATE' | 'EXISTING' | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('New Program');
@@ -131,12 +144,16 @@ export default function ProgramsPage() {
     return list.sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
   }, [query, templates]);
 
-  const openPublishDialog = async (program: ProgramListResp) => {
+  const openDeployDialog = async (program: ProgramListResp) => {
     try {
       setIsPublishLoading(true);
       const res = await getProgramDetails(program.id);
       if (res.data) {
         setPublishTarget(res.data);
+        const live = program.latestVersion ?? res.data.versions?.[0]?.version ?? null;
+        setPublishInitialVersionMode(live ? 'EXISTING' : 'CREATE');
+        setPublishInitialExistingVersion(live);
+        setPublishLockVersionMode(live ? 'EXISTING' : null);
         setPublishOpen(true);
       }
     } catch (err) {
@@ -359,7 +376,10 @@ export default function ProgramsPage() {
                         size="sm" 
                         variant="ghost"
                         className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors sm:h-9 sm:w-auto sm:px-3 sm:gap-2"
-                        onClick={() => navigate(`/dashboard/programs/${program.id}/edit`)}
+                        onClick={() => {
+                          const base = (program.defaultVersion ?? program.latestVersion ?? 0) || 0;
+                          navigate(`/dashboard/programs/${program.id}/edit${base > 0 ? `?base=${base}` : ''}`);
+                        }}
                       >
                         <Pencil className="h-3.5 w-3.5" />
                         <span className="hidden sm:inline">Edit</span>
@@ -369,7 +389,13 @@ export default function ProgramsPage() {
                         variant="ghost"
                         size="sm"
                         className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors sm:h-9 sm:w-auto sm:px-3 sm:gap-2"
-                        onClick={() => openPublishDialog(program)}
+                        onClick={() => {
+                          if (!program.latestVersion) {
+                            navigate(`/dashboard/programs/${program.id}/edit`);
+                            return;
+                          }
+                          openDeployDialog(program);
+                        }}
                         disabled={isPublishLoading}
                       >
                         {isPublishLoading && publishTarget?.id === program.id ? (
@@ -377,7 +403,9 @@ export default function ProgramsPage() {
                         ) : (
                           <Send className="h-3.5 w-3.5" />
                         )}
-                        <span className="hidden sm:inline">{isPublishLoading && publishTarget?.id === program.id ? 'Loading...' : 'Publish'}</span>
+                        <span className="hidden sm:inline">
+                          {isPublishLoading && publishTarget?.id === program.id ? 'Loading...' : (program.latestVersion ? 'Deploy' : 'Publish v1')}
+                        </span>
                       </Button>
 
                       <DropdownMenu>
@@ -458,37 +486,83 @@ export default function ProgramsPage() {
       </Dialog>
 
       <Dialog open={renameOpen} onOpenChange={(open) => { setRenameOpen(open); if (!open) setRenameTarget(null); }}>
-        <DialogContent className="w-[min(100vw-2rem,520px)] text-foreground">
-          <DialogHeader><DialogTitle>Rename program</DialogTitle></DialogHeader>
-          <div className="space-y-4 pt-4">
-            <Input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} placeholder="Program name" />
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setRenameOpen(false)}>Cancel</Button>
-              <Button onClick={handleProgramRename} disabled={renameMutation.isPending}>Save</Button>
+        <DialogContent className="max-w-[420px] p-0 overflow-hidden border-0 shadow-2xl rounded-2xl ring-1 ring-foreground/5 text-foreground">
+          <div className="p-8">
+            <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Pencil className="h-6 w-6" />
             </div>
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold tracking-tight">Rename Program</DialogTitle>
+              <DialogDescription className="text-sm pt-2">Enter a new name for your program.</DialogDescription>
+            </DialogHeader>
+            <form className="mt-8 space-y-6" onSubmit={(e) => { e.preventDefault(); handleProgramRename(); }}>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60" htmlFor="rename-name">Program Name</label>
+                <Input 
+                  id="rename-name" 
+                  value={renameValue} 
+                  onChange={(e) => setRenameValue(e.target.value)} 
+                  className="h-11 bg-muted/20 border-border/50 text-sm font-bold"
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button type="button" variant="ghost" onClick={() => setRenameOpen(false)} className="font-bold text-xs uppercase tracking-widest px-8">Cancel</Button>
+                <Button type="submit" disabled={renameMutation.isPending} className="font-bold text-xs uppercase tracking-widest px-10 h-11 shadow-xl">
+                  {renameMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-2" />} Save
+                </Button>
+              </div>
+            </form>
           </div>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={deleteOpen} onOpenChange={(open) => { setDeleteOpen(open); if (!open) setDeleteTarget(null); }}>
-        <DialogContent className="w-[min(100vw-2rem,520px)] text-foreground">
-          <DialogHeader><DialogTitle>Delete program</DialogTitle></DialogHeader>
-          <div className="space-y-4 pt-4 text-center">
-            <p className="text-sm font-medium">{deleteTarget?.name}</p>
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setDeleteOpen(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={handleProgramDelete} disabled={deleteMutation.isPending}>Delete</Button>
+      <AlertDialog open={deleteOpen} onOpenChange={(open) => { setDeleteOpen(open); if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent className="max-w-[420px] p-0 overflow-hidden border-0 shadow-2xl rounded-2xl ring-1 ring-foreground/5">
+          <div className="p-8">
+            <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+              <Trash2 className="h-6 w-6" />
             </div>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-xl font-bold tracking-tight">Delete Program</AlertDialogTitle>
+              <AlertDialogDescription className="text-sm pt-2 space-y-4">
+                <span className="block">This action cannot be undone. You are about to permanently delete:</span>
+                <span className="block rounded-xl bg-destructive/5 border border-destructive/10 p-4 font-bold text-destructive text-base truncate">
+                  {deleteTarget?.name}
+                </span>
+                <span className="block">This will delete the program and all its versions from our system.</span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="mt-8 gap-3">
+              <AlertDialogCancel className="font-bold text-xs uppercase tracking-widest px-8">Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleProgramDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold text-xs uppercase tracking-widest px-10 h-10 shadow-xl shadow-destructive/20"
+              >
+                {deleteMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-2" />} Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
           </div>
-        </DialogContent>
-      </Dialog>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {publishTarget && (
         <ProgramPublishDialog
           open={publishOpen}
-          onOpenChange={(next) => { setPublishOpen(next); if (!next) setPublishTarget(null); }}
+          onOpenChange={(next) => {
+            setPublishOpen(next);
+            if (!next) {
+              setPublishTarget(null);
+              setPublishInitialVersionMode(null);
+              setPublishInitialExistingVersion(null);
+              setPublishLockVersionMode(null);
+            }
+          }}
           program={publishTarget}
           deployments={publishTarget.deployments || []}
+          initialVersionMode={publishInitialVersionMode}
+          initialExistingVersion={publishInitialExistingVersion}
+          lockVersionMode={publishLockVersionMode}
           onAfterPublish={() => queryClient.invalidateQueries({ queryKey: ['programs'] })}
         />
       )}

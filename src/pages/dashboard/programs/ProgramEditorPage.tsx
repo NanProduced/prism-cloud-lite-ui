@@ -4,6 +4,7 @@ import { useBlocker } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ChevronDown, Code2, Copy, Layers, ListChecks, Play, Redo2, Save, Send, SlidersHorizontal, Trash2, TriangleAlert, Undo2, RefreshCw } from 'lucide-react';
 import { toast } from '@/store/notificationStore';
+import { toPng } from 'html-to-image';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { cn } from '@/lib/utils';
 import { 
   getProgramDetails, 
@@ -26,9 +28,10 @@ import {
   saveProgramDraft, 
   renameProgram as renameProgramApi,
   deleteProgram as deleteProgramApi,
-  deleteProgramDraft as deleteProgramDraftApi
+  deleteProgramDraft as deleteProgramDraftApi,
+  updateProgram as updateProgramApi
 } from '@/services/programApi';
-import type { ProgramDetailResp, ProgramDraftResp } from '@/types/program';
+import type { ProgramDetailResp, ProgramDraftResp, UpdateProgramReq } from '@/types/program';
 import { getErrorMessage } from '@/services/authApi';
 import { ProgramPublishDialog } from '@/features/programs/publishing/ProgramPublishDialog';
 import { getProgramDraftSavePolicy } from '@/features/programs/storage/draftPolicyDb';
@@ -36,6 +39,7 @@ import { getProgramDraftSavePolicy } from '@/features/programs/storage/draftPoli
 import { resolveMaterialId } from '@/features/programs/storage/materialId';
 import { createBlankVsnDocument, createItemFromMedia, createScrollTextItem, createTextItem } from '@/features/programs/vsn/defaults';
 import type { VsnDocument } from '@/features/programs/vsn/types';
+import { sanitizeVsnForPersist } from '@/features/programs/vsn/sanitize';
 import { validateVsnDocument } from '@/features/programs/vsn/validator';
 import type { MediaAssetNode } from '@/types/media-library';
 
@@ -78,9 +82,11 @@ export default function ProgramEditorPage() {
   const queryClient = useQueryClient();
   const { programId } = useParams<{ programId: string }>();
   const isMobile = useIsMobile();
+  const { formatRelative } = useTimeFormatter();
 
   const searchParams = new URLSearchParams(location.search);
   const baseFromUrl = searchParams.get('base');
+  const hasBaseFromUrl = baseFromUrl != null;
   const initialBaseVersion = baseFromUrl === 'blank' ? 0 : (Number.parseInt(baseFromUrl || '', 10) || 0);
 
   // --- State ---
@@ -96,6 +102,7 @@ export default function ProgramEditorPage() {
   const vsnRevisionRef = useRef(0);
   const autosaveTimerRef = useRef<number | null>(null);
   const [autosavePending, setAutosavePending] = useState(false);
+  const stageCaptureContainerRef = useRef<HTMLDivElement | null>(null);
   const [selection, setSelection] = useState<EditorSelection>({ pageIndex: 0, regionIndex: null, itemIndex: null });
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -148,6 +155,12 @@ export default function ProgramEditorPage() {
 
     const load = async () => {
       try {
+        const defaultBase = programQuery.data?.data?.defaultVersion;
+        if (!hasBaseFromUrl && baseVersion == null && defaultBase && defaultBase > 0) {
+          setBaseVersion(defaultBase);
+          return;
+        }
+
         // Reset ephemeral editor state when switching drafts/base versions.
         if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
         setPast([]);
@@ -185,13 +198,14 @@ export default function ProgramEditorPage() {
       }
     };
     load();
-  }, [programId, baseVersion, isInitializing, navigate, programQuery.isLoading, programQuery.data]);
+  }, [programId, baseVersion, hasBaseFromUrl, isInitializing, navigate, programQuery.isLoading, programQuery.data]);
 
   // --- Mutations ---
   const saveMutation = useMutation({
     mutationFn: (newVsn: VsnDocument) => {
-      if (!draft?.id) throw new Error('Draft not initialized');
-      return saveProgramDraft(programId!, draft.id, { vsnJson: JSON.stringify(newVsn) });
+      const draftId = draft?.draftId ?? draft?.id;
+      if (!draftId) throw new Error('Draft not initialized');
+      return saveProgramDraft(programId!, draftId, { vsnJson: JSON.stringify(sanitizeVsnForPersist(newVsn)) });
     },
     onSuccess: (res) => {
       setDirty(false);
@@ -210,6 +224,14 @@ export default function ProgramEditorPage() {
     }
   });
 
+  const updateMutation = useMutation({
+    mutationFn: (data: UpdateProgramReq) => updateProgramApi(programId!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['programs', programId] });
+    },
+    onError: (err) => toast.error(`Update failed: ${getErrorMessage(err)}`),
+  });
+
   // Handle Save
   const handleSaveManually = useCallback(() => {
     if (!vsn || !draft) return;
@@ -220,7 +242,8 @@ export default function ProgramEditorPage() {
 
   // Autosave Logic
   useEffect(() => {
-    if (!dirty || !vsn || !draft?.id) return;
+    const draftId = draft?.draftId ?? draft?.id;
+    if (!dirty || !vsn || !draftId) return;
     
     const policy = getProgramDraftSavePolicy();
     if (policy !== 'always') return;
@@ -274,9 +297,26 @@ export default function ProgramEditorPage() {
   }, [isPlaying, maxPageDurationMs, playbackSpeed]);
 
   const togglePlayback = useCallback(() => setIsPlaying((p) => !p), []);
+
+  const saveStatus = useMemo(() => {
+    if (saveMutation.isPending) return 'Saving…';
+    if (dirty) return autosavePending ? 'Autosave pending' : 'Unsaved';
+    if (draft?.updatedAt) return `Saved ${formatRelative(draft.updatedAt)}`;
+    return 'Saved';
+  }, [autosavePending, dirty, draft?.updatedAt, formatRelative, saveMutation.isPending]);
   
   const [previewOpen, setPreviewOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
+  const [publishContext, setPublishContext] = useState<{
+    preferredDraftId: string | null;
+    initialVersionMode: 'CREATE' | 'EXISTING' | null;
+    initialExistingVersion: number | null;
+    lockVersionMode: 'CREATE' | 'EXISTING' | null;
+    createVsnJson: string | null;
+    coverBase64: string | null;
+    coverContentType: string | null;
+    cleanupDraftId: string | null;
+  } | null>(null);
   const [draftPromptOpen, setDraftPromptOpen] = useState(false);
   const [draftPromptIntent, setDraftPromptIntent] = useState<DraftPromptIntent | null>(null);
 
@@ -510,6 +550,37 @@ export default function ProgramEditorPage() {
         return;
       }
     }
+
+    const captureCover = async (): Promise<{ base64: string; contentType: string } | null> => {
+      const container = stageCaptureContainerRef.current;
+      const stage = container?.querySelector('[data-testid=\"program-stage\"]') as HTMLElement | null;
+      if (!stage) return null;
+      try {
+        const dataUrl = await toPng(stage, { cacheBust: true, pixelRatio: 1 });
+        return { base64: dataUrl, contentType: 'image/png' };
+      } catch (e) {
+        return null;
+      }
+    };
+
+    const base = draft.baseVersion ?? 0;
+    const hasRelease = (program?.versions?.length || 0) > 0;
+    const shouldDeployExisting = hasRelease && !dirty && base > 0;
+
+    const sanitizedVsn = sanitizeVsnForPersist(vsn);
+    const cover = shouldDeployExisting ? null : await captureCover();
+
+    setPublishContext({
+      preferredDraftId: shouldDeployExisting ? null : (draft?.draftId ?? draft?.id ?? null),
+      initialVersionMode: shouldDeployExisting ? 'EXISTING' : 'CREATE',
+      initialExistingVersion: shouldDeployExisting ? base : null,
+      lockVersionMode: shouldDeployExisting ? 'EXISTING' : 'CREATE',
+      createVsnJson: shouldDeployExisting ? null : JSON.stringify(sanitizedVsn),
+      coverBase64: cover?.base64 ?? null,
+      coverContentType: cover?.contentType ?? null,
+      cleanupDraftId: shouldDeployExisting ? null : (draft?.draftId ?? draft?.id ?? null),
+    });
+
     setPublishOpen(true);
   };
 
@@ -674,6 +745,11 @@ export default function ProgramEditorPage() {
                if (!vsn) return;
                setTargetDeviceId(res.targetDeviceId);
                applyVsn(resizeProgramCanvas(vsn, res));
+               updateMutation.mutate({
+                 width: res.width,
+                 height: res.height,
+                 targetDeviceId: res.targetDeviceId
+               });
             }}
             onPatchPage={(pageIndex, patch) => vsn && applyVsn(patchPage(vsn, pageIndex, patch))}
             onPatchRegion={(pIdx, rIdx, patch) => vsn && applyVsn(patchRegion(vsn, pIdx, rIdx, patch))}
@@ -697,7 +773,7 @@ export default function ProgramEditorPage() {
           <div className="min-w-0">
             <h1 className="truncate text-xl font-semibold tracking-tight uppercase">{program.name}</h1>
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-              {canvasWidth}×{canvasHeight} · {baseVersion != null ? `v${baseVersion}` : 'Blank'} {dirty && '· Modified'}
+              {canvasWidth}×{canvasHeight} · {baseVersion != null ? `v${baseVersion}` : 'Blank'} · {saveStatus}
             </p>
           </div>
         </div>
@@ -726,11 +802,11 @@ export default function ProgramEditorPage() {
         <div className={cn('grid h-full gap-4', isMobile ? 'grid-cols-1' : 'lg:grid-cols-[320px_minmax(0,1fr)_360px]')}>
           {!isMobile && <div className="min-h-0 rounded-2xl border bg-card p-4 overflow-hidden">{leftPanelContent}</div>}
           <div className="min-h-0 grid-cols-1 gap-4 lg:grid lg:grid-rows-[minmax(0,1fr)_260px]">
-            <div className="min-h-0 rounded-2xl border bg-card p-4 overflow-hidden">
+            <div ref={stageCaptureContainerRef} className="min-h-0 rounded-2xl border bg-card p-4 overflow-hidden">
                <StagePreview
-                 doc={vsn} programWidth={canvasWidth} programHeight={canvasHeight} selection={selection}
-                 materialIndex={materialIndex} currentTime={currentTime} isPlaying={isPlaying} playbackSpeed={playbackSpeed}
-                 onSelectRegion={(rIdx) => setSelection(prev => ({ ...prev, regionIndex: rIdx, itemIndex: null }))}
+                  doc={vsn} programWidth={canvasWidth} programHeight={canvasHeight} selection={selection}
+                  materialIndex={materialIndex} currentTime={currentTime} isPlaying={isPlaying} playbackSpeed={playbackSpeed}
+                  onSelectRegion={(rIdx) => setSelection(prev => ({ ...prev, regionIndex: rIdx, itemIndex: null }))}
                  onPatchRegionRect={(pIdx, rIdx, patch) => vsn && applyVsn(patchRegionRect(vsn, pIdx, rIdx, patch))}
                  onDropMaterial={(materialId, point) => {
                     const material = materialIndex[materialId];
@@ -823,9 +899,20 @@ export default function ProgramEditorPage() {
 
       <ProgramPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} doc={vsn} materialIndex={materialIndex} startPageIndex={selection.pageIndex} />
       <ProgramPublishDialog
-        open={publishOpen} onOpenChange={setPublishOpen}
+        open={publishOpen}
+        onOpenChange={(next) => {
+          setPublishOpen(next);
+          if (!next) setPublishContext(null);
+        }}
         program={program as any} deployments={program.deployments || []}
-        preferredDraftId={draft?.id ?? null}
+        preferredDraftId={publishContext?.preferredDraftId ?? null}
+        initialVersionMode={publishContext?.initialVersionMode ?? null}
+        initialExistingVersion={publishContext?.initialExistingVersion ?? null}
+        lockVersionMode={publishContext?.lockVersionMode ?? null}
+        createVsnJson={publishContext?.createVsnJson ?? null}
+        coverBase64={publishContext?.coverBase64 ?? null}
+        coverContentType={publishContext?.coverContentType ?? null}
+        cleanupDraftId={publishContext?.cleanupDraftId ?? null}
         onAfterPublish={() => queryClient.invalidateQueries({ queryKey: ['programs', programId] })}
       />
 

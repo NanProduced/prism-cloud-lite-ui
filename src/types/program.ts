@@ -8,22 +8,25 @@ export interface ProgramListResp {
   name: string;
   width: number;
   height: number;
-  latestVersion?: number;
-  latestReleaseAt?: string;
-  latestDraftAt?: string;
+  defaultVersion?: number;
+  latestVersion?: number | null;
+  latestReleaseAt?: string | null;
+  latestDraftAt?: string | null;
   unpublishedChanges: boolean;
-  coverUrl?: string;
+  coverUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface ProgramDraftResp {
-  id: string; // UUID
+  // Backend uses `draftId`; keep `id` optional for legacy UI compatibility.
+  draftId: string; // UUID
+  id?: string;
   programId: string;
-  baseVersion: number | null;
+  baseVersion: number; // 0 = Blank, N = from vN
   vsnJson: string; // The full editor JSON content
-  coverUrl?: string;
-  contentHash?: string;
+  coverUrl?: string | null;
+  contentHash?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -32,18 +35,22 @@ export interface ProgramVersionResp {
   version: number; // Platform version v1, v2...
   deviceProgramId: number; // Colorlight integer ID
   programId: string;
-  vsnJson: string;
-  coverUrl?: string;
+  deviceTitleSnapshot?: string | null;
+  vsnMd5?: string | null;
+  vsnSizeBytes?: number | null;
+  coverUrl?: string | null;
   createdAt: string;
 }
 
 export interface ProgramDeploymentResp {
-  deviceId: string;
-  deviceName?: string;
-  version: number;
-  status: 'DOWNLOADING' | 'DOWNLOADED' | null;
+  programId: string;
+  deviceId: number;
+  deviceName?: string | null;
+  releaseVersion: number;
+  releaseProgramId: number;
+  status?: 'DOWNLOADING' | 'DOWNLOADED' | null;
   assignedAt: string;
-  updatedAt?: string;
+  updatedAt?: string | null;
 }
 
 export interface ProgramDetailResp {
@@ -51,6 +58,7 @@ export interface ProgramDetailResp {
   name: string;
   width: number;
   height: number;
+  defaultVersion?: number;
   targetDeviceId?: string | null;
   drafts: ProgramDraftResp[];
   versions: ProgramVersionResp[];
@@ -63,6 +71,13 @@ export interface CreateProgramReq {
   name: string;
   width: number;
   height: number;
+}
+
+export interface UpdateProgramReq {
+  name?: string;
+  width?: number;
+  height?: number;
+  targetDeviceId?: string | null;
 }
 
 export interface SaveProgramDraftReq {
@@ -78,21 +93,28 @@ export interface ProgramPublishReq {
   draftId?: string;
   vsnJson?: string;
   coverBase64?: string;
+  coverContentType?: string;
   scope: 'SELECTED' | 'RUNNING';
-  deviceIds?: string[];
+  deviceIds?: number[];
   mode: 'APPEND' | 'OVERWRITE';
 }
 
 export interface ProgramPublishResult {
-  deviceId: string;
+  deviceId: number;
   action: 'deploy' | 'update' | 'rollback' | 'no-change' | 'skip' | 'undeploy';
+  affected?: boolean;
   commandId?: string;
+  queuedId?: number;
   accepted: boolean;
   errorMessage?: string;
 }
 
 export interface ProgramPublishResp {
-  publishOperationId: string;
+  programId: string;
+  version: number;
+  deviceProgramId: number;
+  totalTargets: number;
+  affected: number;
   results: ProgramPublishResult[];
 }
 

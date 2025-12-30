@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Send, 
   Monitor, Info, CheckCircle2, AlertCircle,
-  Database, Layers, XCircle, Search, Pencil, MoreHorizontal, History as HistoryIcon, RefreshCw
+  Database, Layers, XCircle, Search, Pencil, MoreHorizontal, History as HistoryIcon, RefreshCw, Trash2
 } from 'lucide-react';
 import { toast } from '@/store/notificationStore';
 
@@ -23,6 +23,7 @@ import {
   getProgramDetails, 
   getProgramAuditLogs, 
   deleteProgram as deleteProgramApi,
+  deleteProgramDraft as deleteProgramDraftApi,
   unpublishProgram
 } from '@/services/programApi';
 import { getErrorMessage } from '@/services/authApi';
@@ -46,6 +47,9 @@ export default function ProgramDetailsPage() {
   const { formatDateTime } = useTimeFormatter();
   
   const [publishOpen, setPublishOpen] = useState(false);
+  const [publishPreferredDraftId, setPublishPreferredDraftId] = useState<string | null>(null);
+  const [publishInitialVersionMode, setPublishInitialVersionMode] = useState<'CREATE' | 'EXISTING' | null>(null);
+  const [publishInitialExistingVersion, setPublishInitialExistingVersion] = useState<number | null>(null);
   const [deviceQuery, setDeviceQuery] = useState('');
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -79,7 +83,7 @@ export default function ProgramDetailsPage() {
   });
 
   const unpublishMutation = useMutation({
-    mutationFn: () => unpublishProgram(programId!, deployments.map(d => d.deviceId)),
+    mutationFn: () => unpublishProgram(programId!, { scope: 'RUNNING' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['programs', programId] });
       toast.success('Unpublished from all devices');
@@ -87,11 +91,21 @@ export default function ProgramDetailsPage() {
     onError: (err) => toast.error(getErrorMessage(err)),
   });
 
+  const deleteDraftMutation = useMutation({
+    mutationFn: (draftId: string) => deleteProgramDraftApi(programId!, draftId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['programs', programId] });
+      toast.success('Draft deleted');
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+
   const filteredDeployments = useMemo(() => {
     const q = deviceQuery.toLowerCase().trim();
     return deployments.filter(d => {
-      const name = (d.deviceName || d.deviceId).toLowerCase();
-      return name.includes(q) || d.deviceId.toLowerCase().includes(q);
+      const name = String(d.deviceName || d.deviceId || '').toLowerCase();
+      const idStr = String(d.deviceId || '').toLowerCase();
+      return name.includes(q) || idStr.includes(q);
     });
   }, [deployments, deviceQuery]);
 
@@ -99,6 +113,10 @@ export default function ProgramDetailsPage() {
     if (!program?.versions?.length) return null;
     return [...program.versions].sort((a, b) => b.version - a.version)[0];
   }, [program]);
+
+  const draftsSorted = useMemo(() => {
+    return [...(program?.drafts || [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }, [program?.drafts]);
   
   const maxVersion = latestRelease?.version ?? 0;
   const hasRelease = maxVersion > 0;
@@ -142,7 +160,10 @@ export default function ProgramDetailsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-           <Button className="h-10 px-6 gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]" onClick={() => navigate(`/dashboard/programs/${programId}/edit`)}>
+           <Button className="h-10 px-6 gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]" onClick={() => {
+             const base = (program.defaultVersion ?? maxVersion ?? 0) || 0;
+             navigate(`/dashboard/programs/${programId}/edit${base > 0 ? `?base=${base}` : ''}`);
+           }}>
              <Pencil className="h-3.5 w-3.5" /> Edit Workspace
            </Button>
            <Button size="sm" className="font-bold gap-2 shadow-lg shadow-primary/20" onClick={() => setPublishOpen(true)}>
@@ -184,6 +205,12 @@ export default function ProgramDetailsPage() {
                  <TabsTrigger value="nodes" className="px-6 rounded-lg gap-2 font-bold text-xs uppercase tracking-wider data-[state=active]:shadow-sm">
                     <Monitor className="h-3.5 w-3.5" /> Running Nodes
                  </TabsTrigger>
+                 <TabsTrigger value="releases" className="px-6 rounded-lg gap-2 font-bold text-xs uppercase tracking-wider data-[state=active]:shadow-sm">
+                    <Database className="h-3.5 w-3.5" /> Releases
+                 </TabsTrigger>
+                 <TabsTrigger value="drafts" className="px-6 rounded-lg gap-2 font-bold text-xs uppercase tracking-wider data-[state=active]:shadow-sm">
+                    <Layers className="h-3.5 w-3.5" /> Drafts
+                 </TabsTrigger>
                  <TabsTrigger value="history" className="px-6 rounded-lg gap-2 font-bold text-xs uppercase tracking-wider data-[state=active]:shadow-sm">
                     <HistoryIcon className="h-3.5 w-3.5" /> Full Audit Trail
                  </TabsTrigger>
@@ -216,7 +243,7 @@ export default function ProgramDetailsPage() {
                                    <div key={d.deviceId} className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-muted/5">
                                       <div className="min-w-0 flex-1">
                                          <p className="text-sm font-bold truncate leading-tight">{d.deviceName || d.deviceId}</p>
-                                         <p className="text-[10px] text-muted-foreground font-mono mt-1 opacity-60 uppercase">{d.deviceId?.slice(0, 12) ?? "Unknown"}</p>
+                                         <p className="text-[10px] text-muted-foreground font-mono mt-1 opacity-60 uppercase">{String(d.deviceId ?? '').slice(0, 12) || "Unknown"}</p>
                                       </div>
                                       <div className="flex items-center gap-6">
                                          <div className="text-right">
@@ -228,7 +255,7 @@ export default function ProgramDetailsPage() {
                                          </div>
                                          <div className="text-right min-w-[80px]">
                                             <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-40 mb-1 tracking-tighter">Running</p>
-                                            <Badge variant="outline" className="font-mono text-[10px] h-5 px-1.5 font-black border-primary/20 text-primary bg-primary/5">v{d.version}</Badge>
+                                            <Badge variant="outline" className="font-mono text-[10px] h-5 px-1.5 font-black border-primary/20 text-primary bg-primary/5">v{d.releaseVersion}</Badge>
                                          </div>
                                       </div>
                                    </div>
@@ -274,6 +301,136 @@ export default function ProgramDetailsPage() {
                              <div className="py-10 text-center opacity-30 italic text-xs">No audit logs found for this program.</div>
                           )}
                        </div>
+                    </CardContent>
+                 </Card>
+              </TabsContent>
+
+              <TabsContent value="releases" className="mt-6 space-y-4">
+                 <Card className="border-0 shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+                    <CardHeader className="bg-muted/10 border-b">
+                       <CardTitle className="text-sm font-bold">Published Releases</CardTitle>
+                       <CardDescription className="text-xs">Versions (vN) are immutable snapshots that can be deployed to devices.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                       {program.versions?.length ? (
+                         <ScrollArea className="h-[520px]">
+                            <div className="divide-y divide-foreground/[0.03]">
+                              {[...program.versions].sort((a, b) => b.version - a.version).map((v) => (
+                                <div key={v.version} className="flex items-center justify-between gap-4 px-6 py-4">
+                                  <div className="min-w-0 flex-1">
+                                     <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="font-mono text-[10px] h-5 px-1.5 font-black border-primary/20 text-primary bg-primary/5">v{v.version}</Badge>
+                                        <span className="text-[10px] text-muted-foreground/60">· {formatDateTime(v.createdAt)}</span>
+                                     </div>
+                                     <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[10px] text-muted-foreground/70">
+                                        <span className="font-mono">deviceProgramId: {v.deviceProgramId}</span>
+                                        {v.deviceTitleSnapshot ? <span className="truncate max-w-[420px]">title: {v.deviceTitleSnapshot}</span> : null}
+                                     </div>
+                                  </div>
+                                  <div className="flex shrink-0 items-center gap-2">
+                                     <Button
+                                       size="sm"
+                                       variant="outline"
+                                       onClick={() => {
+                                         navigate(`/dashboard/programs/${programId}/edit?base=${v.version}`);
+                                       }}
+                                     >
+                                       Open baseline
+                                     </Button>
+                                     <Button
+                                       size="sm"
+                                       onClick={() => {
+                                         setPublishPreferredDraftId(null);
+                                         setPublishInitialVersionMode('EXISTING');
+                                         setPublishInitialExistingVersion(v.version);
+                                         setPublishOpen(true);
+                                       }}
+                                     >
+                                       Deploy
+                                     </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                         </ScrollArea>
+                       ) : (
+                         <div className="py-20 text-center flex flex-col items-center gap-3 opacity-40">
+                           <Database className="h-12 w-12" />
+                           <p className="text-sm font-bold uppercase tracking-widest leading-tight">No Releases Yet</p>
+                            <Button size="sm" className="mt-2" onClick={() => { navigate(`/dashboard/programs/${programId}/edit`); }}>Publish v1</Button>
+                          </div>
+                        )}
+                     </CardContent>
+                  </Card>
+              </TabsContent>
+
+              <TabsContent value="drafts" className="mt-6 space-y-4">
+                 <Card className="border-0 shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+                    <CardHeader className="bg-muted/10 border-b">
+                       <CardTitle className="text-sm font-bold">Draft Snapshots</CardTitle>
+                       <CardDescription className="text-xs">Drafts are editable snapshots, unique per baseVersion (Blank or vN).</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                       {draftsSorted.length ? (
+                         <ScrollArea className="h-[520px]">
+                            <div className="divide-y divide-foreground/[0.03]">
+                              {draftsSorted.map((d) => (
+                                <div key={d.draftId} className="flex items-center justify-between gap-4 px-6 py-4">
+                                  <div className="min-w-0 flex-1">
+                                     <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="font-mono text-[10px] h-5 px-1.5 font-black border-amber-500/30 text-amber-700 bg-amber-500/5">
+                                          {d.baseVersion > 0 ? `base v${d.baseVersion}` : 'base Blank'}
+                                        </Badge>
+                                        <span className="text-[10px] text-muted-foreground/60">· updated {formatDateTime(d.updatedAt)}</span>
+                                     </div>
+                                     <div className="mt-2 flex items-center gap-2 text-[10px] text-muted-foreground/70 font-mono">
+                                        <span>draftId: {d.draftId.slice(0, 8)}...</span>
+                                     </div>
+                                  </div>
+                                  <div className="flex shrink-0 items-center gap-2">
+                                     <Button
+                                       size="sm"
+                                       variant="outline"
+                                       onClick={() => {
+                                         const base = d.baseVersion > 0 ? `?base=${d.baseVersion}` : '';
+                                         navigate(`/dashboard/programs/${programId}/edit${base}`);
+                                       }}
+                                     >
+                                       Open draft
+                                     </Button>
+                                     <Button
+                                       size="sm"
+                                       onClick={() => {
+                                         setPublishPreferredDraftId(d.draftId);
+                                         setPublishInitialVersionMode('CREATE');
+                                         setPublishInitialExistingVersion(null);
+                                         setPublishOpen(true);
+                                       }}
+                                     >
+                                       Publish
+                                     </Button>
+                                     <Button
+                                       size="sm"
+                                       variant="destructive"
+                                       onClick={() => deleteDraftMutation.mutate(d.draftId)}
+                                       disabled={deleteDraftMutation.isPending}
+                                     >
+                                       Delete
+                                     </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                         </ScrollArea>
+                       ) : (
+                         <div className="py-20 text-center flex flex-col items-center gap-3 opacity-40">
+                           <Layers className="h-12 w-12" />
+                           <p className="text-sm font-bold uppercase tracking-widest leading-tight">No Drafts Yet</p>
+                           <Button size="sm" className="mt-2" variant="outline" onClick={() => navigate(`/dashboard/programs/${programId}/edit`)}>
+                             Open editor
+                           </Button>
+                         </div>
+                       )}
                     </CardContent>
                  </Card>
               </TabsContent>
@@ -333,42 +490,63 @@ export default function ProgramDetailsPage() {
                     <p className="text-[10px] text-muted-foreground italic text-center">
                       {hasRelease ? 'Preview of the most recently published snapshot.' : 'Publish to create your first release (v1).'}
                     </p>
-                    {!hasRelease ? (
-                      <Button size="sm" className="font-bold gap-2" onClick={() => setPublishOpen(true)}>
-                        <Send className="h-3.5 w-3.5" /> Publish
+                     {!hasRelease ? (
+                      <Button size="sm" className="font-bold gap-2" onClick={() => navigate(`/dashboard/programs/${programId}/edit`)}>
+                        <Send className="h-3.5 w-3.5" /> Open editor
                       </Button>
-                    ) : null}
-                 </div>
-              </CardContent>
-           </Card>
+                     ) : null}
+                  </div>
+               </CardContent>
+            </Card>
         </div>
       </div>
 
       <ProgramPublishDialog 
         open={publishOpen} 
-        onOpenChange={setPublishOpen} 
+        onOpenChange={(next) => {
+          setPublishOpen(next);
+          if (!next) {
+            setPublishPreferredDraftId(null);
+            setPublishInitialVersionMode(null);
+            setPublishInitialExistingVersion(null);
+          }
+        }} 
         program={program as any} 
         deployments={deployments}
+        preferredDraftId={publishPreferredDraftId}
+        initialVersionMode={publishInitialVersionMode}
+        initialExistingVersion={publishInitialExistingVersion}
+        lockVersionMode={publishInitialVersionMode}
+        cleanupDraftId={publishInitialVersionMode === 'CREATE' ? publishPreferredDraftId : null}
         onAfterPublish={() => queryClient.invalidateQueries({ queryKey: ['programs', programId] })}
       />
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Program Permanently?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will delete the program and all its versions. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => deleteMutation.mutate()}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
+        <AlertDialogContent className="max-w-[420px] p-0 overflow-hidden border-0 shadow-2xl rounded-2xl ring-1 ring-foreground/5">
+          <div className="p-8">
+            <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+              <Trash2 className="h-6 w-6" />
+            </div>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-xl font-bold tracking-tight">Delete Program Permanently?</AlertDialogTitle>
+              <AlertDialogDescription className="text-sm pt-2 space-y-4">
+                <span className="block">This action cannot be undone. You are about to permanently delete:</span>
+                <span className="block rounded-xl bg-destructive/5 border border-destructive/10 p-4 font-bold text-destructive text-base truncate">
+                  {program.name}
+                </span>
+                <span className="block">This will delete the program and all its versions from our system.</span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="mt-8 gap-3">
+              <AlertDialogCancel className="font-bold text-xs uppercase tracking-widest px-8">Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => deleteMutation.mutate()}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold text-xs uppercase tracking-widest px-10 h-10 shadow-xl shadow-destructive/20"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
 

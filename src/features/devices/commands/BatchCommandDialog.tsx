@@ -85,7 +85,7 @@ function formatActionParams(type: ActionType, params: any): string {
       return parts.join(' | ');
     }
     case 'VOLUME':
-      return `Volume: ${params.musicvolume}/15`;
+      return `Volume: ${Math.round(params.musicvolume / 15 * 100)}%`;
     case 'INPUT_MODE':
       return `Input Mode: ${(params.inputmode || '').toUpperCase()}`;
     case 'TIMEZONE':
@@ -125,7 +125,12 @@ export function BatchCommandDialog({
   const [step, setStep] = useState(0);
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<Set<string>>(new Set(initialSelectedDeviceIds));
   const [actions, setActions] = useState<ActionConfig[]>([]);
-  const [executionResults, setExecutionResults] = useState<Record<string, { status: string, operationId?: string, deviceId?: string }>>({});
+  
+  // Track status by operationId (immutable from SSE)
+  const [opStatusMap, setOpStatusMap] = useState<Record<string, string>>({});
+  // Map UI item ID (device ID or action index) to its associated operationIds
+  const [itemToOpIds, setItemToOpIds] = useState<Record<string, string[]>>({});
+
   const [riskConfirmed, setRiskConfirmed] = useState(false);
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -139,16 +144,9 @@ export function BatchCommandDialog({
 
       if (!operationId) return;
 
-      setExecutionResults(prev => {
-        const next = { ...prev };
-        let found = false;
-        for (const key in next) {
-          if (String(next[key].operationId) === String(operationId)) {
-            next[key] = { ...next[key], status };
-            found = true;
-          }
-        }
-        return found ? next : prev;
+      setOpStatusMap(prev => {
+        if (prev[operationId] === status) return prev;
+        return { ...prev, [operationId]: status };
       });
     };
 
@@ -162,7 +160,8 @@ export function BatchCommandDialog({
       setStep(startAtStep);
       setSelectedDeviceIds(new Set(initialSelectedDeviceIds));
       setActions([]);
-      setExecutionResults({});
+      setOpStatusMap({});
+      setItemToOpIds({});
       setRiskConfirmed(false);
       setOnlineOnly(false);
       setIsLoading(false);
@@ -222,21 +221,43 @@ export function BatchCommandDialog({
       
       if (response.success && response.data) {
         toast.success('Commands dispatched');
-        const results: Record<string, any> = {};
+        const initialOpStatus: Record<string, string> = {};
+        const mapping: Record<string, string[]> = {};
         const apiResults = response.data.results || [];
         
-        // Note: With combined DISPLAY, there might be more apiResults than actions.
-        // We'll map them back by deviceId and key for simple tracking.
-        items.forEach((item, i) => {
-          const apiResult = apiResults[i] || {};
-          const key = mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? String(item.deviceId) : `${item.deviceId}-op-${i}`;
-          results[key] = { 
-            status: apiResult.status || 'DISPATCHED',
-            operationId: apiResult.operationId,
-            deviceId: String(item.deviceId)
-          };
-        });
-        setExecutionResults(results);
+        let apiIdx = 0;
+        if (mode === 'MULTI_DEVICE_SINGLE_COMMAND') {
+          const action = actions[0];
+          deviceIds.forEach(id => {
+            const count = action.type === 'DISPLAY' ? 2 : 1;
+            const itemOpIds = [];
+            for (let k = 0; k < count; k++) {
+              const res = apiResults[apiIdx++];
+              if (res?.operationId) {
+                itemOpIds.push(res.operationId);
+                initialOpStatus[res.operationId] = res.status || 'DISPATCHED';
+              }
+            }
+            mapping[String(id)] = itemOpIds;
+          });
+        } else {
+          const targetId = deviceIds[0];
+          actions.forEach((action, actionIdx) => {
+            const count = action.type === 'DISPLAY' ? 2 : 1;
+            const itemOpIds = [];
+            for (let k = 0; k < count; k++) {
+              const res = apiResults[apiIdx++];
+              if (res?.operationId) {
+                itemOpIds.push(res.operationId);
+                initialOpStatus[res.operationId] = res.status || 'DISPATCHED';
+              }
+            }
+            mapping[`${targetId}-action-${actionIdx}`] = itemOpIds;
+          });
+        }
+
+        setOpStatusMap(initialOpStatus);
+        setItemToOpIds(mapping);
       } else {
         toast.error(response.error?.message || 'Failed to dispatch commands');
         setStep(2);
@@ -327,7 +348,8 @@ export function BatchCommandDialog({
                 selectedDeviceIds={selectedDeviceIds}
                 devices={devices}
                 actions={actions}
-                results={executionResults}
+                opStatusMap={opStatusMap}
+                itemToOpIds={itemToOpIds}
                 onlineOnly={onlineOnly}
               />
             )}
@@ -681,11 +703,17 @@ function ActionConfigStep({
                       </div>
                     )}
                     {action.type === 'VOLUME' && (
-                      <ControlItem label={`Volume Level: ${action.params.musicvolume}`} className="col-span-2">
+                      <ControlItem label={`Volume Level: ${Math.round(action.params.musicvolume / 15 * 100)}%`} className="col-span-2">
                          <div className="flex items-center gap-6 bg-muted/20 p-3 rounded-md border">
                             <Volume2 className="h-4 w-4 text-primary" />
-                            <Slider value={[action.params.musicvolume]} onValueChange={([v]) => updateParam(index, 'musicvolume', v)} max={15} step={1} className="flex-1" />
-                            <span className="font-bold tabular-nums text-base w-6 text-primary">15</span>
+                            <Slider 
+                               value={[action.params.musicvolume]} 
+                               onValueChange={([v]) => updateParam(index, 'musicvolume', v)} 
+                               max={15} 
+                               step={1} 
+                               className="flex-1" 
+                            />
+                            <span className="font-bold tabular-nums text-base w-12 text-primary text-right">100%</span>
                          </div>
                       </ControlItem>
                     )}
@@ -930,14 +958,16 @@ function ExecutionStep({
   selectedDeviceIds,
   devices,
   actions,
-  results,
+  opStatusMap,
+  itemToOpIds,
   onlineOnly
 }: {
   mode: CommandMode,
   selectedDeviceIds: Set<string>,
   devices: Device[],
   actions: ActionConfig[],
-  results: Record<string, any>,
+  opStatusMap: Record<string, string>,
+  itemToOpIds: Record<string, string[]>,
   onlineOnly: boolean
 }) {
   const trackingData = mode === 'MULTI_DEVICE_SINGLE_COMMAND' 
@@ -950,9 +980,27 @@ function ExecutionStep({
             }).filter(Boolean) as any[]
     : actions.map((a, idx) => ({ id: `${Array.from(selectedDeviceIds)[0]}-action-${idx}`, label: formatActionType(a.type), sub: formatActionParams(a.type, a.params), isDevice: false, type: a.type, isOffline: false }));
 
+  const getAggregatedStatus = (itemId: string) => {
+    const opIds = itemToOpIds[itemId] || [];
+    if (opIds.length === 0) return 'WAITING';
+    
+    const statuses = opIds.map(id => opStatusMap[id] || 'WAITING');
+    
+    if (statuses.some(s => s === 'FAILED')) return 'FAILED';
+    if (statuses.some(s => s === 'EXPIRED')) return 'EXPIRED';
+    if (statuses.every(s => s === 'COMPLETED' || s === 'SUCCEEDED')) return 'COMPLETED';
+    if (statuses.some(s => s === 'CONFIRMED' || s === 'ACKED')) return 'CONFIRMED';
+    if (statuses.some(s => s === 'PUBLISHED' || s === 'DISPATCHED')) return 'PUBLISHED';
+    
+    return 'WAITING';
+  };
+
   const activeStream = trackingData.filter(t => !t.isOffline);
-  const queueStream = trackingData.filter(t => t.isOffline);
-  const finishedCount = Object.values(results).filter(r => ['COMPLETED', 'CONFIRMED', 'SUCCEEDED', 'FAILED', 'EXPIRED'].includes(r.status)).length;
+  const finishedCount = trackingData.filter(item => {
+    const s = getAggregatedStatus(item.id);
+    return ['COMPLETED', 'SUCCEEDED', 'FAILED', 'EXPIRED'].includes(s);
+  }).length;
+  
   const isAllFinished = trackingData.length > 0 && finishedCount >= activeStream.length;
 
   return (
@@ -992,14 +1040,14 @@ function ExecutionStep({
                   </div>
                 </div>
                 <div className="w-32 flex justify-center">
-                  <StatusBadge status={results[item.id]?.status || 'WAITING'} />
+                  <StatusBadge status={getAggregatedStatus(item.id)} />
                 </div>
               </div>
             ))}
           </div>
         </ScrollArea>
         <div className="h-1 bg-muted">
-           <div className="h-full bg-primary transition-all duration-1000" style={{ width: `${(finishedCount / trackingData.length) * 100}%` }} />
+           <div className="h-full bg-primary transition-all duration-1000" style={{ width: `${(finishedCount / Math.max(1, trackingData.length)) * 100}%` }} />
         </div>
       </div>
     </div>
