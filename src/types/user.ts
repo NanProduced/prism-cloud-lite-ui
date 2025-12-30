@@ -85,6 +85,23 @@ export interface BindPhoneRequest {
 }
 
 export interface BindPhoneConfirmRequest {
+
   phone: string;
+
   code: string;
+
+}
+
+
+
+export interface UserStorageQuotaView {
+
+  quotaBytes: number;
+
+  usedBytes: number;
+
+  availableBytes: number | null;
+
+  percent: number | null;
+
 }

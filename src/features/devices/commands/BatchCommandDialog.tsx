@@ -541,6 +541,26 @@ function DeviceSelectStep({
                       <Sun className="h-3 w-3 text-amber-500" />
                       <span className="text-[10px] font-bold tabular-nums">{d.brightness}%</span>
                    </div>
+                   {resolveDeviceStatus(d) === 'online' && d.powerStatus !== undefined && (
+                     <div className="flex items-center gap-2">
+                        {d.powerStatus === 0 ? (
+                          <>
+                            <Moon className="h-3 w-3 text-blue-500" />
+                            <span className="text-[9px] font-medium text-blue-600 uppercase">Sleep</span>
+                          </>
+                        ) : d.powerStatus === 1 ? (
+                          <>
+                            <Power className="h-3 w-3 text-emerald-500" />
+                            <span className="text-[9px] font-medium text-emerald-600 uppercase">Awake</span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-[9px] font-medium text-muted-foreground uppercase">Unknown</span>
+                          </>
+                        )}
+                     </div>
+                   )}
                 </div>
                 <div className="w-24 text-right">
                    <Badge variant="outline" className={cn(
@@ -970,15 +990,33 @@ function ExecutionStep({
   itemToOpIds: Record<string, string[]>,
   onlineOnly: boolean
 }) {
+  const isActionAckOnly = (type: ActionType) => ['POWER', 'SCREENSHOT'].includes(type);
+
   const trackingData = mode === 'MULTI_DEVICE_SINGLE_COMMAND' 
         ? Array.from(selectedDeviceIds).map(id => {
               const d = devices.find(x => String(x.deviceId) === id);
               const status = d ? resolveDeviceStatus(d) : 'offline';
               const isOnline = status === 'online';
               if (onlineOnly && !isOnline) return null;
-              return { id, label: d?.deviceName || id, sub: isOnline ? 'Real-time sync' : 'Queued for heartbeat', isDevice: true, isOffline: !isOnline };
+              return { 
+                id, 
+                label: d?.deviceName || id, 
+                sub: isOnline ? 'Real-time sync' : 'Queued for heartbeat', 
+                isDevice: true, 
+                isOffline: !isOnline,
+                isAckOnly: actions.length > 0 && isActionAckOnly(actions[0].type)
+              };
             }).filter(Boolean) as any[]
-    : actions.map((a, idx) => ({ id: `${Array.from(selectedDeviceIds)[0]}-action-${idx}`, label: formatActionType(a.type), sub: formatActionParams(a.type, a.params), isDevice: false, type: a.type, isOffline: false }));
+    : actions.map((a, idx) => ({ 
+        id: `${Array.from(selectedDeviceIds)[0]}-action-${idx}`, 
+        label: formatActionType(a.type), 
+        sub: formatActionParams(a.type, a.params), 
+        isDevice: false, 
+        type: a.type, 
+        params: a.params,
+        isOffline: false,
+        isAckOnly: isActionAckOnly(a.type)
+      }));
 
   const getAggregatedStatus = (itemId: string) => {
     const opIds = itemToOpIds[itemId] || [];
@@ -998,7 +1036,25 @@ function ExecutionStep({
   const activeStream = trackingData.filter(t => !t.isOffline);
   const finishedCount = trackingData.filter(item => {
     const s = getAggregatedStatus(item.id);
-    return ['COMPLETED', 'SUCCEEDED', 'FAILED', 'EXPIRED'].includes(s);
+    const isDone = ['COMPLETED', 'SUCCEEDED', 'FAILED', 'EXPIRED'].includes(s);
+    
+    // For ACK_ONLY actions, we usually consider CONFIRMED as success.
+    // However, for sleep/wakeup, we might want to wait for the actual powerStatus to match.
+    let isAckDone = item.isAckOnly && (s === 'CONFIRMED' || s === 'ACKED');
+    
+    if (isAckDone) {
+       const type = item.isDevice ? (actions[0]?.type) : item.type;
+       const params = item.isDevice ? (actions[0]?.params) : item.params;
+       if (type === 'POWER') {
+          const cmd = params?.command;
+          const deviceId = item.isDevice ? item.id : Array.from(selectedDeviceIds)[0];
+          const d = devices.find(x => String(x.deviceId) === deviceId);
+          if (cmd === 'sleep' && d?.powerStatus !== 0) isAckDone = false;
+          if (cmd === 'wakeup' && d?.powerStatus !== 1) isAckDone = false;
+       }
+    }
+
+    return isDone || isAckDone;
   }).length;
   
   const isAllFinished = trackingData.length > 0 && finishedCount >= activeStream.length;
@@ -1040,7 +1096,7 @@ function ExecutionStep({
                   </div>
                 </div>
                 <div className="w-32 flex justify-center">
-                  <StatusBadge status={getAggregatedStatus(item.id)} />
+                  <StatusBadge status={getAggregatedStatus(item.id)} isAckOnly={item.isAckOnly} />
                 </div>
               </div>
             ))}
@@ -1054,13 +1110,17 @@ function ExecutionStep({
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, isAckOnly = false }: { status: string, isAckOnly?: boolean }) {
   switch (status) {
     case 'WAITING': return <Badge variant="outline" className="bg-zinc-100 text-zinc-500 border-zinc-200 gap-1.5 h-6 px-2 rounded-md"><Clock className="h-3 w-3" /><span className="text-[9px] font-bold uppercase">In Queue</span></Badge>;
     case 'DISPATCHED':
     case 'PUBLISHED': return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-200 gap-1.5 h-6 px-2 rounded-md"><Loader2 className="h-3 w-3 animate-spin" /><span className="text-[9px] font-bold uppercase">Sending</span></Badge>;
     case 'ACKED':
-    case 'CONFIRMED': return <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200 gap-1.5 h-6 px-2 rounded-md"><Check className="h-3 w-3" /><span className="text-[9px] font-bold uppercase">Received</span></Badge>;
+    case 'CONFIRMED': 
+      if (isAckOnly) {
+        return <Badge className="bg-emerald-500 text-white border-none gap-1.5 h-6 px-2 rounded-md shadow-none"><Check className="h-3 w-3 stroke-[3]" /><span className="text-[9px] font-bold uppercase">Success</span></Badge>;
+      }
+      return <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200 gap-1.5 h-6 px-2 rounded-md"><Check className="h-3 w-3" /><span className="text-[9px] font-bold uppercase">Received</span></Badge>;
     case 'SUCCEEDED':
     case 'COMPLETED': return <Badge className="bg-emerald-500 text-white border-none gap-1.5 h-6 px-2 rounded-md shadow-none"><Check className="h-3 w-3 stroke-[3]" /><span className="text-[9px] font-bold uppercase">Success</span></Badge>;
     case 'FAILED':

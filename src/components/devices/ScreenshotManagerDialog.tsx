@@ -38,6 +38,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { HistoricalScreenshot } from "@/types/device";
 import { useTimeFormatter } from "@/hooks/use-time-formatter";
+import { useQuery } from "@tanstack/react-query";
+import { getUserStorageQuota } from "@/services/userApi";
 
 interface ScreenshotManagerDialogProps {
   open: boolean;
@@ -64,13 +66,21 @@ export function ScreenshotManagerDialog({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
+  const { data: quotaResponse } = useQuery({
+    queryKey: ['user-storage-quota'],
+    queryFn: () => getUserStorageQuota(),
+    enabled: open,
+  });
+
+  const quota = quotaResponse?.data;
+
   // Sync local state with props when refreshed
   useEffect(() => {
     setLocalScreenshots(initialScreenshots);
   }, [initialScreenshots]);
 
   const totalSize = useMemo(() => {
-    return localScreenshots.reduce((acc, curr) => acc + curr.size, 0);
+    return localScreenshots.reduce((acc, curr) => acc + (curr.sizeBytes || curr.size || 0), 0);
   }, [localScreenshots]);
 
   const formatSize = (bytes: number) => {
@@ -92,7 +102,7 @@ export function ScreenshotManagerDialog({
     if (selectedIds.length === localScreenshots.length && localScreenshots.length > 0) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(localScreenshots.map(s => s.id));
+      setSelectedIds(localScreenshots.map(s => s.screenshotId || s.id));
     }
   };
 
@@ -102,7 +112,7 @@ export function ScreenshotManagerDialog({
     toast.promise(new Promise(r => setTimeout(r, 800)), {
       loading: `Deleting ${selectedIds.length} items...`,
       success: () => {
-        const remaining = localScreenshots.filter(s => !selectedIds.includes(s.id));
+        const remaining = localScreenshots.filter(s => !selectedIds.includes(s.screenshotId || s.id));
         setLocalScreenshots(remaining);
         onDelete?.(selectedIds);
         setSelectedIds([]);
@@ -174,14 +184,16 @@ export function ScreenshotManagerDialog({
                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-transparent">
                       <HardDrive className="h-4 w-4 text-muted-foreground" />
                       <div className="flex items-baseline gap-1.5">
-                         <span className="text-sm font-semibold">{formatSize(totalSize)}</span>
-                         <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">/ 1.2 GB</span>
+                         <span className="text-sm font-semibold">{formatSize(quota?.usedBytes || totalSize)}</span>
+                         <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                           / {quota?.quotaBytes && quota.quotaBytes > 0 ? formatSize(quota.quotaBytes) : "No Limit"}
+                         </span>
                       </div>
                    </div>
                    <div className="h-1.5 w-24 bg-muted rounded-full overflow-hidden hidden lg:block">
                       <div 
                          className="h-full bg-primary transition-all duration-500" 
-                         style={{ width: `${Math.min(100, (totalSize / (1.2 * 1024 * 1024 * 1024)) * 100)}%` }} 
+                         style={{ width: `${quota?.percent != null ? Math.min(100, quota.percent) : 0}%` }} 
                       />
                    </div>
                 </div>
@@ -277,43 +289,46 @@ export function ScreenshotManagerDialog({
                   </div>
                 ) : viewMode === 'grid' ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                     {localScreenshots.map((s) => (
-                       <div 
-                         key={s.id} 
-                         className={cn(
-                           "group relative aspect-[4/3] rounded-xl overflow-hidden border transition-all cursor-pointer bg-muted shadow-sm",
-                           selectedIds.includes(s.id) ? "ring-2 ring-primary border-primary" : "hover:border-primary/50"
-                         )}
-                         onClick={() => setPreviewImage(s.url || s.screenshotUrl)}
-                       >
-                          <img src={s.url || s.screenshotUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt="History" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                          
-                          <div className="absolute top-2 left-2" onClick={(e) => e.stopPropagation()}>
-                             <Checkbox 
-                                checked={selectedIds.includes(s.id)}
-                                className="h-4 w-4 rounded-md data-[state=checked]:bg-primary"
-                                onCheckedChange={() => handleToggleSelect(s.id)}
-                             />
-                          </div>
+                     {localScreenshots.map((s) => {
+                       const sid = s.screenshotId || s.id;
+                       return (
+                         <div 
+                           key={sid} 
+                           className={cn(
+                             "group relative aspect-[4/3] rounded-xl overflow-hidden border transition-all cursor-pointer bg-muted shadow-sm",
+                             selectedIds.includes(sid) ? "ring-2 ring-primary border-primary" : "hover:border-primary/50"
+                           )}
+                           onClick={() => setPreviewImage(s.url || s.screenshotUrl)}
+                         >
+                            <img src={s.url || s.screenshotUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt="History" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            
+                            <div className="absolute top-2 left-2" onClick={(e) => e.stopPropagation()}>
+                               <Checkbox 
+                                  checked={selectedIds.includes(sid)}
+                                  className="h-4 w-4 rounded-md data-[state=checked]:bg-primary"
+                                  onCheckedChange={() => handleToggleSelect(sid)}
+                               />
+                            </div>
 
-                          <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all">
-                             <div className="text-white text-[10px] font-medium leading-none drop-shadow-md">
-                                <p className="mb-1">{formatDateTime(s.timestamp || s.createdAt)}</p>
-                             </div>
-                             <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                                <Button 
-                                   size="icon" 
-                                   variant="secondary" 
-                                   className="h-7 w-7 rounded-lg bg-black/50 border border-white/20 text-white hover:bg-primary transition-colors"
-                                   onClick={() => setPreviewImage(s.url || s.screenshotUrl)}
-                                >
-                                   <Maximize2 className="h-3.5 w-3.5" />
-                                </Button>
-                             </div>
-                          </div>
-                       </div>
-                     ))}
+                            <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all">
+                               <div className="text-white text-[10px] font-medium leading-none drop-shadow-md">
+                                  <p className="mb-1">{formatDateTime(s.uploadedAt || s.timestamp || s.createdAt)}</p>
+                               </div>
+                               <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                  <Button 
+                                     size="icon" 
+                                     variant="secondary" 
+                                     className="h-7 w-7 rounded-lg bg-black/50 border border-white/20 text-white hover:bg-primary transition-colors"
+                                     onClick={() => setPreviewImage(s.url || s.screenshotUrl)}
+                                  >
+                                     <Maximize2 className="h-3.5 w-3.5" />
+                                  </Button>
+                               </div>
+                            </div>
+                         </div>
+                       );
+                     })}
                   </div>
                 ) : (
                   <div className="rounded-lg border bg-background overflow-hidden">
@@ -324,65 +339,67 @@ export function ScreenshotManagerDialog({
                         <div className="col-span-2 text-right">Actions</div>
                      </div>
                      <div className="divide-y">
-                        {localScreenshots.map((s) => (
-                          <div 
-                            key={s.id} 
-                            className={cn(
-                              "grid grid-cols-12 px-4 py-3 items-center transition-colors cursor-pointer",
-                              selectedIds.includes(s.id) ? "bg-primary/5" : "hover:bg-muted/30"
-                            )}
-                            onClick={() => handleToggleSelect(s.id)}
-                          >
-                             <div className="col-span-1 flex justify-center">
-                                <Checkbox 
-                                   checked={selectedIds.includes(s.id)}
-                                   onCheckedChange={() => handleToggleSelect(s.id)}
-                                   onClick={(e) => e.stopPropagation()}
-                                   className="h-4 w-4 rounded-md"
-                                />
-                             </div>
-                             <div className="col-span-7 flex items-center gap-4">
-                                <div 
-                                   className="h-10 w-16 rounded-md overflow-hidden border bg-muted relative group/thumb shadow-sm"
-                                   onClick={(e) => { e.stopPropagation(); setPreviewImage(s.url || s.screenshotUrl); }}
-                                >
-                                   <img src={s.url || s.screenshotUrl} className="w-full h-full object-cover" alt="Thumb" />
-                                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center transition-opacity">
-                                      <Maximize2 className="h-4 w-4 text-white" />
-                                   </div>
-                                </div>
-                                <div className="space-y-0.5">
-                                   <p className="text-sm font-medium tracking-tight">{formatDateTime(s.timestamp || s.createdAt)}</p>
-                                   <p className="text-[10px] text-muted-foreground font-mono">ID: {(s.id || s.screenshotId)?.slice(0, 8).toUpperCase() ?? "UNKNOWN"}</p>
-                                </div>
-                             </div>
-                             <div className="col-span-2 text-right">
-                                <p className="text-xs font-medium text-muted-foreground">{formatSize(s.size)}</p>
-                             </div>
-                             <div className="col-span-2 text-right flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                                <Button 
-                                   variant="ghost" 
-                                   size="icon" 
-                                   className="h-8 w-8 rounded-md"
-                                   onClick={() => setPreviewImage(s.url || s.screenshotUrl)}
-                                >
-                                   <Maximize2 className="h-4 w-4" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8 rounded-md text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedIds([s.id]);
-                                    handleDeleteSelected();
-                                  }}
-                                >
-                                   <Trash2 className="h-4 w-4" />
-                                </Button>
-                             </div>
-                          </div>
-                        ))}
+                        {localScreenshots.map((s) => {
+                          const sid = s.screenshotId || s.id;
+                          return (
+                            <div 
+                              key={sid} 
+                              className={cn(
+                                "grid grid-cols-12 px-4 py-3 items-center transition-colors cursor-pointer",
+                                selectedIds.includes(sid) ? "bg-primary/5" : "hover:bg-muted/30"
+                              )}
+                              onClick={() => handleToggleSelect(sid)}
+                            >
+                               <div className="col-span-1 flex justify-center">
+                                  <Checkbox 
+                                     checked={selectedIds.includes(sid)}
+                                     onCheckedChange={() => handleToggleSelect(sid)}
+                                     onClick={(e) => e.stopPropagation()}
+                                     className="h-4 w-4 rounded-md"
+                                  />
+                               </div>
+                               <div className="col-span-7 flex items-center gap-4">
+                                  <div 
+                                     className="h-10 w-16 rounded-md overflow-hidden border bg-muted relative group/thumb shadow-sm"
+                                     onClick={(e) => { e.stopPropagation(); setPreviewImage(s.url || s.screenshotUrl); }}
+                                  >
+                                     <img src={s.url || s.screenshotUrl} className="w-full h-full object-cover" alt="Thumb" />
+                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center transition-opacity">
+                                        <Maximize2 className="h-4 w-4 text-white" />
+                                     </div>
+                                  </div>
+                                  <div className="space-y-0.5">
+                                     <p className="text-sm font-medium tracking-tight">{formatDateTime(s.uploadedAt || s.timestamp || s.createdAt)}</p>
+                                  </div>
+                               </div>
+                               <div className="col-span-2 text-right">
+                                  <p className="text-xs font-medium text-muted-foreground">{formatSize(s.sizeBytes || s.size || 0)}</p>
+                               </div>
+                               <div className="col-span-2 text-right flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                                  <Button 
+                                     variant="ghost" 
+                                     size="icon" 
+                                     className="h-8 w-8 rounded-md"
+                                     onClick={() => setPreviewImage(s.url || s.screenshotUrl)}
+                                  >
+                                     <Maximize2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8 rounded-md text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedIds([sid]);
+                                      handleDeleteSelected();
+                                    }}
+                                  >
+                                     <Trash2 className="h-4 w-4" />
+                                  </Button>
+                               </div>
+                            </div>
+                          );
+                        })}
                      </div>
                   </div>
                 )}

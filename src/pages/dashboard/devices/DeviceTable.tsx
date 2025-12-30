@@ -431,6 +431,7 @@ export function DeviceTable({
         return (
           <DeviceStatusBadge
             status={resolveDeviceStatus(device)}
+            powerStatus={device.powerStatus}
             pulse={pulsingDeviceIds?.has(String(device.deviceId))}
           />
         );

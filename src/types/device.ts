@@ -38,10 +38,14 @@ export interface CurrentProgram {
 
 export interface HistoricalScreenshot {
   id: string;
+  screenshotId?: string; // compatibility
   url?: string;
-  screenshotUrl?: string;
-  timestamp: string;
-  size: number;
+  screenshotUrl?: string; // compatibility
+  timestamp?: string;
+  createdAt?: string; // compatibility
+  uploadedAt?: string; // primary for new logic
+  size?: number;
+  sizeBytes?: number; // backend actual field
 }
 
 export interface Device {
@@ -83,6 +87,7 @@ export interface Device {
   brightness: number;
   colorTemperature?: number;
   volume?: number;
+  powerStatus?: number | null; // 0 for sleep, 1 for wakeup, null for unknown
 
   // Storage
   totalStorage: number;
@@ -96,6 +101,7 @@ export interface Device {
 
   // Screenshot
   lastScreenshotUrl?: string;
+  lastScreenshotUploadedAt?: string;
   latestScreenshot?: { url: string; timestamp: string }; // compatibility
 
   // Metadata

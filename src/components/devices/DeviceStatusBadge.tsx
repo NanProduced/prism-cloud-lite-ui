@@ -1,10 +1,11 @@
 import { type DeviceStatus } from '@/types/device';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Circle } from 'lucide-react';
+import { Circle, Moon, Power } from 'lucide-react';
 
 interface DeviceStatusBadgeProps {
   status?: DeviceStatus | number;
+  powerStatus?: number | null;
   offlineDuration?: number; // seconds
   className?: string;
   pulse?: boolean;
@@ -12,12 +13,14 @@ interface DeviceStatusBadgeProps {
 
 export function DeviceStatusBadge({
   status,
+  powerStatus,
   offlineDuration,
   className,
   pulse,
 }: DeviceStatusBadgeProps) {
+  const isOnline = status === 'online' || status === 1;
   const getStatusConfig = () => {
-    if (status === 'online' || status === 1) {
+    if (isOnline) {
       return {
         label: 'Online',
         color: 'text-emerald-600 dark:text-emerald-400',
@@ -56,23 +59,47 @@ export function DeviceStatusBadge({
   const config = getStatusConfig();
 
   return (
-    <Badge
-      variant="outline"
-      className={cn(
-        'flex items-center gap-2 px-2.5 py-0.5 text-[10px] font-bold tracking-wider transition-all duration-300',
-        config.bgColor,
-        config.borderColor,
-        className
-      )}
-    >
-      <div className="relative flex items-center justify-center">
-        <div className={cn('h-1.5 w-1.5 rounded-full', config.dotColor)} />
-        {pulse && (status === 'online' || status === 1) && (
-          <div className="absolute inset-0 h-1.5 w-1.5 rounded-full bg-emerald-500 animate-prism-breath scale-[2.5]" />
+    <div className="flex items-center gap-2">
+      <Badge
+        variant="outline"
+        className={cn(
+          'flex items-center gap-2 px-2.5 py-0.5 text-[10px] font-bold tracking-wider transition-all duration-300',
+          config.bgColor,
+          config.borderColor,
+          className
         )}
-      </div>
-      <span className={config.color}>{config.label}</span>
-    </Badge>
+      >
+        <div className="relative flex items-center justify-center">
+          <div className={cn('h-1.5 w-1.5 rounded-full', config.dotColor)} />
+          {pulse && isOnline && (
+            <div className="absolute inset-0 h-1.5 w-1.5 rounded-full bg-emerald-500 animate-prism-breath scale-[2.5]" />
+          )}
+        </div>
+        <span className={config.color}>{config.label}</span>
+      </Badge>
+
+      {isOnline && powerStatus !== undefined && powerStatus !== null && (
+        <Badge
+          variant="outline"
+          className={cn(
+            'flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-300',
+            powerStatus === 1 ? 'bg-emerald-500/5 text-emerald-600 border-emerald-500/20' : 'bg-blue-500/5 text-blue-600 border-blue-500/20'
+          )}
+        >
+          {powerStatus === 1 ? (
+            <>
+              <Power className="h-3 w-3" />
+              <span>Awake</span>
+            </>
+          ) : (
+            <>
+              <Moon className="h-3 w-3" />
+              <span>Sleep</span>
+            </>
+          )}
+        </Badge>
+      )}
+    </div>
   );
 }
 

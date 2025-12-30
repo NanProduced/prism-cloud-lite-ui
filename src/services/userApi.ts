@@ -14,6 +14,7 @@ import type {
   SubscriptionHistoryItem,
   BindPhoneRequest,
   BindPhoneConfirmRequest,
+  UserStorageQuotaView,
 } from '@/types/user';
 
 // User Profile
@@ -22,6 +23,10 @@ export const getUserProfile = () =>
 
 export const updateUserProfile = (data: UpdateProfileRequest) =>
   handleRequest(apiClient.post<BffResponse<UserProfile>>('/user/me', data));
+
+// Quota
+export const getUserStorageQuota = () =>
+  handleRequest(apiClient.get<BffResponse<UserStorageQuotaView>>('/user/quota/storage'));
 
 // Security - Phone Binding
 export const bindPhoneRequest = (data: BindPhoneRequest) =>

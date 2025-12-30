@@ -20,7 +20,7 @@ export interface DeviceProperties {
       vername: string;
       serialno: string;
       model: string;
-      up: number; // uptime in seconds
+      up: number; // uptime in milliseconds
       mem: {
         total: number;
         free: number;

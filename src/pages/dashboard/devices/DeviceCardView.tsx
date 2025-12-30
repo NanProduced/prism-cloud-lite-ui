@@ -128,6 +128,7 @@ function DeviceCard({
         <div className="absolute top-2 left-2">
           <DeviceStatusBadge
             status={resolveDeviceStatus(device)}
+            powerStatus={device.powerStatus}
             pulse={isPulsing}
             className="shadow-lg backdrop-blur-sm"
           />

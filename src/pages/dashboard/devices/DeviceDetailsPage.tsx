@@ -148,8 +148,9 @@ export default function DeviceDetailsPage() {
   // Robust fallback logic for screenshot timestamp
   const screenshotTime = useMemo(() => {
     if (!device) return undefined;
-    return device.latestScreenshot?.timestamp || 
-           (historicalScreenshots.length > 0 ? (historicalScreenshots[0].timestamp || historicalScreenshots[0].createdAt) : device.lastReportTime);
+    return device.lastScreenshotUploadedAt || 
+           device.latestScreenshot?.timestamp || 
+           (historicalScreenshots.length > 0 ? (historicalScreenshots[0].timestamp || historicalScreenshots[0].createdAt || historicalScreenshots[0].uploadedAt) : device.lastReportTime);
   }, [device, historicalScreenshots]);
   const recentOperations = useMemo(() => commandLogsResponse?.data?.items || [], [commandLogsResponse]);
   const deviceSchedule = scheduleResponse?.data;
@@ -308,7 +309,7 @@ export default function DeviceDetailsPage() {
     }
   };
 
-  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean, type: 'sleep' | 'reboot' | null }>({ open: false, type: null });
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean, type: 'sleep' | 'wakeup' | 'reboot' | null }>({ open: false, type: null });
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
@@ -332,8 +333,9 @@ export default function DeviceDetailsPage() {
   };
 
   const executeDangerousAction = async () => {
-    const actionType = confirmDialog.type === 'sleep' ? 'POWER' : 'POWER';
-    const command = confirmDialog.type === 'sleep' ? 'sleep' : 'reboot';
+    const actionType = 'POWER';
+    const command = confirmDialog.type === 'sleep' ? 'sleep' : 
+                    confirmDialog.type === 'wakeup' ? 'wakeup' : 'reboot';
     
     try {
       await executeDeviceAction(deviceId!, { 
@@ -353,6 +355,7 @@ export default function DeviceDetailsPage() {
         await deleteScreenshot(deviceId!, id);
       }
       queryClient.invalidateQueries({ queryKey: ['device-screenshots', deviceId] });
+      queryClient.invalidateQueries({ queryKey: ['user-storage-quota'] });
       toast.success('Screenshot(s) deleted');
     } catch (err) {
       toast.error('Failed to delete screenshots');
@@ -363,6 +366,7 @@ export default function DeviceDetailsPage() {
     try {
       await clearScreenshots(deviceId!);
       queryClient.invalidateQueries({ queryKey: ['device-screenshots', deviceId] });
+      queryClient.invalidateQueries({ queryKey: ['user-storage-quota'] });
       toast.success('History cleared');
     } catch (err) {
       toast.error('Failed to clear history');
@@ -409,7 +413,7 @@ export default function DeviceDetailsPage() {
                <div className="space-y-2">
                   <div className="flex items-center gap-3">
                      <h1 className="text-2xl font-bold tracking-tight">{device.deviceName}</h1>
-                     <DeviceStatusBadge status={resolveDeviceStatus(device)} />
+                     <DeviceStatusBadge status={resolveDeviceStatus(device)} powerStatus={device.powerStatus} />
                   </div>
                   <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-muted-foreground">
                      <span className="flex items-center gap-1.5">
@@ -612,23 +616,34 @@ export default function DeviceDetailsPage() {
               </CardHeader>
               <CardContent className="flex-1 overflow-y-auto space-y-8 pt-6 px-6 scrollbar-none">
                  {/* Power Control */}
-                 <div className="space-y-4">
-                    <p className="text-xs font-semibold text-muted-foreground">Power</p>
-                    <div className="flex gap-2">
+                 <div className="space-y-4 bg-muted/20 p-5 rounded-2xl border border-muted/20">
+                    <p className="text-xs font-semibold text-muted-foreground">System power</p>
+                    <div className="flex gap-3">
+                       {device.powerStatus === 0 ? (
+                          <Button
+                             variant="default"
+                             className="flex-[1.5] h-12 rounded-xl text-sm font-bold gap-2 bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 border-none transition-all active:scale-95"
+                             onClick={() => setConfirmDialog({ open: true, type: 'wakeup' })}
+                          >
+                             <Zap className="h-4 w-4 fill-white" />
+                             Wake Up
+                          </Button>
+                       ) : (
+                          <Button
+                             variant="outline"
+                             className="flex-1 h-12 rounded-xl text-sm font-semibold gap-2 bg-background border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-all active:scale-95 shadow-sm"
+                             onClick={() => setConfirmDialog({ open: true, type: 'sleep' })}
+                          >
+                             <Moon className="h-4 w-4 text-slate-500" />
+                             Sleep
+                          </Button>
+                       )}
                        <Button
                           variant="outline"
-                          className="flex-1 h-10 rounded-xl text-sm font-medium gap-2 border-amber-200 hover:bg-amber-50 hover:border-amber-300 text-amber-700 dark:border-amber-800 dark:hover:bg-amber-950 dark:text-amber-400"
-                          onClick={() => setConfirmDialog({ open: true, type: 'sleep' })}
-                       >
-                          <Moon className="h-4 w-4" />
-                          Sleep
-                       </Button>
-                       <Button
-                          variant="outline"
-                          className="flex-1 h-10 rounded-xl text-sm font-medium gap-2 border-rose-200 hover:bg-rose-50 hover:border-rose-300 text-rose-700 dark:border-rose-800 dark:hover:bg-rose-950 dark:text-rose-400"
+                          className="flex-1 h-12 rounded-xl text-sm font-semibold gap-2 bg-background border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all active:scale-95 shadow-sm"
                           onClick={() => setConfirmDialog({ open: true, type: 'reboot' })}
                        >
-                          <RotateCw className="h-4 w-4" />
+                          <RotateCw className="h-4 w-4 text-rose-400" />
                           Restart
                        </Button>
                     </div>
@@ -745,7 +760,7 @@ export default function DeviceDetailsPage() {
          {/* Hardware Information */}
          <div className="xl:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4">
             <InfoGroup title="System" icon={Layers}>
-               <InfoItem label="Uptime" value={formatUptime(realProps.info?.info.up || 0)} highlight />
+               <InfoItem label="Uptime" value={formatUptime(Math.floor((realProps.info?.info.up || 0) / 1000))} highlight />
                <InfoItem label="Firmware" value={realProps.info?.info.vername} />
                <InfoItem label="Orientation" value={realProps.screen_orientation?.orientation === 'landscape' ? 'Landscape' : 'Portrait'} />
             </InfoGroup>
@@ -1113,21 +1128,25 @@ export default function DeviceDetailsPage() {
       <Dialog open={confirmDialog.open} onOpenChange={(open) => !open && setConfirmDialog({ open: false, type: null })}>
         <DialogContent className="sm:max-w-[440px] rounded-[2.5rem] p-10 overflow-hidden border-none shadow-2xl ring-1 ring-muted/50">
           <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
-             {confirmDialog.type === 'sleep' ? <Moon className="h-48 w-48" /> : <RotateCw className="h-48 w-48" />}
+             {confirmDialog.type === 'sleep' ? <Moon className="h-48 w-48" /> : confirmDialog.type === 'wakeup' ? <Power className="h-48 w-48" /> : <RotateCw className="h-48 w-48" />}
           </div>
           <DialogHeader className="relative z-10 space-y-4">
             <div className={cn(
                 "h-20 w-20 rounded-3xl flex items-center justify-center border-2 shadow-inner mb-2",
-                confirmDialog.type === 'sleep' ? "bg-amber-500/10 border-amber-500/20 text-amber-600" : "bg-rose-500/10 border-rose-500/20 text-rose-600"
+                confirmDialog.type === 'sleep' ? "bg-amber-500/10 border-amber-500/20 text-amber-600" : 
+                confirmDialog.type === 'wakeup' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600" :
+                "bg-rose-500/10 border-rose-500/20 text-rose-600"
              )}>
-                {confirmDialog.type === 'sleep' ? <Moon className="h-10 w-10" /> : <RotateCw className="h-10 w-10" />}
+                {confirmDialog.type === 'sleep' ? <Moon className="h-10 w-10" /> : confirmDialog.type === 'wakeup' ? <Power className="h-10 w-10" /> : <RotateCw className="h-10 w-10" />}
              </div>
             <DialogTitle className="text-2xl font-bold tracking-tight">
-               {confirmDialog.type === 'sleep' ? "Put device to sleep?" : "Restart device?"}
+               {confirmDialog.type === 'sleep' ? "Put device to sleep?" : confirmDialog.type === 'wakeup' ? "Wake up device?" : "Restart device?"}
             </DialogTitle>
             <DialogDescription className="text-sm leading-relaxed">
                {confirmDialog.type === 'sleep'
                   ? "The device will enter sleep mode. Content playback will stop until the device is woken up."
+                  : confirmDialog.type === 'wakeup'
+                  ? "The device will be woken up and resume normal operation."
                   : "The device will restart. It may be unavailable for about 90 seconds."}
             </DialogDescription>
           </DialogHeader>
@@ -1135,7 +1154,7 @@ export default function DeviceDetailsPage() {
           <div className="py-10 flex flex-col items-center gap-6 relative z-10">
              <SlideToUnlock
                 onUnlock={executeDangerousAction}
-                label={confirmDialog.type === 'sleep' ? "Slide to confirm sleep" : "Slide to confirm restart"}
+                label={confirmDialog.type === 'sleep' ? "Slide to confirm sleep" : confirmDialog.type === 'wakeup' ? "Slide to confirm wake up" : "Slide to confirm restart"}
              />
              <Button variant="ghost" className="text-sm text-muted-foreground hover:text-foreground" onClick={() => setConfirmDialog({ open: false, type: null })}>
                 Cancel
