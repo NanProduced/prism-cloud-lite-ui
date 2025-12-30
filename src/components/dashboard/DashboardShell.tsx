@@ -63,6 +63,7 @@ import { getMediaUsage } from "@/services/mediaApi";
 import { markSingleAsRead } from "@/services/messageApi";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "@/store/notificationStore";
+import { renderMessage } from "@/lib/message-renderer";
 
 type NavItem = {
   label: string;
@@ -517,14 +518,14 @@ function NotificationPopover() {
                             !item.readAt && getToneColorByStatus(item.status)
                           )}
                         >
-                          {item.title}
+                          {renderMessage(item).title}
                         </span>
                         <span className="flex-shrink-0 text-[10px] text-muted-foreground">
                           {formatRelative(item.createdAt)}
                         </span>
                       </div>
                       <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
-                        {item.summary}
+                        {renderMessage(item).summary}
                       </p>
                     </div>
                   </div>

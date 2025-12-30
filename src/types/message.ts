@@ -7,10 +7,11 @@ export interface MessageListItem {
   kind: MessageKind;
   type: string;
   status?: MessageStatus;
-  title: string;
-  summary: string;
+  payload: any;
   deviceId?: string;
+  deviceName?: string;
   programId?: string;
+  programName?: string;
   operationId?: string;
   taskId?: string;
   createdAt: string;

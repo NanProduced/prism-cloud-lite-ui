@@ -172,6 +172,58 @@
       "allFieldsRequired": "请填写所有必填字段"
     }
   },
+  "message": {
+    "type": {
+      "device": {
+        "command": {
+          "finished": {
+            "title": "指令执行{{status}}",
+            "summary": "在 {{target}} 上执行了 {{actionType}} 动作"
+          },
+          "batch": {
+            "finished": {
+              "title": "批量指令执行完成",
+              "summary": "成功 {{success}}/{{total}}，失败 {{failed}}"
+            }
+          }
+        }
+      },
+      "program": {
+        "publish": {
+          "online": {
+            "finished": {
+              "title": "节目在线发布{{status}}",
+              "summary": "{{programName}} (v{{version}}): {{onlineTargets}}/{{totalTargets}} 台在线设备已更新完成"
+            }
+          },
+          "finished": {
+            "title": "节目发布任务结束",
+            "summary": "{{programName}} (v{{version}}) 已下发至 {{totalTargets}} 台设备"
+          }
+        }
+      },
+      "media": {
+        "transcode": {
+          "title": "素材转码{{status}}",
+          "summary": "{{sourceTitle}}: {{stage}}{{progress}}"
+        }
+      }
+    },
+    "kind": {
+      "NOTIFICATION": "系统通知",
+      "TASK": "后台任务"
+    },
+    "status": {
+      "PENDING": "等待中",
+      "RUNNING": "执行中",
+      "SUCCESS": "成功",
+      "FAILED": "失败"
+    },
+    "unknown": {
+      "title": "收到新消息",
+      "summary": "收到一条新的{{kind}}"
+    }
+  },
   "billing": {
     "title": "订阅计划",
     "subtitle": "选择适合您业务规模的套餐",

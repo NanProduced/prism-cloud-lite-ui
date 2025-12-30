@@ -172,6 +172,58 @@
       "allFieldsRequired": "All fields are required"
     }
   },
+  "message": {
+    "type": {
+      "device": {
+        "command": {
+          "finished": {
+            "title": "Command {{status}}",
+            "summary": "Action {{actionType}} on {{target}}"
+          },
+          "batch": {
+            "finished": {
+              "title": "Batch Command Finished",
+              "summary": "{{success}}/{{total}} succeeded, {{failed}} failed"
+            }
+          }
+        }
+      },
+      "program": {
+        "publish": {
+          "online": {
+            "finished": {
+              "title": "Program Online Publishing {{status}}",
+              "summary": "{{programName}} (v{{version}}): {{onlineTargets}}/{{totalTargets}} online devices finished"
+            }
+          },
+          "finished": {
+            "title": "Program Publishing Finished",
+            "summary": "{{programName}} (v{{version}}) published to {{totalTargets}} devices"
+          }
+        }
+      },
+      "media": {
+        "transcode": {
+          "title": "Media Transcoding {{status}}",
+          "summary": "{{sourceTitle}}: {{stage}}{{progress}}"
+        }
+      }
+    },
+    "kind": {
+      "NOTIFICATION": "Notification",
+      "TASK": "Task"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "RUNNING": "Running",
+      "SUCCESS": "Success",
+      "FAILED": "Failed"
+    },
+    "unknown": {
+      "title": "New Message",
+      "summary": "New {{kind}} received"
+    }
+  },
   "billing": {
     "title": "Subscription Plans",
     "subtitle": "Choose the scale that fits your business needs",

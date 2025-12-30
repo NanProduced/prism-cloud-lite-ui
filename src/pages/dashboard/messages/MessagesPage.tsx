@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Monitor,
   Layers,
+  Image,
   Terminal,
   ExternalLink,
   Eye,
@@ -56,6 +57,7 @@ import type { MessageListItem, MessageKind, MessageStatus } from "@/types/messag
 import { cn } from "@/lib/utils";
 import { toast } from "@/store/notificationStore";
 import { useTimeFormatter } from "@/hooks/use-time-formatter";
+import { renderMessage } from "@/lib/message-renderer";
 
 export default function MessagesPage() {
   const navigate = useNavigate();
@@ -335,7 +337,7 @@ export default function MessagesPage() {
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
           <Input
-            placeholder="Search by title or summary..."
+            placeholder="Search messages..."
             className="pl-9 h-9 border-none bg-transparent font-bold text-xs p-0 focus-visible:ring-0"
             value={searchKeyword}
             onChange={(e) => { setSearchKeyword(e.target.value); setPage(0); }}
@@ -435,7 +437,9 @@ export default function MessagesPage() {
                     <Badge variant="outline" className="mb-2 text-[8px] font-black uppercase tracking-widest bg-background/50">
                       {detailRes.data.kind}
                     </Badge>
-                    <DialogTitle className="text-xl font-bold tracking-tight">{detailRes.data.title}</DialogTitle>
+                    <DialogTitle className="text-xl font-bold tracking-tight">
+                      {renderMessage(detailRes.data).title}
+                    </DialogTitle>
                     <div className="flex items-center gap-3 mt-1.5">
                       <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
                         <Clock className="h-3 w-3" />
@@ -460,52 +464,108 @@ export default function MessagesPage() {
                 <div className="space-y-3">
                   <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Message Summary</p>
                   <p className="text-sm leading-relaxed text-foreground font-medium">
-                    {detailRes.data.summary}
+                    {renderMessage(detailRes.data).summary}
                   </p>
                 </div>
 
-                {(detailRes.data.deviceId || detailRes.data.programId) && (
-                  <div className="grid grid-cols-2 gap-4">
-                    {detailRes.data.deviceId && (
-                      <div className="p-4 rounded-2xl bg-muted/30 border shadow-sm flex items-center justify-between group">
-                        <div className="flex items-center gap-3">
-                          <Monitor className="h-4 w-4 text-primary" />
-                          <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Related Device</span>
-                            <span className="text-xs font-bold font-mono">{detailRes.data.deviceId}</span>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => navigate(`/dashboard/devices/${detailRes.data?.deviceId}`)}>
-                           <ExternalLink className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    )}
-                    {detailRes.data.programId && (
-                      <div className="p-4 rounded-2xl bg-muted/30 border shadow-sm flex items-center justify-between group">
-                        <div className="flex items-center gap-3">
-                          <Layers className="h-4 w-4 text-primary" />
-                          <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Related Program</span>
-                            <span className="text-xs font-bold truncate max-w-[120px]">{detailRes.data.programId}</span>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => navigate(`/dashboard/programs/${detailRes.data?.programId}`)}>
-                           <ExternalLink className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Related Resources Grid */}
+                {(() => {
+                  const payload = detailRes.data.payload || {};
+                  const assetId = payload.output?.assetId || payload.source?.assetId;
+                  const assetTitle = payload.source?.title || payload.output?.title;
 
+                  if (!detailRes.data.deviceId && !detailRes.data.programId && !assetId) return null;
+
+                  return (
+                    <div className="grid grid-cols-2 gap-4">
+                      {detailRes.data.deviceId && (
+                        <div className="p-4 rounded-2xl bg-muted/30 border shadow-sm flex items-center justify-between group">
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                               <Monitor className="h-4 w-4" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Device</span>
+                              <span className="text-xs font-bold truncate max-w-[150px]">
+                                {detailRes.data.deviceName || 'Prism Device'}
+                              </span>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => navigate(`/dashboard/devices/${detailRes.data?.deviceId}`)}>
+                             <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                      {detailRes.data.programId && (
+                        <div className="p-4 rounded-2xl bg-muted/30 border shadow-sm flex items-center justify-between group">
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                               <Layers className="h-4 w-4" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Program</span>
+                              <span className="text-xs font-bold truncate max-w-[150px]">
+                                {detailRes.data.programName || 'Prism Program'}
+                              </span>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => navigate(`/dashboard/programs/${detailRes.data?.programId}`)}>
+                             <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                      {assetId && (
+                        <div className="p-4 rounded-2xl bg-muted/30 border shadow-sm flex items-center justify-between group">
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-lg bg-pink-500/10 flex items-center justify-center text-pink-600">
+                               <Image className="h-4 w-4" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Media Asset</span>
+                              <span className="text-xs font-bold truncate max-w-[150px]">
+                                {assetTitle || 'Media Resource'}
+                              </span>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => navigate(`/dashboard/media`)}>
+                             <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Payload Details (Meaningful fields only) */}
                 {detailRes.data.payload && (
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Technical Details (Payload)</p>
-                    </div>
-                    <div className="bg-slate-950 rounded-2xl p-6 overflow-hidden border border-slate-800 shadow-xl group relative">
-                      <pre className="text-xs text-emerald-400 font-mono overflow-auto max-h-[300px] custom-scrollbar leading-relaxed">
-                        {JSON.stringify(detailRes.data.payload, null, 2)}
-                      </pre>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Detailed Information</p>
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-4 bg-muted/20 rounded-2xl p-6 border">
+                      {Object.entries(detailRes.data.payload).map(([key, value]) => {
+                        // Skip internal IDs and objects (unless simple)
+                        if (key.toLowerCase().includes('id') || key.toLowerCase().includes('uuid')) return null;
+                        if (typeof value === 'object' && value !== null) return null;
+                        if (value === null || value === undefined || value === '') return null;
+
+                        // Format labels
+                        const label = key
+                          .replace(/([A-Z])/g, ' $1')
+                          .replace(/^./, (str) => str.toUpperCase());
+
+                        return (
+                          <div key={key} className="flex flex-col gap-1">
+                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">{label}</span>
+                            <span className="text-sm font-semibold">{String(value)}</span>
+                          </div>
+                        );
+                      })}
+                      {/* Special handling for media progress if not caught by loop */}
+                      {detailRes.data.payload.progress?.percent !== undefined && (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Progress</span>
+                          <span className="text-sm font-semibold">{Math.round(detailRes.data.payload.progress.percent * 100)}%</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -539,6 +599,8 @@ function MessageItem({
   formatDateTime: (d: string) => string;
   navigate: (path: string) => void;
 }) {
+  const { title, summary } = renderMessage(message);
+
   return (
     <div 
       className={cn(
@@ -561,7 +623,7 @@ function MessageItem({
               "text-sm font-bold truncate",
               !message.readAt ? "text-foreground" : "text-muted-foreground/70"
             )}>
-              {message.title}
+              {title}
             </h4>
             {!message.readAt && (
               <div className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse shadow-sm" />
@@ -576,24 +638,19 @@ function MessageItem({
           "text-xs leading-relaxed line-clamp-1 font-medium",
           message.readAt ? "text-muted-foreground/50" : "text-muted-foreground/80"
         )}>
-          {message.summary}
+          {summary}
         </p>
 
         <div className="flex items-center gap-2 pt-1">
-          {message.deviceId && (
+          {(message.deviceName || message.deviceId) && (
             <Badge variant="outline" className="h-4 text-[8px] font-black uppercase tracking-tight bg-muted/20 border-none flex gap-1 items-center">
-              <Monitor className="h-2 w-2" /> Device {message.deviceId}
+              <Monitor className="h-2 w-2" /> {message.deviceName || 'Linked Device'}
             </Badge>
           )}
-          {message.programId && (
+          {(message.programName || message.programId) && (
             <Badge variant="outline" className="h-4 text-[8px] font-black uppercase tracking-tight bg-muted/20 border-none flex gap-1 items-center">
-              <Layers className="h-2 w-2" /> Program Ref
+              <Layers className="h-2 w-2" /> {message.programName || 'Linked Program'}
             </Badge>
-          )}
-          {message.operationId && (
-             <Badge variant="outline" className="h-4 text-[8px] font-black uppercase tracking-tight bg-muted/20 border-none flex gap-1 items-center">
-               <Terminal className="h-2 w-2" /> Audit Trail
-             </Badge>
           )}
         </div>
       </div>
