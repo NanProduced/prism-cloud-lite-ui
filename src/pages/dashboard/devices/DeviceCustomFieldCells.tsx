@@ -20,9 +20,17 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
 import { CountryPicker } from '@/components/ui/country-picker';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, Filter, X } from 'lucide-react';
 import { COUNTRIES, countryLabel } from '@/lib/countries';
 
 function optionSort(a: DeviceCustomFieldOption, b: DeviceCustomFieldOption): number {
@@ -47,143 +55,71 @@ function prefixToStringOperator(prefix?: string): FilterStringOperator {
 
 function prefixToNumberOperator(prefix?: string): FilterNumberOperator {
   switch (prefix) {
-    case '>=':
-      return 'greater_than_or_equals';
-    case '<=':
-      return 'less_than_or_equals';
-    case '>':
-      return 'greater_than';
-    case '<':
-      return 'less_than';
-    case '!=':
-      return 'not_equals';
-    default:
-      return 'equals';
+    case '>=': return 'greater_than_or_equals';
+    case '<=': return 'less_than_or_equals';
+    case '>': return 'greater_than';
+    case '<': return 'less_than';
+    case '!=': return 'not_equals';
+    default: return 'equals';
   }
 }
 
 function prefixToDateOperator(prefix?: string): FilterDateOperator {
   switch (prefix) {
-    case '>=':
-      return 'after_or_equals';
-    case '<=':
-      return 'before_or_equals';
-    case '>':
-      return 'after';
-    case '<':
-      return 'before';
-    case '!=':
-      return 'not_equals';
-    default:
-      return 'equals';
+    case '>=': return 'after_or_equals';
+    case '<=': return 'before_or_equals';
+    case '>': return 'after';
+    case '<': return 'before';
+    case '!=': return 'not_equals';
+    default: return 'equals';
   }
 }
 
 function filterItemToText(filter?: FilterModelItem<Device>): string {
   if (!filter) return '';
+  if (filter.kind === 'func') {
+    const prismSelected = (filter as any).prismSelected as string[];
+    if (prismSelected) return prismSelected.join(', ');
+    const prismRange = (filter as any).prismRange as [number, number];
+    if (prismRange) return `${prismRange[0]} - ${prismRange[1]}`;
+    return '';
+  }
   if (filter.kind === 'string') return String(filter.value ?? '');
   if (filter.kind === 'number') return filter.value == null ? '' : String(filter.value);
   if (filter.kind === 'date') return filter.value == null ? '' : String(filter.value);
-  if (filter.kind === 'combination') return '';
-  if (filter.kind === 'func') return '';
   return '';
 }
 
-function extractEnumValues(filter: FilterCombination): string[] {
-  if (filter.operator !== 'OR') return [];
-  return filter.filters
-    .filter((f) => f.kind === 'string' && f.operator === 'equals')
-    .map((f) => (f as FilterString).value)
-    .filter((v): v is string => typeof v === 'string' && v.length > 0);
-}
-
-type EnumOption = { value: string; label: string; disabled?: boolean };
-
-function EnumFilterPopover({
-  open,
-  onOpenChange,
-  title,
+function OperatorSelect<T extends string>({
+  value,
   options,
-  selected,
-  onSelectedChange,
-  onApply,
-  onClear,
+  onValueChange,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title: string;
-  options: EnumOption[];
-  selected: Set<string>;
-  onSelectedChange: (next: Set<string>) => void;
-  onApply: () => void;
-  onClear: () => void;
+  value: T;
+  options: Array<{ value: T; label: string }>;
+  onValueChange: (value: T) => void;
 }) {
+  const active = options.find((o) => o.value === value)?.label ?? value;
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-7 w-full justify-between px-2 text-xs font-normal">
-          <span className="truncate">
-            {selected.size === 0 || selected.size === options.length
-              ? 'Any'
-              : selected.size === 1
-              ? options.find((o) => selected.has(o.value))?.label ?? '1 selected'
-              : `${selected.size} selected`}
-          </span>
-          <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="h-9 w-full justify-between bg-muted/20 border-muted/50 text-xs font-normal px-2">
+          <span className="truncate">{active}</span>
+          <ChevronDown className="h-3.5 w-3.5 opacity-50" />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-72 p-3" onOpenAutoFocus={(e) => e.preventDefault()}>
-        <div className="grid gap-3">
-          <div className="text-xs font-semibold text-muted-foreground">{title}</div>
-
-          <ScrollArea className="h-44 rounded border">
-            <div className="p-2 grid gap-2">
-              {options.map((o) => {
-                const checked = selected.has(o.value);
-                return (
-                  <button
-                    key={o.value}
-                    type="button"
-                    className={cn(
-                      'w-full flex items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-accent',
-                      o.disabled && 'opacity-60 cursor-not-allowed hover:bg-transparent',
-                    )}
-                    disabled={o.disabled}
-                    onClick={() => {
-                      onSelectedChange((() => {
-                        const next = new Set(selected);
-                        if (next.has(o.value)) next.delete(o.value);
-                        else next.add(o.value);
-                        return next;
-                      })());
-                    }}
-                  >
-                    <span className="truncate">{o.label}</span>
-                    {checked && <Check className="h-4 w-4 text-emerald-600" />}
-                  </button>
-                );
-              })}
-            </div>
-          </ScrollArea>
-
-          <div className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={onClear}>
-              Clear
-            </Button>
-            <Button size="sm" onClick={onApply}>
-              Apply
-            </Button>
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-56 rounded-xl">
+        <DropdownMenuRadioGroup value={value} onValueChange={(v) => onValueChange(v as T)}>
+          {options.map((o) => (
+            <DropdownMenuRadioItem key={o.value} value={o.value} className="text-xs">
+              {o.label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
-
-const COUNTRY_OPTIONS: EnumOption[] = COUNTRIES.map((c) => ({
-  value: c.code,
-  label: countryLabel(c.code),
-}));
 
 export function DeviceCustomFieldFloatingFilterCell({
   grid,
@@ -191,134 +127,18 @@ export function DeviceCustomFieldFloatingFilterCell({
   fieldDef,
 }: HeaderFloatingCellRendererParams<Device> & { fieldDef: DeviceCustomFieldDef }) {
   const filterModel = grid.state.filterModel.useValue();
-  const current = filterModel[column.id] as (FilterModelItem<Device> & Record<string, unknown>) | undefined;
+  const current = filterModel[column.id] as (FilterModelItem<Device> & Record<string, any>) | undefined;
 
   const fieldType = fieldDef.fieldType;
-  const isEnum =
-    fieldType === 'SELECT' ||
-    fieldType === 'MULTI_SELECT' ||
-    fieldType === 'BOOLEAN' ||
-    fieldType === 'COUNTRY';
-
-  const options: EnumOption[] = useMemo(() => {
-    if (fieldType === 'BOOLEAN') {
-      return [
-        { value: 'true', label: 'True' },
-        { value: 'false', label: 'False' },
-      ];
-    }
-    if (fieldType === 'COUNTRY') return COUNTRY_OPTIONS;
-    if (fieldType === 'SELECT' || fieldType === 'MULTI_SELECT') {
-      const list = (fieldDef.options ?? []).slice().sort(optionSort);
-      return list.map((o) => ({
-        value: o.optionKey,
-        label: o.displayName,
-        disabled: o.active === false,
-      }));
-    }
-    return [];
-  }, [fieldDef.options, fieldType]);
-
-  const [enumOpen, setEnumOpen] = useState(false);
-
-  const initialEnumSelected = useMemo(() => {
-    if (!isEnum) return new Set<string>();
-    if (options.length === 0) return new Set<string>();
-
-    if (!current) return new Set<string>(options.map((o) => o.value));
-    if (typeof current.prismSelected === 'object' && Array.isArray(current.prismSelected)) {
-      const selected = (current.prismSelected as unknown[]).filter((v): v is string => typeof v === 'string');
-      return new Set(selected);
-    }
-    if (current.kind === 'combination') return new Set(extractEnumValues(current));
-    if (current.kind === 'string' && current.operator === 'equals' && typeof current.value === 'string') {
-      return new Set([current.value]);
-    }
-    return new Set<string>(options.map((o) => o.value));
-  }, [current, fieldType, isEnum, options]);
-
-  const [enumSelected, setEnumSelected] = useState<Set<string>>(initialEnumSelected);
-
-  useEffect(() => {
-    if (!enumOpen) return;
-    setEnumSelected(new Set(initialEnumSelected));
-  }, [enumOpen, initialEnumSelected]);
-
-  useEffect(() => {
-    if (enumOpen) return;
-    setEnumSelected(new Set(initialEnumSelected));
-  }, [enumOpen, initialEnumSelected]);
-
-  const applyEnum = () => {
-    if (!isEnum) return;
-    const selected = Array.from(enumSelected);
-    grid.state.filterModel.set((prev) => {
-      const next = { ...prev };
-      if (options.length === 0 || selected.length === 0 || selected.length === options.length) {
-        delete next[column.id];
-        return next;
-      }
-
-      const selectedKeys = selected.slice();
-      const filter: FilterFunc<Device> & { prismSelected: string[]; prismMode: 'any' } = {
-        kind: 'func',
-        prismSelected: selectedKeys,
-        prismMode: 'any',
-        func: ({ data }) => {
-          if (!data) return true;
-          const raw = data.customFieldValues?.[fieldDef.fieldKey];
-
-          if (fieldType === 'MULTI_SELECT') {
-            const arr = Array.isArray(raw) ? raw : [];
-            return selectedKeys.some((k) => arr.includes(k));
-          }
-
-          if (fieldType === 'BOOLEAN') {
-            const v = raw === true ? 'true' : raw === false ? 'false' : '';
-            if (!v) return false;
-            return selectedKeys.includes(v);
-          }
-
-          if (fieldType === 'SELECT' || fieldType === 'COUNTRY') {
-            if (typeof raw !== 'string' || !raw) return false;
-            return selectedKeys.includes(raw);
-          }
-
-          return true;
-        },
-      };
-
-      next[column.id] = filter as unknown as FilterModelItem<Device>;
-      return next;
-    });
-    setEnumOpen(false);
-  };
-
-  const clearEnum = () => {
-    grid.state.filterModel.set((prev) => {
-      const next = { ...prev };
-      delete next[column.id];
-      return next;
-    });
-    setEnumOpen(false);
-  };
-
-  if (isEnum) {
-    return (
-      <EnumFilterPopover
-        open={enumOpen}
-        onOpenChange={setEnumOpen}
-        title={fieldDef.displayName}
-        options={options}
-        selected={enumSelected}
-        onSelectedChange={setEnumSelected}
-        onApply={applyEnum}
-        onClear={clearEnum}
-      />
-    );
-  }
-
   const value = filterItemToText(current);
+
+  const clearFilter = () => {
+    grid.state.filterModel.set((prev) => {
+      const updated = { ...prev };
+      delete updated[column.id];
+      return updated;
+    });
+  };
 
   const handleTextChange = (raw: string) => {
     const text = raw.trim();
@@ -326,43 +146,292 @@ export function DeviceCustomFieldFloatingFilterCell({
       const next = { ...prev };
       if (!text) {
         delete next[column.id];
-        return next;
-      }
-
-      if (fieldType === 'NUMBER') {
+      } else {
         const parsed = parsePrefixed(text);
-        const operator = prefixToNumberOperator(parsed.prefix);
-        const num = Number(parsed.value);
-        if (Number.isNaN(num)) return next;
-        const filter: FilterNumber = { kind: 'number', operator, value: num };
-        next[column.id] = filter;
-        return next;
+        if (fieldType === 'NUMBER') {
+          const num = Number(parsed.value);
+          if (!Number.isNaN(num)) {
+            next[column.id] = { kind: 'number', operator: prefixToNumberOperator(parsed.prefix), value: num } as any;
+          }
+        } else if (fieldType === 'DATETIME') {
+          next[column.id] = { kind: 'date', operator: prefixToDateOperator(parsed.prefix), value: parsed.value } as any;
+        } else {
+          next[column.id] = { kind: 'string', operator: prefixToStringOperator(parsed.prefix), value: parsed.value } as any;
+        }
       }
-
-      if (fieldType === 'DATETIME') {
-        const parsed = parsePrefixed(text);
-        const operator = prefixToDateOperator(parsed.prefix);
-        const filter: FilterDate = { kind: 'date', operator, value: parsed.value };
-        next[column.id] = filter;
-        return next;
-      }
-
-      const parsed = parsePrefixed(text);
-      const operator = prefixToStringOperator(parsed.prefix);
-      next[column.id] = { kind: 'string', operator, value: parsed.value };
       return next;
     });
   };
 
   return (
-    <div className="flex items-center w-full h-full gap-1">
-      <Input
-        value={value}
-        onChange={(e) => handleTextChange(e.target.value)}
-        placeholder="Filter…"
-        className="h-7 text-xs px-2 flex-1"
+    <div className="flex items-center w-full h-full gap-1 px-1">
+      <div className="relative flex-1 min-w-0">
+        <Input
+          value={value}
+          onChange={(e) => handleTextChange(e.target.value)}
+          placeholder="Filter…"
+          className={cn(
+            "h-7 text-[11px] px-2 pr-6 flex-1 bg-background/50 focus-visible:ring-1",
+            current && "border-primary/50 bg-primary/5"
+          )}
+        />
+        {current && (
+          <button 
+            onClick={clearFilter}
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+
+      <CustomFieldFilterPopover
+        grid={grid}
+        column={column}
+        fieldDef={fieldDef}
+        current={current}
+        onApply={(next) => {
+          grid.state.filterModel.set((prev) => {
+            const updated = { ...prev };
+            if (!next) delete updated[column.id];
+            else updated[column.id] = next;
+            return updated;
+          });
+        }}
+        onClear={clearFilter}
       />
     </div>
+  );
+}
+
+function CustomFieldFilterPopover({
+  grid,
+  column,
+  fieldDef,
+  current,
+  onApply,
+  onClear,
+}: {
+  grid: any;
+  column: any;
+  fieldDef: DeviceCustomFieldDef;
+  current?: FilterModelItem<Device> & Record<string, any>;
+  onApply: (next?: FilterModelItem<Device>) => void;
+  onClear: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const type = fieldDef.fieldType;
+
+  // Enum Options
+  const options = useMemo(() => {
+    if (type === 'BOOLEAN') return [{ value: 'true', label: 'True' }, { value: 'false', label: 'False' }];
+    if (type === 'COUNTRY') return COUNTRIES.map(c => ({ value: c.code, label: countryLabel(c.code) }));
+    if (type === 'SELECT' || type === 'MULTI_SELECT') {
+      return (fieldDef.options ?? []).slice().sort(optionSort).map(o => ({ value: o.optionKey, label: o.displayName }));
+    }
+    return null;
+  }, [fieldDef.options, type]);
+
+  const initialEnumSelected = useMemo(() => {
+    if (!options) return new Set<string>();
+    if (current?.prismSelected) return new Set(current.prismSelected);
+    return new Set<string>();
+  }, [current, options]);
+  const [enumSelected, setEnumSelected] = useState<Set<string>>(initialEnumSelected);
+
+  // Range Slider (only for NUMBER)
+  const dataRange = useMemo(() => {
+    if (type !== 'NUMBER') return [0, 100];
+    const data = grid.state.rowDataSource.get()?.data as Device[] || [];
+    const vals = data.map(d => Number(d.customFieldValues?.[fieldDef.fieldKey])).filter(v => !Number.isNaN(v));
+    if (vals.length === 0) return [0, 100];
+    return [Math.floor(Math.min(...vals)), Math.ceil(Math.max(...vals))];
+  }, [grid, type, fieldDef.fieldKey]);
+
+  const [range, setRange] = useState<[number, number]>(current?.prismRange ?? dataRange);
+
+  // Default values
+  const [operator, setOperator] = useState<any>(current?.operator ?? (type === 'NUMBER' ? 'equals' : 'contains'));
+  const [value, setValue] = useState(current?.value ? String(current.value) : '');
+
+  useEffect(() => {
+    if (!open) return;
+    setEnumSelected(new Set(initialEnumSelected));
+    setRange(current?.prismRange ?? dataRange);
+    setOperator(current?.operator ?? (type === 'NUMBER' ? 'equals' : 'contains'));
+    setValue(current?.value ? String(current.value) : '');
+  }, [open, initialEnumSelected, current, type, dataRange]);
+
+  const apply = () => {
+    if (options) {
+      const selected = Array.from(enumSelected);
+      if (selected.length === 0) onApply(undefined);
+      else {
+        const filter: FilterFunc<Device> & { prismSelected: string[] } = {
+          kind: 'func',
+          prismSelected: selected,
+          func: ({ data }) => {
+            if (!data) return false;
+            const raw = data.customFieldValues?.[fieldDef.fieldKey];
+            if (type === 'MULTI_SELECT') {
+              const arr = Array.isArray(raw) ? raw : [];
+              return selected.some(s => arr.includes(s));
+            }
+            if (type === 'BOOLEAN') {
+              const v = raw === true ? 'true' : raw === false ? 'false' : '';
+              return selected.includes(v);
+            }
+            return typeof raw === 'string' && selected.includes(raw);
+          }
+        };
+        onApply(filter as any);
+      }
+    } else if (type === 'NUMBER') {
+      const filter: FilterFunc<Device> & { prismRange: [number, number] } = {
+        kind: 'func',
+        prismRange: range,
+        func: ({ data }) => {
+          if (!data) return false;
+          const val = Number(data.customFieldValues?.[fieldDef.fieldKey]);
+          if (Number.isNaN(val)) return false;
+          return val >= range[0] && val <= range[1];
+        }
+      };
+      onApply(filter as any);
+    } else {
+      const trimmed = value.trim();
+      if (!trimmed) onApply(undefined);
+      else {
+        if (type === 'DATETIME') onApply({ kind: 'date', operator, value: trimmed } as any);
+        else onApply({ kind: 'string', operator, value: trimmed } as any);
+      }
+    }
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant={current ? "secondary" : "ghost"}
+          size="icon"
+          className={cn("h-7 w-7 transition-colors", current && "text-primary bg-primary/10")}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Filter className={cn("h-3.5 w-3.5", current && "fill-current")} />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 p-4 shadow-xl border-muted/50 rounded-xl" onOpenAutoFocus={(e) => e.preventDefault()}>
+        <div className="grid gap-4">
+          <header className="flex items-center justify-between border-b pb-2">
+             <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-primary/10 rounded-lg">
+                   <Filter className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <h4 className="font-semibold text-sm">{fieldDef.displayName}</h4>
+             </div>
+             {current && (
+               <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive" onClick={onClear}>
+                 Reset
+               </Button>
+             )}
+          </header>
+
+          {options && (
+            <div className="grid gap-2">
+              <ScrollArea className="h-48 rounded-lg border bg-muted/20">
+                <div className="p-1.5 grid gap-1">
+                  {options.map((opt) => {
+                    const checked = enumSelected.has(opt.value);
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={cn(
+                          "w-full flex items-center justify-between rounded-md px-2.5 py-2 text-sm transition-all hover:bg-background",
+                          checked ? "bg-background shadow-sm border" : "border-transparent"
+                        )}
+                        onClick={() => {
+                          setEnumSelected((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(opt.value)) next.delete(opt.value);
+                            else next.add(opt.value);
+                            return next;
+                          });
+                        }}
+                      >
+                        <span className={cn(checked ? "font-semibold" : "text-muted-foreground")}>
+                          {opt.label}
+                        </span>
+                        {checked && <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+              <div className="flex justify-between items-center px-1">
+                 <Button variant="link" className="h-auto p-0 text-[10px]" onClick={() => setEnumSelected(new Set(options.map(o => o.value)))}>Select All</Button>
+                 <Button variant="link" className="h-auto p-0 text-[10px]" onClick={() => setEnumSelected(new Set())}>Clear All</Button>
+              </div>
+            </div>
+          )}
+
+          {type === 'NUMBER' && (
+            <div className="grid gap-4 py-2">
+              <div className="flex items-center justify-between">
+                 <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Range</div>
+                 <div className="text-xs font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                    {range[0]} - {range[1]}
+                 </div>
+              </div>
+              <div className="px-2">
+                 <Slider 
+                    value={range} 
+                    onValueChange={(v) => setRange(v as [number, number])} 
+                    min={dataRange[0]}
+                    max={dataRange[1]} 
+                    step={1} 
+                    className="cursor-pointer"
+                 />
+              </div>
+            </div>
+          )}
+
+          {!options && type !== 'NUMBER' && (
+            <div className="grid gap-3">
+              <div className="grid gap-1.5">
+                 <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Operator</div>
+                 <OperatorSelect
+                   value={operator}
+                   onValueChange={setOperator}
+                   options={[
+                     { value: 'contains', label: 'Contains' },
+                     { value: 'equals', label: 'Equals' },
+                     { value: 'begins_with', label: 'Begins with' },
+                   ]}
+                 />
+              </div>
+              <div className="grid gap-1.5">
+                 <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Value</div>
+                 <Input
+                   value={value}
+                   onChange={(e) => setValue(e.target.value)}
+                   placeholder="Search value..."
+                   className="h-9 text-sm"
+                   autoFocus
+                 />
+              </div>
+            </div>
+          )}
+
+          <footer className="flex items-center justify-end gap-2 pt-2 border-t mt-2">
+            <Button variant="ghost" size="sm" className="h-8 rounded-lg" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button size="sm" className="h-8 px-5 rounded-lg font-bold" onClick={apply}>Apply</Button>
+          </footer>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 

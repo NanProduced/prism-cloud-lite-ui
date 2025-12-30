@@ -403,9 +403,12 @@ export function DeviceTable({
     {
       id: 'onlineStatus',
       name: 'Status',
-      type: 'number',
+      type: 'string',
       width: 160,
-      field: 'onlineStatus',
+      field: (data) => {
+        if (data.kind !== 'leaf' || !data.data) return '';
+        return resolveDeviceStatus(data.data);
+      },
       floatingCellRenderer: DeviceGridFloatingFilterCell,
       uiHints: {
         sortable: true,
@@ -459,7 +462,7 @@ export function DeviceTable({
       id: 'networkType',
       name: 'Network',
       type: 'string',
-      width: 160,
+      width: 140,
       field: 'networkType',
       floatingCellRenderer: DeviceGridFloatingFilterCell,
       uiHints: {
@@ -469,18 +472,39 @@ export function DeviceTable({
         movable: true,
         aggsAllowed: ['count'],
       },
+    },
+    {
+      id: 'networkStrength',
+      name: 'Signal',
+      type: 'number',
+      width: 120,
+      field: 'networkStrength',
+      floatingCellRenderer: DeviceGridFloatingFilterCell,
+      uiHints: {
+        sortable: true,
+        rowGroupable: false,
+        resizable: true,
+        movable: true,
+        aggsAllowed: ['avg', 'min', 'max'],
+      },
       cellRenderer: ({ row, grid }: CellRendererParams<Device>) => {
         if (grid.api.rowIsGroup(row) || !row.data) return null;
         const device = row.data;
         const strength = device.networkStrength;
+        const is4G = device.networkType === '4G' || device.networkType === 'FOUR_G';
+        
+        if (!is4G || strength === undefined) return <span className="text-muted-foreground">-</span>;
+        
         return (
-          <div className="flex flex-col gap-0.5 px-1">
-            <span className="text-sm font-medium">{device.networkType}</span>
-            {strength !== undefined && (
-              <span className="text-xs font-semibold text-muted-foreground">
-                {strength}%
-              </span>
-            )}
+          <div className="flex items-center gap-2 px-1">
+            <span className={cn(
+              "text-[10px] font-bold px-1.5 py-0.5 rounded",
+              strength > 70 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" :
+              strength > 40 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
+              "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"
+            )}>
+              {strength}%
+            </span>
           </div>
         );
       },
@@ -501,9 +525,19 @@ export function DeviceTable({
       cellRenderer: ({ row, grid }: CellRendererParams<Device>) => {
         if (grid.api.rowIsGroup(row) || !row.data) return null;
         const device = row.data;
+        const status = resolveDeviceStatus(device);
+
+        if (status === 'pending') {
+          return (
+            <div className="flex items-center gap-1.5 text-muted-foreground italic">
+              <div className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+              <span className="text-xs">Waiting for first report...</span>
+            </div>
+          );
+        }
 
         if (!device.lastReportTime) {
-          return <span className="text-sm text-muted-foreground">-</span>;
+          return <span className="text-sm text-muted-foreground">—</span>;
         }
 
         const date = new Date(device.lastReportTime);
