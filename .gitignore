@@ -28,3 +28,7 @@ dist-ssr
 .playwright-mcp/
 docs/
 .env
+
+.claude/
+.mcp.json
+

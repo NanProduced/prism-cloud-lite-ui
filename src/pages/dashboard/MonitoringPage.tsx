@@ -28,20 +28,20 @@ import { toast } from '@/lib/toast';
 
 import type { RealtimeMetric, SSEState } from './monitoring/types';
 import { type MonitoringTab } from './monitoring/constants';
-import { DeviceSensorTab, M2SensorTab } from './monitoring/components';
+import { DeviceSensorTab, M2SensorTab, ReceiveCardTab } from './monitoring/components';
 import { useMonitoringSSE } from '@/hooks/use-monitoring-sse';
 
 export default function MonitoringPage() {
   const queryClient = useQueryClient();
 
-  // Selection & Filters
-  const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
+  // Selection & Filters - 单设备模式，使用 number 类型（契约要求）
+  const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<MonitoringTab>('device');
+  const [activeTab, setActiveTab] = useState<MonitoringTab>('receiveCard');  // 默认显示接收卡Tab
   const [showDebug, setShowDebug] = useState(false);
 
-  // SSE & Real-time State
-  const sseState = useMonitoringSSE(selectedDeviceIds);
+  // SSE & Real-time State - 单设备订阅
+  const sseState = useMonitoringSSE(selectedDeviceId);
 
   // --- Queries ---
 
@@ -55,16 +55,16 @@ export default function MonitoringPage() {
     return list.filter(
       (d) =>
         d.deviceName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(d.deviceId).includes(searchQuery.toLowerCase()) ||
         d.id.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [devicesRes, searchQuery]);
 
   // --- Helpers ---
 
-  const toggleDevice = (id: string) => {
-    setSelectedDeviceIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
+  // 单选设备：点击切换选中状态
+  const selectDevice = (deviceId: number) => {
+    setSelectedDeviceId((prev) => (prev === deviceId ? null : deviceId));
   };
 
   const copyDiagnostics = () => {
@@ -75,13 +75,16 @@ export default function MonitoringPage() {
     toast.success('Diagnostics copied to clipboard');
   };
 
-  // Filter metrics by active tab
+  // Filter metrics by active tab (3个独立数据源)
   const filteredMetrics = useMemo(() => {
     const result: Record<string, RealtimeMetric> = {};
     Object.entries(sseState.metrics).forEach(([key, metric]) => {
+      const isReceiveCard = metric.sourceType === 'RECEIVE_CARD' || metric.reportType === 'bitErrorRate';
+
       if (
-        (activeTab === 'device' && (metric.sourceType === 'DEVICE_SENSOR' || metric.reportType === 'bitErrorRate')) ||
-        (activeTab === 'm2' && metric.sourceType === 'M2_SENSOR' && metric.reportType !== 'bitErrorRate')
+        (activeTab === 'receiveCard' && isReceiveCard) ||
+        (activeTab === 'device' && metric.sourceType === 'DEVICE_SENSOR' && !isReceiveCard) ||
+        (activeTab === 'm2' && metric.sourceType === 'M2_SENSOR')
       ) {
         result[key] = metric;
       }
@@ -89,19 +92,22 @@ export default function MonitoringPage() {
     return result;
   }, [sseState.metrics, activeTab]);
 
-  // Get metric counts for tabs
+  // Get metric counts for tabs (3个独立数据源)
   const tabCounts = useMemo(() => {
+    let receiveCard = 0;
     let device = 0;
     let m2 = 0;
     Object.values(sseState.metrics).forEach((m) => {
-      if (m.sourceType === 'DEVICE_SENSOR' || m.reportType === 'bitErrorRate') {
+      const isReceiveCard = m.sourceType === 'RECEIVE_CARD' || m.reportType === 'bitErrorRate';
+      if (isReceiveCard) {
+        receiveCard++;
+      } else if (m.sourceType === 'DEVICE_SENSOR') {
         device++;
-      }
-      if (m.sourceType === 'M2_SENSOR' && m.reportType !== 'bitErrorRate') {
+      } else if (m.sourceType === 'M2_SENSOR') {
         m2++;
       }
     });
-    return { device, m2 };
+    return { receiveCard, device, m2 };
   }, [sseState.metrics]);
 
   if (isDevicesLoading) {
@@ -164,7 +170,7 @@ export default function MonitoringPage() {
             <div className="relative group">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50 transition-colors group-focus-within:text-primary" />
               <Input
-                placeholder="Search devices..."
+                placeholder="Search by name or ID..."
                 className="pl-8 h-8 bg-background text-xs"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -174,34 +180,28 @@ export default function MonitoringPage() {
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Fleet ({devices.length})
               </span>
-              <div className="flex gap-1">
+              {/* 单选模式：显示当前选中状态 */}
+              {selectedDeviceId !== null && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-5 px-1.5 text-[9px] font-bold"
-                  onClick={() => setSelectedDeviceIds(devices.map((d) => d.id))}
+                  className="h-5 px-1.5 text-[9px] font-bold text-muted-foreground"
+                  onClick={() => setSelectedDeviceId(null)}
                 >
-                  ALL
+                  Clear
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-5 px-1.5 text-[9px] font-bold"
-                  onClick={() => setSelectedDeviceIds([])}
-                >
-                  NONE
-                </Button>
-              </div>
+              )}
             </div>
           </div>
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-0.5">
               {devices.map((d) => {
-                const isSelected = selectedDeviceIds.includes(d.id);
+                // 单选模式：使用 deviceId (number) 比较
+                const isSelected = selectedDeviceId === d.deviceId;
                 return (
                   <button
                     key={d.id}
-                    onClick={() => toggleDevice(d.id)}
+                    onClick={() => selectDevice(d.deviceId)}
                     className={cn(
                       'w-full flex items-center gap-2.5 p-2 rounded-md transition-all text-left border border-transparent',
                       isSelected
@@ -226,7 +226,8 @@ export default function MonitoringPage() {
                       >
                         {d.deviceName}
                       </p>
-                      <p className="text-[9px] opacity-40 font-mono truncate">{d.id}</p>
+                      {/* 显示 deviceId (number) 而非 id (string) */}
+                      <p className="text-[9px] opacity-40 font-mono truncate">{d.deviceId}</p>
                     </div>
                     {isSelected && <CheckCircle2 className="h-3 w-3 text-primary" />}
                   </button>
@@ -238,15 +239,14 @@ export default function MonitoringPage() {
 
         {/* MAIN AREA */}
         <div className="flex-1 flex flex-col gap-4 overflow-hidden">
-          {selectedDeviceIds.length === 0 ? (
+          {selectedDeviceId === null ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center opacity-40 bg-muted/10 rounded-lg border border-dashed">
               <Monitor className="h-12 w-12 mb-3" />
               <h2 className="text-lg font-bold tracking-tight">
-                No Active Subscriptions
+                No Device Selected
               </h2>
               <p className="text-xs max-w-xs">
-                Select one or more devices from the fleet list to start receiving real-time
-                telemetry.
+                Select a device from the fleet list to start receiving real-time telemetry.
               </p>
             </div>
           ) : (
@@ -255,15 +255,27 @@ export default function MonitoringPage() {
               onValueChange={(v) => setActiveTab(v as MonitoringTab)}
               className="flex-1 flex flex-col overflow-hidden"
             >
-              {/* Tab Header */}
+              {/* Tab Header - 3个独立数据源Tab */}
               <div className="bg-card border rounded-lg p-2 px-4 flex items-center justify-between gap-4 shadow-sm">
                 <TabsList className="bg-muted/50 h-8">
+                  <TabsTrigger
+                    value="receiveCard"
+                    className="h-6 px-3 text-xs font-semibold data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2"
+                  >
+                    <Cpu className="h-3.5 w-3.5" />
+                    Receive Cards
+                    {tabCounts.receiveCard > 0 && (
+                      <span className="ml-1 px-1.5 py-0.5 text-[9px] bg-primary/10 text-primary rounded-full">
+                        {tabCounts.receiveCard}
+                      </span>
+                    )}
+                  </TabsTrigger>
                   <TabsTrigger
                     value="device"
                     className="h-6 px-3 text-xs font-semibold data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2"
                   >
-                    <Cpu className="h-3.5 w-3.5" />
-                    Device & Receive Card
+                    <Monitor className="h-3.5 w-3.5" />
+                    Device Sensors
                     {tabCounts.device > 0 && (
                       <span className="ml-1 px-1.5 py-0.5 text-[9px] bg-primary/10 text-primary rounded-full">
                         {tabCounts.device}
@@ -275,7 +287,7 @@ export default function MonitoringPage() {
                     className="h-6 px-3 text-xs font-semibold data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2"
                   >
                     <Gauge className="h-3.5 w-3.5" />
-                    M2 External Sensors
+                    M2 External
                     {tabCounts.m2 > 0 && (
                       <span className="ml-1 px-1.5 py-0.5 text-[9px] bg-primary/10 text-primary rounded-full">
                         {tabCounts.m2}
@@ -294,20 +306,38 @@ export default function MonitoringPage() {
                 </div>
               </div>
 
-              {/* Tab Content */}
+              {/* Tab Content - 3个独立数据源 */}
+              <TabsContent
+                value="receiveCard"
+                className="flex-1 mt-3 overflow-auto data-[state=inactive]:hidden"
+              >
+                {Object.keys(filteredMetrics).length === 0 ? (
+                  <EmptyState
+                    icon={Cpu}
+                    title="Awaiting Receive Card Data"
+                    description="No receive card telemetry reported for this device yet."
+                  />
+                ) : (
+                  <ReceiveCardTab
+                    deviceId={selectedDeviceId}
+                    metrics={filteredMetrics}
+                  />
+                )}
+              </TabsContent>
+
               <TabsContent
                 value="device"
                 className="flex-1 mt-3 overflow-auto data-[state=inactive]:hidden"
               >
                 {Object.keys(filteredMetrics).length === 0 ? (
                   <EmptyState
-                    icon={Cpu}
-                    title="Awaiting Device Telemetry"
-                    description="No device sensor or receive card data reported for the selected devices yet."
+                    icon={Monitor}
+                    title="Awaiting Device Sensors"
+                    description="No device sensor data reported for this device yet."
                   />
                 ) : (
                   <DeviceSensorTab
-                    deviceIds={selectedDeviceIds}
+                    deviceId={selectedDeviceId}
                     metrics={filteredMetrics}
                   />
                 )}
@@ -321,11 +351,11 @@ export default function MonitoringPage() {
                   <EmptyState
                     icon={Gauge}
                     title="Awaiting M2 Telemetry"
-                    description="No M2 external sensor data reported for the selected devices yet."
+                    description="No M2 external sensor data reported for this device yet."
                   />
                 ) : (
                   <M2SensorTab
-                    deviceIds={selectedDeviceIds}
+                    deviceId={selectedDeviceId}
                     metrics={filteredMetrics}
                   />
                 )}

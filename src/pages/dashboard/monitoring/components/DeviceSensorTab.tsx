@@ -2,13 +2,12 @@ import { useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import type { RealtimeMetric } from '../types';
 import { DEVICE_TAB_GROUPS } from '../constants';
-import { ReceiveCardSection } from './ReceiveCardSection';
 import { SensorGroupCard } from './SensorGroupCard';
 import { HistoryDrawer } from './HistoryDrawer';
 import type { SensorSourceType } from '@/services/telemetryApi';
 
 interface DeviceSensorTabProps {
-  deviceIds: string[];
+  deviceId: number;  // 单设备模式
   metrics: Record<string, RealtimeMetric>;
   className?: string;
 }
@@ -25,7 +24,7 @@ interface HistoryState {
 }
 
 export function DeviceSensorTab({
-  deviceIds,
+  deviceId,
   metrics,
   className,
 }: DeviceSensorTabProps) {
@@ -70,18 +69,11 @@ export function DeviceSensorTab({
     setHistoryState((prev) => ({ ...prev, open: false }));
   }, []);
 
-  // Get sensor groups excluding receive card (handled separately)
-  const sensorGroups = DEVICE_TAB_GROUPS.filter((g) => g.id !== 'receiveCard');
+  // Device sensor groups (接收卡已移至独立Tab)
+  const sensorGroups = DEVICE_TAB_GROUPS;
 
   return (
     <div className={cn('space-y-4', className)}>
-      {/* Receive Cards Section - FIRST as per user request */}
-      <ReceiveCardSection
-        deviceIds={deviceIds}
-        metrics={metrics}
-        className="col-span-full"
-      />
-
       {/* Sensor Group Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {sensorGroups.map((group) => (
@@ -89,7 +81,7 @@ export function DeviceSensorTab({
             key={group.id}
             group={group}
             metrics={metrics}
-            deviceIds={deviceIds}
+            deviceId={deviceId}
             onViewHistory={handleViewHistory}
           />
         ))}
@@ -99,7 +91,7 @@ export function DeviceSensorTab({
       <HistoryDrawer
         open={historyState.open}
         onClose={handleCloseHistory}
-        deviceId={deviceIds[0] || ''}
+        deviceId={String(deviceId)}
         reportType={historyState.reportType}
         sourceType={historyState.sourceType}
         metricKeys={historyState.metricKeys}

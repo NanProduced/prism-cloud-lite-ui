@@ -23,7 +23,7 @@ import { CHART_COLORS, ALERT_THRESHOLDS } from '../constants';
 interface SensorGroupCardProps {
   group: SensorGroup;
   metrics: Record<string, RealtimeMetric>;
-  deviceIds: string[];
+  deviceId: number;  // 单设备模式
   onViewHistory?: (reportType: string, metricKeys?: string[]) => void;
   className?: string;
 }
@@ -31,7 +31,7 @@ interface SensorGroupCardProps {
 export function SensorGroupCard({
   group,
   metrics,
-  deviceIds,
+  deviceId,
   onViewHistory,
   className,
 }: SensorGroupCardProps) {
@@ -101,16 +101,12 @@ export function SensorGroupCard({
     // Sort by time
     allPoints.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
 
-    // If single device or can combine, just return values
-    if (deviceIds.length === 1 || group.canCombine) {
-      return allPoints.map((p) => ({
-        at: p.at,
-        value: p.val,
-      }));
-    }
-
-    return allPoints;
-  }, [activeMetric, groupMetrics, deviceIds, group.canCombine]);
+    // 单设备模式：直接返回值
+    return allPoints.map((p) => ({
+      at: p.at,
+      value: p.val,
+    }));
+  }, [activeMetric, groupMetrics]);
 
   // Check if value exceeds threshold
   const getAlertStatus = (

@@ -70,7 +70,7 @@ export interface MultiLineChartData {
 // --- Component Props ---
 
 export interface SensorCardProps {
-  deviceIds: string[];
+  deviceId: number;  // 单设备模式，使用 number 类型
   metrics: Record<string, RealtimeMetric>;
   onViewHistory?: (reportType: string, metricKeys?: string[]) => void;
 }

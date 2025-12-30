@@ -22,15 +22,34 @@ export default function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('program');
 
   // Global Controls
-  const [timeRange, setTimeRange] = useState({
-    from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    to: new Date().toISOString().split('T')[0],
+  const [timeRange, setTimeRange] = useState(() => {
+    const now = new Date();
+    const weekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return {
+      from: weekAgo.toISOString().split('T')[0],
+      to: today.toISOString().split('T')[0],
+    };
   });
   const [tz] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [bucket, setBucket] = useState<PlaybackBucket>('DAY');
 
-  const fromIso = useMemo(() => new Date(timeRange.from).toISOString(), [timeRange.from]);
-  const toIso = useMemo(() => new Date(timeRange.to).toISOString(), [timeRange.to]);
+  // 修复时区问题：将本地日期转换为本地时区的 start/end of day
+  // 然后转换为 UTC ISO 字符串供 API 使用
+  const fromIso = useMemo(() => {
+    // 解析本地日期字符串，创建本地 00:00:00
+    const [year, month, day] = timeRange.from.split('-').map(Number);
+    const localStart = new Date(year, month - 1, day, 0, 0, 0, 0);
+    return localStart.toISOString();
+  }, [timeRange.from]);
+
+  const toIso = useMemo(() => {
+    // 解析本地日期字符串，创建本地 23:59:59.999（或下一天 00:00:00）
+    const [year, month, day] = timeRange.to.split('-').map(Number);
+    // 使用下一天的 00:00:00 作为 exclusive end
+    const localEnd = new Date(year, month - 1, day + 1, 0, 0, 0, 0);
+    return localEnd.toISOString();
+  }, [timeRange.to]);
 
   return (
     <div className="flex flex-col gap-4 p-6 h-full">

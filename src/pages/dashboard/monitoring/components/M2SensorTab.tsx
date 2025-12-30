@@ -8,7 +8,7 @@ import { HistoryDrawer } from './HistoryDrawer';
 import type { SensorSourceType } from '@/services/telemetryApi';
 
 interface M2SensorTabProps {
-  deviceIds: string[];
+  deviceId: number;  // 单设备模式
   metrics: Record<string, RealtimeMetric>;
   className?: string;
 }
@@ -22,7 +22,7 @@ interface HistoryState {
 }
 
 export function M2SensorTab({
-  deviceIds,
+  deviceId,
   metrics,
   className,
 }: M2SensorTabProps) {
@@ -81,7 +81,7 @@ export function M2SensorTab({
             key={group.id}
             group={group}
             metrics={metrics}
-            deviceIds={deviceIds}
+            deviceId={deviceId}
             onViewHistory={handleViewHistory}
           />
         ))}
@@ -94,7 +94,7 @@ export function M2SensorTab({
       <HistoryDrawer
         open={historyState.open}
         onClose={handleCloseHistory}
-        deviceId={deviceIds[0] || ''}
+        deviceId={String(deviceId)}
         reportType={historyState.reportType}
         sourceType={historyState.sourceType}
         metricKeys={historyState.metricKeys}

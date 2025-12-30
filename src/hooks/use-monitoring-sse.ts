@@ -5,7 +5,11 @@ import { resolveSensorInfo } from '@/lib/telemetry';
 const LRU_LIMIT = 500;
 const REFRESH_INTERVAL = 1000;
 
-export function useMonitoringSSE(selectedDeviceIds: string[]) {
+/**
+ * Monitoring SSE Hook - 单设备实时数据订阅
+ * @param selectedDeviceId 设备ID（number类型，契约要求）
+ */
+export function useMonitoringSSE(selectedDeviceId: number | null) {
   const [sseState, setSseState] = useState<SSEState>({
     metrics: {},
     lastUpdate: 0,
@@ -17,12 +21,14 @@ export function useMonitoringSSE(selectedDeviceIds: string[]) {
   const pendingUpdates = useRef<Record<string, RealtimeMetric>>({});
 
   useEffect(() => {
-    if (selectedDeviceIds.length === 0) {
+    // 单设备模式：必须选择设备才订阅
+    if (selectedDeviceId === null) {
       setSseState((prev) => ({ ...prev, status: 'idle', metrics: {} }));
       return;
     }
 
-    const url = `/api/sse/monitoring/stream?deviceIds=${selectedDeviceIds.join(',')}`;
+    // SSE 契约：deviceIds 参数使用 Long 类型
+    const url = `/api/sse/monitoring/stream?deviceIds=${selectedDeviceId}`;
     const eventSource = new EventSource(url, { withCredentials: true });
 
     setSseState((prev) => ({ ...prev, status: 'connected' }));
@@ -30,6 +36,7 @@ export function useMonitoringSSE(selectedDeviceIds: string[]) {
     eventSource.addEventListener('prism', (event: any) => {
       try {
         const envelope = JSON.parse(event.data);
+        // 契约：msg.type === 'telemetry.sensor.reported'
         if (envelope.type === 'telemetry.sensor.reported') {
           // De-duplication
           if (envelope.traceId && traceIdBuffer.current.has(envelope.traceId)) return;
@@ -44,24 +51,83 @@ export function useMonitoringSSE(selectedDeviceIds: string[]) {
             }
           }
 
+          // 契约：设备归属从 msg.scope.deviceId 获取（不是 envelope.deviceId）
+          const scopeDeviceId = envelope.scope?.deviceId;
+          if (!scopeDeviceId) {
+            console.warn('[SSE Monitoring] Missing scope.deviceId in envelope', envelope);
+            return;
+          }
+
           const items = (envelope.data?.items || []) as TelemetryItem[];
 
           items.forEach((item) => {
-            const deviceId = item.deviceId || envelope.deviceId || 'unknown';
+            // 使用 scope.deviceId 作为设备归属
+            const deviceId = String(scopeDeviceId);
             const sensorType = item.sensorType;
             const sensorId = item.sensorId;
 
-            // Use the new utility to resolve sensor info
+            // 特殊处理1: 接收卡（bitErrorRate）- 嵌套数组结构
+            if (sensorType === 'bitErrorRate') {
+              const metricKey = `RECEIVE_CARD:bitErrorRate:${deviceId}`;
+              // 保存完整的嵌套结构，不展平
+              pendingUpdates.current[metricKey] = {
+                value: item.sensorValue, // 保持原始数组结构
+                at: envelope.occurredAt,
+                sourceType: 'RECEIVE_CARD' as any, // 独立数据源
+                reportType: 'bitErrorRate',
+                metricKey,
+                deviceId,
+                history: [], // 接收卡不维护 history（结构复杂，用 HTTP 查历史）
+                traceId: envelope.traceId,
+              };
+              return;
+            }
+
+            // 特殊处理2: 亮度（bright）- 多指标字段
+            if (sensorType === 'bright') {
+              const { sourceType } = resolveSensorInfo(sensorType, sensorId);
+              const brightMetrics = {
+                masterBrightValue: item.masterBrightValue,
+                screenBrightValue: item.screenBrightValue,
+                sensorBrightValue: item.sensorBrightValue,
+              };
+
+              // 为每个有效指标创建独立的 metric entry
+              Object.entries(brightMetrics).forEach(([key, val]) => {
+                if (val !== undefined && val !== null) {
+                  const metricKey = `${sourceType}:bright:${key}:${deviceId}`;
+                  const existing = pendingUpdates.current[metricKey] || sseState.metrics[metricKey];
+                  const history = existing?.history || [];
+                  const newHistory = [...history, { at: envelope.occurredAt, val: val as number }].slice(-30);
+
+                  pendingUpdates.current[metricKey] = {
+                    value: val,
+                    at: envelope.occurredAt,
+                    sourceType,
+                    reportType: 'bright',
+                    metricKey,
+                    deviceId,
+                    history: newHistory,
+                    traceId: envelope.traceId,
+                  };
+                }
+              });
+              return;
+            }
+
+            // 通用传感器处理：单值 sensorValue
             const { sourceType, reportType } = resolveSensorInfo(sensorType, sensorId);
-
             const metricKey = `${sourceType}:${reportType}:${deviceId}`;
+            const val = item.sensorValue;
 
-            const val = item.sensorValue !== undefined ? item.sensorValue : item;
-            const numVal = typeof val === 'number' ? val : 0;
+            // 只有数值类型才写入 history
+            const numVal = typeof val === 'number' ? val : null;
 
             const existing = pendingUpdates.current[metricKey] || sseState.metrics[metricKey];
             const history = existing?.history || [];
-            const newHistory = [...history, { at: envelope.occurredAt, val: numVal }].slice(-30);
+            const newHistory = numVal !== null
+              ? [...history, { at: envelope.occurredAt, val: numVal }].slice(-30)
+              : history;
 
             pendingUpdates.current[metricKey] = {
               value: val,
@@ -98,7 +164,7 @@ export function useMonitoringSSE(selectedDeviceIds: string[]) {
     return () => {
       eventSource.close();
     };
-  }, [selectedDeviceIds]);
+  }, [selectedDeviceId]);
 
   // Throttled UI Update
   useEffect(() => {

@@ -14,7 +14,8 @@ import type { SensorSourceType } from '@/services/telemetryApi';
 
 // --- Source Type Definitions ---
 
-export type MonitoringTab = 'device' | 'm2';
+// 3个Tab：接收卡(独立)、设备传感器、M2外置传感器
+export type MonitoringTab = 'receiveCard' | 'device' | 'm2';
 
 export interface SensorMapping {
   reportType: string;
@@ -37,8 +38,8 @@ export interface SensorGroup {
 // --- SSE Item Routing ---
 
 export function getSourceTab(sensorType: string, sensorId: number): MonitoringTab {
-  // Receive card always goes to device tab
-  if (sensorType === 'bitErrorRate') return 'device';
+  // 接收卡单独Tab
+  if (sensorType === 'bitErrorRate') return 'receiveCard';
   // M2 sensors have sensorId >= 1000
   return sensorId >= 1000 ? 'm2' : 'device';
 }
@@ -66,22 +67,9 @@ export const SENSOR_ID_MAP: Record<number, { reportType: string; sourceType: Sen
 };
 
 // --- Device Tab Sensor Groups ---
+// 注意：接收卡(receiveCard)已移至独立Tab，不在此处定义
 
 export const DEVICE_TAB_GROUPS: SensorGroup[] = [
-  {
-    id: 'receiveCard',
-    title: 'Receive Cards',
-    icon: Cpu,
-    chartType: 'drilldown',
-    sensors: [
-      {
-        reportType: 'bitErrorRate',
-        sensorIds: [],
-        sourceType: 'DEVICE_SENSOR',
-        label: 'Receive Card Health',
-      },
-    ],
-  },
   {
     id: 'climate',
     title: 'Climate',

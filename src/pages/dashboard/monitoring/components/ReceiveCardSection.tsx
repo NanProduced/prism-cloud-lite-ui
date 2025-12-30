@@ -38,20 +38,17 @@ import type { RealtimeMetric, ReceiveCardPortData, ReceiveCardData } from '../ty
 import { CHART_COLORS } from '../constants';
 
 interface ReceiveCardSectionProps {
-  deviceIds: string[];
+  deviceId: number;  // 单设备模式
   metrics: Record<string, RealtimeMetric>;
   className?: string;
 }
 
 export function ReceiveCardSection({
-  deviceIds,
+  deviceId,
   metrics,
   className,
 }: ReceiveCardSectionProps) {
   const { formatDateTime } = useTimeFormatter();
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string>(
-    deviceIds[0] || ''
-  );
   const [selectedPort, setSelectedPort] = useState<number | null>(null);
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
   const [showHistory, setShowHistory] = useState(false);
@@ -82,8 +79,8 @@ export function ReceiveCardSection({
     return result;
   }, [metrics]);
 
-  // Get data for selected device
-  const currentDeviceData = receiveCardData[selectedDeviceId] || [];
+  // Get data for current device (单设备模式)
+  const currentDeviceData = receiveCardData[String(deviceId)] || [];
 
   // Calculate summary
   const summary = useMemo(() => {
@@ -130,20 +127,20 @@ export function ReceiveCardSection({
       'telemetry',
       'receive-cards',
       'samples',
-      selectedDeviceId,
+      deviceId,
       selectedPort,
       selectedCard,
     ],
     queryFn: () =>
       getReceiveCardSamples({
-        deviceId: selectedDeviceId,
+        deviceId: String(deviceId),
         netPortNum: selectedPort!,
         receiveCardNum: selectedCard!,
         limit: 100,
       }),
     enabled:
       showHistory &&
-      !!selectedDeviceId &&
+      deviceId !== null &&
       selectedPort !== null &&
       selectedCard !== null,
   });
@@ -236,22 +233,7 @@ export function ReceiveCardSection({
               </div>
             </div>
 
-            {/* Port/Card Grid */}
-            {deviceIds.length > 1 && (
-              <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
-                <SelectTrigger className="h-8 text-[10px] font-bold rounded-md">
-                  <SelectValue placeholder="Select Device" />
-                </SelectTrigger>
-                <SelectContent>
-                  {deviceIds.map((id) => (
-                    <SelectItem key={id} value={id} className="text-[10px]">
-                      {id}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
+            {/* Port/Card Grid - 单设备模式，无需设备选择器 */}
             <ScrollArea className="h-[200px]">
               <div className="space-y-2">
                 {currentDeviceData.map((port) => (
