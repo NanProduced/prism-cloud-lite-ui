@@ -15,6 +15,7 @@ import SettingsPage from "@/pages/dashboard/settings/SettingsPage";
 import MapPage from "@/pages/dashboard/map/MapPage";
 import DeviceDetailsPage from "@/pages/dashboard/devices/DeviceDetailsPage";
 import SchedulePage from "@/pages/dashboard/schedule/SchedulePage";
+import ScheduleDetailPage from "@/pages/dashboard/schedule/ScheduleDetailPage";
 import MessagesPage from "@/pages/dashboard/messages/MessagesPage";
 import MonitoringPage from "@/pages/dashboard/MonitoringPage";
 import AnalyticsPage from "@/pages/dashboard/AnalyticsPage";
@@ -58,6 +59,7 @@ const router = createBrowserRouter([
       { path: "devices", element: <DevicesPage /> },
       { path: "devices/:deviceId", element: <DeviceDetailsPage /> },
       { path: "schedule", element: <SchedulePage /> },
+      { path: "schedule/:scheduleId", element: <ScheduleDetailPage /> },
       { path: "map", element: <MapPage /> },
       { path: "analytics", element: <AnalyticsPage /> },
       { path: "monitoring", element: <MonitoringPage /> },

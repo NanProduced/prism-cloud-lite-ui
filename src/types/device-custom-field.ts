@@ -41,6 +41,6 @@ export interface DeviceCustomFieldDef {
 export type DeviceCustomFieldValue = string | number | boolean | string[] | null;
 
 /**
- * Keys are `String(fieldId)` from `DeviceCustomFieldDef.fieldId`.
+ * Keys are `fieldKey` from `DeviceCustomFieldDef.fieldKey`.
  */
 export type DeviceCustomFieldValues = Record<string, DeviceCustomFieldValue>;

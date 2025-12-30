@@ -266,7 +266,7 @@ export function DeviceCustomFieldFloatingFilterCell({
         prismMode: 'any',
         func: ({ data }) => {
           if (!data) return true;
-          const raw = data.customFieldValues?.[String(fieldDef.fieldId)];
+          const raw = data.customFieldValues?.[fieldDef.fieldKey];
 
           if (fieldType === 'MULTI_SELECT') {
             const arr = Array.isArray(raw) ? raw : [];
@@ -391,9 +391,9 @@ export function DeviceCustomFieldEditRenderer({
   const options = useMemo(() => (fieldDef.options ?? []).slice().sort(optionSort), [fieldDef.options]);
   const initialMultiSelected = useMemo(() => {
     if (row.kind !== 'leaf' || !row.data) return [];
-    const raw = row.data.customFieldValues?.[String(fieldDef.fieldId)];
+    const raw = row.data.customFieldValues?.[fieldDef.fieldKey];
     return Array.isArray(raw) ? raw : [];
-  }, [fieldDef.fieldId, row]);
+  }, [fieldDef.fieldKey, row]);
   const [multiSelected, setMultiSelected] = useState<string[]>(initialMultiSelected);
 
   if (type === 'BOOLEAN') {

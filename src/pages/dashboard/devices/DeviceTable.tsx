@@ -118,7 +118,7 @@ export function DeviceTable({
         width: 180,
         field: ({ data }) => {
           if (data.kind !== 'leaf' || !data.data) return type === 'number' ? 0 : '';
-          const raw = data.data.customFieldValues?.[String(def.fieldId)];
+          const raw = data.data.customFieldValues?.[def.fieldKey];
           if (raw == null) return '';
           if (def.fieldType === 'NUMBER') return typeof raw === 'number' ? raw : Number(raw);
           if (def.fieldType === 'BOOLEAN') return raw === true ? 'true' : raw === false ? 'false' : '';   
@@ -140,7 +140,7 @@ export function DeviceTable({
         },
         cellRenderer: ({ row, grid }: CellRendererParams<Device>) => {
           if (grid.api.rowIsGroup(row) || !row.data) return null;
-          const raw = row.data.customFieldValues?.[String(def.fieldId)];
+          const raw = row.data.customFieldValues?.[def.fieldKey];
           if (raw == null) return <span className="text-muted-foreground">-</span>;
 
           if (def.fieldType === 'NUMBER') {
@@ -299,13 +299,14 @@ export function DeviceTable({
             return String(value);
           })();
 
-          nextValues[String(def.fieldId)] = normalized;
+          nextValues[def.fieldKey] = normalized;
           next.customFieldValues = nextValues;
           return next;
         },
         prismMeta: {
           kind: 'customField',
           fieldId: def.fieldId,
+          fieldKey: def.fieldKey,
           fieldType: def.fieldType,
           icon: def.icon,
           planTierRequired: def.planTierRequired,
@@ -910,10 +911,11 @@ export function DeviceTable({
     const getCustomFieldMeta = (column: Column<Device>) => {
       const raw = (column as unknown as { prismMeta?: unknown }).prismMeta;
       if (!raw || typeof raw !== 'object') return null;
-      const meta = raw as { kind?: unknown; fieldId?: unknown; locked?: unknown };
+      const meta = raw as { kind?: unknown; fieldId?: unknown; fieldKey?: unknown; locked?: unknown };
       if (meta.kind !== 'customField') return null;
       if (typeof meta.fieldId !== 'number') return null;
-      return { fieldId: meta.fieldId, locked: Boolean(meta.locked) };
+      if (typeof meta.fieldKey !== 'string') return null;
+      return { fieldId: meta.fieldId, fieldKey: meta.fieldKey, locked: Boolean(meta.locked) };
     };
 
     const removeEditBegin = grid.api.eventAddListener('editBegin', ({ column, preventDefault }) => {
@@ -929,9 +931,9 @@ export function DeviceTable({
     const removeEditEnd = grid.api.eventAddListener('editEnd', ({ column, data }) => {
       const meta = getCustomFieldMeta(column);
       if (!meta) return;
-      const fieldId = meta.fieldId;
+      const { fieldId, fieldKey } = meta;
       const device = data as Device;
-      const value = device.customFieldValues?.[String(fieldId)] ?? null;
+      const value = device.customFieldValues?.[fieldKey] ?? null;
       onCustomFieldValueChange(String(device.deviceId), fieldId, value);
     });
 

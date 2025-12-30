@@ -971,9 +971,18 @@ export default function DeviceDetailsPage() {
                      >
                         <RefreshCw className="h-4 w-4" /> Refresh
                      </Button>
-                     <Button className="h-10 rounded-xl text-sm gap-2" onClick={() => navigate('/dashboard/schedule')}>
-                        Manage
-                     </Button>
+                     {deviceSchedule?.scheduleId ? (
+                        <Button
+                           className="h-10 rounded-xl text-sm gap-2"
+                           onClick={() => navigate(`/dashboard/schedule/${deviceSchedule.scheduleId}`)}
+                        >
+                           Open schedule
+                        </Button>
+                     ) : (
+                        <Button className="h-10 rounded-xl text-sm gap-2" onClick={() => navigate('/dashboard/schedule')}>
+                           Manage
+                        </Button>
+                     )}
                   </div>
                </CardHeader>
                <CardContent className="p-6 space-y-6">
@@ -981,16 +990,16 @@ export default function DeviceDetailsPage() {
                   <div className="flex flex-col md:flex-row gap-4">
                      <div className="flex-1 p-6 rounded-2xl bg-muted/20 border border-dashed border-muted/60">
                         <p className="text-xs font-medium text-muted-foreground mb-3">Assigned schedule</p>
-                        {deviceSchedule ? (
+                        {deviceSchedule?.scheduleId ? (
                            <div className="flex items-center gap-3">
                               <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
                                  <CalendarDays className="h-5 w-5" />
                               </div>
                               <div>
-                                 <h4 className="text-base font-semibold">{deviceSchedule.name}</h4>
+                                 <h4 className="text-base font-semibold">{deviceSchedule.scheduleName || '—'}</h4>
                                  <p className="text-xs text-muted-foreground mt-0.5">
-                                    <span className={cn(deviceSchedule.enabled ? "text-emerald-600" : "text-amber-600")}>
-                                       {deviceSchedule.enabled ? 'Active' : 'Paused'}
+                                    <span className={cn(deviceSchedule.scheduleEnabled ? "text-emerald-600" : "text-amber-600")}>
+                                       {deviceSchedule.scheduleEnabled ? 'Active' : 'Paused'}
                                     </span>
                                  </p>
                               </div>

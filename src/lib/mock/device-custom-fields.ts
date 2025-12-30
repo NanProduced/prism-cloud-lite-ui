@@ -115,7 +115,7 @@ export const mockDeviceCustomFieldDefs: DeviceCustomFieldDef[] = [
 export function generateMockDeviceCustomFieldValues(deviceIndex: number): DeviceCustomFieldValues {
   const values: DeviceCustomFieldValues = {};
 
-  values['9001'] = faker.helpers.arrayElement([
+  values['screen_customer'] = faker.helpers.arrayElement([
     'Telecom Operator',
     'Retail Chain',
     'Airport Authority',
@@ -123,23 +123,23 @@ export function generateMockDeviceCustomFieldValues(deviceIndex: number): Device
     'University',
   ]);
 
-  values['9002'] = faker.helpers.arrayElement(['tier-100', 'tier-300', 'tier-500']);
+  values['pricing_tier'] = faker.helpers.arrayElement(['tier-100', 'tier-300', 'tier-500']);
 
-  values['9003'] = faker.number.float({ min: -50, max: 1200, multipleOf: 0.01 });
+  values['monthly_fee'] = faker.number.float({ min: -50, max: 1200, multipleOf: 0.01 });
 
-  values['9004'] = faker.date.soon({ days: 180, refDate: new Date() }).toISOString();
+  values['contract_end'] = faker.date.soon({ days: 180, refDate: new Date() }).toISOString();
 
-  values['9005'] = faker.datatype.boolean();
+  values['managed'] = faker.datatype.boolean();
 
-  values['9006'] = faker.helpers
+  values['regions'] = faker.helpers
     .shuffle(['apac', 'emea', 'na'])
     .slice(0, faker.number.int({ min: 1, max: 2 }));
 
-  values['9007'] = deviceIndex % 3 === 0 ? faker.internet.url() : null;
-  values['9008'] = deviceIndex % 4 === 0 ? faker.internet.email() : null;
-  values['9009'] = deviceIndex % 5 === 0 ? faker.phone.number() : null;
+  values['support_url'] = deviceIndex % 3 === 0 ? faker.internet.url() : null;
+  values['contact_email'] = deviceIndex % 4 === 0 ? faker.internet.email() : null;
+  values['hotline'] = deviceIndex % 5 === 0 ? faker.phone.number() : null;
 
-  values['9010'] = faker.helpers.arrayElement(['US', 'CN', 'JP', 'DE', 'GB', 'SG', 'AU']);
+  values['country'] = faker.helpers.arrayElement(['US', 'CN', 'JP', 'DE', 'GB', 'SG', 'AU']);
 
   return values;
 }

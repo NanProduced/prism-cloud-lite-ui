@@ -1,157 +1,180 @@
-// Schedule Type Definitions for Prism Cloud Lite
-// Aligned with backend business logic (pc_schedule, pc_schedule_contents_rule, etc.)
-
-export type WeekDay = 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI' | 'SAT' | 'SUN';
-
-export interface ScheduleLimitTime {
-  start: string; // HH:mm:ss
-  end: string;   // HH:mm:ss
-}
-
-export interface ScheduleLimitDate {
-  start: string; // YYYY-MM-DD
-  end: string;   // YYYY-MM-DD
-}
+// Schedule Type Definitions
+// Aligned with core-service ScheduleController + docs/integration/program-and-schedule.md
 
 export type ContentsScheduleType = 'rotation' | 'spot';
 
-/**
- * Represents a single rule for a program within a schedule.
- * Maps to pc_schedule_contents_rule
- */
-export interface ProgramScheduleRule {
-  id: string;
-  type: ContentsScheduleType;
-  priority: number;
-  
-  // Link to a specific release (program version)
-  // On device side, this is the integer 'programId'
-  releaseProgramId: number; 
-  programId: string; // UUID of the program
-  programName: string;
-  version: number;
+export type ScheduleCommandActionType =
+  | 'BRIGHTNESS'
+  | 'VOLUME'
+  | 'COLOR_TEMP'
+  | 'POWER'
+  | 'INPUT_MODE'
+  | 'CLEAR_CACHE';
 
-  // Limits
-  ifLimitTime: boolean;
-  limitTime?: ScheduleLimitTime | null;
-  
-  ifLimitDate: boolean;
-  limitDate?: ScheduleLimitDate | null;
-  
-  ifLimitWeekday: boolean;
-  limitWeekday?: boolean[] | null; // Length 7: [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
-}
+export type JsonObject = Record<string, unknown>;
+export type JsonValue = null | boolean | number | string | JsonObject | JsonValue[];
 
-/**
- * Represents a single command rule within a schedule.
- * Maps to pc_schedule_command_rule
- */
-export interface CommandScheduleRule {
-  id: string;
-  name: string; 
-  
-  // Backend request structure
-  operation: {
-    type: 'BRIGHTNESS' | 'VOLUME' | 'COLOR_TEMP' | 'POWER' | 'INPUT_MODE' | 'CLEAR_CACHE';
-    body?: any;
-  };
-  opTime: string[]; // Array of trigger points: ["08:00:00", "22:00:00"]
-  
-  // Limits
-  ifLimitDate: boolean;
-  limitDate?: ScheduleLimitDate | null;
-  
-  ifLimitWeekday: boolean;
-  limitWeekday?: boolean[] | null;
-  
-  // Read-only from backend
-  payload?: any; 
-}
-
-/**
- * A Schedule is a collection of program and command rules.
- * Maps to pc_schedule
- */
-export interface ScheduleRecord {
-  id: string;
-  name: string; // "Playback Plan Name"
-  description?: string;
+export interface ScheduleListResp {
+  scheduleId: string; // UUID
+  name: string;
+  description?: string | null;
   enabled: boolean;
-  timezone: string; // e.g., 'Asia/Shanghai', 'UTC'
+  boundDevices: number;
+  programRules: number;
+  commandRules: number;
   createdAt: string;
   updatedAt: string;
-  
-  // Observability
-  lastPushedAt?: string;
-  syncStatus?: 'synced' | 'pending' | 'failed' | 'partial';
-
-  // Rules
-  programRules: ProgramScheduleRule[];
-  commandRules: CommandScheduleRule[];
-  
-  // Stats for list view
-  boundDeviceCount: number;
 }
 
-/**
- * Represents the link between a device and a schedule.
- * Maps to pc_device_schedule_binding
- */
-export interface ScheduleBinding {
-  deviceId: string;
+export interface ScheduleDetailResp {
+  scheduleId: string; // UUID
+  name: string;
+  description?: string | null;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  boundDeviceIds: number[];
+  contentsRules: ScheduleContentsRuleResp[];
+  commandRules: ScheduleCommandRuleResp[];
+}
+
+export interface ScheduleContentsRuleResp {
+  id: number;
   scheduleId: string;
-  boundAt: string;
-  syncStatus?: 'synced' | 'pending' | 'failed';
-  lastSyncedAt?: string;
-  errorMessage?: string;
+  type: ContentsScheduleType;
+  priority: number;
+  releaseProgramId: number; // ProgramRelease.deviceProgramId (Integer)
+  programId?: string | null;
+  releaseVersion?: number | null;
+  deviceTitleSnapshot?: string | null;
+  ifLimitTime?: boolean | null;
+  limitTime?: JsonValue;
+  ifLimitDate?: boolean | null;
+  limitDate?: JsonValue;
+  ifLimitWeekday?: boolean | null;
+  limitWeekday?: JsonValue;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type ScheduleBindingDevice = ScheduleBinding;
+export interface ScheduleCommandRuleResp {
+  id: number;
+  scheduleId: string;
+  payload: JsonValue; // device protocol commandSchedule element (opaque to UI unless parsed)
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScheduleBindingDeviceResp {
+  deviceId: number;
+  deviceName?: string | null;
+  onlineStatus?: number | null;
+  boundAt: string;
+}
+
+export interface ScheduleBindDevicesReq {
+  deviceIds: number[];
+  replaceExisting?: boolean;
+}
+
+export interface ScheduleBindDevicesResultResp {
+  deviceId: number;
+  status: 'bound' | 'no-change' | 'conflict' | 'skip' | string;
+  previousScheduleId?: string | null;
+}
+
+export interface ScheduleBindDevicesResp {
+  totalTargets: number;
+  bound: number;
+  conflicts: number;
+  results: ScheduleBindDevicesResultResp[];
+}
+
+export interface SchedulePushReq {
+  deviceIds?: number[];
+}
+
+export interface SchedulePushResultResp {
+  deviceId: number;
+  commandId?: string | null;
+  accepted: boolean;
+  queuedId?: number | null;
+  errorMessage?: string | null;
+}
 
 export interface SchedulePushResp {
   totalTargets: number;
   accepted: number;
-  results: Array<{
-    deviceId: string;
-    commandId?: string;
-    accepted: boolean;
-    queuedId?: number;
-    errorMessage?: string;
-  }>;
+  results: SchedulePushResultResp[];
+}
+
+export interface DeviceActionBase {
+  type: ScheduleCommandActionType;
+  ttlMinutes?: number | null;
+  clientRequestId?: string | null;
+  body?: JsonObject | null;
+}
+
+export interface UpsertScheduleContentsRuleReq {
+  id?: number | null;
+  type: ContentsScheduleType;
+  priority: number;
+  releaseProgramId: number;
+  ifLimitTime?: boolean | null;
+  limitTime?: JsonValue;
+  ifLimitDate?: boolean | null;
+  limitDate?: JsonValue;
+  ifLimitWeekday?: boolean | null;
+  limitWeekday?: JsonValue;
+}
+
+export interface UpsertScheduleCommandRuleReq {
+  id?: number | null;
+  operation: DeviceActionBase;
+  opTime: string[]; // ["HH:mm:ss", ...]
+  ifLimitDate?: boolean | null;
+  limitDate?: JsonValue;
+  ifLimitWeekday?: boolean | null;
+  limitWeekday?: JsonValue;
 }
 
 export interface CreateScheduleReq {
   name: string;
-  description?: string;
-  enabled?: boolean;
-  timezone?: string;
-  contentsRules?: ProgramScheduleRule[] | null;
-  commandRules?: CommandScheduleRule[] | null;
+  description?: string | null;
+  enabled?: boolean | null;
+  contentsRules?: UpsertScheduleContentsRuleReq[] | null;
+  commandRules?: UpsertScheduleCommandRuleReq[] | null;
 }
 
 export interface UpdateScheduleReq {
-  name?: string;
-  description?: string;
-  enabled?: boolean;
-  timezone?: string;
-  contentsRules?: ProgramScheduleRule[] | null;
-  commandRules?: CommandScheduleRule[] | null;
+  name?: string | null;
+  description?: string | null;
+  enabled?: boolean | null;
+  contentsRules?: UpsertScheduleContentsRuleReq[] | null;
+  commandRules?: UpsertScheduleCommandRuleReq[] | null;
 }
 
-/**
- * Combined data for device visibility (AllowList)
- * Used in Device Details -> Playback Plan
- */
-export interface DeviceProgramVisibility {
-  programId: string;
-  programName: string;
-  version: number;
-  releaseProgramId: number;
-  source: 'direct' | 'schedule';
-  scheduleId?: string;
-  scheduleName?: string;
-  
-  // Fact: is it actually on the device?
-  status: 'unknown' | 'downloading' | 'downloaded';
-  progress?: number;
+export interface ScheduleAuditLogResp {
+  id: number;
+  userId: string;
+  scheduleId: string;
+  action: string;
+  details?: string | null;
+  createdAt: string;
 }
+
+export interface DeviceScheduleResp {
+  deviceId: number;
+  scheduleId?: string | null;
+  scheduleName?: string | null;
+  scheduleDescription?: string | null;
+  scheduleEnabled?: boolean | null;
+  scheduleCreatedAt?: string | null;
+  scheduleUpdatedAt?: string | null;
+  boundAt?: string | null;
+  programRulesCount: number;
+  commandRulesCount: number;
+  contentsRules: ScheduleContentsRuleResp[];
+  commandRules: ScheduleCommandRuleResp[];
+}
+
