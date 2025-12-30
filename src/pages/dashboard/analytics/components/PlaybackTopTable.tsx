@@ -46,8 +46,9 @@ export function PlaybackTopTable({
           movable: false,
         },
         cellRenderer: ({ row }: CellRendererParams<TopPlaybackItem>) => {
-          if (!row.data) return null;
-          const rank = data.findIndex((d) => d.id === row.data?.id) + 1;
+          const item = row.data as TopPlaybackItem;
+          if (!item) return null;
+          const rank = data.findIndex((d) => d.id === item.id) + 1;
           return (
             <div className="flex items-center justify-center">
               <Badge
@@ -78,28 +79,30 @@ export function PlaybackTopTable({
           movable: false,
         },
         autosizeCellFn: ({ grid, row }) => {
-          if (row.kind !== 'leaf' || !row.data) return null;
-          const text = row.data.name;
+          const item = row.data as TopPlaybackItem;
+          if (row.kind !== 'leaf' || !item) return null;
+          const text = item.name;
           const vp = grid.state.viewport.get() ?? undefined;
           return measureText(text, vp).width + 60;
         },
         cellRenderer: ({ row }: CellRendererParams<TopPlaybackItem>) => {
-          if (!row.data) return null;
-          const isSelected = row.data.id === selectedId;
+          const item = row.data as TopPlaybackItem;
+          if (!item) return null;
+          const isSelected = item.id === selectedId;
           return (
             <div
               className={cn(
                 'flex items-center gap-2 px-1 cursor-pointer transition-colors',
                 isSelected && 'text-primary'
               )}
-              onClick={() => onSelect?.(row.data!)}
+              onClick={() => onSelect?.(item)}
             >
               {type === 'program' ? (
                 <Layers className="h-3.5 w-3.5 opacity-40 shrink-0" />
               ) : (
                 <Film className="h-3.5 w-3.5 opacity-40 shrink-0" />
               )}
-              <span className="text-xs font-bold truncate">{row.data.name}</span>
+              <span className="text-xs font-bold truncate">{item.name}</span>
               {isSelected && <ChevronRight className="h-3 w-3 ml-auto shrink-0" />}
             </div>
           );
@@ -117,12 +120,13 @@ export function PlaybackTopTable({
           movable: false,
         },
         cellRenderer: ({ row }: CellRendererParams<TopPlaybackItem>) => {
-          if (!row.data) return null;
+          const item = row.data as TopPlaybackItem;
+          if (!item) return null;
           return (
             <div className="flex items-center gap-1.5 px-1">
               <Hash className="h-3 w-3 opacity-30" />
               <span className="text-xs font-bold tabular-nums text-foreground/80">
-                {row.data.playCount.toLocaleString()}
+                {item.playCount.toLocaleString()}
               </span>
             </div>
           );
@@ -140,12 +144,13 @@ export function PlaybackTopTable({
           movable: false,
         },
         cellRenderer: ({ row }: CellRendererParams<TopPlaybackItem>) => {
-          if (!row.data) return null;
+          const item = row.data as TopPlaybackItem;
+          if (!item) return null;
           return (
             <div className="flex items-center gap-1.5 px-1">
               <Clock className="h-3 w-3 opacity-30" />
               <span className="text-xs font-bold tabular-nums text-primary">
-                {formatDuration(row.data.playSeconds)}
+                {formatDuration(item.playSeconds)}
               </span>
             </div>
           );

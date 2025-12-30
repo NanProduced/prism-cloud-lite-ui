@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Layers, MonitorPlay, Clock, Monitor, TrendingUp } from 'lucide-react';
+import { Layers, MonitorPlay, Clock, Monitor, TrendingUp, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -12,17 +12,20 @@ import {
   Tooltip,
   CartesianGrid,
 } from 'recharts';
+import { formatInTimeZone } from 'date-fns-tz';
 import { cn } from '@/lib/utils';
 import {
-  getPlaybackOverview,
+  getProgramsSummary,
   getProgramPlaybackBuckets,
   getProgramPlaybackDevices,
+  getLanProgramPlaybackBuckets,
+  getLanProgramPlaybackDevices,
   type PlaybackBucket,
+  type ProgramSummaryItem,
 } from '@/services/telemetryApi';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { PlaybackTopTable } from './PlaybackTopTable';
 import { AnalyticsDeviceTable } from '@/components/analytics/AnalyticsDeviceTable';
-import type { TopPlaybackItem } from '../types';
 
 interface ProgramTabProps {
   from: string;
@@ -34,29 +37,38 @@ interface ProgramTabProps {
 
 export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps) {
   const { formatDateTime } = useTimeFormatter();
-  const [selectedProgram, setSelectedProgram] = useState<TopPlaybackItem | null>(null);
+  const [selectedProgram, setSelectedProgram] = useState<ProgramSummaryItem | null>(null);
 
-  // Query for overview
-  const { data: overviewRes, isLoading: isOverviewLoading } = useQuery({
-    queryKey: ['telemetry', 'playback', 'overview', from, to],
-    queryFn: () => getPlaybackOverview({ from, to }),
+  // Query for summary list
+  const { data: summaryRes, isLoading: isSummaryLoading } = useQuery({
+    queryKey: ['telemetry', 'playback', 'programs', 'summary', from, to],
+    queryFn: () => getProgramsSummary({ from, to, limit: 50, sort: 'playSeconds' }),
   });
 
-  const overview = overviewRes?.data;
-  const topPrograms = overview?.topPrograms || [];
+  const programs = summaryRes?.data?.items || [];
 
   // Query for selected program trend
   const { data: trendRes, isLoading: isTrendLoading } = useQuery({
-    queryKey: ['telemetry', 'playback', 'program', selectedProgram?.id, selectedProgram?.version, from, to, bucket],
-    queryFn: () =>
-      getProgramPlaybackBuckets({
-        programId: selectedProgram!.id,
+    queryKey: ['telemetry', 'playback', 'program', selectedProgram?.programId, selectedProgram?.version, from, to, bucket, tz],
+    queryFn: () => {
+      if (selectedProgram!.isLan) {
+        return getLanProgramPlaybackBuckets({
+          lanProgramId: selectedProgram!.programId,
+          from,
+          to,
+          tz,
+          bucket,
+        });
+      }
+      return getProgramPlaybackBuckets({
+        programId: selectedProgram!.programId,
         version: selectedProgram!.version || '1',
         from,
         to,
         tz,
         bucket,
-      }),
+      });
+    },
     enabled: !!selectedProgram,
   });
 
@@ -64,15 +76,24 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
 
   // Query for selected program device distribution
   const { data: devicesRes, isLoading: isDevicesLoading } = useQuery({
-    queryKey: ['telemetry', 'playback', 'program', selectedProgram?.id, 'devices', from, to],
-    queryFn: () =>
-      getProgramPlaybackDevices({
-        programId: selectedProgram!.id,
+    queryKey: ['telemetry', 'playback', 'program', selectedProgram?.programId, 'devices', from, to],
+    queryFn: () => {
+      if (selectedProgram!.isLan) {
+        return getLanProgramPlaybackDevices({
+          lanProgramId: selectedProgram!.programId,
+          from,
+          to,
+          limit: 10,
+        });
+      }
+      return getProgramPlaybackDevices({
+        programId: selectedProgram!.programId,
         version: selectedProgram!.version || '1',
         from,
         to,
         limit: 10,
-      }),
+      });
+    },
     enabled: !!selectedProgram,
   });
 
@@ -80,20 +101,10 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
 
   // Auto-select first program
   useMemo(() => {
-    if (!selectedProgram && topPrograms.length > 0) {
-      setSelectedProgram(topPrograms[0]);
+    if (!selectedProgram && programs.length > 0) {
+      setSelectedProgram(programs[0]);
     }
-  }, [topPrograms, selectedProgram]);
-
-  // KPI calculations
-  const kpis = useMemo(() => {
-    if (!overview) return { totalCount: 0, totalSeconds: 0, uniquePrograms: 0 };
-    return {
-      totalCount: overview.totalCount || 0,
-      totalSeconds: overview.totalSeconds || 0,
-      uniquePrograms: topPrograms.length,
-    };
-  }, [overview, topPrograms]);
+  }, [programs, selectedProgram]);
 
   const formatDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -104,83 +115,31 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
 
   return (
     <div className={cn('space-y-6', className)}>
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="rounded-lg border bg-card shadow-sm overflow-hidden">
-          <div className="h-1 w-full bg-indigo-500" />
-          <CardContent className="p-4 px-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-md bg-indigo-500/10">
-                <MonitorPlay className="h-5 w-5 text-indigo-500" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
-                  Total Plays
-                </p>
-                <p className="text-xl font-bold tracking-tight tabular-nums">
-                  {kpis.totalCount.toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-lg border bg-card shadow-sm overflow-hidden">
-          <div className="h-1 w-full bg-pink-500" />
-          <CardContent className="p-4 px-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-md bg-pink-500/10">
-                <Clock className="h-5 w-5 text-pink-500" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
-                  Total Air Time
-                </p>
-                <p className="text-xl font-bold tracking-tight tabular-nums">
-                  {formatDuration(kpis.totalSeconds)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-lg border bg-card shadow-sm overflow-hidden">
-          <div className="h-1 w-full bg-emerald-500" />
-          <CardContent className="p-4 px-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-md bg-emerald-500/10">
-                <Layers className="h-5 w-5 text-emerald-500" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
-                  Active Programs
-                </p>
-                <p className="text-xl font-bold tracking-tight tabular-nums">
-                  {kpis.uniquePrograms}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Programs Table */}
-        <Card className="rounded-lg border bg-card shadow-sm overflow-hidden">
-          <CardHeader className="p-3 pb-2 bg-muted/30 border-b">
+        {/* Programs Summary Table */}
+        <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
+          <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
             <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
               <Layers className="h-4 w-4 text-primary" />
-              Top Programs
+              Program Analytics Summary
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <PlaybackTopTable
-              data={topPrograms}
+              data={programs.map(p => ({
+                id: p.programId,
+                name: p.name,
+                playCount: p.playCount,
+                playSeconds: p.playSeconds,
+                version: p.version
+              }))}
               type="program"
-              selectedId={selectedProgram?.id}
-              onSelect={setSelectedProgram}
-              className="h-[400px] border-0 rounded-none"
+              selectedId={selectedProgram?.programId}
+              onSelect={(item) => {
+                const p = programs.find(p => p.programId === item.id);
+                if (p) setSelectedProgram(p);
+              }}
+              className="h-[500px] border-0 rounded-none"
             />
           </CardContent>
         </Card>
@@ -190,32 +149,45 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
           {selectedProgram ? (
             <>
               {/* Selected Program Header */}
-              <Card className="rounded-lg border bg-card shadow-sm">
+              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-1.5 rounded-md bg-primary/10">
+                      <div className="p-2 rounded-lg bg-primary/10">
                         <Layers className="h-4 w-4 text-primary" />
                       </div>
-                      <div>
-                        <p className="text-sm font-bold truncate max-w-[200px]">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold truncate max-w-[250px]">
                           {selectedProgram.name}
                         </p>
                         <p className="text-[10px] font-mono text-muted-foreground">
-                          ID: {selectedProgram.id}
+                          ID: {selectedProgram.programId}
                           {selectedProgram.version && ` v${selectedProgram.version}`}
                         </p>
                       </div>
                     </div>
-                    <Badge variant="secondary" className="text-[9px] font-bold h-5 px-2 rounded-full">
-                      TOP {topPrograms.findIndex((p) => p.id === selectedProgram.id) + 1}
-                    </Badge>
+                    {selectedProgram.isLan && (
+                      <Badge variant="outline" className="text-[9px] font-bold h-5 px-2 bg-amber-500/5 text-amber-600 border-amber-200">
+                        LAN PROGRAM
+                      </Badge>
+                    )}
                   </div>
                 </CardContent>
               </Card>
 
+              {/* LAN Safeguard Message */}
+              {selectedProgram.isLan && (
+                <div className="p-3 bg-amber-500/5 border border-amber-200 rounded-xl flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-amber-700 leading-relaxed font-medium">
+                    This is a LAN-distributed program. Platform-side metadata and detail pages are not available. 
+                    Drill-down is limited to telemetry statistics only.
+                  </p>
+                </div>
+              )}
+
               {/* Trend Chart */}
-              <Card className="rounded-lg border bg-card shadow-sm">
+              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none">
                 <CardHeader className="p-4 pb-2">
                   <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
                     <TrendingUp className="h-4 w-4 text-primary" />
@@ -223,14 +195,14 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 pt-2">
-                  <div className="h-[180px]">
+                  <div className="h-[200px]">
                     {isTrendLoading ? (
-                      <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
-                        LOADING...
+                      <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 italic">
+                        LOADING TREND...
                       </div>
                     ) : trendData.length === 0 ? (
-                      <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
-                        No trend data available
+                      <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 italic text-center px-8">
+                        No trend data available for this period
                       </div>
                     ) : (
                       <ResponsiveContainer width="100%" height="100%">
@@ -242,31 +214,34 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                          <XAxis
-                            dataKey="bucketStart"
-                            fontSize={9}
-                            tickFormatter={(val) =>
-                              new Date(val).toLocaleDateString(undefined, {
-                                month: 'short',
-                                day: 'numeric',
-                              })
-                            }
-                            tickLine={false}
-                            axisLine={false}
-                          />
+                                              <XAxis
+                                                dataKey="bucketStart"
+                                                fontSize={9}
+                                                tickFormatter={(val) => {
+                                                  try {
+                                                    return formatInTimeZone(new Date(val), tz, bucket === 'HOUR' ? 'HH:mm' : 'MMM d');
+                                                  } catch {
+                                                    return val;
+                                                  }
+                                                }}
+                                                tickLine={false}
+                                                axisLine={false}
+                                              />
+                          
                           <YAxis fontSize={9} tickLine={false} axisLine={false} />
                           <Tooltip
                             labelFormatter={(val) => formatDateTime(val)}
                             contentStyle={{
-                              borderRadius: '8px',
-                              border: '1px solid #e2e8f0',
-                              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                              borderRadius: '12px',
+                              border: 'none',
+                              boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
                               fontSize: '10px',
                             }}
                           />
                           <Area
                             type="monotone"
                             dataKey="playCount"
+                            name="Plays"
                             stroke="#6366f1"
                             strokeWidth={2}
                             fill="url(#colorProgramTrend)"
@@ -279,8 +254,8 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
               </Card>
 
               {/* Device Distribution */}
-              <Card className="rounded-lg border bg-card shadow-sm overflow-hidden">
-                <CardHeader className="p-4 pb-2">
+              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
+                <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
                   <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
                     <Monitor className="h-4 w-4 text-primary" />
                     Device Distribution
@@ -288,12 +263,12 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
                 </CardHeader>
                 <CardContent className="p-0">
                   {isDevicesLoading ? (
-                    <div className="h-[150px] flex items-center justify-center text-[10px] font-bold opacity-20">
-                      LOADING...
+                    <div className="h-[150px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">
+                      LOADING DEVICES...
                     </div>
                   ) : deviceData.length === 0 ? (
-                    <div className="h-[150px] flex items-center justify-center text-[10px] font-bold opacity-20">
-                      No device data available
+                    <div className="h-[150px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">
+                      No device distribution recorded
                     </div>
                   ) : (
                     <AnalyticsDeviceTable data={deviceData} className="h-[150px] border-0 rounded-none" />
@@ -302,11 +277,11 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
               </Card>
             </>
           ) : (
-            <Card className="rounded-lg border bg-card shadow-sm h-full min-h-[400px]">
+            <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none h-full min-h-[400px]">
               <CardContent className="h-full flex flex-col items-center justify-center text-center opacity-40">
                 <Layers className="h-12 w-12 mb-3" />
-                <p className="text-sm font-bold">Select a Program</p>
-                <p className="text-[10px]">Choose a program from the list to view details</p>
+                <p className="text-sm font-bold uppercase">Select a Program</p>
+                <p className="text-[10px]">Choose a program from the list to view telemetry details</p>
               </CardContent>
             </Card>
           )}

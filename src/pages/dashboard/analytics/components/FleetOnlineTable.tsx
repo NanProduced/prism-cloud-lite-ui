@@ -12,6 +12,7 @@ import type { OnlineTimeSummaryItem } from '@/services/telemetryApi';
 
 interface FleetOnlineTableProps {
   data: OnlineTimeSummaryItem[];
+  deviceMap?: Record<string, string>;
   selectedDeviceId?: string;
   onSelectDevice?: (deviceId: string) => void;
   className?: string;
@@ -19,6 +20,7 @@ interface FleetOnlineTableProps {
 
 export function FleetOnlineTable({
   data,
+  deviceMap,
   selectedDeviceId,
   onSelectDevice,
   className,
@@ -38,7 +40,7 @@ export function FleetOnlineTable({
         id: 'deviceId',
         name: 'Device',
         type: 'string',
-        width: 200,
+        width: 250,
         field: 'deviceId',
         pin: 'start',
         uiHints: {
@@ -48,21 +50,23 @@ export function FleetOnlineTable({
         },
         autosizeCellFn: ({ grid, row }) => {
           if (row.kind !== 'leaf' || !row.data) return null;
-          const text = row.data.deviceId;
+          const name = deviceMap?.[row.data.deviceId] || row.data.deviceId;
           const vp = grid.state.viewport.get() ?? undefined;
-          return measureText(text, vp).width + 60;
+          return measureText(name, vp).width + 80;
         },
         cellRenderer: ({ row }: CellRendererParams<OnlineTimeSummaryItem>) => {
-          if (!row.data) return null;
-          const isSelected = row.data.deviceId === selectedDeviceId;
-          const onlineRate = row.data.onlineRate;
+          const item = row.data as OnlineTimeSummaryItem;
+          if (!item) return null;
+          const isSelected = item.deviceId === selectedDeviceId;
+          const onlineRate = item.onlineRate;
+          const name = deviceMap?.[item.deviceId] || item.deviceId;
           return (
             <div
               className={cn(
                 'flex items-center gap-2 px-1 cursor-pointer transition-colors',
                 isSelected && 'text-primary'
               )}
-              onClick={() => onSelectDevice?.(row.data!.deviceId)}
+              onClick={() => onSelectDevice?.(item.deviceId)}
             >
               {onlineRate >= 0.9 ? (
                 <Wifi className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
@@ -71,7 +75,12 @@ export function FleetOnlineTable({
               ) : (
                 <WifiOff className="h-3.5 w-3.5 text-rose-500 shrink-0" />
               )}
-              <span className="text-xs font-bold truncate font-mono">{row.data.deviceId}</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-bold truncate">{name}</span>
+                {deviceMap?.[item.deviceId] && (
+                  <span className="text-[9px] opacity-40 font-mono truncate">{item.deviceId}</span>
+                )}
+              </div>
               {isSelected && <ChevronRight className="h-3 w-3 ml-auto shrink-0" />}
             </div>
           );
@@ -89,8 +98,9 @@ export function FleetOnlineTable({
           movable: false,
         },
         cellRenderer: ({ row }: CellRendererParams<OnlineTimeSummaryItem>) => {
-          if (!row.data) return null;
-          const rate = row.data.onlineRate;
+          const item = row.data as OnlineTimeSummaryItem;
+          if (!item) return null;
+          const rate = item.onlineRate;
           const percentage = Math.round(rate * 100);
           return (
             <div className="flex items-center gap-2 px-1">
@@ -130,12 +140,13 @@ export function FleetOnlineTable({
           movable: false,
         },
         cellRenderer: ({ row }: CellRendererParams<OnlineTimeSummaryItem>) => {
-          if (!row.data) return null;
+          const item = row.data as OnlineTimeSummaryItem;
+          if (!item) return null;
           return (
             <div className="flex items-center gap-1.5 px-1">
               <Wifi className="h-3 w-3 text-emerald-500 opacity-50" />
               <span className="text-xs font-bold tabular-nums text-emerald-600">
-                {formatDuration(row.data.onlineSeconds)}
+                {formatDuration(item.onlineSeconds)}
               </span>
             </div>
           );
@@ -153,12 +164,13 @@ export function FleetOnlineTable({
           movable: false,
         },
         cellRenderer: ({ row }: CellRendererParams<OnlineTimeSummaryItem>) => {
-          if (!row.data) return null;
+          const item = row.data as OnlineTimeSummaryItem;
+          if (!item) return null;
           return (
             <div className="flex items-center gap-1.5 px-1">
               <WifiOff className="h-3 w-3 text-rose-500 opacity-50" />
               <span className="text-xs font-bold tabular-nums text-rose-600">
-                {formatDuration(row.data.offlineSeconds)}
+                {formatDuration(item.offlineSeconds)}
               </span>
             </div>
           );

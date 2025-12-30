@@ -1,6 +1,6 @@
 import type { PlaybackBucket } from '@/services/telemetryApi';
 
-export type AnalyticsTab = 'program' | 'media' | 'fleet';
+export type AnalyticsTab = 'overview' | 'online-time' | 'playback';
 
 export interface TimeRangeState {
   from: string;

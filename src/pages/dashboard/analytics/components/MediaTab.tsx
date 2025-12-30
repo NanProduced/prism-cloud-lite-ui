@@ -12,17 +12,18 @@ import {
   Tooltip,
   CartesianGrid,
 } from 'recharts';
+import { formatInTimeZone } from 'date-fns-tz';
 import { cn } from '@/lib/utils';
 import {
-  getPlaybackOverview,
+  getMediaSummary,
   getMediaPlaybackBuckets,
   getMediaPlaybackDevices,
   type PlaybackBucket,
+  type MediaSummaryItem,
 } from '@/services/telemetryApi';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { PlaybackTopTable } from './PlaybackTopTable';
 import { AnalyticsDeviceTable } from '@/components/analytics/AnalyticsDeviceTable';
-import type { TopPlaybackItem } from '../types';
 
 interface MediaTabProps {
   from: string;
@@ -34,23 +35,22 @@ interface MediaTabProps {
 
 export function MediaTab({ from, to, tz, bucket, className }: MediaTabProps) {
   const { formatDateTime } = useTimeFormatter();
-  const [selectedMedia, setSelectedMedia] = useState<TopPlaybackItem | null>(null);
+  const [selectedMedia, setSelectedMedia] = useState<MediaSummaryItem | null>(null);
 
-  // Query for overview
-  const { data: overviewRes, isLoading: isOverviewLoading } = useQuery({
-    queryKey: ['telemetry', 'playback', 'overview', from, to],
-    queryFn: () => getPlaybackOverview({ from, to }),
+  // Query for summary list
+  const { data: summaryRes, isLoading: isSummaryLoading } = useQuery({
+    queryKey: ['telemetry', 'playback', 'media', 'summary', from, to],
+    queryFn: () => getMediaSummary({ from, to, limit: 50, sort: 'playSeconds' }),
   });
 
-  const overview = overviewRes?.data;
-  const topMedia = overview?.topMedia || [];
+  const mediaList = summaryRes?.data?.items || [];
 
   // Query for selected media trend
   const { data: trendRes, isLoading: isTrendLoading } = useQuery({
-    queryKey: ['telemetry', 'playback', 'media', selectedMedia?.id, from, to, bucket],
+    queryKey: ['telemetry', 'playback', 'media', selectedMedia?.mediaId, from, to, bucket, tz],
     queryFn: () =>
       getMediaPlaybackBuckets({
-        mediaId: selectedMedia!.id,
+        mediaId: selectedMedia!.mediaId,
         from,
         to,
         tz,
@@ -63,10 +63,10 @@ export function MediaTab({ from, to, tz, bucket, className }: MediaTabProps) {
 
   // Query for selected media device distribution
   const { data: devicesRes, isLoading: isDevicesLoading } = useQuery({
-    queryKey: ['telemetry', 'playback', 'media', selectedMedia?.id, 'devices', from, to],
+    queryKey: ['telemetry', 'playback', 'media', selectedMedia?.mediaId, 'devices', from, to],
     queryFn: () =>
       getMediaPlaybackDevices({
-        mediaId: selectedMedia!.id,
+        mediaId: selectedMedia!.mediaId,
         from,
         to,
         limit: 10,
@@ -78,20 +78,10 @@ export function MediaTab({ from, to, tz, bucket, className }: MediaTabProps) {
 
   // Auto-select first media
   useMemo(() => {
-    if (!selectedMedia && topMedia.length > 0) {
-      setSelectedMedia(topMedia[0]);
+    if (!selectedMedia && mediaList.length > 0) {
+      setSelectedMedia(mediaList[0]);
     }
-  }, [topMedia, selectedMedia]);
-
-  // KPI calculations
-  const kpis = useMemo(() => {
-    if (!overview) return { totalCount: 0, totalSeconds: 0, uniqueMedia: 0 };
-    return {
-      totalCount: overview.totalCount || 0,
-      totalSeconds: overview.totalSeconds || 0,
-      uniqueMedia: topMedia.length,
-    };
-  }, [overview, topMedia]);
+  }, [mediaList, selectedMedia]);
 
   const formatDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -102,83 +92,30 @@ export function MediaTab({ from, to, tz, bucket, className }: MediaTabProps) {
 
   return (
     <div className={cn('space-y-6', className)}>
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="rounded-lg border bg-card shadow-sm overflow-hidden">
-          <div className="h-1 w-full bg-pink-500" />
-          <CardContent className="p-4 px-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-md bg-pink-500/10">
-                <MonitorPlay className="h-5 w-5 text-pink-500" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
-                  Total Plays
-                </p>
-                <p className="text-xl font-bold tracking-tight tabular-nums">
-                  {kpis.totalCount.toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-lg border bg-card shadow-sm overflow-hidden">
-          <div className="h-1 w-full bg-violet-500" />
-          <CardContent className="p-4 px-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-md bg-violet-500/10">
-                <Clock className="h-5 w-5 text-violet-500" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
-                  Total Air Time
-                </p>
-                <p className="text-xl font-bold tracking-tight tabular-nums">
-                  {formatDuration(kpis.totalSeconds)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-lg border bg-card shadow-sm overflow-hidden">
-          <div className="h-1 w-full bg-cyan-500" />
-          <CardContent className="p-4 px-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-md bg-cyan-500/10">
-                <Film className="h-5 w-5 text-cyan-500" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
-                  Active Media
-                </p>
-                <p className="text-xl font-bold tracking-tight tabular-nums">
-                  {kpis.uniqueMedia}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Media Table */}
-        <Card className="rounded-lg border bg-card shadow-sm overflow-hidden">
-          <CardHeader className="p-3 pb-2 bg-muted/30 border-b">
+        {/* Media Summary Table */}
+        <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
+          <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
             <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
               <Film className="h-4 w-4 text-primary" />
-              Top Media
+              Media Analytics Summary
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <PlaybackTopTable
-              data={topMedia}
+              data={mediaList.map(m => ({
+                id: m.mediaId,
+                name: m.name,
+                playCount: m.playCount,
+                playSeconds: m.playSeconds
+              }))}
               type="media"
-              selectedId={selectedMedia?.id}
-              onSelect={setSelectedMedia}
-              className="h-[400px] border-0 rounded-none"
+              selectedId={selectedMedia?.mediaId}
+              onSelect={(item) => {
+                const m = mediaList.find(m => m.mediaId === item.id);
+                if (m) setSelectedMedia(m);
+              }}
+              className="h-[500px] border-0 rounded-none"
             />
           </CardContent>
         </Card>
@@ -188,46 +125,43 @@ export function MediaTab({ from, to, tz, bucket, className }: MediaTabProps) {
           {selectedMedia ? (
             <>
               {/* Selected Media Header */}
-              <Card className="rounded-lg border bg-card shadow-sm">
+              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-1.5 rounded-md bg-pink-500/10">
+                      <div className="p-2 rounded-lg bg-pink-500/10">
                         <Film className="h-4 w-4 text-pink-500" />
                       </div>
-                      <div>
-                        <p className="text-sm font-bold truncate max-w-[200px]">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold truncate max-w-[250px]">
                           {selectedMedia.name}
                         </p>
                         <p className="text-[10px] font-mono text-muted-foreground">
-                          ID: {selectedMedia.id}
+                          ID: {selectedMedia.mediaId} | Type: {selectedMedia.type}
                         </p>
                       </div>
                     </div>
-                    <Badge variant="secondary" className="text-[9px] font-bold h-5 px-2 rounded-full bg-pink-500/10 text-pink-600">
-                      TOP {topMedia.findIndex((m) => m.id === selectedMedia.id) + 1}
-                    </Badge>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Trend Chart */}
-              <Card className="rounded-lg border bg-card shadow-sm">
+              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none">
                 <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70 text-pink-500">
-                    <TrendingUp className="h-4 w-4" />
+                  <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
+                    <TrendingUp className="h-4 w-4 text-pink-500" />
                     Playback Trend
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 pt-2">
-                  <div className="h-[180px]">
+                  <div className="h-[200px]">
                     {isTrendLoading ? (
-                      <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
-                        LOADING...
+                      <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 italic">
+                        LOADING TREND...
                       </div>
                     ) : trendData.length === 0 ? (
-                      <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
-                        No trend data available
+                      <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 italic text-center px-8">
+                        No trend data available for this period
                       </div>
                     ) : (
                       <ResponsiveContainer width="100%" height="100%">
@@ -239,31 +173,34 @@ export function MediaTab({ from, to, tz, bucket, className }: MediaTabProps) {
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                          <XAxis
-                            dataKey="bucketStart"
-                            fontSize={9}
-                            tickFormatter={(val) =>
-                              new Date(val).toLocaleDateString(undefined, {
-                                month: 'short',
-                                day: 'numeric',
-                              })
-                            }
-                            tickLine={false}
-                            axisLine={false}
-                          />
+                                              <XAxis
+                                                dataKey="bucketStart"
+                                                fontSize={9}
+                                                tickFormatter={(val) => {
+                                                  try {
+                                                    return formatInTimeZone(new Date(val), tz, bucket === 'HOUR' ? 'HH:mm' : 'MMM d');
+                                                  } catch {
+                                                    return val;
+                                                  }
+                                                }}
+                                                tickLine={false}
+                                                axisLine={false}
+                                              />
+                          
                           <YAxis fontSize={9} tickLine={false} axisLine={false} />
                           <Tooltip
                             labelFormatter={(val) => formatDateTime(val)}
                             contentStyle={{
-                              borderRadius: '8px',
-                              border: '1px solid #e2e8f0',
-                              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                              borderRadius: '12px',
+                              border: 'none',
+                              boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
                               fontSize: '10px',
                             }}
                           />
                           <Area
                             type="monotone"
                             dataKey="playCount"
+                            name="Plays"
                             stroke="#ec4899"
                             strokeWidth={2}
                             fill="url(#colorMediaTrend)"
@@ -276,21 +213,21 @@ export function MediaTab({ from, to, tz, bucket, className }: MediaTabProps) {
               </Card>
 
               {/* Device Distribution */}
-              <Card className="rounded-lg border bg-card shadow-sm overflow-hidden">
-                <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70 text-pink-500">
-                    <Monitor className="h-4 w-4" />
+              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
+                <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
+                  <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
+                    <Monitor className="h-4 w-4 text-pink-500" />
                     Device Distribution
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                   {isDevicesLoading ? (
-                    <div className="h-[150px] flex items-center justify-center text-[10px] font-bold opacity-20">
-                      LOADING...
+                    <div className="h-[150px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">
+                      LOADING DEVICES...
                     </div>
                   ) : deviceData.length === 0 ? (
-                    <div className="h-[150px] flex items-center justify-center text-[10px] font-bold opacity-20">
-                      No device data available
+                    <div className="h-[150px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">
+                      No device distribution recorded
                     </div>
                   ) : (
                     <AnalyticsDeviceTable data={deviceData} className="h-[150px] border-0 rounded-none" />
@@ -299,11 +236,11 @@ export function MediaTab({ from, to, tz, bucket, className }: MediaTabProps) {
               </Card>
             </>
           ) : (
-            <Card className="rounded-lg border bg-card shadow-sm h-full min-h-[400px]">
+            <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none h-full min-h-[400px]">
               <CardContent className="h-full flex flex-col items-center justify-center text-center opacity-40">
                 <Film className="h-12 w-12 mb-3" />
-                <p className="text-sm font-bold">Select a Media</p>
-                <p className="text-[10px]">Choose a media item from the list to view details</p>
+                <p className="text-sm font-bold uppercase">Select a Media Asset</p>
+                <p className="text-[10px]">Choose a media item from the list to view telemetry details</p>
               </CardContent>
             </Card>
           )}

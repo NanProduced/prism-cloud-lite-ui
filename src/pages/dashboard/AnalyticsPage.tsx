@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Download, Calendar, Globe, Layers, Film, Wifi } from 'lucide-react';
+import { Download, Calendar, Globe, LayoutDashboard, Wifi, PlayCircle } from 'lucide-react';
 import type { PlaybackBucket } from '@/services/telemetryApi';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ProgramTab, MediaTab, FleetUptimeTab } from './analytics/components';
+import { OverviewTab, PlaybackTab, FleetUptimeTab } from './analytics/components';
 import type { AnalyticsTab } from './analytics/types';
+import { useSettingsStore } from '@/store/settingsStore';
+import { fromZonedTime } from 'date-fns-tz';
 
 // --- Constants ---
 
@@ -19,7 +21,9 @@ const BUCKETS: { value: PlaybackBucket; label: string }[] = [
 // --- Main Page Component ---
 
 export default function AnalyticsPage() {
-  const [activeTab, setActiveTab] = useState<AnalyticsTab>('program');
+  const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
+  const { preferences } = useSettingsStore();
+  const tz = preferences.timezone || 'UTC';
 
   // Global Controls
   const [timeRange, setTimeRange] = useState(() => {
@@ -31,25 +35,40 @@ export default function AnalyticsPage() {
       to: today.toISOString().split('T')[0],
     };
   });
-  const [tz] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  
   const [bucket, setBucket] = useState<PlaybackBucket>('DAY');
 
-  // 修复时区问题：将本地日期转换为本地时区的 start/end of day
-  // 然后转换为 UTC ISO 字符串供 API 使用
+  // 使用用户设置的时区将本地日期字符串转换为 UTC ISO 字符串供 API 使用
   const fromIso = useMemo(() => {
-    // 解析本地日期字符串，创建本地 00:00:00
-    const [year, month, day] = timeRange.from.split('-').map(Number);
-    const localStart = new Date(year, month - 1, day, 0, 0, 0, 0);
-    return localStart.toISOString();
-  }, [timeRange.from]);
+    try {
+      // 假设用户输入的日期是该时区的 00:00:00
+      const dateTimeStr = `${timeRange.from} 00:00:00`;
+      const utcDate = fromZonedTime(dateTimeStr, tz);
+      if (isNaN(utcDate.getTime())) throw new Error('Invalid date');
+      return utcDate.toISOString();
+    } catch (e) {
+      console.error('Failed to convert from date:', e);
+      return new Date().toISOString();
+    }
+  }, [timeRange.from, tz]);
 
   const toIso = useMemo(() => {
-    // 解析本地日期字符串，创建本地 23:59:59.999（或下一天 00:00:00）
-    const [year, month, day] = timeRange.to.split('-').map(Number);
-    // 使用下一天的 00:00:00 作为 exclusive end
-    const localEnd = new Date(year, month - 1, day + 1, 0, 0, 0, 0);
-    return localEnd.toISOString();
-  }, [timeRange.to]);
+    try {
+      // 假设用户输入的日期是该时区的 23:59:59.999，或者下一天的 00:00:00
+      const [year, month, day] = timeRange.to.split('-').map(Number);
+      const nextDay = new Date(year, month - 1, day + 1);
+      if (isNaN(nextDay.getTime())) throw new Error('Invalid next day');
+      
+      const nextDayStr = nextDay.toISOString().split('T')[0];
+      const dateTimeStr = `${nextDayStr} 00:00:00`;
+      const utcDate = fromZonedTime(dateTimeStr, tz);
+      if (isNaN(utcDate.getTime())) throw new Error('Invalid utc date');
+      return utcDate.toISOString();
+    } catch (e) {
+      console.error('Failed to convert to date:', e);
+      return new Date().toISOString();
+    }
+  }, [timeRange.to, tz]);
 
   return (
     <div className="flex flex-col gap-4 p-6 h-full">
@@ -116,38 +135,38 @@ export default function AnalyticsPage() {
       >
         <TabsList className="bg-muted/40 p-1 rounded-lg border shadow-inner w-fit h-9">
           <TabsTrigger
-            value="program"
+            value="overview"
             className="rounded-md px-4 text-[10px] font-bold uppercase tracking-wider data-[state=active]:bg-background gap-1.5 h-7"
           >
-            <Layers className="h-3.5 w-3.5" />
-            Program
+            <LayoutDashboard className="h-3.5 w-3.5" />
+            Overview
           </TabsTrigger>
           <TabsTrigger
-            value="media"
-            className="rounded-md px-4 text-[10px] font-bold uppercase tracking-wider data-[state=active]:bg-background gap-1.5 h-7"
-          >
-            <Film className="h-3.5 w-3.5" />
-            Media
-          </TabsTrigger>
-          <TabsTrigger
-            value="fleet"
+            value="online-time"
             className="rounded-md px-4 text-[10px] font-bold uppercase tracking-wider data-[state=active]:bg-background gap-1.5 h-7"
           >
             <Wifi className="h-3.5 w-3.5" />
-            Fleet Uptime
+            Online Time
+          </TabsTrigger>
+          <TabsTrigger
+            value="playback"
+            className="rounded-md px-4 text-[10px] font-bold uppercase tracking-wider data-[state=active]:bg-background gap-1.5 h-7"
+          >
+            <PlayCircle className="h-3.5 w-3.5" />
+            Playback
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="program" className="flex-1 min-h-0 mt-0 overflow-auto pr-1">
-          <ProgramTab from={fromIso} to={toIso} tz={tz} bucket={bucket} />
+        <TabsContent value="overview" className="flex-1 min-h-0 mt-0 overflow-auto pr-1">
+          <OverviewTab from={fromIso} to={toIso} tz={tz} bucket={bucket} />
         </TabsContent>
 
-        <TabsContent value="media" className="flex-1 min-h-0 mt-0 overflow-auto pr-1">
-          <MediaTab from={fromIso} to={toIso} tz={tz} bucket={bucket} />
-        </TabsContent>
-
-        <TabsContent value="fleet" className="flex-1 min-h-0 mt-0 overflow-auto pr-1">
+        <TabsContent value="online-time" className="flex-1 min-h-0 mt-0 overflow-auto pr-1">
           <FleetUptimeTab from={fromIso} to={toIso} tz={tz} bucket={bucket} />
+        </TabsContent>
+
+        <TabsContent value="playback" className="flex-1 min-h-0 mt-0 overflow-auto pr-1">
+          <PlaybackTab from={fromIso} to={toIso} tz={tz} bucket={bucket} />
         </TabsContent>
       </Tabs>
     </div>

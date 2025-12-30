@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/toast';
+import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import type { DeviceSession } from '../types';
 
 interface DeviceSessionsTableProps {
@@ -18,6 +19,7 @@ interface DeviceSessionsTableProps {
 
 export function DeviceSessionsTable({ data, className }: DeviceSessionsTableProps) {
   const gridId = useId();
+  const { formatDateTime } = useTimeFormatter();
 
   const formatDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -28,18 +30,9 @@ export function DeviceSessionsTable({ data, className }: DeviceSessionsTableProp
     return `${secs}s`;
   };
 
-  const formatDateTime = (iso: string) => {
-    return new Date(iso).toLocaleString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
   const copySessionTime = (session: DeviceSession) => {
-    const start = new Date(session.startedAt).toISOString();
-    const end = session.endedAt ? new Date(session.endedAt).toISOString() : 'ongoing';
+    const start = formatDateTime(session.startedAt);
+    const end = session.endedAt ? formatDateTime(session.endedAt) : 'ongoing';
     navigator.clipboard.writeText(`${start} — ${end}`);
     toast.success('Session time range copied');
   };
@@ -58,12 +51,13 @@ export function DeviceSessionsTable({ data, className }: DeviceSessionsTableProp
           movable: false,
         },
         cellRenderer: ({ row }: CellRendererParams<DeviceSession>) => {
-          if (!row.data) return null;
+          const item = row.data as DeviceSession;
+          if (!item) return null;
           return (
             <div className="flex items-center gap-1.5 px-1">
               <Calendar className="h-3 w-3 opacity-30" />
               <span className="text-xs font-medium tabular-nums">
-                {formatDateTime(row.data.startedAt)}
+                {formatDateTime(item.startedAt)}
               </span>
             </div>
           );
@@ -81,8 +75,9 @@ export function DeviceSessionsTable({ data, className }: DeviceSessionsTableProp
           movable: false,
         },
         cellRenderer: ({ row }: CellRendererParams<DeviceSession>) => {
-          if (!row.data) return null;
-          const isOngoing = !row.data.endedAt;
+          const item = row.data as DeviceSession;
+          if (!item) return null;
+          const isOngoing = !item.endedAt;
           return (
             <div className="flex items-center gap-1.5 px-1">
               {isOngoing ? (
@@ -94,7 +89,7 @@ export function DeviceSessionsTable({ data, className }: DeviceSessionsTableProp
                 <>
                   <Clock className="h-3 w-3 opacity-30" />
                   <span className="text-xs font-medium tabular-nums">
-                    {formatDateTime(row.data.endedAt)}
+                    {formatDateTime(item.endedAt)}
                   </span>
                 </>
               )}
@@ -114,12 +109,13 @@ export function DeviceSessionsTable({ data, className }: DeviceSessionsTableProp
           movable: false,
         },
         cellRenderer: ({ row }: CellRendererParams<DeviceSession>) => {
-          if (!row.data) return null;
+          const item = row.data as DeviceSession;
+          if (!item) return null;
           return (
             <div className="flex items-center gap-1.5 px-1">
               <Timer className="h-3 w-3 opacity-30" />
               <span className="text-xs font-bold tabular-nums text-primary">
-                {formatDuration(row.data.durationSeconds)}
+                {formatDuration(item.durationSeconds)}
               </span>
             </div>
           );
@@ -136,14 +132,15 @@ export function DeviceSessionsTable({ data, className }: DeviceSessionsTableProp
           movable: false,
         },
         cellRenderer: ({ row }: CellRendererParams<DeviceSession>) => {
-          if (!row.data) return null;
+          const item = row.data as DeviceSession;
+          if (!item) return null;
           return (
             <div className="flex items-center justify-center">
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={() => copySessionTime(row.data!)}
+                onClick={() => copySessionTime(item)}
                 title="Copy time range"
               >
                 <Copy className="h-3 w-3" />

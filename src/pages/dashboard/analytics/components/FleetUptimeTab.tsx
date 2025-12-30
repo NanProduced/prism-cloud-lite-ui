@@ -14,6 +14,7 @@ import {
   Tooltip,
   CartesianGrid,
 } from 'recharts';
+import { formatInTimeZone } from 'date-fns-tz';
 import { cn } from '@/lib/utils';
 import {
   getOnlineTimeSummary,
@@ -22,6 +23,7 @@ import {
   getDeviceSessions,
   type PlaybackBucket,
 } from '@/services/telemetryApi';
+import { getDevices } from '@/services/deviceApi';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { FleetOnlineTable } from './FleetOnlineTable';
 import { DeviceSessionsTable } from './DeviceSessionsTable';
@@ -39,6 +41,20 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
   const { formatDateTime } = useTimeFormatter();
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
 
+  // Query for device mapping
+  const { data: devicesRes } = useQuery({
+    queryKey: ['devices', 'list'],
+    queryFn: () => getDevices(),
+  });
+
+  const deviceMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    devicesRes?.data?.forEach((d) => {
+      map[String(d.deviceId)] = d.deviceName;
+    });
+    return map;
+  }, [devicesRes]);
+
   // Query for fleet online summary
   const { data: summaryRes, isLoading: isSummaryLoading } = useQuery({
     queryKey: ['telemetry', 'online-time', 'summary', from, to],
@@ -49,7 +65,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
 
   // Query for active device count trend
   const { data: activeCountRes, isLoading: isActiveCountLoading } = useQuery({
-    queryKey: ['telemetry', 'online-time', 'active-count', from, to, bucket],
+    queryKey: ['telemetry', 'online-time', 'active-count', from, to, bucket, tz],
     queryFn: () => getActiveDeviceCountBuckets({ from, to, tz, bucket }),
   });
 
@@ -57,7 +73,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
 
   // Query for concurrency trend
   const { data: concurrencyRes, isLoading: isConcurrencyLoading } = useQuery({
-    queryKey: ['telemetry', 'online-time', 'concurrency', from, to, bucket],
+    queryKey: ['telemetry', 'online-time', 'concurrency', from, to, bucket, tz],
     queryFn: () => getConcurrencyBuckets({ from, to, tz, bucket }),
   });
 
@@ -123,7 +139,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
               </div>
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Total Devices
+                  Fleet Size
                 </p>
                 <p className="text-2xl font-bold tracking-tighter tabular-nums">
                   {kpis.totalDevices}
@@ -142,7 +158,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
               </div>
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Avg Online Rate
+                  Avg Availability
                 </p>
                 <p className="text-2xl font-bold tracking-tighter tabular-nums">
                   {Math.round(kpis.avgOnlineRate * 100)}%
@@ -161,7 +177,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
               </div>
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Peak Concurrent
+                  Peak Concurrency
                 </p>
                 <p className="text-2xl font-bold tracking-tighter tabular-nums">
                   {kpis.peakConcurrent}
@@ -177,7 +193,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
         {/* Active Device Count Chart */}
         <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none">
           <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+            <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
               <TrendingUp className="h-4 w-4 text-emerald-500" />
               Active Device Count
             </CardTitle>
@@ -205,12 +221,13 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
                     <XAxis
                       dataKey="bucketStart"
                       fontSize={9}
-                      tickFormatter={(val) =>
-                        new Date(val).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                        })
-                      }
+                      tickFormatter={(val) => {
+                        try {
+                          return formatInTimeZone(new Date(val), tz, bucket === 'HOUR' ? 'HH:mm' : 'MMM d');
+                        } catch {
+                          return val;
+                        }
+                      }}
                       tickLine={false}
                       axisLine={false}
                     />
@@ -241,7 +258,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
         {/* Concurrency Chart */}
         <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none">
           <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+            <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
               <Users className="h-4 w-4 text-violet-500" />
               Concurrency Trend
             </CardTitle>
@@ -263,12 +280,13 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
                     <XAxis
                       dataKey="bucketStart"
                       fontSize={9}
-                      tickFormatter={(val) =>
-                        new Date(val).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                        })
-                      }
+                      tickFormatter={(val) => {
+                        try {
+                          return formatInTimeZone(new Date(val), tz, bucket === 'HOUR' ? 'HH:mm' : 'MMM d');
+                        } catch {
+                          return val;
+                        }
+                      }}
                       tickLine={false}
                       axisLine={false}
                     />
@@ -312,14 +330,15 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
         {/* Fleet Online Table */}
         <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
           <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
-            <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+            <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
               <Wifi className="h-4 w-4 text-primary" />
-              Device Online Summary
+              Online Summary
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <FleetOnlineTable
               data={summaryData}
+              deviceMap={deviceMap}
               selectedDeviceId={selectedDeviceId || undefined}
               onSelectDevice={setSelectedDeviceId}
               className="h-[400px] border-0 rounded-none"
@@ -339,12 +358,12 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
                       <div className="p-2 rounded-lg bg-emerald-500/10">
                         <Wifi className="h-4 w-4 text-emerald-500" />
                       </div>
-                      <div>
-                        <p className="text-sm font-bold truncate max-w-[200px] font-mono">
-                          {selectedDevice.deviceId}
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold truncate max-w-[200px]">
+                          {deviceMap[selectedDevice.deviceId] || selectedDevice.deviceId}
                         </p>
-                        <p className="text-[10px] text-muted-foreground">
-                          Online Rate: {Math.round(selectedDevice.onlineRate * 100)}%
+                        <p className="text-[10px] text-muted-foreground font-mono">
+                          ID: {selectedDevice.deviceId}
                         </p>
                       </div>
                     </div>
@@ -371,23 +390,23 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
 
               {/* Device Sessions */}
               <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
-                <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
+                  <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
                     <Clock className="h-4 w-4 text-emerald-500" />
                     Session History
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                   {isSessionsLoading ? (
-                    <div className="h-[300px] flex items-center justify-center text-[10px] font-bold opacity-20">
-                      LOADING...
+                    <div className="h-[320px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">
+                      LOADING SESSIONS...
                     </div>
                   ) : sessionsData.length === 0 ? (
-                    <div className="h-[300px] flex items-center justify-center text-[10px] font-bold opacity-20">
-                      No sessions available
+                    <div className="h-[320px] flex items-center justify-center text-[10px] font-bold opacity-20">
+                      No sessions recorded in this period
                     </div>
                   ) : (
-                    <DeviceSessionsTable data={sessionsData} className="h-[300px] border-0 rounded-none" />
+                    <DeviceSessionsTable data={sessionsData} className="h-[320px] border-0 rounded-none" />
                   )}
                 </CardContent>
               </Card>
@@ -396,8 +415,8 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
             <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none h-full min-h-[400px]">
               <CardContent className="h-full flex flex-col items-center justify-center text-center opacity-40">
                 <Wifi className="h-12 w-12 mb-3" />
-                <p className="text-sm font-bold">Select a Device</p>
-                <p className="text-[10px]">Choose a device from the list to view session history</p>
+                <p className="text-sm font-bold uppercase">Select a Device</p>
+                <p className="text-[10px]">Choose a device from the summary to view detailed sessions</p>
               </CardContent>
             </Card>
           )}

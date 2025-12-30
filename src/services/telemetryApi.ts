@@ -241,19 +241,117 @@ export const getProgramPlaybackDevices = (params: {
 
 export const getMediaPlaybackDevices = (params: { 
 
+
+
   mediaId: string; 
+
+
 
   from: string; 
 
+
+
   to: string; 
+
+
 
   limit?: number; 
 
+
+
   sort?: string 
+
+
 
 }) =>
 
+
+
   handleRequest(apiClient.get<BffResponse<any>>(`/telemetry/playback/media/${params.mediaId}/devices`, { params }));
+
+
+
+
+
+
+
+// --- LAN Program Telemetry ---
+
+
+
+
+
+
+
+export const getLanProgramPlaybackBuckets = (params: { 
+
+
+
+  lanProgramId: string; 
+
+
+
+  from: string; 
+
+
+
+  to: string; 
+
+
+
+  tz: string; 
+
+
+
+  bucket: PlaybackBucket 
+
+
+
+}) =>
+
+
+
+  handleRequest(apiClient.get<BffResponse<any>>(`/telemetry/playback/programs/lan/${params.lanProgramId}/buckets`, { params }));
+
+
+
+
+
+
+
+export const getLanProgramPlaybackDevices = (params: { 
+
+
+
+  lanProgramId: string; 
+
+
+
+  from: string; 
+
+
+
+  to: string; 
+
+
+
+  limit?: number; 
+
+
+
+  sort?: string 
+
+
+
+}) =>
+
+
+
+  handleRequest(apiClient.get<BffResponse<any>>(`/telemetry/playback/programs/lan/${params.lanProgramId}/devices`, { params }));
+
+
+
+
 
 
 
