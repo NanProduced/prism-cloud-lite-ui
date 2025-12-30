@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/store/notificationStore";
@@ -67,6 +67,9 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
+  const googleCallbackHandledRef = useRef(false);
+  const GOOGLE_CONTINUE_STORAGE_KEY = "prism_google_continue_url";
+
   const initiateSecureLogin = () => {
     const gatewayUrl = import.meta.env.VITE_GATEWAY_URL || "http://localhost:8082";
     const redirectUri = encodeURIComponent(`${window.location.origin}/dashboard`);
@@ -78,11 +81,13 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
     const params = new URLSearchParams(window.location.search);
     const continueParam = params.get('continue');
     const justLoggedOut = sessionStorage.getItem('prism_just_logged_out') === 'true';
+    const hasGoogleIdToken = typeof window.location.hash === 'string' && window.location.hash.includes('id_token=');
 
     if (justLoggedOut) {
       // If we just logged out, clear all flags and force stay on landing or login
       sessionStorage.removeItem('prism_just_logged_out');
       sessionStorage.removeItem('prism_logout_in_progress');
+      sessionStorage.removeItem(GOOGLE_CONTINUE_STORAGE_KEY);
       clearAuth();
       resetLogoutFlag();
       navigate("/", { replace: true });
@@ -91,44 +96,106 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
 
     if (continueParam) {
       setContinueUrl(continueParam);
+      sessionStorage.setItem(GOOGLE_CONTINUE_STORAGE_KEY, continueParam);
       if (isAuthenticated) clearAuth();
     } else if (isAuthenticated) {
       navigate('/dashboard');
+    } else if (hasGoogleIdToken) {
+      // Google OAuth implicit callback returns id_token in URL fragment (#id_token=...).
+      // Do NOT initiate SSO redirect here, otherwise the hash will be lost and Google login cannot complete.
+      return;
     } else {
       initiateSecureLogin();
     }
   }, [isAuthenticated, clearAuth, navigate, resetLogoutFlag]);
 
+  const clearHashWithoutLosingQuery = () => {
+    try {
+      const nextUrl = window.location.pathname + window.location.search;
+      window.history.replaceState(null, document.title, nextUrl);
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const parseGoogleCallback = (): { idToken?: string; stateContinueUrl?: string } => {
+    const hash = window.location.hash;
+    if (!hash || !hash.includes('id_token=')) {
+      return {};
+    }
+    const params = new URLSearchParams(hash.startsWith('#') ? hash.substring(1) : hash);
+    return {
+      idToken: params.get('id_token') ?? undefined,
+      stateContinueUrl: params.get('state') ?? undefined,
+    };
+  };
+
   // Handle Google Login Callback
   useEffect(() => {
     const handleCallback = async () => {
-      const hash = window.location.hash;
-      if (hash && hash.includes('id_token=')) {
-        const params = new URLSearchParams(hash.substring(1));
-        const idToken = params.get('id_token');
-        if (idToken && continueUrl) {
-          setIsLoading(true);
-          try {
-            const response = await googleLogin({ idToken, continueUrl, rememberMe: true });
-            if (response.success && response.data) {
-              window.location.href = response.data.redirectUrl;
-            } else {
-              toast.error(getErrorMessage(response));
-              setIsLoading(false);
-            }
-          } catch (error) {
-            toast.error(t('auth.errors.networkError'));
-            setIsLoading(false);
-          }
+      if (googleCallbackHandledRef.current) return;
+
+      const { idToken, stateContinueUrl } = parseGoogleCallback();
+      if (!idToken) return;
+
+      googleCallbackHandledRef.current = true;
+
+      // Prefer continueUrl already parsed from ?continue=..., otherwise recover from OAuth2 `state`.
+      const storedContinueUrl = sessionStorage.getItem(GOOGLE_CONTINUE_STORAGE_KEY);
+      const effectiveContinueUrl = continueUrl || stateContinueUrl || storedContinueUrl || null;
+
+      if (!effectiveContinueUrl) {
+        clearHashWithoutLosingQuery();
+        sessionStorage.removeItem(GOOGLE_CONTINUE_STORAGE_KEY);
+        toast.error(t('auth.errors.invalidRequest', 'Missing continue URL, please retry login.'));
+        setIsLoading(false);
+        return;
+      }
+
+      // Persist recovered continueUrl for later retries / other login methods.
+      if (!continueUrl && stateContinueUrl) {
+        setContinueUrl(stateContinueUrl);
+        sessionStorage.setItem(GOOGLE_CONTINUE_STORAGE_KEY, stateContinueUrl);
+      }
+
+      setIsLoading(true);
+      try {
+        const response = await googleLogin({ idToken, continueUrl: effectiveContinueUrl, rememberMe });
+        if (response.success && response.data) {
+          clearHashWithoutLosingQuery();
+          sessionStorage.removeItem(GOOGLE_CONTINUE_STORAGE_KEY);
+          window.location.href = response.data.redirectUrl;
+          return;
         }
+
+        clearHashWithoutLosingQuery();
+        toast.error(getErrorMessage(response));
+        setIsLoading(false);
+      } catch (error) {
+        clearHashWithoutLosingQuery();
+        toast.error(t('auth.errors.networkError'));
+        setIsLoading(false);
       }
     };
     handleCallback();
-  }, [continueUrl, t]);
+  }, [continueUrl, rememberMe, t]);
 
   const handleGoogleLoginCustom = () => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (!clientId) return;
+    if (!clientId) {
+      toast.error(t('auth.errors.googleLoginNotConfigured', 'Google login is not configured.'));
+      return;
+    }
+
+    const queryContinueUrl = new URLSearchParams(window.location.search).get('continue');
+    const storedContinueUrl = sessionStorage.getItem(GOOGLE_CONTINUE_STORAGE_KEY);
+    const effectiveContinueUrl = continueUrl || queryContinueUrl || storedContinueUrl || '';
+    if (!effectiveContinueUrl) {
+      initiateSecureLogin();
+      return;
+    }
+
+    sessionStorage.setItem(GOOGLE_CONTINUE_STORAGE_KEY, effectiveContinueUrl);
     const redirectUri = window.location.origin + '/login';
     const nonce = Math.random().toString(36).substring(2);
     const params = new URLSearchParams({
@@ -136,9 +203,11 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
       redirect_uri: redirectUri,
       response_type: 'id_token',
       scope: 'openid email profile',
+      // Ensure users see a Google account chooser instead of a silent redirect when already signed in.
+      prompt: 'select_account',
       nonce: nonce,
       response_mode: 'fragment',
-      state: continueUrl || ''
+      state: effectiveContinueUrl
     });
     window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   };
@@ -190,6 +259,7 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
       });
 
       if (response.success && response.data) {
+        sessionStorage.removeItem(GOOGLE_CONTINUE_STORAGE_KEY);
         window.location.href = response.data.redirectUrl;
       } else {
         const errorCode = getErrorCode(response);

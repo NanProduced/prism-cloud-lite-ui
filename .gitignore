@@ -26,9 +26,10 @@ dist-ssr
 .doc/*
 .serena/
 .playwright-mcp/
+test-results/
+playwright-report/
 docs/
 .env
 
 .claude/
 .mcp.json
-
