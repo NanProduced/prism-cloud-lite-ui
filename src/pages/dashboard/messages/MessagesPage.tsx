@@ -52,6 +52,7 @@ import {
   getUnreadCount,
   getMessageDetail
 } from "@/services/messageApi";
+import { retryTranscodeTask } from "@/services/mediaApi";
 import { useMessageStore } from "@/store/messageStore";
 import type { MessageListItem, MessageKind, MessageStatus } from "@/types/message";
 import { cn } from "@/lib/utils";
@@ -143,7 +144,21 @@ export default function MessagesPage() {
     mutationFn: (id: string) => markSingleAsRead(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });
-      fetchInitialData(); // Update global store
+      fetchInitialData();
+    }
+  });
+
+  const retryTranscodeMutation = useMutation({
+    mutationFn: ({ taskId, assetId, presetId, options }: { taskId: string, assetId: string, presetId: string, options?: any }) => 
+      retryTranscodeTask(taskId, { assetId, presetId, options }),
+    onSuccess: (res) => {
+      if (res.success && res.data) {
+        toast.success('Retrying transcoding task');
+        setSelectedMessageId(res.data.messageId);
+        queryClient.invalidateQueries({ queryKey: ['messages'] });
+      } else {
+        toast.error(res.error?.displayMessage || 'Failed to retry task');
+      }
     }
   });
 
@@ -570,7 +585,26 @@ export default function MessagesPage() {
                   </div>
                 )}
 
-                <div className="flex justify-end pt-4">
+                <div className="flex justify-end gap-3 pt-4">
+                  {detailRes.data.status === 'FAILED' && detailRes.data.type === 'media.transcode' && (
+                    <Button 
+                      variant="outline"
+                      className="rounded-xl font-bold uppercase tracking-widest text-xs px-6 h-10 border-rose-200 text-rose-600 hover:bg-rose-50"
+                      disabled={retryTranscodeMutation.isPending}
+                      onClick={() => {
+                        const payload = detailRes.data?.payload || {};
+                        retryTranscodeMutation.mutate({
+                          taskId: detailRes.data?.taskId || '',
+                          assetId: payload.source?.assetId || '',
+                          presetId: payload.presetId || 'mp4_720p_h264',
+                          options: payload.options
+                        });
+                      }}
+                    >
+                      {retryTranscodeMutation.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin mr-2" /> : <Zap className="h-3.5 w-3.5 mr-2 fill-rose-600" />}
+                      Retry Task
+                    </Button>
+                  )}
                   <Button className="rounded-xl font-bold uppercase tracking-widest text-xs px-8 h-10" onClick={() => setSelectedMessageId(null)}>
                     Dismiss
                   </Button>

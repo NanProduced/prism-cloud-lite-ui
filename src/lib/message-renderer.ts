@@ -57,11 +57,24 @@ export function renderMessage(message: MessageListItem): RenderedMessage {
     case 'media.transcode':
       const hasProgress = payload.progress?.percent !== undefined;
       const progressText = hasProgress ? ` (${Math.round(payload.progress.percent * 100)}%)` : '';
+      
+      const stageMap: Record<string, string> = {
+        'PENDING': 'Queued',
+        'DOWNLOADING': 'Preparing source',
+        'TRANSCODING': 'Processing',
+        'UPLOADING': 'Finalizing',
+        'FINALIZING': 'Saving to library',
+        'SUCCESS': 'Completed',
+        'FAILED': 'Failed'
+      };
+
+      const stageText = stageMap[payload.stage as string] || payload.stage || '';
+      
       return {
         title: t('message.type.media.transcode.title', { status: statusLabel }),
         summary: t('message.type.media.transcode.summary', {
           sourceTitle: payload.source?.title || 'Unknown Media',
-          stage: payload.stage || '',
+          stage: stageText,
           progress: progressText
         })
       };

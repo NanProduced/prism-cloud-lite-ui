@@ -113,13 +113,28 @@ export interface BatchFinalizeResponse {
   }>;
 }
 
+export interface TranscodeOptions {
+  width?: number;
+  height?: number;
+  crf?: number;
+  videoBitrateKbps?: number;
+  audioBitrateKbps?: number;
+  faststart?: boolean;
+}
+
 export interface TranscodeCreateRequest {
   presetId: string;
   targetFolderId?: string | null;
-  options?: Record<string, any>;
+  options?: TranscodeOptions;
 }
 
 export interface TranscodeCreateResponse {
   taskId: string;
   messageId: string;
 }
+
+export interface TranscodeRetryRequest extends TranscodeCreateRequest {
+  assetId: string;
+}
+
+export interface TranscodeRetryResponse extends TranscodeCreateResponse {}

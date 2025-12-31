@@ -12,7 +12,9 @@ import type {
   BatchFinalizeRequest,
   BatchFinalizeResponse,
   TranscodeCreateRequest,
-  TranscodeCreateResponse
+  TranscodeCreateResponse,
+  TranscodeRetryRequest,
+  TranscodeRetryResponse
 } from '@/types/media-library';
 
 /**
@@ -126,6 +128,18 @@ export async function createTranscodeTask(
 ): Promise<BffResponse<TranscodeCreateResponse>> {
   return handleRequest<TranscodeCreateResponse>(
     apiClient.post(`/media-library/assets/${assetId}/transcode`, data)
+  );
+}
+
+/**
+ * Retry a transcoding task
+ */
+export async function retryTranscodeTask(
+  taskId: string,
+  data: TranscodeRetryRequest
+): Promise<BffResponse<TranscodeRetryResponse>> {
+  return handleRequest<TranscodeRetryResponse>(
+    apiClient.post(`/media-library/transcode/${taskId}/retry`, data)
   );
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Wifi, Activity, Users, Clock, TrendingUp, MonitorSmartphone } from 'lucide-react';
+import { Wifi, Activity, Clock, TrendingUp, MonitorSmartphone } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -22,13 +22,13 @@ import {
   type PlaybackBucket,
 } from '@/services/telemetryApi';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
-import { FleetOnlineTable } from './FleetOnlineTable';
+import { DeviceOnlineTable } from './DeviceOnlineTable';
 import { DeviceSessionsTable } from './DeviceSessionsTable';
 import type { DeviceSession } from '../types';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
-interface FleetUptimeTabProps {
+interface DeviceUptimeTabProps {
   from: string;
   to: string;
   tz: string;
@@ -37,14 +37,14 @@ interface FleetUptimeTabProps {
   className?: string;
 }
 
-export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: FleetUptimeTabProps) {
+export function DeviceUptimeTab({ from, to, tz, bucket, deviceMap, className }: DeviceUptimeTabProps) {
   const { formatDateTime } = useTimeFormatter();
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const navigate = useNavigate();
   const summaryTableHeight = 'h-[340px] sm:h-[420px] lg:h-[520px]';
   const sessionsTableHeight = 'h-[340px] sm:h-[420px]';
 
-  // Query for fleet online summary
+  // Query for device online summary
   const { data: summaryRes, isLoading: isSummaryLoading } = useQuery({
     queryKey: ['telemetry', 'online-time', 'summary', from, to],
     queryFn: () => getOnlineTimeSummary({ from, to }),
@@ -84,11 +84,11 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
   const sessionsData: DeviceSession[] = useMemo(() => {
     if (!sessionsRes?.data?.items) return [];
     return sessionsRes.data.items.map((s) => ({
-      sessionId: s.sessionId,
+      sessionId: String(s.sessionId),
       deviceId: selectedDeviceId!,
-      startedAt: s.startTime,
-      endedAt: s.endTime || null,
-      durationSeconds: s.durationSeconds,
+      startedAt: s.onlineAt, // Mapping to correct field from telemetryApi response
+      endedAt: s.offlineAt || null,
+      durationSeconds: s.onlineSecondsInRange,
     }));
   }, [sessionsRes, selectedDeviceId]);
 
@@ -102,31 +102,31 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
   // KPI calculations
   const kpis = useMemo(() => {
     if (summaryData.length === 0) {
-      return { totalDevices: 0, avgOnlineRate: null as number | null, peakConcurrent: 0 };
+      return { totalDevices: 0, totalOnlineTime: 0, peakConcurrent: 0 };
     }
     const totalDevices = summaryData.length;
-    const validRates = summaryData
-      .map((d) => (typeof d.onlineRate === 'number' && Number.isFinite(d.onlineRate) ? d.onlineRate : null))
-      .filter((v): v is number => v !== null);
-    const avgOnlineRate =
-      validRates.length === 0 ? null : validRates.reduce((sum, r) => sum + r, 0) / validRates.length;
+    const totalOnlineTime = summaryData.reduce((sum, d) => sum + (d.onlineSeconds || 0), 0);
     const peakConcurrent = concurrencyData.reduce(
       (max: number, d: { maxConcurrent?: number }) => Math.max(max, d.maxConcurrent || 0),
       0
     );
-    return { totalDevices, avgOnlineRate, peakConcurrent };
+    return { totalDevices, totalOnlineTime, peakConcurrent };
   }, [summaryData, concurrencyData]);
 
   const selectedDevice = summaryData.find((d) => d.deviceId === selectedDeviceId);
-  const selectedDeviceOnlineRate =
-    typeof selectedDevice?.onlineRate === 'number' && Number.isFinite(selectedDevice.onlineRate)
-      ? selectedDevice.onlineRate
-      : null;
-  const selectedDeviceName =
-    selectedDeviceId && deviceMap
-      ? deviceMap[String(selectedDeviceId)] || 'Deleted device'
-      : null;
-  const canOpenDevice = Boolean(selectedDeviceId && deviceMap?.[String(selectedDeviceId)]);
+  
+  const selectedDeviceName = useMemo(() => {
+    if (!selectedDeviceId || !deviceMap) return null;
+    return deviceMap[selectedDeviceId]?.deviceName || 'Deleted Device';
+  }, [selectedDeviceId, deviceMap]);
+
+  const canOpenDevice = Boolean(selectedDeviceId && deviceMap?.[selectedDeviceId]);
+
+  const formatTotalTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    if (hours > 1000) return `${(hours / 1000).toFixed(1)}k h`;
+    return `${hours}h`;
+  };
 
   return (
     <div className={cn('flex flex-col gap-6', className)}>
@@ -141,8 +141,8 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
                   <MonitorSmartphone className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-muted-foreground tracking-[0.1em]">Total fleet</p>
-                  <p className="text-2xl font-black tracking-tighter tabular-nums">{kpis.totalDevices}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground tracking-[0.1em]">Total Devices</p>
+                  <p className="text-2xl font-bold tracking-tighter tabular-nums">{kpis.totalDevices}</p>
                 </div>
               </div>
             </CardContent>
@@ -152,12 +152,12 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
                 <div className="p-3 rounded-2xl bg-sky-500/10 text-sky-600 shadow-inner">
-                  <Activity className="h-5 w-5" />
+                  <Clock className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-muted-foreground tracking-[0.1em]">Availability</p>
-                  <p className="text-2xl font-black tracking-tighter tabular-nums text-sky-600">
-                    {kpis.avgOnlineRate === null ? '—' : `${Math.round(kpis.avgOnlineRate * 100)}%`}
+                  <p className="text-[10px] font-bold text-muted-foreground tracking-[0.1em]">Total Online Time</p>
+                  <p className="text-2xl font-bold tracking-tighter tabular-nums text-sky-600">
+                    {formatTotalTime(kpis.totalOnlineTime)}
                   </p>
                 </div>
               </div>
@@ -168,14 +168,14 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
         {/* Global Trends - More prominent */}
         <Card className="xl:col-span-9 rounded-3xl border-none ring-1 ring-muted/60 shadow-sm bg-background/40 backdrop-blur-md overflow-hidden">
           <CardHeader className="p-6 pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-[11px] font-black tracking-[0.2em] text-muted-foreground/80 flex items-center gap-2.5">
+            <CardTitle className="text-[11px] font-bold tracking-tight text-muted-foreground/80 flex items-center gap-2.5">
               <TrendingUp className="h-4 w-4 text-primary" />
-              Real-time Fleet Activity
+              Global Device Activity
             </CardTitle>
             <div className="flex items-center gap-4">
                <div className="flex items-center gap-1.5">
                   <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  <span className="text-[10px] font-bold text-muted-foreground">Active Devices</span>
+                  <span className="text-[10px] font-bold text-muted-foreground tracking-tight">Active Devices</span>
                </div>
             </div>
           </CardHeader>
@@ -228,12 +228,12 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
         <div className="min-w-0">
           <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
             <CardHeader className="p-4 pb-2 bg-muted/5 border-b flex flex-row items-center justify-between">
-              <CardTitle className="text-xs font-bold flex items-center gap-2 text-foreground/80">
-                <Wifi className="h-4 w-4 text-primary" />
-                Fleet Online Summary
+              <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-2 text-foreground/80">
+                <Wifi className="h-3.5 w-3.5 text-primary" />
+                Device Online Summary
               </CardTitle>
-              <div className="text-[10px] font-medium text-muted-foreground bg-muted/20 px-2 py-0.5 rounded-full">
-                {summaryData.length} Devices Recorded
+              <div className="text-[10px] font-bold text-muted-foreground bg-muted/20 px-2 py-0.5 rounded-full tracking-tighter">
+                {summaryData.length} Devices
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -243,10 +243,10 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
                 </div>
               ) : summaryData.length === 0 ? (
                 <div className={cn(summaryTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8')}>
-                  No online time data in this period
+                  No online data in this period
                 </div>
               ) : (
-                <FleetOnlineTable
+                <DeviceOnlineTable
                   data={summaryData}
                   deviceMap={deviceMap}
                   selectedDeviceId={selectedDeviceId || undefined}
@@ -268,8 +268,14 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-emerald-500/10">
-                          <Wifi className="h-4 w-4 text-emerald-500" />
+                        <div className={cn(
+                          "p-2 rounded-lg",
+                          (selectedDevice as any)?.status === 'ACTIVE' ? "bg-emerald-500/10" : "bg-slate-500/10"
+                        )}>
+                          <Wifi className={cn(
+                            "h-4 w-4",
+                            (selectedDevice as any)?.status === 'ACTIVE' ? "text-emerald-500" : "text-slate-400"
+                          )} />
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-bold truncate max-w-[200px]">
@@ -278,41 +284,28 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
                         </div>
                       </div>
                       <Badge
-                        variant="secondary"
+                        variant="outline"
                         className={cn(
-                          'text-[9px] font-bold',
-                          selectedDeviceOnlineRate !== null &&
-                            selectedDeviceOnlineRate >= 0.9 &&
-                            'bg-emerald-500/10 text-emerald-600',
-                          selectedDeviceOnlineRate !== null &&
-                            selectedDeviceOnlineRate >= 0.5 &&
-                            selectedDeviceOnlineRate < 0.9 &&
-                            'bg-amber-500/10 text-amber-600',
-                          selectedDeviceOnlineRate !== null &&
-                            selectedDeviceOnlineRate < 0.5 &&
-                            'bg-rose-500/10 text-rose-600'
+                          'text-[9px] font-bold tracking-widest',
+                          (selectedDevice as any)?.status === 'ACTIVE'
+                            ? 'bg-emerald-500/5 text-emerald-600 border-emerald-200'
+                            : 'bg-slate-500/5 text-slate-400 border-slate-200'
                         )}
                       >
-                        {selectedDeviceOnlineRate === null
-                          ? '—'
-                          : selectedDeviceOnlineRate >= 0.9
-                            ? 'Excellent'
-                            : selectedDeviceOnlineRate >= 0.5
-                              ? 'Fair'
-                              : 'Poor'}
+                        {(selectedDevice as any)?.status || 'Unknown'}
                       </Badge>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <div className="p-2 rounded-xl bg-background border border-muted/20">
-                        <p className="text-[9px] font-bold text-muted-foreground">Rate</p>
-                        <p className="text-sm font-bold text-emerald-500">
-                          {selectedDeviceOnlineRate === null ? '—' : `${Math.round(selectedDeviceOnlineRate * 100)}%`}
+                        <p className="text-[9px] font-bold text-muted-foreground tracking-tighter">Network</p>
+                        <p className="text-xs font-bold text-primary">
+                          {deviceMap?.[selectedDeviceId!]?.networkType || '—'}
                         </p>
                       </div>
                       <div className="p-2 rounded-xl bg-background border border-muted/20">
-                        <p className="text-[9px] font-bold text-muted-foreground">Uptime</p>
-                        <p className="text-sm font-bold text-primary">
+                        <p className="text-[9px] font-bold text-muted-foreground tracking-tighter">Period Online Time</p>
+                        <p className="text-xs font-bold text-emerald-500 tabular-nums">
                           {Math.floor(selectedDevice.onlineSeconds / 3600)}h {Math.floor((selectedDevice.onlineSeconds % 3600) / 60)}m
                         </p>
                       </div>
@@ -322,10 +315,10 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
                       <Button
                         variant="outline"
                         size="sm"
-                        className="w-full h-8 text-xs font-semibold"
+                        className="w-full h-8 text-[10px] font-bold tracking-widest"
                         onClick={() => navigate(`/dashboard/devices/${selectedDeviceId}`)}
                       >
-                        View device
+                        Navigate to Device
                       </Button>
                     )}
                   </div>
@@ -335,8 +328,8 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
               {/* Session History Table */}
               <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
                 <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
-                  <CardTitle className="text-xs font-bold flex items-center gap-2 text-foreground/80">
-                    <Clock className="h-4 w-4 text-primary" />
+                  <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-2 text-foreground/80">
+                    <Clock className="h-3.5 w-3.5 text-primary" />
                     Connection History
                   </CardTitle>
                 </CardHeader>
@@ -358,8 +351,8 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center opacity-30 border-2 border-dashed rounded-3xl p-8 bg-muted/5">
               <MonitorSmartphone className="h-12 w-12 mb-3" />
-              <p className="text-xs font-bold tracking-widest">Select a device</p>
-              <p className="text-[10px] mt-1">Select from the summary list to view detailed telemetry</p>
+              <p className="text-xs font-bold tracking-widest">Select a Device</p>
+              <p className="text-[10px] mt-1">Choose from the summary list to view detailed telemetry</p>
             </div>
           )}
         </div>

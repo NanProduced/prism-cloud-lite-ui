@@ -135,13 +135,6 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
     }
   }, [programs, selectedProgram]);
 
-  const formatDuration = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
-  };
-
   return (
     <div className={cn('flex flex-col gap-6', className)}>
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] gap-6 items-start">
@@ -149,12 +142,12 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
         <div className="min-w-0">
           <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
             <CardHeader className="p-4 pb-2 bg-muted/5 border-b flex flex-row items-center justify-between">
-              <CardTitle className="text-xs font-bold flex items-center gap-2 text-foreground/80">
+              <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-2 text-foreground/80">
                 <Layers className="h-4 w-4 text-primary" />
-                Program Analytics Summary
+                Program Playback Summary
               </CardTitle>
-              <div className="text-[10px] font-medium text-muted-foreground bg-muted/20 px-2 py-0.5 rounded-full">
-                {programs.length} Programs Tracked
+              <div className="text-[10px] font-bold text-muted-foreground bg-muted/20 px-2 py-0.5 rounded-full tracking-tighter">
+                {programs.length} Programs
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -207,8 +200,8 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
                       </div>
                     </div>
                     {selectedProgram.lan && (
-                      <Badge variant="outline" className="text-[9px] font-bold bg-amber-500/5 text-amber-600 border-amber-200">
-                        LAN
+                      <Badge variant="outline" className="text-[9px] font-bold bg-amber-500/5 text-amber-600 border-amber-200 tracking-widest">
+                        Lan
                       </Badge>
                     )}
                   </div>
@@ -255,7 +248,7 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
                           <YAxis fontSize={9} tickLine={false} axisLine={false} />
                           <Tooltip
                             labelFormatter={(val) => formatDateTime(val)}
-                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold' }}
                           />
                           <Area type="monotone" dataKey="playCount" name="Plays" stroke="#6366f1" strokeWidth={2} fill="url(#colorProgramTrend)" />
                         </AreaChart>
@@ -268,8 +261,8 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
               {/* Device Distribution */}
               <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
                 <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
-                  <CardTitle className="text-xs font-bold flex items-center gap-2 text-foreground/80">
-                    <Monitor className="h-4 w-4 text-primary" />
+                  <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-2 text-foreground/80">
+                    <Monitor className="h-3.5 w-3.5 text-primary" />
                     Device Distribution
                   </CardTitle>
                 </CardHeader>
@@ -292,7 +285,7 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center opacity-30 border-2 border-dashed rounded-3xl p-8 bg-muted/5">
               <Layers className="h-12 w-12 mb-3" />
-              <p className="text-xs font-bold tracking-widest">Select a program</p>
+              <p className="text-xs font-bold tracking-widest">Select a Program</p>
             </div>
           )}
         </div>

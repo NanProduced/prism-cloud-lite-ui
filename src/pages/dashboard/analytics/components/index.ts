@@ -1,6 +1,6 @@
 export { PlaybackTopTable } from './PlaybackTopTable';
 export { DeviceSessionsTable } from './DeviceSessionsTable';
-export { FleetOnlineTable } from './FleetOnlineTable';
+export { DeviceOnlineTable } from './DeviceOnlineTable';
 export { ProgramTab } from './ProgramTab';
 export { MediaTab } from './MediaTab';
-export { FleetUptimeTab } from './FleetUptimeTab';
+export { DeviceUptimeTab } from './DeviceUptimeTab';

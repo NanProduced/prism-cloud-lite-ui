@@ -56,6 +56,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { MediaAssetPreviewDialog } from './MediaAssetPreviewDialog';
 import { MoveNodesDialog } from './MoveNodesDialog';
+import { TranscodeDialog } from '@/features/media/components/TranscodeDialog';
 
 type MediaFilter = 'all' | 'folders' | 'image' | 'video' | 'document' | 'other';
 type MediaSort = 'updatedAt' | 'name' | 'size';
@@ -104,9 +105,10 @@ export function MediaExplorer({
   const [filter, setFilter] = useState<MediaFilter>('all');
   const [sort, setSort] = useState<MediaSort>('updatedAt');
   const [viewMode, setViewMode] = useState<MediaViewMode>(() => getInitialMediaViewMode());
-  const [previewAsset, setPreviewAsset] = useState<MediaAssetNode | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
-  
+  const [previewAsset, setPreviewAsset] = useState<MediaAssetNode | null>(null);
+  const [transcodeTarget, setTranscodeTarget] = useState<MediaAssetNode | null>(null);
+
   const [moveNodesOpen, setMoveNodesOpen] = useState(false);
   const [movingNodes, setMovingNodes] = useState<{ ids: string[]; names: string[] }>({ ids: [], names: [] });
 
@@ -149,18 +151,6 @@ export function MediaExplorer({
       queryClient.invalidateQueries({ queryKey: ['media', 'nodes'] });
       queryClient.invalidateQueries({ queryKey: ['media', 'folders'] });
       toast.success('Items moved successfully');
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error as any));
-    }
-  });
-
-  const transcodeMutation = useMutation({
-    mutationFn: (assetId: string) => 
-      createTranscodeTask(assetId, { presetId: 'default-mp4' }), // Default preset
-    onSuccess: (res) => {
-      toast.success('Transcoding task started');
-      // Redirect to message center if needed, or just let SSE handle updates
     },
     onError: (error) => {
       toast.error(getErrorMessage(error as any));
@@ -217,7 +207,8 @@ export function MediaExplorer({
     }
 
     if (action === 'Transcode') {
-      transcodeMutation.mutate(node.id);
+      if (node.type !== 'asset') return;
+      setTranscodeTarget(node);
       return;
     }
 
@@ -455,6 +446,12 @@ export function MediaExplorer({
         open={previewOpen}
         onOpenChange={handlePreviewOpenChange}
         asset={previewAsset}
+      />
+
+      <TranscodeDialog
+        open={!!transcodeTarget}
+        onOpenChange={(open) => !open && setTranscodeTarget(null)}
+        asset={transcodeTarget}
       />
 
       <MoveNodesDialog

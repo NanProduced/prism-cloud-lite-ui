@@ -1,17 +1,16 @@
-import { useMemo, useId } from 'react';
-import { useLyteNyte, useClientRowDataSource } from '@lytenyte/hooks/use-lytenyte-core';
-import { LyteNyte } from '@lytenyte/components/lytenyte-core';
-import type { CellRendererParams, Column } from '@1771technologies/lytenyte-core/types';
-import { measureText } from '@1771technologies/lytenyte-shared';
-import { PrismHeaderRenderer } from '@/components/lytenyte/PrismHeaderRenderer';
-import { Clock, Calendar, Timer, Copy, CheckCircle2 } from 'lucide-react';
+import { Clock, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { toast } from '@/lib/toast';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import type { DeviceSession } from '../types';
-import { useLyteNyteAutosize } from '@/hooks/use-lytenyte-autosize';
 
 interface DeviceSessionsTableProps {
   data: DeviceSession[];
@@ -19,172 +18,61 @@ interface DeviceSessionsTableProps {
 }
 
 export function DeviceSessionsTable({ data, className }: DeviceSessionsTableProps) {
-  const gridId = useId();
   const { formatDateTime } = useTimeFormatter();
 
   const formatDuration = (seconds: number) => {
+    if (!Number.isFinite(seconds) || seconds <= 0) return '—';
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    if (minutes > 0) return `${minutes}m ${secs}s`;
-    return `${secs}s`;
+    
+    let parts = [];
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
+    
+    return parts.join(' ');
   };
-
-  const copySessionTime = (session: DeviceSession) => {
-    const start = formatDateTime(session.startedAt);
-    const end = session.endedAt ? formatDateTime(session.endedAt) : 'ongoing';
-    navigator.clipboard.writeText(`${start} — ${end}`);
-    toast.success('Session time range copied');
-  };
-
-  const columns = useMemo<Column<DeviceSession>[]>(
-    () => [
-      {
-        id: 'startedAt',
-        name: 'Started',
-        type: 'string',
-        width: 150,
-        field: 'startedAt',
-        uiHints: {
-          sortable: true,
-          resizable: true,
-          movable: false,
-        },
-        cellRenderer: ({ row }: CellRendererParams<DeviceSession>) => {
-          const item = row.data as DeviceSession;
-          if (!item) return null;
-          return (
-            <div className="flex items-center gap-1.5 px-1">
-              <Calendar className="h-3 w-3 opacity-30" />
-              <span className="text-xs font-medium tabular-nums">
-                {formatDateTime(item.startedAt)}
-              </span>
-            </div>
-          );
-        },
-      },
-      {
-        id: 'endedAt',
-        name: 'Ended',
-        type: 'string',
-        width: 150,
-        field: 'endedAt',
-        uiHints: {
-          sortable: true,
-          resizable: true,
-          movable: false,
-        },
-        cellRenderer: ({ row }: CellRendererParams<DeviceSession>) => {
-          const item = row.data as DeviceSession;
-          if (!item) return null;
-          const isOngoing = !item.endedAt;
-          return (
-            <div className="flex items-center gap-1.5 px-1">
-              {isOngoing ? (
-                <Badge variant="default" className="text-[9px] bg-emerald-500 h-5 gap-1">
-                  <CheckCircle2 className="h-2.5 w-2.5" />
-                  Online
-                </Badge>
-              ) : (
-                <>
-                  <Clock className="h-3 w-3 opacity-30" />
-                  <span className="text-xs font-medium tabular-nums">
-                    {formatDateTime(item.endedAt)}
-                  </span>
-                </>
-              )}
-            </div>
-          );
-        },
-      },
-      {
-        id: 'durationSeconds',
-        name: 'Duration',
-        type: 'number',
-        width: 100,
-        field: 'durationSeconds',
-        uiHints: {
-          sortable: true,
-          resizable: true,
-          movable: false,
-        },
-        cellRenderer: ({ row }: CellRendererParams<DeviceSession>) => {
-          const item = row.data as DeviceSession;
-          if (!item) return null;
-          return (
-            <div className="flex items-center gap-1.5 px-1">
-              <Timer className="h-3 w-3 opacity-30" />
-              <span className="text-xs font-bold tabular-nums text-primary">
-                {formatDuration(item.durationSeconds)}
-              </span>
-            </div>
-          );
-        },
-      },
-      {
-        id: 'actions',
-        name: '',
-        type: 'string',
-        width: 50,
-        uiHints: {
-          sortable: false,
-          resizable: false,
-          movable: false,
-        },
-        cellRenderer: ({ row }: CellRendererParams<DeviceSession>) => {
-          const item = row.data as DeviceSession;
-          if (!item) return null;
-          return (
-            <div className="flex items-center justify-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={() => copySessionTime(item)}
-                title="Copy time range"
-              >
-                <Copy className="h-3 w-3" />
-              </Button>
-            </div>
-          );
-        },
-      },
-    ],
-    []
-  );
-
-  const dataSource = useClientRowDataSource({ data, reflectData: true });
-
-  const grid = useLyteNyte({
-    gridId,
-    columns,
-    rowDataSource: dataSource,
-    columnBase: {
-      headerRenderer: PrismHeaderRenderer,
-      autosizeHeaderFn: ({ grid, column }) => {
-        const vp = grid.state.viewport.get() ?? undefined;
-        const text = String(column.name ?? column.id ?? '');
-        const textWidth = measureText(text, vp).width;
-        return Math.ceil(textWidth + 24 + 30);
-      },
-    },
-    rowSelectionMode: 'none',
-    columnMarkerEnabled: false,
-    floatingRowEnabled: false,
-  });
-
-  const { containerRef } = useLyteNyteAutosize(grid, [data.length]);
 
   return (
-    <div
-      ref={containerRef}
-      className={cn(
-        'w-full h-full min-h-[300px] border rounded-xl overflow-hidden bg-background',
-        className
-      )}
-    >
-      <LyteNyte grid={grid} />
-    </div>
+    <ScrollArea className={cn("w-full h-full", className)}>
+      <Table>
+        <TableHeader className="bg-muted/30 sticky top-0 z-10">
+          <TableRow>
+            <TableHead className="text-[9px] font-bold tracking-widest">Started At</TableHead>
+            <TableHead className="text-[9px] font-bold tracking-widest text-right">Duration</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.map((session) => (
+            <TableRow key={session.sessionId} className="group hover:bg-muted/40 transition-colors border-none">
+              <TableCell className="py-2.5">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold text-foreground/80 tabular-nums">
+                    {formatDateTime(session.startedAt)}
+                  </span>
+                  <span className="text-[8px] text-muted-foreground opacity-60">
+                    {session.endedAt ? `End: ${formatDateTime(session.endedAt)}` : 'Still active'}
+                  </span>
+                </div>
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/5 text-primary text-[9px] font-bold tabular-nums border border-primary/10">
+                  <Clock className="h-2.5 w-2.5 opacity-40" />
+                  {formatDuration(session.durationSeconds)}
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+          {data.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={2} className="h-24 text-center text-[10px] font-medium text-muted-foreground italic">
+                No session history recorded
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </ScrollArea>
   );
 }

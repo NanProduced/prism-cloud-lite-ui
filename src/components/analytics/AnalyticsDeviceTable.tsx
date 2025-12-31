@@ -1,15 +1,18 @@
-import { useCallback, useMemo, useId } from 'react';
-import { useLyteNyte, useClientRowDataSource } from '@lytenyte/hooks/use-lytenyte-core';
-import { LyteNyte } from '@lytenyte/components/lytenyte-core';
-import type {
-  CellRendererParams,
-  Column,
-} from '@1771technologies/lytenyte-core/types';
-import { measureText } from '@1771technologies/lytenyte-shared';
-import { PrismHeaderRenderer } from '@/components/lytenyte/PrismHeaderRenderer';
-import { Clock, Monitor } from 'lucide-react';
+import { Monitor, Clock, ChevronRight, Maximize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useLyteNyteAutosize } from '@/hooks/use-lytenyte-autosize';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useTimeFormatter } from '@/hooks/use-time-formatter';
+import type { Device } from '@/types/device';
+import { resolveDeviceStatus } from '@/types/device';
+import { Badge } from '@/components/ui/badge';
 
 interface AnalyticsDeviceItem {
   deviceId: string | number;
@@ -20,166 +23,81 @@ interface AnalyticsDeviceItem {
 
 interface AnalyticsDeviceTableProps {
   data: AnalyticsDeviceItem[];
-  deviceMap?: Record<string, string>;
+  deviceMap?: Record<string, Device>;
   onOpenDevice?: (deviceId: string) => void;
   className?: string;
 }
 
 export function AnalyticsDeviceTable({ data, deviceMap, onOpenDevice, className }: AnalyticsDeviceTableProps) {
-  const gridId = useId();
+  const { formatDateTime } = useTimeFormatter();
 
-  const formatDuration = useCallback((seconds: number) => {
+  const formatDuration = (seconds: number) => {
     if (!Number.isFinite(seconds) || seconds <= 0) return '—';
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
-  }, []);
-
-  const formatDateTime = useCallback((iso?: string) => {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return '—';
-    return d.toLocaleString([], { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-  }, []);
-
-  const columns = useMemo<Column<AnalyticsDeviceItem>[]>(() => [
-    {
-      id: 'deviceId',
-      name: 'Device',
-      type: 'string',
-      width: 280,
-      field: 'deviceId',
-      pin: 'start',
-      uiHints: {
-        sortable: true,
-        resizable: true,
-        movable: false,
-      },
-      autosizeCellFn: ({ grid, row }) => {
-        if (row.kind !== 'leaf' || !row.data) return null;
-        const deviceId = String(row.data.deviceId);
-        const name = deviceMap ? (deviceMap[deviceId] || 'Deleted device') : '—';
-        const vp = grid.state.viewport.get() ?? undefined;
-        return Math.max(measureText(name, vp).width + 80, 200);
-      },
-      cellRenderer: ({ row }: CellRendererParams<AnalyticsDeviceItem>) => {
-        if (!row.data) return null;
-        const deviceId = String(row.data.deviceId);
-        const name = deviceMap ? (deviceMap[deviceId] || 'Deleted device') : '—';
-        const canOpen = Boolean(deviceMap?.[deviceId]) && typeof onOpenDevice === 'function';
-        return (
-          <div
-            className={cn('flex items-center gap-2 px-1', canOpen && 'cursor-pointer')}
-            onClick={() => (canOpen ? onOpenDevice?.(deviceId) : undefined)}
-          >
-             <Monitor className="h-3 w-3 opacity-40" />
-             <div className="min-w-0 flex flex-col">
-               <span className="text-xs font-bold text-foreground/80 truncate">
-                 {name}
-               </span>
-             </div>
-          </div>
-        );
-      },
-    },
-    {
-      id: 'playCount',
-      name: 'Plays',
-      type: 'number',
-      width: 120,
-      field: 'playCount',
-      uiHints: {
-        sortable: true,
-        resizable: true,
-        movable: false,
-      },
-      cellRenderer: ({ row }: CellRendererParams<AnalyticsDeviceItem>) => {
-        if (!row.data) return null;
-        const playCount = Number(row.data.playCount || 0);
-        return (
-          <span className="text-xs font-bold text-primary tabular-nums px-1">
-            {playCount.toLocaleString()}
-          </span>
-        );
-      },
-    },
-    {
-      id: 'playSeconds',
-      name: 'Play Time',
-      type: 'number',
-      width: 130,
-      field: 'playSeconds',
-      uiHints: {
-        sortable: true,
-        resizable: true,
-        movable: false,
-      },
-      cellRenderer: ({ row }: CellRendererParams<AnalyticsDeviceItem>) => {
-        if (!row.data) return null;
-        const seconds = typeof row.data.playSeconds === 'number' ? row.data.playSeconds : NaN;
-        return (
-          <span className="text-xs font-bold tabular-nums px-1">
-            {formatDuration(seconds)}
-          </span>
-        );
-      },
-    },
-    {
-      id: 'lastPlayedAt',
-      name: 'Last Played',
-      type: 'datetime',
-      width: 180,
-      field: 'lastPlayedAt',
-      uiHints: {
-        sortable: true,
-        resizable: true,
-        movable: false,
-      },
-      cellRenderer: ({ row }: CellRendererParams<AnalyticsDeviceItem>) => {
-        if (!row.data) return null;
-        return (
-          <div className="flex items-center gap-1.5 px-1 text-muted-foreground">
-            <Clock className="h-3 w-3 opacity-40" />
-            <span className="text-xs font-semibold tabular-nums">
-              {formatDateTime(row.data.lastPlayedAt as string | undefined)}
-            </span>
-          </div>
-        );
-      },
-    },
-  ], [deviceMap, formatDateTime, formatDuration]);
-
-  const dataSource = useClientRowDataSource({ data, reflectData: true });
-
-  const grid = useLyteNyte({
-    gridId,
-    columns,
-    rowDataSource: dataSource,
-    columnBase: {
-      headerRenderer: PrismHeaderRenderer,
-      autosizeHeaderFn: ({ grid, column }) => {
-        const vp = grid.state.viewport.get() ?? undefined;
-        const text = String(column.name ?? column.id ?? '');
-        const textWidth = measureText(text, vp).width;
-        // Padding + Sort button space
-        return Math.ceil(textWidth + 24 + 30); 
-      },
-    },
-    // Simplified features for analytics view
-    rowSelectionMode: 'none',
-    columnMarkerEnabled: false,
-    floatingRowEnabled: false,
-  });
-
-  const { containerRef } = useLyteNyteAutosize(grid, [data.length, Boolean(onOpenDevice)]);
+  };
 
   return (
-    <div
-      ref={containerRef}
-      className={cn("w-full h-full min-h-0 border rounded-lg overflow-hidden bg-background shadow-sm", className)}
-    >
-      <LyteNyte grid={grid} />
-    </div>
+    <ScrollArea className={cn("w-full h-full", className)}>
+      <Table>
+        <TableHeader className="bg-muted/30 sticky top-0 z-10 shadow-sm">
+          <TableRow>
+            <TableHead className="text-[9px] font-bold tracking-widest">Device</TableHead>
+            <TableHead className="text-[9px] font-bold tracking-widest px-2">Res</TableHead>
+            <TableHead className="text-[9px] font-bold tracking-widest text-right whitespace-nowrap px-4">Performance</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.map((item) => {
+            const deviceIdStr = String(item.deviceId);
+            const deviceObj = deviceMap ? deviceMap[deviceIdStr] : undefined;
+            const name = deviceObj?.deviceName || 'Deleted Device';
+            const status = deviceObj ? resolveDeviceStatus(deviceObj) : 'offline';
+            const resolution = deviceObj ? (typeof deviceObj.resolution === 'string' ? deviceObj.resolution : `${deviceObj.resolution.width}x${deviceObj.resolution.height}`) : '—';
+            const canOpen = Boolean(deviceMap?.[deviceIdStr]);
+
+            return (
+              <TableRow 
+                key={deviceIdStr} 
+                className={cn(
+                  "group hover:bg-muted/40 transition-colors border-none",
+                  canOpen && "cursor-pointer"
+                )}
+                onClick={() => canOpen && onOpenDevice?.(deviceIdStr)}
+              >
+                <TableCell className="py-2.5">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "h-1.5 w-1.5 rounded-full shrink-0",
+                      status === 'online' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-slate-300"
+                    )} />
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-[11px] font-bold truncate leading-tight group-hover:text-primary transition-colors">{name}</span>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="px-2">
+                   <div className="inline-flex items-center gap-1 text-[9px] font-mono font-bold text-muted-foreground bg-muted/30 px-1.5 py-0.5 rounded border border-border/10">
+                     <Maximize2 className="h-2.5 w-2.5 opacity-40" />
+                     {resolution}
+                   </div>
+                </TableCell>
+                <TableCell className="text-right px-4">
+                  <div className="flex flex-col items-end">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-bold tabular-nums">{item.playCount.toLocaleString()}</span>
+                      <span className="text-[9px] font-bold text-muted-foreground/40">Plays</span>
+                    </div>
+                    <span className="text-[9px] font-bold text-primary/80 tabular-nums">{formatDuration(item.playSeconds || 0)}</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </ScrollArea>
   );
 }

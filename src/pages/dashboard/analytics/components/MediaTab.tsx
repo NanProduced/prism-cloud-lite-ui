@@ -93,13 +93,6 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
     }
   }, [mediaList, selectedMedia]);
 
-  const formatDuration = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
-  };
-
   return (
     <div className={cn('flex flex-col gap-6', className)}>
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] gap-6 items-start">
@@ -107,11 +100,11 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
         <div className="min-w-0">
           <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
             <CardHeader className="p-4 pb-2 bg-muted/5 border-b flex flex-row items-center justify-between">
-              <CardTitle className="text-xs font-bold flex items-center gap-2 text-foreground/80">
+              <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-2 text-foreground/80">
                 <Film className="h-4 w-4 text-pink-500" />
-                Media Analytics Summary
+                Media Playback Summary
               </CardTitle>
-              <div className="text-[10px] font-medium text-muted-foreground bg-muted/20 px-2 py-0.5 rounded-full">
+              <div className="text-[10px] font-bold text-muted-foreground bg-muted/20 px-2 py-0.5 rounded-full tracking-tighter">
                 {mediaList.length} Items Tracked
               </div>
             </CardHeader>
@@ -163,7 +156,7 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
                         </p>
                         {selectedMedia.itemType && (
                           <div className="mt-1">
-                            <Badge variant="outline" className="text-[9px] font-semibold">
+                            <Badge variant="outline" className="text-[9px] font-bold tracking-widest opacity-60">
                               {selectedMedia.itemType}
                             </Badge>
                           </div>
@@ -214,7 +207,7 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
                           <YAxis fontSize={9} tickLine={false} axisLine={false} />
                           <Tooltip
                             labelFormatter={(val) => formatDateTime(val)}
-                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold' }}
                           />
                           <Area type="monotone" dataKey="playCount" name="Plays" stroke="#ec4899" strokeWidth={2} fill="url(#colorMediaTrend)" />
                         </AreaChart>
@@ -227,7 +220,7 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
               {/* Device Distribution */}
               <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
                 <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
-                  <CardTitle className="text-xs font-bold flex items-center gap-2 text-foreground/80">
+                  <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-2 text-foreground/80">
                     <Monitor className="h-4 w-4 text-pink-500" />
                     Device Distribution
                   </CardTitle>
@@ -251,7 +244,7 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center opacity-30 border-2 border-dashed rounded-3xl p-8 bg-muted/5">
               <Film className="h-12 w-12 mb-3" />
-              <p className="text-xs font-bold tracking-widest">Select a media asset</p>
+              <p className="text-xs font-bold tracking-widest">Select a Media Asset</p>
             </div>
           )}
         </div>

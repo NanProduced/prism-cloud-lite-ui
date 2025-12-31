@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { FleetUptimeTab, ProgramTab, MediaTab } from './analytics/components';
+import { DeviceUptimeTab, ProgramTab, MediaTab } from './analytics/components';
 import type { AnalyticsTab } from './analytics/types';
 import { useSettingsStore } from '@/store/settingsStore';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
@@ -61,9 +61,10 @@ export default function AnalyticsPage() {
   const deviceMap = useMemo(() => {
     if (isDevicesLoading) return undefined;
     if (!Array.isArray(devicesRes?.data)) return undefined;
-    const map: Record<string, string> = {};
+    const map: Record<string, typeof devicesRes.data[0]> = {};
     devicesRes.data.forEach((d) => {
-      map[String(d.deviceId)] = d.deviceName;
+      map[String(d.deviceId)] = d;
+      if (d.id) map[d.id] = d;
     });
     return map;
   }, [devicesRes, isDevicesLoading]);
@@ -117,13 +118,6 @@ export default function AnalyticsPage() {
             onChange={(val) => setTimeRange(val)}
             showTime={false}
           />
-
-          <Separator orientation="vertical" className="h-6 mx-1" />
-
-          <div className="flex items-center gap-2">
-            <Globe className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground">{tz}</span>
-          </div>
         </div>
       </div>
 
@@ -161,7 +155,7 @@ export default function AnalyticsPage() {
         </div>
 
         <TabsContent value="online-time" className="flex-1 min-h-0 mt-0 overflow-x-hidden overflow-y-auto pr-1">
-          <FleetUptimeTab from={fromIso} to={toIso} tz={tz} bucket={bucket} deviceMap={deviceMap} />
+          <DeviceUptimeTab from={fromIso} to={toIso} tz={tz} bucket={bucket} deviceMap={deviceMap} />
         </TabsContent>
  
         <TabsContent value="programs" className="flex-1 min-h-0 mt-0 overflow-x-hidden overflow-y-auto pr-1">

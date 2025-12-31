@@ -1,32 +1,40 @@
-import { useMemo, useId } from 'react';
-import { useLyteNyte, useClientRowDataSource } from '@lytenyte/hooks/use-lytenyte-core';
-import { LyteNyte } from '@lytenyte/components/lytenyte-core';
-import type { CellRendererParams, Column } from '@1771technologies/lytenyte-core/types';
-import { measureText } from '@1771technologies/lytenyte-shared';
-import { PrismHeaderRenderer } from '@/components/lytenyte/PrismHeaderRenderer';
-import { Film, Layers, Clock, Hash, ChevronRight } from 'lucide-react';
+import { PlayCircle, Award, ChevronRight, Layers, Film } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import type { TopPlaybackItem } from '../types';
-import { useLyteNyteAutosize } from '@/hooks/use-lytenyte-autosize';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from '@/components/ui/progress';
+
+interface TopPlaybackItem {
+  id: string;
+  name: string;
+  playCount: number;
+  playSeconds: number;
+  version?: string;
+}
 
 interface PlaybackTopTableProps {
   data: TopPlaybackItem[];
   type: 'program' | 'media';
-  onSelect?: (item: TopPlaybackItem) => void;
   selectedId?: string;
+  onSelect: (item: TopPlaybackItem) => void;
   className?: string;
 }
 
 export function PlaybackTopTable({
   data,
   type,
-  onSelect,
   selectedId,
+  onSelect,
   className,
 }: PlaybackTopTableProps) {
-  const gridId = useId();
-
+  
   const formatDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -34,164 +42,82 @@ export function PlaybackTopTable({
     return `${minutes}m`;
   };
 
-  const columns = useMemo<Column<TopPlaybackItem>[]>(
-    () => [
-      {
-        id: 'rank',
-        name: '#',
-        type: 'number',
-        width: 50,
-        uiHints: {
-          sortable: false,
-          resizable: false,
-          movable: false,
-        },
-        cellRenderer: ({ row }: CellRendererParams<TopPlaybackItem>) => {
-          const item = row.data as TopPlaybackItem;
-          if (!item) return null;
-          const rank = data.findIndex((d) => d.id === item.id) + 1;
-          return (
-            <div className="flex items-center justify-center">
-              <Badge
-                variant={rank <= 3 ? 'default' : 'secondary'}
-                className={cn(
-                  'h-5 w-5 p-0 flex items-center justify-center text-[9px] font-bold',
-                  rank === 1 && 'bg-amber-500',
-                  rank === 2 && 'bg-slate-400',
-                  rank === 3 && 'bg-amber-700'
-                )}
-              >
-                {rank}
-              </Badge>
-            </div>
-          );
-        },
-      },
-      {
-        id: 'name',
-        name: type === 'program' ? 'Program Name' : 'Media Name',
-        type: 'string',
-        width: 250,
-        field: 'name',
-        pin: 'start',
-        uiHints: {
-          sortable: true,
-          resizable: true,
-          movable: false,
-        },
-        autosizeCellFn: ({ grid, row }) => {
-          const item = row.data as TopPlaybackItem;
-          if (row.kind !== 'leaf' || !item) return null;
-          const text = item.name;
-          const vp = grid.state.viewport.get() ?? undefined;
-          return measureText(text, vp).width + 60;
-        },
-        cellRenderer: ({ row }: CellRendererParams<TopPlaybackItem>) => {
-          const item = row.data as TopPlaybackItem;
-          if (!item) return null;
-          const isSelected = item.id === selectedId;
-          return (
-            <div
-              className={cn(
-                'flex items-center gap-2 px-1 cursor-pointer transition-colors',
-                isSelected && 'text-primary'
-              )}
-              onClick={() => onSelect?.(item)}
-            >
-              {type === 'program' ? (
-                <Layers className="h-3.5 w-3.5 opacity-40 shrink-0" />
-              ) : (
-                <Film className="h-3.5 w-3.5 opacity-40 shrink-0" />
-              )}
-              <span className="text-xs font-bold truncate">{item.name}</span>
-              {isSelected && <ChevronRight className="h-3 w-3 ml-auto shrink-0" />}
-            </div>
-          );
-        },
-      },
-      {
-        id: 'playCount',
-        name: 'Plays',
-        type: 'number',
-        width: 120,
-        field: 'playCount',
-        uiHints: {
-          sortable: true,
-          resizable: true,
-          movable: false,
-        },
-        cellRenderer: ({ row }: CellRendererParams<TopPlaybackItem>) => {
-          const item = row.data as TopPlaybackItem;
-          if (!item) return null;
-          return (
-            <div className="flex items-center gap-1.5 px-1">
-              <Hash className="h-3 w-3 opacity-30" />
-              <span className="text-xs font-bold tabular-nums text-foreground/80">
-                {item.playCount.toLocaleString()}
-              </span>
-            </div>
-          );
-        },
-      },
-      {
-        id: 'playSeconds',
-        name: 'Play Time',
-        type: 'number',
-        width: 140,
-        field: 'playSeconds',
-        uiHints: {
-          sortable: true,
-          resizable: true,
-          movable: false,
-        },
-        cellRenderer: ({ row }: CellRendererParams<TopPlaybackItem>) => {
-          const item = row.data as TopPlaybackItem;
-          if (!item) return null;
-          return (
-            <div className="flex items-center gap-1.5 px-1">
-              <Clock className="h-3 w-3 opacity-30" />
-              <span className="text-xs font-bold tabular-nums text-primary">
-                {formatDuration(item.playSeconds)}
-              </span>
-            </div>
-          );
-        },
-      },
-    ],
-    [data, type, selectedId, onSelect]
-  );
-
-  const dataSource = useClientRowDataSource({ data, reflectData: true });
-
-  const grid = useLyteNyte({
-    gridId,
-    columns,
-    rowDataSource: dataSource,
-    columnBase: {
-      headerRenderer: PrismHeaderRenderer,
-      autosizeHeaderFn: ({ grid, column }) => {
-        const vp = grid.state.viewport.get() ?? undefined;
-        const text = String(column.name ?? column.id ?? '');
-        const textWidth = measureText(text, vp).width;
-        return Math.ceil(textWidth + 24 + 30);
-      },
-    },
-    rowSelectionMode: 'none',
-    columnMarkerEnabled: false,
-    floatingRowEnabled: false,
-  });
-
-  const { containerRef } = useLyteNyteAutosize(grid, [data.length, type, selectedId]);
+  const maxPlays = Math.max(...data.map(d => d.playCount), 1);
 
   return (
-    <div
-      ref={containerRef}
-      className={cn(
-        'w-full h-full min-h-[300px] border rounded-xl overflow-hidden bg-background',
-        className
-      )}
-    >
-      <LyteNyte grid={grid} />
-    </div>
+    <ScrollArea className={cn("w-full h-full", className)}>
+      <Table>
+        <TableHeader className="bg-muted/50 sticky top-0 z-10">
+          <TableRow>
+            <TableHead className="w-[300px] text-[10px] font-bold tracking-widest">
+              {type === 'program' ? 'Program' : 'Asset'}
+            </TableHead>
+            <TableHead className="text-[10px] font-bold tracking-widest text-right">Plays</TableHead>
+            <TableHead className="text-[10px] font-bold tracking-widest text-right">Time</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.map((item, index) => {
+            const isSelected = item.id === selectedId;
+            const progress = (item.playCount / maxPlays) * 100;
+
+            return (
+              <TableRow 
+                key={item.id}
+                className={cn(
+                  "cursor-pointer group transition-colors",
+                  isSelected ? "bg-primary/[0.03] hover:bg-primary/[0.05]" : "hover:bg-muted/40"
+                )}
+                onClick={() => onSelect(item)}
+              >
+                <TableCell className="py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="relative shrink-0">
+                      <div className={cn(
+                        "p-2 rounded-xl transition-colors",
+                        isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                      )}>
+                        {type === 'program' ? <Layers className="h-4 w-4" /> : <Film className="h-4 w-4" />}
+                      </div>
+                      {index < 3 && (
+                        <div className="absolute -top-1 -left-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[8px] font-bold text-white shadow-sm ring-1 ring-background">
+                          {index + 1}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className={cn("text-xs font-bold truncate", isSelected && "text-primary")}>
+                          {item.name || 'Untitled'}
+                        </span>
+                        {item.version && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground font-bold opacity-60">
+                            V{item.version}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Progress value={progress} className="h-1 flex-1 opacity-20" />
+                      </div>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <span className="text-[11px] font-bold tabular-nums">{item.playCount.toLocaleString()}</span>
+                </TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                   <div className="flex items-center justify-end gap-2">
+                      <span className="text-[10px] font-bold text-muted-foreground/80 tabular-nums">
+                        {formatDuration(item.playSeconds)}
+                      </span>
+                      {isSelected && <ChevronRight className="h-3.5 w-3.5 text-primary shrink-0" />}
+                   </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </ScrollArea>
   );
 }
