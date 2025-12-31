@@ -154,7 +154,10 @@ export function ScheduleContentsRuleSheet(props: {
          return;
       }
       req.ifLimitTime = true;
-      req.limitTime = limitTime as any;
+      req.limitTime = {
+          start: limitTime.start.length === 5 ? limitTime.start + ":00" : limitTime.start,
+          end: limitTime.end.length === 5 ? limitTime.end + ":00" : limitTime.end
+      };
     }
     
     if (ifLimitDate) {

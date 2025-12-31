@@ -303,7 +303,7 @@ export default function ScheduleDetailPage() {
         <TabsContent value="overview" className="space-y-4">
           
           {/* Visualizer */}
-          <ScheduleVisualizer rules={schedule?.contentsRules || []} />
+          <ScheduleVisualizer rules={schedule?.contentsRules || []} commandRules={schedule?.commandRules || []} />
 
           <Card className="border-0 ring-1 ring-foreground/5 shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/10 border-b flex flex-row items-center justify-between gap-3">

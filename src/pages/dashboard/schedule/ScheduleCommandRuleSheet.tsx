@@ -69,11 +69,11 @@ export function ScheduleCommandRuleSheet(props: {
     
     // Parse Params
     const body: any = initialRule.operation.body || {};
-    if (initialRule.operation.type === 'BRIGHTNESS') setBrightness(body.brightness ?? 50);
-    if (initialRule.operation.type === 'VOLUME') setVolume(body.volume ?? 50);
-    if (initialRule.operation.type === 'POWER') setPowerState(body.action ?? 'on');
-    if (initialRule.operation.type === 'INPUT_MODE') setInputSource(body.source ?? 'HDMI-1');
-    if (initialRule.operation.type === 'COLOR_TEMP') setColorTemp(body.value ?? 6500);
+    if (initialRule.operation.type === 'BRIGHTNESS') setBrightness(Math.round((body.brightness ?? 0) / 255 * 100));
+    if (initialRule.operation.type === 'VOLUME') setVolume(Math.round((body.musicvolume ?? 0) / 15 * 100));
+    if (initialRule.operation.type === 'POWER') setPowerState(body.command === 'wakeup' ? 'on' : 'off');
+    if (initialRule.operation.type === 'INPUT_MODE') setInputSource(body.inputmode ?? 'hdmi');
+    if (initialRule.operation.type === 'COLOR_TEMP') setColorTemp(body.colortemp ?? 6500);
 
     // Limits
     setIfLimitDate(Boolean(initialRule.ifLimitDate));
@@ -107,12 +107,27 @@ export function ScheduleCommandRuleSheet(props: {
 
       // Build Body
       let body: any = {};
-      if (actionType === 'BRIGHTNESS') body = { brightness };
-      else if (actionType === 'VOLUME') body = { volume };
-      else if (actionType === 'POWER') body = { action: powerState }; // Protocol detail: 'reboot' might be separate type or action
-      else if (actionType === 'INPUT_MODE') body = { source: inputSource };
-      else if (actionType === 'COLOR_TEMP') body = { value: colorTemp };
-      else if (actionType === 'CLEAR_CACHE') body = {};
+      if (actionType === 'BRIGHTNESS') {
+          // 0-100 -> 0-255
+          body = { brightness: Math.round((brightness / 100) * 255) };
+      }
+      else if (actionType === 'VOLUME') {
+          // 0-100 -> 0-15
+          body = { musicvolume: Math.round((volume / 100) * 15) };
+      }
+      else if (actionType === 'POWER') {
+          // on -> wakeup, off -> sleep
+          body = { command: powerState === 'on' ? 'wakeup' : 'sleep' };
+      }
+      else if (actionType === 'INPUT_MODE') {
+          body = { inputmode: inputSource };
+      }
+      else if (actionType === 'COLOR_TEMP') {
+          body = { colortemp: colorTemp };
+      }
+      else if (actionType === 'CLEAR_CACHE') {
+          body = {};
+      }
 
       // Handle Power/Reboot ambiguity
       // If type is POWER, usually action is "on" or "off". Reboot is often type="REBOOT".
@@ -210,7 +225,7 @@ export function ScheduleCommandRuleSheet(props: {
                     {actionType === 'INPUT_MODE' && (
                         <div className="space-y-2">
                              <label className="text-sm font-medium">Input Source Name</label>
-                             <Input value={inputSource} onChange={e => setInputSource(e.target.value)} placeholder="e.g. HDMI-1" />
+                             <Input value={inputSource} onChange={e => setInputSource(e.target.value)} placeholder="hdmi or dvi" />
                         </div>
                     )}
                     {actionType === 'CLEAR_CACHE' && (

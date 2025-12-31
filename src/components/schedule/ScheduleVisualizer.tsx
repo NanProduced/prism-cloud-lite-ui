@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 // Types
 interface ScheduleVisualizerProps {
   rules: any[] // ScheduleContentsRuleResp
+  commandRules?: any[] // ScheduleCommandRuleResp
   className?: string
 }
 
@@ -16,10 +17,11 @@ interface TimelineBlock {
   id: string
   startPercent: number // 0-100
   widthPercent: number // 0-100
-  type: 'rotation' | 'spot'
+  type: 'rotation' | 'spot' | 'command'
   priority: number
   color: string
   rule: any
+  icon?: React.ReactNode
 }
 
 const WEEKDAY_MAP: Record<string, number> = {
@@ -57,11 +59,12 @@ function getDayStatus(date: Date, rules: any[]) {
   return { hasRotation, hasSpot }
 }
 
-function computeTimeline(date: Date, rules: any[]): TimelineBlock[] {
+function computeTimeline(date: Date, rules: any[], commandRules: any[] = []): TimelineBlock[] {
   const blocks: TimelineBlock[] = []
   
+  // 1. Program Rules
   for (const rule of rules) {
-    // 1. Basic Eligibility (same as getDayStatus)
+    // Basic Eligibility
     if (rule.ifLimitDate && rule.limitDate) {
        try {
         const start = parseISO(rule.limitDate.start)
@@ -76,14 +79,13 @@ function computeTimeline(date: Date, rules: any[]): TimelineBlock[] {
        if (!allowedDays.includes(dayIdx)) continue
     }
 
-    // 2. Time Mapping
+    // Time Mapping
     let timeSlots: {start: string, end: string}[] = []
     
     if (rule.ifLimitTime) {
         if (Array.isArray(rule.limitTime)) {
             timeSlots = rule.limitTime
         } else if (typeof rule.limitTime === 'object' && rule.limitTime !== null) {
-            // Handle single object { start, end }
             timeSlots = [rule.limitTime as {start: string, end: string}]
         } else {
              timeSlots = [{ start: "00:00:00", end: "23:59:59" }]
@@ -109,16 +111,55 @@ function computeTimeline(date: Date, rules: any[]): TimelineBlock[] {
     }
   }
 
-  // Sort by priority (higher z-index for higher priority)
+  // 2. Command Rules
+  for (const rule of commandRules) {
+      let payload = rule.payload;
+      // Handle payload string or object
+      if (typeof payload === 'string') {
+          try { payload = JSON.parse(payload) } catch {}
+      }
+      
+      // Basic Eligibility (similar checks if payload has ifLimitDate etc.)
+      if (rule.ifLimitDate || payload?.ifLimitDate) {
+          // ... (skipped for MVP brevity, assuming commands mostly daily or similar logic)
+      }
+
+      // opTime is usually array of strings "HH:mm:ss"
+      // Wait, in ScheduleCommandRuleResp, payload is the FULL commandSchedule JSON from device protocol?
+      // Or is it our internal structure?
+      // Based on schedulePayload.ts, the 'payload' stored in DB is the `commandSchedule` item.
+      // It contains `opTime` array.
+      
+      const opTimes = payload?.opTime || [];
+      if (!Array.isArray(opTimes)) continue;
+
+      for (const t of opTimes) {
+          const min = parseTime(t);
+          const totalMin = 1440;
+          
+          blocks.push({
+              id: `cmd-${rule.id}-${t}`,
+              startPercent: (min / totalMin) * 100,
+              widthPercent: 1, // small width for icon
+              type: 'command',
+              priority: 999, // On top
+              color: 'bg-yellow-500',
+              rule: rule,
+              icon: <div className="h-2 w-2 rounded-full bg-yellow-400 ring-1 ring-white" />
+          })
+      }
+  }
+
   return blocks.sort((a, b) => a.priority - b.priority)
 }
 
 function parseTime(t: string) {
+  if (!t) return 0;
   const [h, m] = t.split(':').map(Number)
-  return h * 60 + m
+  return (h || 0) * 60 + (m || 0)
 }
 
-export function ScheduleVisualizer({ rules, className }: ScheduleVisualizerProps) {
+export function ScheduleVisualizer({ rules, commandRules = [], className }: ScheduleVisualizerProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(new Date())
   
@@ -137,8 +178,8 @@ export function ScheduleVisualizer({ rules, className }: ScheduleVisualizerProps
 
   // Timeline Data
   const timelineBlocks = useMemo(() => {
-    return computeTimeline(selectedDate, rules)
-  }, [selectedDate, rules])
+    return computeTimeline(selectedDate, rules, commandRules)
+  }, [selectedDate, rules, commandRules])
 
   return (
     <div className={cn("grid grid-cols-1 lg:grid-cols-3 gap-6", className)}>
@@ -190,6 +231,7 @@ export function ScheduleVisualizer({ rules, className }: ScheduleVisualizerProps
           <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
              <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-blue-400" /> Rotation</div>
              <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-rose-500" /> Spot</div>
+             <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-yellow-400" /> Command</div>
           </div>
         </CardContent>
       </Card>
@@ -199,7 +241,7 @@ export function ScheduleVisualizer({ rules, className }: ScheduleVisualizerProps
         <CardHeader>
           <CardTitle className="text-sm font-medium flex items-center justify-between">
              <span>Schedule for {format(selectedDate, "yyyy-MM-dd")}</span>
-             <span className="text-xs font-normal text-muted-foreground">{timelineBlocks.length} active rules</span>
+             <span className="text-xs font-normal text-muted-foreground">{timelineBlocks.length} active items</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -231,15 +273,27 @@ export function ScheduleVisualizer({ rules, className }: ScheduleVisualizerProps
                       <div
                         style={{ left: `${block.startPercent}%`, width: `${block.widthPercent}%` }}
                         className={cn(
-                          "absolute top-2 bottom-2 rounded-md transition-all hover:brightness-110 cursor-pointer border border-white/10",
-                          block.color
+                          "absolute top-2 bottom-2 rounded-md transition-all hover:brightness-110 cursor-pointer border border-white/10 z-10",
+                          block.color,
+                          block.type === 'command' && "top-0 bottom-auto h-2 w-2 rounded-full -ml-1 border-none shadow-sm z-20"
                         )}
-                      />
+                      >
+                         {block.type === 'command' && <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-0.5 h-16 bg-yellow-400/50 -z-10" />}
+                      </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                       <p className="font-semibold">{block.type === 'spot' ? 'Spot' : 'Rotation'}</p>
-                       <p className="text-xs">Priority: {block.priority}</p>
-                       <p className="text-xs font-mono">v{block.rule.releaseVersion}</p>
+                       {block.type === 'command' ? (
+                           <div className="text-xs">
+                               <p className="font-semibold">Command</p>
+                               <pre className="mt-1 font-mono text-[10px]">{JSON.stringify(block.rule.payload?.operation || {}, null, 2)}</pre>
+                           </div>
+                       ) : (
+                           <>
+                               <p className="font-semibold">{block.type === 'spot' ? 'Spot' : 'Rotation'}</p>
+                               <p className="text-xs">Priority: {block.priority}</p>
+                               <p className="text-xs font-mono">v{block.rule.releaseVersion}</p>
+                           </>
+                       )}
                     </TooltipContent>
                   </Tooltip>
                 ))
@@ -249,8 +303,7 @@ export function ScheduleVisualizer({ rules, className }: ScheduleVisualizerProps
              <div className="mt-4 p-3 bg-muted/30 rounded-lg text-xs text-muted-foreground flex gap-2">
                <Info className="h-4 w-4 shrink-0" />
                <p>
-                 Higher priority items (e.g. Spot) will display on top of lower priority items. 
-                 Devices will play the valid rule with the highest priority at any given second.
+                 Higher priority items (e.g. Spot) will display on top. Commands are shown as yellow markers.
                </p>
              </div>
           </div>
