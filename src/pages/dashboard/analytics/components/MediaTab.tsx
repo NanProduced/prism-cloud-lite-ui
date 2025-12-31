@@ -93,54 +93,59 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
   };
 
   return (
-    <div className={cn('space-y-6', className)}>
-      <div className="flex flex-col gap-6">
-        {/* Media Summary Table */}
-        <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
-          <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
-            <CardTitle className="text-xs font-semibold flex items-center gap-2 text-foreground/70">
-              <Film className="h-4 w-4 text-primary" />
-              Media Analytics Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {isSummaryLoading ? (
-              <div className="h-[320px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">
-                Loading...
+    <div className={cn('flex flex-col gap-6', className)}>
+      <div className="flex flex-col lg:flex-row gap-6 items-stretch min-h-[600px]">
+        {/* LEFT: Master Table (65%) */}
+        <div className="flex-[6.5] flex flex-col gap-4">
+          <Card className="flex-1 rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
+            <CardHeader className="p-4 pb-2 bg-muted/5 border-b flex flex-row items-center justify-between">
+              <CardTitle className="text-xs font-bold flex items-center gap-2 text-foreground/80">
+                <Film className="h-4 w-4 text-pink-500" />
+                Media Analytics Summary
+              </CardTitle>
+              <div className="text-[10px] font-medium text-muted-foreground bg-muted/20 px-2 py-0.5 rounded-full">
+                {mediaList.length} Items Tracked
               </div>
-            ) : mediaList.length === 0 ? (
-              <div className="h-[320px] flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8">
-                No media playback data in this period
-              </div>
-            ) : (
-              <PlaybackTopTable
-                data={mediaList.map(m => ({
-                  id: m.mediaId,
-                  name: m.mediaTitle || 'Unknown Media',
-                  playCount: m.playCount,
-                  playSeconds: m.playSeconds
-                }))}
-                type="media"
-                selectedId={selectedMedia?.mediaId}
-                onSelect={(item) => {
-                  const m = mediaList.find(m => m.mediaId === item.id);
-                  if (m) setSelectedMedia(m);
-                }}
-                className="h-[400px] border-0 rounded-none"
-              />
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent className="p-0 flex-1">
+              {isSummaryLoading ? (
+                <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 italic">
+                  Loading...
+                </div>
+              ) : mediaList.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8">
+                  No media playback data
+                </div>
+              ) : (
+                <PlaybackTopTable
+                  data={mediaList.map(m => ({
+                    id: m.mediaId,
+                    name: m.mediaTitle || 'Unknown Media',
+                    playCount: m.playCount,
+                    playSeconds: m.playSeconds
+                  }))}
+                  type="media"
+                  selectedId={selectedMedia?.mediaId}
+                  onSelect={(item) => {
+                    const m = mediaList.find(m => m.mediaId === item.id);
+                    if (m) setSelectedMedia(m);
+                  }}
+                  className="h-full border-0 rounded-none min-h-[550px]"
+                />
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Detail Panel */}
-        <div className="space-y-4">
+        {/* RIGHT: Detail Panel (35%) */}
+        <div className="flex-[3.5] flex flex-col gap-4">
           {selectedMedia ? (
             <>
-              {/* Selected Media Header */}
-              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none">
+              {/* Context Header */}
+              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm bg-muted/5">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <div className="p-2 rounded-lg bg-pink-500/10">
                         <Film className="h-4 w-4 text-pink-500" />
                       </div>
@@ -158,65 +163,48 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
               </Card>
 
               {/* Trend Chart */}
-              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none">
-                <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-xs font-semibold flex items-center gap-2 text-foreground/70">
-                    <TrendingUp className="h-4 w-4 text-pink-500" />
+              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
+                <CardHeader className="p-4 pb-0">
+                  <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                    <TrendingUp className="h-3.5 w-3.5 text-pink-500" />
                     Playback Trend
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 pt-2">
-                  <div className="h-[200px]">
+                  <div className="h-[150px]">
                     {isTrendLoading ? (
-                      <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 italic">
-                        Loading trend...
-                      </div>
-                    ) : trendData.length === 0 ? (
-                      <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 italic text-center px-8">
-                        No trend data available for this period
+                      <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
+                        Loading...
                       </div>
                     ) : (
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={trendData}>
                           <defs>
                             <linearGradient id="colorMediaTrend" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#ec4899" stopOpacity={0.2} />
+                              <stop offset="5%" stopColor="#ec4899" stopOpacity={0.15} />
                               <stop offset="95%" stopColor="#ec4899" stopOpacity={0} />
                             </linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                              <XAxis
-                                                dataKey="bucketStart"
-                                                fontSize={9}
-                                                tickFormatter={(val) => {
-                                                  try {
-                                                    return formatInTimeZone(new Date(val), tz, bucket === 'HOUR' ? 'HH:mm' : 'MMM d');
-                                                  } catch {
-                                                    return val;
-                                                  }
-                                                }}
-                                                tickLine={false}
-                                                axisLine={false}
-                                              />
-                          
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
+                          <XAxis
+                            dataKey="bucketStart"
+                            fontSize={9}
+                            tickFormatter={(val) => {
+                              try {
+                                return formatInTimeZone(new Date(val), tz, bucket === 'HOUR' ? 'HH:mm' : 'MMM d');
+                              } catch {
+                                return val;
+                              }
+                            }}
+                            tickLine={false}
+                            axisLine={false}
+                          />
                           <YAxis fontSize={9} tickLine={false} axisLine={false} />
                           <Tooltip
                             labelFormatter={(val) => formatDateTime(val)}
-                            contentStyle={{
-                              borderRadius: '12px',
-                              border: 'none',
-                              boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                              fontSize: '10px',
-                            }}
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
                           />
-                          <Area
-                            type="monotone"
-                            dataKey="playCount"
-                            name="Plays"
-                            stroke="#ec4899"
-                            strokeWidth={2}
-                            fill="url(#colorMediaTrend)"
-                          />
+                          <Area type="monotone" dataKey="playCount" name="Plays" stroke="#ec4899" strokeWidth={2} fill="url(#colorMediaTrend)" />
                         </AreaChart>
                       </ResponsiveContainer>
                     )}
@@ -225,40 +213,33 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
               </Card>
 
               {/* Device Distribution */}
-              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
+              <Card className="flex-1 rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
                 <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
-                  <CardTitle className="text-xs font-semibold flex items-center gap-2 text-foreground/70">
+                  <CardTitle className="text-xs font-bold flex items-center gap-2 text-foreground/80">
                     <Monitor className="h-4 w-4 text-pink-500" />
                     Device Distribution
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-0">
+                <CardContent className="p-0 flex-1">
                   {isDevicesLoading ? (
-                    <div className="h-[150px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">
-                      Loading devices...
-                    </div>
-                  ) : deviceData.length === 0 ? (
-                    <div className="h-[150px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">
-                      No device distribution recorded
+                    <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
+                      Loading...
                     </div>
                   ) : (
                     <AnalyticsDeviceTable
                       data={deviceData}
                       deviceMap={resolvedDeviceMap}
-                      className="h-[300px] border-0 rounded-none"
+                      className="h-full border-0 rounded-none min-h-[250px]"
                     />
                   )}
                 </CardContent>
               </Card>
             </>
           ) : (
-            <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none h-full min-h-[400px]">
-              <CardContent className="h-full flex flex-col items-center justify-center text-center opacity-40">
-                <Film className="h-12 w-12 mb-3" />
-                <p className="text-sm font-bold uppercase">Select a Media Asset</p>
-                <p className="text-[10px]">Choose a media item from the list to view telemetry details</p>
-              </CardContent>
-            </Card>
+            <div className="flex-1 flex flex-col items-center justify-center text-center opacity-30 border-2 border-dashed rounded-3xl p-8 bg-muted/5">
+              <Film className="h-12 w-12 mb-3" />
+              <p className="text-xs font-bold uppercase tracking-widest">Select a Media Asset</p>
+            </div>
           )}
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useId } from 'react';
+import { useCallback, useMemo, useId, useEffect } from 'react';
 import { useLyteNyte, useClientRowDataSource } from '@lytenyte/hooks/use-lytenyte-core';
 import { LyteNyte } from '@lytenyte/components/lytenyte-core';
 import type {
@@ -170,6 +170,16 @@ export function AnalyticsDeviceTable({ data, deviceMap, className }: AnalyticsDe
     columnMarkerEnabled: false,
     floatingRowEnabled: false,
   });
+
+  // Auto-size columns on mount and when data changes
+  useEffect(() => {
+    if (data.length > 0) {
+      const timer = setTimeout(() => {
+        grid.actions.autosizeAllColumns();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [grid, data]);
 
   return (
     <div className={cn("w-full h-full min-h-0 border rounded-lg overflow-hidden bg-background shadow-sm", className)}>

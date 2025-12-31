@@ -1,4 +1,4 @@
-import { useMemo, useId } from 'react';
+import { useMemo, useId, useEffect } from 'react';
 import { useLyteNyte, useClientRowDataSource } from '@lytenyte/hooks/use-lytenyte-core';
 import { LyteNyte } from '@lytenyte/components/lytenyte-core';
 import type { CellRendererParams, Column } from '@1771technologies/lytenyte-core/types';
@@ -216,6 +216,16 @@ export function FleetOnlineTable({
     columnMarkerEnabled: false,
     floatingRowEnabled: false,
   });
+
+  // Auto-size columns on mount and when data changes
+  useEffect(() => {
+    if (data.length > 0) {
+      const timer = setTimeout(() => {
+        grid.actions.autosizeAllColumns();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [grid, data]);
 
   return (
     <div

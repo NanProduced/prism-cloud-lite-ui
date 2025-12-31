@@ -122,315 +122,229 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
       : null;
 
   return (
-    <div className={cn('space-y-6', className)}>
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
-          <div className="h-1 w-full bg-emerald-500" />
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-emerald-500/10">
-                <MonitorSmartphone className="h-5 w-5 text-emerald-500" />
+    <div className={cn('flex flex-col gap-6', className)}>
+      {/* Top Section: Global KPIs and Trends */}
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+        {/* KPI Summary - Compact */}
+        <div className="xl:col-span-1 grid grid-cols-1 gap-4">
+          <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm bg-background/50 backdrop-blur-sm overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-emerald-500/10">
+                  <MonitorSmartphone className="h-4 w-4 text-emerald-500" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Fleet Size</p>
+                  <p className="text-xl font-bold tracking-tight tabular-nums">{kpis.totalDevices}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">
-                  Fleet Size
-                </p>
-                <p className="text-2xl font-bold tracking-tighter tabular-nums">
-                  {kpis.totalDevices}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
-          <div className="h-1 w-full bg-sky-500" />
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-sky-500/10">
-                <Activity className="h-5 w-5 text-sky-500" />
+          <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm bg-background/50 backdrop-blur-sm overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-sky-500/10">
+                  <Activity className="h-4 w-4 text-sky-500" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Avg Availability</p>
+                  <p className="text-xl font-bold tracking-tight tabular-nums">
+                    {kpis.avgOnlineRate === null ? '—' : `${Math.round(kpis.avgOnlineRate * 100)}%`}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">
-                  Avg Availability
-                </p>
-                <p className="text-2xl font-bold tracking-tighter tabular-nums">
-                  {kpis.avgOnlineRate === null ? '—' : `${Math.round(kpis.avgOnlineRate * 100)}%`}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
-          <div className="h-1 w-full bg-violet-500" />
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-violet-500/10">
-                <Users className="h-5 w-5 text-violet-500" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">
-                  Peak Concurrency
-                </p>
-                <p className="text-2xl font-bold tracking-tighter tabular-nums">
-                  {kpis.peakConcurrent}
-                </p>
-              </div>
+        {/* Global Trends - Compact */}
+        <Card className="xl:col-span-3 rounded-2xl border-none ring-1 ring-muted shadow-sm bg-background/50 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="p-4 pb-0 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+              <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+              Fleet Availability & Concurrency
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-2">
+            <div className="h-[120px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={activeCountData}>
+                  <defs>
+                    <linearGradient id="colorActiveCount" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
+                  <XAxis
+                    dataKey="bucketStart"
+                    fontSize={9}
+                    tickFormatter={(val) => {
+                      try {
+                        return formatInTimeZone(new Date(val), tz, bucket === 'HOUR' ? 'HH:mm' : 'MMM d');
+                      } catch {
+                        return val;
+                      }
+                    }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis fontSize={9} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    labelFormatter={(val) => formatDateTime(val)}
+                    contentStyle={{
+                      borderRadius: '12px',
+                      border: 'none',
+                      boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                      fontSize: '10px',
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="activeDevices"
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    fill="url(#colorActiveCount)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Active Device Count Chart */}
-        <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-xs font-semibold flex items-center gap-2 text-foreground/70">
-              <TrendingUp className="h-4 w-4 text-emerald-500" />
-              Active Device Count
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-2">
-            <div className="h-[200px]">
-              {isActiveCountLoading ? (
-                <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
+      {/* Main Analysis Section: Master-Detail Layout */}
+      <div className="flex flex-col lg:flex-row gap-6 items-stretch min-h-[600px]">
+        {/* LEFT: Master Table (65%) */}
+        <div className="flex-[6.5] flex flex-col gap-4">
+          <Card className="flex-1 rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
+            <CardHeader className="p-4 pb-2 bg-muted/5 border-b flex flex-row items-center justify-between">
+              <CardTitle className="text-xs font-bold flex items-center gap-2 text-foreground/80">
+                <Wifi className="h-4 w-4 text-primary" />
+                Fleet Online Summary
+              </CardTitle>
+              <div className="text-[10px] font-medium text-muted-foreground bg-muted/20 px-2 py-0.5 rounded-full">
+                {summaryData.length} Devices Recorded
+              </div>
+            </CardHeader>
+            <CardContent className="p-0 flex-1">
+              {isSummaryLoading ? (
+                <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 italic">
                   Loading...
                 </div>
-              ) : activeCountData.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
-                  No data available
+              ) : summaryData.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8">
+                  No online time data in this period
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={activeCountData}>
-                    <defs>
-                      <linearGradient id="colorActiveCount" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis
-                      dataKey="bucketStart"
-                      fontSize={9}
-                      tickFormatter={(val) => {
-                        try {
-                          return formatInTimeZone(new Date(val), tz, bucket === 'HOUR' ? 'HH:mm' : 'MMM d');
-                        } catch {
-                          return val;
-                        }
-                      }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis fontSize={9} tickLine={false} axisLine={false} />
-                    <Tooltip
-                      labelFormatter={(val) => formatDateTime(val)}
-                      contentStyle={{
-                        borderRadius: '12px',
-                        border: 'none',
-                        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                        fontSize: '10px',
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="activeDevices"
-                      stroke="#10b981"
-                      strokeWidth={2}
-                      fill="url(#colorActiveCount)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <FleetOnlineTable
+                  data={summaryData}
+                  deviceMap={resolvedDeviceMap}
+                  selectedDeviceId={selectedDeviceId || undefined}
+                  onSelectDevice={setSelectedDeviceId}
+                  className="h-full border-0 rounded-none min-h-[500px]"
+                />
               )}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Concurrency Chart */}
-        <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-xs font-semibold flex items-center gap-2 text-foreground/70">
-              <Users className="h-4 w-4 text-violet-500" />
-              Concurrency Trend
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-2">
-            <div className="h-[200px]">
-              {isConcurrencyLoading ? (
-                <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
-                  Loading...
-                </div>
-              ) : concurrencyData.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
-                  No data available
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={concurrencyData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis
-                      dataKey="bucketStart"
-                      fontSize={9}
-                      tickFormatter={(val) => {
-                        try {
-                          return formatInTimeZone(new Date(val), tz, bucket === 'HOUR' ? 'HH:mm' : 'MMM d');
-                        } catch {
-                          return val;
-                        }
-                      }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis fontSize={9} tickLine={false} axisLine={false} />
-                    <Tooltip
-                      labelFormatter={(val) => formatDateTime(val)}
-                      contentStyle={{
-                        borderRadius: '12px',
-                        border: 'none',
-                        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                        fontSize: '10px',
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="maxConcurrent"
-                      name="Max"
-                      stroke="#8b5cf6"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="avgConcurrent"
-                      name="Avg"
-                      stroke="#a78bfa"
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex flex-col gap-6">
-        {/* Fleet Online Table */}
-        <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
-          <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
-            <CardTitle className="text-xs font-semibold flex items-center gap-2 text-foreground/70">
-              <Wifi className="h-4 w-4 text-primary" />
-              Online Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {isSummaryLoading ? (
-              <div className="h-[400px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">
-                Loading...
-              </div>
-            ) : summaryData.length === 0 ? (
-              <div className="h-[400px] flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8">
-                No online time data in this period
-              </div>
-            ) : (
-              <FleetOnlineTable
-                data={summaryData}
-                deviceMap={resolvedDeviceMap}
-                selectedDeviceId={selectedDeviceId || undefined}
-                onSelectDevice={setSelectedDeviceId}
-                className="h-[400px] border-0 rounded-none"
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Device Sessions Panel */}
-        <div className="space-y-4">
+        {/* RIGHT: Detail Panel (35%) */}
+        <div className="flex-[3.5] flex flex-col gap-4">
           {selectedDevice ? (
             <>
-              {/* Selected Device Header */}
-              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none">
+              {/* Selected Device Context Card */}
+              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm bg-muted/5">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-emerald-500/10">
-                        <Wifi className="h-4 w-4 text-emerald-500" />
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-emerald-500/10">
+                          <Wifi className="h-4 w-4 text-emerald-500" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold truncate max-w-[200px]">
+                            {resolvedDeviceMap[selectedDevice.deviceId] || selectedDevice.deviceId}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground font-mono">
+                            ID: {selectedDevice.deviceId}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold truncate max-w-[200px]">
-                          {resolvedDeviceMap[selectedDevice.deviceId] || selectedDevice.deviceId}
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          'text-[9px] font-bold',
+                          selectedDeviceOnlineRate !== null &&
+                            selectedDeviceOnlineRate >= 0.9 &&
+                            'bg-emerald-500/10 text-emerald-600',
+                          selectedDeviceOnlineRate !== null &&
+                            selectedDeviceOnlineRate >= 0.5 &&
+                            selectedDeviceOnlineRate < 0.9 &&
+                            'bg-amber-500/10 text-amber-600',
+                          selectedDeviceOnlineRate !== null &&
+                            selectedDeviceOnlineRate < 0.5 &&
+                            'bg-rose-500/10 text-rose-600'
+                        )}
+                      >
+                        {selectedDeviceOnlineRate === null
+                          ? '—'
+                          : selectedDeviceOnlineRate >= 0.9
+                            ? 'EXCELLENT'
+                            : selectedDeviceOnlineRate >= 0.5
+                              ? 'FAIR'
+                              : 'POOR'}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-2 rounded-xl bg-background border border-muted/20">
+                        <p className="text-[9px] font-bold text-muted-foreground uppercase">Rate</p>
+                        <p className="text-sm font-bold text-emerald-500">
+                          {selectedDeviceOnlineRate === null ? '—' : `${Math.round(selectedDeviceOnlineRate * 100)}%`}
                         </p>
-                        <p className="text-[10px] text-muted-foreground font-mono">
-                          ID: {selectedDevice.deviceId}
+                      </div>
+                      <div className="p-2 rounded-xl bg-background border border-muted/20">
+                        <p className="text-[9px] font-bold text-muted-foreground uppercase">Uptime</p>
+                        <p className="text-sm font-bold text-primary">
+                          {Math.floor(selectedDevice.onlineSeconds / 3600)}h {Math.floor((selectedDevice.onlineSeconds % 3600) / 60)}m
                         </p>
                       </div>
                     </div>
-                    <Badge
-                      variant="secondary"
-                      className={cn(
-                        'text-[9px] font-bold',
-                        selectedDeviceOnlineRate !== null &&
-                          selectedDeviceOnlineRate >= 0.9 &&
-                          'bg-emerald-500/10 text-emerald-600',
-                        selectedDeviceOnlineRate !== null &&
-                          selectedDeviceOnlineRate >= 0.5 &&
-                          selectedDeviceOnlineRate < 0.9 &&
-                          'bg-amber-500/10 text-amber-600',
-                        selectedDeviceOnlineRate !== null &&
-                          selectedDeviceOnlineRate < 0.5 &&
-                          'bg-rose-500/10 text-rose-600'
-                      )}
-                    >
-                      {selectedDeviceOnlineRate === null
-                        ? '—'
-                        : selectedDeviceOnlineRate >= 0.9
-                          ? 'EXCELLENT'
-                          : selectedDeviceOnlineRate >= 0.5
-                            ? 'FAIR'
-                            : 'POOR'}
-                    </Badge>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Device Sessions */}
-              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
+              {/* Session History Table */}
+              <Card className="flex-1 rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
                 <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
-                  <CardTitle className="text-xs font-semibold flex items-center gap-2 text-foreground/70">
-                    <Clock className="h-4 w-4 text-emerald-500" />
-                    Session History
+                  <CardTitle className="text-xs font-bold flex items-center gap-2 text-foreground/80">
+                    <Clock className="h-4 w-4 text-primary" />
+                    Connection History
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-0">
+                <CardContent className="p-0 flex-1">
                   {isSessionsLoading ? (
-                    <div className="h-[320px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">
-                      Loading sessions...
+                    <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 italic">
+                      Loading...
                     </div>
                   ) : sessionsData.length === 0 ? (
-                    <div className="h-[320px] flex items-center justify-center text-[10px] font-bold opacity-20">
-                      No sessions recorded in this period
+                    <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
+                      No session history
                     </div>
                   ) : (
-                    <DeviceSessionsTable data={sessionsData} className="h-[400px] border-0 rounded-none" />
+                    <DeviceSessionsTable data={sessionsData} className="h-full border-0 rounded-none min-h-[400px]" />
                   )}
                 </CardContent>
               </Card>
             </>
           ) : (
-            <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none h-full min-h-[400px]">
-              <CardContent className="h-full flex flex-col items-center justify-center text-center opacity-40">
-                <Wifi className="h-12 w-12 mb-3" />
-                <p className="text-sm font-bold uppercase">Select a Device</p>
-                <p className="text-[10px]">Choose a device from the summary to view detailed sessions</p>
-              </CardContent>
-            </Card>
+            <div className="flex-1 flex flex-col items-center justify-center text-center opacity-30 border-2 border-dashed rounded-3xl p-8 bg-muted/5">
+              <MonitorSmartphone className="h-12 w-12 mb-3" />
+              <p className="text-xs font-bold uppercase tracking-widest">Select a Device</p>
+              <p className="text-[10px] mt-1">Select from the summary list to view detailed telemetry</p>
+            </div>
           )}
         </div>
       </div>
