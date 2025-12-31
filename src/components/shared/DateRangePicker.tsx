@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
 import { Calendar as CalendarIcon, ChevronDown, Clock, History } from 'lucide-react';
-import { format, subDays, subHours, startOfDay, endOfDay } from 'date-fns';
+import { format, subDays, subHours, startOfDay, endOfDay, isSameDay } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
+import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { formatInTimeZone } from 'date-fns-tz';
@@ -149,6 +150,48 @@ export function DateRangePicker({
     }
   };
 
+  const selectedRange = useMemo(() => {
+    return {
+      from: new Date(value.from),
+      to: new Date(value.to),
+    };
+  }, [value]);
+
+  const handleCalendarSelect = (range: { from?: Date; to?: Date } | undefined) => {
+    if (!range) return;
+    
+    const nextRange = { ...value };
+    if (range.from) {
+      const currentFrom = new Date(value.from);
+      const nextFrom = range.from;
+      // Keep time if possible
+      if (showTime) {
+        nextFrom.setHours(currentFrom.getHours(), currentFrom.getMinutes(), currentFrom.getSeconds(), currentFrom.getMilliseconds());
+        nextRange.from = nextFrom.toISOString();
+      } else {
+        nextRange.from = format(nextFrom, 'yyyy-MM-dd');
+      }
+    }
+    
+    if (range.to) {
+      const currentTo = new Date(value.to);
+      const nextTo = range.to;
+      if (showTime) {
+        nextTo.setHours(currentTo.getHours(), currentTo.getMinutes(), currentTo.getSeconds(), currentTo.getMilliseconds());
+        nextRange.to = nextTo.toISOString();
+      } else {
+        nextRange.to = format(nextTo, 'yyyy-MM-dd');
+      }
+    } else if (range.from && !range.to) {
+      // If only one date is selected, we might want to set to to same date but end of day
+      if (!showTime) {
+        nextRange.to = format(range.from, 'yyyy-MM-dd');
+      }
+    }
+
+    onChange(nextRange);
+  };
+
   return (
     <div className={cn('grid gap-2', className)}>
       <Popover>
@@ -172,7 +215,7 @@ export function DateRangePicker({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align={align}>
-          <div className="flex flex-col sm:flex-row">
+          <div className="flex flex-col md:flex-row">
             {/* Presets Column */}
             <div className="flex flex-col p-2 bg-muted/20 min-w-[140px] border-r">
               <div className="px-2 py-1.5 mb-1">
@@ -192,43 +235,53 @@ export function DateRangePicker({
               ))}
             </div>
 
-            {/* Custom Input Column */}
-            <div className="p-4 space-y-4 min-w-[260px]">
-              <div className="px-0 py-0 mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Custom Range</span>
-              </div>
+            {/* Calendar Column */}
+            <div className="flex flex-col p-0">
+               <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={selectedRange.from}
+                selected={{
+                  from: selectedRange.from,
+                  to: selectedRange.to,
+                }}
+                onSelect={handleCalendarSelect}
+                numberOfMonths={2}
+                disabled={{ after: new Date() }}
+                className="p-3"
+              />
               
-              <div className="grid gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-muted-foreground flex items-center gap-1.5">
-                    <Clock className="h-3 w-3" /> STARTING FROM
-                  </label>
-                  <input
-                    type={showTime ? 'datetime-local' : 'date'}
-                    value={toLocalInputValue(value.from)}
-                    onChange={(e) => handleInputChange('from', e.target.value)}
-                    className="w-full h-9 bg-muted/30 border border-muted-foreground/10 rounded-md px-3 text-xs font-bold focus:ring-1 focus:ring-primary/20 outline-none transition-all"
-                  />
+              {showTime && (
+                <div className="p-4 pt-0 border-t bg-muted/5 flex flex-col gap-4">
+                  <div className="pt-4 flex items-center justify-between gap-4">
+                    <div className="flex-1 space-y-1.5">
+                       <label className="text-[10px] font-bold text-muted-foreground flex items-center gap-1.5 uppercase">
+                        <Clock className="h-3 w-3" /> Start Time
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={toLocalInputValue(value.from)}
+                        onChange={(e) => handleInputChange('from', e.target.value)}
+                        className="w-full h-8 bg-background border border-muted-foreground/10 rounded-md px-2 text-[11px] font-bold focus:ring-1 focus:ring-primary/20 outline-none transition-all"
+                      />
+                    </div>
+                    <div className="flex-1 space-y-1.5">
+                       <label className="text-[10px] font-bold text-muted-foreground flex items-center gap-1.5 uppercase">
+                        <Clock className="h-3 w-3" /> End Time
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={toLocalInputValue(value.to)}
+                        onChange={(e) => handleInputChange('to', e.target.value)}
+                        className="w-full h-8 bg-background border border-muted-foreground/10 rounded-md px-2 text-[11px] font-bold focus:ring-1 focus:ring-primary/20 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div className="text-[9px] text-muted-foreground italic px-1 flex items-center justify-between">
+                    <span>* Using {timeZone} timezone</span>
+                  </div>
                 </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-muted-foreground flex items-center gap-1.5">
-                    <Clock className="h-3 w-3" /> UNTIL
-                  </label>
-                  <input
-                    type={showTime ? 'datetime-local' : 'date'}
-                    value={toLocalInputValue(value.to)}
-                    onChange={(e) => handleInputChange('to', e.target.value)}
-                    className="w-full h-9 bg-muted/30 border border-muted-foreground/10 rounded-md px-3 text-xs font-bold focus:ring-1 focus:ring-primary/20 outline-none transition-all"
-                  />
-                </div>
-              </div>
-
-              <Separator className="my-2 opacity-50" />
-              
-              <div className="flex items-center justify-between gap-2 text-[9px] text-muted-foreground italic px-1">
-                <span>* Times are in local timezone</span>
-              </div>
+              )}
             </div>
           </div>
         </PopoverContent>
@@ -236,3 +289,4 @@ export function DateRangePicker({
     </div>
   );
 }
+
