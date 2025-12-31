@@ -40,8 +40,9 @@ import type {
 } from '@/types/schedule';
 import { parseScheduleCommandPayloadToUpsert } from './schedulePayload';
 import { ScheduleBindDevicesDialog } from './ScheduleBindDevicesDialog';
-import { ScheduleContentsRuleDialog } from './ScheduleContentsRuleDialog';
-import { ScheduleCommandRuleDialog } from './ScheduleCommandRuleDialog';
+import { ScheduleContentsRuleSheet } from './ScheduleContentsRuleSheet';
+import { ScheduleCommandRuleSheet } from './ScheduleCommandRuleSheet';
+import { ScheduleVisualizer } from '@/components/schedule/ScheduleVisualizer';
 
 function getBffDisplayError(res: { error?: { displayMessage?: string; message?: string } } | null | undefined): string {
   return res?.error?.displayMessage || res?.error?.message || 'Request failed';
@@ -300,6 +301,10 @@ export default function ScheduleDetailPage() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
+          
+          {/* Visualizer */}
+          <ScheduleVisualizer rules={schedule?.contentsRules || []} />
+
           <Card className="border-0 ring-1 ring-foreground/5 shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/10 border-b flex flex-row items-center justify-between gap-3">
               <div>
@@ -549,7 +554,7 @@ export default function ScheduleDetailPage() {
 
       <ScheduleBindDevicesDialog open={bindOpen} onOpenChange={setBindOpen} scheduleId={scheduleId} alreadyBoundDeviceIds={schedule?.boundDeviceIds || []} />
 
-      <ScheduleContentsRuleDialog
+      <ScheduleContentsRuleSheet
         open={contentsDialogOpen}
         onOpenChange={(open) => {
           setContentsDialogOpen(open);
@@ -560,7 +565,7 @@ export default function ScheduleDetailPage() {
         onSave={saveContentsRule}
       />
 
-      <ScheduleCommandRuleDialog
+      <ScheduleCommandRuleSheet
         open={commandDialogOpen}
         onOpenChange={(open) => {
           setCommandDialogOpen(open);

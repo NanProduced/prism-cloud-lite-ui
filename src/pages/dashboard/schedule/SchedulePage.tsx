@@ -5,9 +5,11 @@ import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -197,37 +199,42 @@ export default function SchedulePage() {
       </Card>
 
       <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) { setCreateName('New Schedule'); setCreateDescription(''); setCreateEnabled(true); } }}>
-        <DialogContent className="max-w-[560px]">
+        <DialogContent className="max-w-[560px] p-6">
           <DialogHeader>
             <DialogTitle>Create schedule</DialogTitle>
             <DialogDescription>Create an empty schedule, then configure rules and bind devices.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-6 py-4">
             <div className="space-y-2">
-              <label className="text-xs font-semibold">Name</label>
-              <Input value={createName} onChange={(e) => setCreateName(e.target.value)} />
+              <Label>Name</Label>
+              <Input value={createName} onChange={(e) => setCreateName(e.target.value)} placeholder="e.g. Summer Campaign" />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold">Description</label>
-              <Input value={createDescription} onChange={(e) => setCreateDescription(e.target.value)} />
+              <Label>Description</Label>
+              <Textarea 
+                value={createDescription} 
+                onChange={(e) => setCreateDescription(e.target.value)} 
+                placeholder="Optional description..."
+                className="resize-none h-24"
+              />
             </div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="text-sm font-semibold">Enabled</p>
+            <div className="flex items-center justify-between rounded-lg border p-4 shadow-sm">
+              <div className="space-y-0.5">
+                <Label className="text-base">Enabled</Label>
                 <p className="text-xs text-muted-foreground">Disabled schedules do not take effect on devices.</p>
               </div>
               <Switch checked={createEnabled} onCheckedChange={setCreateEnabled} />
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setCreateOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending} className="gap-2">
-                {createMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : null}
-                Create
-              </Button>
-            </div>
           </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCreateOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending} className="gap-2">
+              {createMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : null}
+              Create
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
