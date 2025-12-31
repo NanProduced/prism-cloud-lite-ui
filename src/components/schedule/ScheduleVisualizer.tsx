@@ -1,5 +1,5 @@
 import { addDays, format, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isWithinInterval, parseISO } from "date-fns"
-import { ChevronLeft, ChevronRight, Clock, Info, AlertTriangle, List, BarChart3, Sun, Volume2, Power, Plug, Thermometer, Trash2, Calendar, CalendarDays } from "lucide-react"
+import { ChevronLeft, ChevronRight, Clock, List, BarChart3, Calendar, CalendarDays } from "lucide-react"
 import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { isDateAllowedByWeekday, formatWeekdaySelection, formatTimeRange, formatDateRange, weekdayBooleanToIndices } from "@/lib/schedule/weekdayUtils"
-import { useSettingsStore } from "@/store/settingsStore"
+import { COMMAND_TYPE_CONFIG, DEFAULT_COMMAND_TYPE_INFO } from "@/lib/schedule/commandConfig"
 
 // Types
 interface ScheduleVisualizerProps {
@@ -305,15 +305,6 @@ function parseTime(t: string) {
   return (h || 0) * 60 + (m || 0)
 }
 
-const COMMAND_TYPE_CONFIG: Record<string, { icon: React.ComponentType<{ className?: string }>; label: string; color: string }> = {
-  BRIGHTNESS: { icon: Sun, label: 'Brightness', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' },
-  VOLUME: { icon: Volume2, label: 'Volume', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
-  POWER: { icon: Power, label: 'Power', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' },
-  INPUT_MODE: { icon: Plug, label: 'Input', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' },
-  COLOR_TEMP: { icon: Thermometer, label: 'Color Temp', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' },
-  CLEAR_CACHE: { icon: Trash2, label: 'Clear Cache', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300' },
-}
-
 // Helper: Normalize time slot keys (backend may use start/start_time/startTime variants)
 function normalizeTimeSlot(slot: Record<string, unknown>): { start: string; end: string } {
   const start = (slot.start || slot.startTime || slot.start_time || '00:00:00') as string
@@ -325,7 +316,6 @@ export function ScheduleVisualizer({ rules, commandRules = [], className }: Sche
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list')
-  const timezone = useSettingsStore((s) => s.preferences.timezone)
 
   // Calendar Grid Generation
   const calendarDays = useMemo(() => {
@@ -494,7 +484,7 @@ export function ScheduleVisualizer({ rules, commandRules = [], className }: Sche
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Commands</h4>
                   <div className="space-y-2">
                     {activeCommands.map((c) => {
-                      const typeInfo = COMMAND_TYPE_CONFIG[c.actionType] || { icon: Info, label: 'Unknown', color: 'bg-gray-100 text-gray-800' }
+                      const typeInfo = COMMAND_TYPE_CONFIG[c.actionType] || DEFAULT_COMMAND_TYPE_INFO
                       const IconComponent = typeInfo.icon
                       return (
                         <div
@@ -616,28 +606,6 @@ export function ScheduleVisualizer({ rules, commandRules = [], className }: Sche
             </div>
           )}
 
-          {/* Timezone & Disclaimer Info */}
-          <div className="mt-4 space-y-2 pt-4 border-t">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" />
-              <span>Displaying in timezone: <span className="font-mono font-medium text-foreground">{timezone}</span></span>
-            </div>
-            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg text-xs flex gap-2">
-              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-              <div className="space-y-1 text-amber-800 dark:text-amber-200">
-                <p className="font-medium">Preview Disclaimer</p>
-                <p className="text-amber-700 dark:text-amber-300">
-                  This is a visual preview based on your settings timezone. Actual device execution depends on each device's configured timezone and may differ.
-                </p>
-              </div>
-            </div>
-            <div className="p-3 bg-muted/30 rounded-lg text-xs text-muted-foreground flex gap-2">
-              <Info className="h-4 w-4 shrink-0" />
-              <p>
-                Higher priority items (e.g. Spot) display on top. Commands shown as yellow markers.
-              </p>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

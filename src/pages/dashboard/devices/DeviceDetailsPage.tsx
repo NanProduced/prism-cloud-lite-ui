@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
@@ -105,7 +105,11 @@ import { formatInTimeZone } from 'date-fns-tz';
 export default function DeviceDetailsPage() {
   const { deviceId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
+
+  // Get return path from navigation state (e.g., from schedule detail page)
+  const returnTo = (location.state as { returnTo?: string })?.returnTo || '/dashboard/devices';
   const { formatRelative, formatDateTime } = useTimeFormatter();
   
   // Live Device Clock state
@@ -533,7 +537,7 @@ export default function DeviceDetailsPage() {
     <div className="flex flex-col items-center justify-center h-[70vh] gap-4">
       <AlertTriangle className="h-12 w-12 text-amber-500" />
       <p className="text-sm font-medium">Device data unavailable</p>
-      <Button variant="outline" onClick={() => navigate("/dashboard/devices")}>Back to devices</Button>
+      <Button variant="outline" onClick={() => navigate(returnTo)}>Back</Button>
     </div>
   );
 
@@ -577,7 +581,7 @@ export default function DeviceDetailsPage() {
                </div>
             </div>
             <div className="flex items-center gap-2">
-               <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard/devices")} className="rounded-xl border h-10 w-10">
+               <Button variant="ghost" size="icon" onClick={() => navigate(returnTo)} className="rounded-xl border h-10 w-10" title={returnTo.includes('schedule') ? 'Back to schedule' : 'Back to devices'}>
                   <ArrowLeft className="h-4 w-4" />
                </Button>
                <TooltipProvider>

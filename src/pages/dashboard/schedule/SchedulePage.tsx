@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CalendarDays, ChevronRight, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { AlertTriangle, CalendarDays, ChevronRight, Plus, RefreshCw, Search, Send, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,7 @@ import {
 import { toast } from '@/store/notificationStore';
 
 import type { ScheduleListResp } from '@/types/schedule';
-import { createSchedule, deleteSchedule, getSchedules, updateSchedule } from '@/services/scheduleApi';
+import { createSchedule, deleteSchedule, getSchedules, pushScheduleToDevices, updateSchedule } from '@/services/scheduleApi';
 import { ScheduleOnboarding } from '@/components/schedule/ScheduleOnboarding';
 
 function getBffDisplayError(res: { error?: { displayMessage?: string; message?: string } } | null | undefined): string {
@@ -105,6 +105,20 @@ export default function SchedulePage() {
     onError: () => toast.error('Delete failed'),
   });
 
+  const pushMutation = useMutation({
+    mutationFn: (scheduleId: string) => pushScheduleToDevices(scheduleId),
+    onSuccess: (res, scheduleId) => {
+      if (!res.success) {
+        toast.error(getBffDisplayError(res));
+        return;
+      }
+      toast.success('Published', {
+        description: `Push command sent to bound devices`,
+      });
+    },
+    onError: () => toast.error('Publish failed'),
+  });
+
   const isLoading = schedulesQuery.isLoading;
 
   return (
@@ -184,6 +198,15 @@ export default function SchedulePage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => pushMutation.mutate(s.scheduleId)}
+                      disabled={s.boundDevices === 0 || pushMutation.isPending}
+                      title={s.boundDevices === 0 ? 'No bound devices' : 'Push to bound devices'}
+                    >
+                      <Send className="h-4 w-4" /> Publish
+                    </Button>
                     <Button variant="outline" onClick={() => navigate(`/dashboard/schedule/${s.scheduleId}`)} className="gap-2">
                       Open <ChevronRight className="h-4 w-4" />
                     </Button>

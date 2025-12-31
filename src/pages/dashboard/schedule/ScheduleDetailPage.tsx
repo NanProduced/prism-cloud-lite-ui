@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, ArrowLeft, Calendar, CalendarDays, Clock, Edit3, Info, Loader2, Plug, Plus, Power, RefreshCw, Send, Sun, Thermometer, Trash2, Unlink2, Volume2 } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { AlertTriangle, ArrowLeft, Calendar, CalendarDays, Clock, Loader2, Plus, RefreshCw, Send, Trash2, Unlink2 } from 'lucide-react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,6 +38,7 @@ import {
   formatDateRange,
   weekdayBooleanToIndices,
 } from '@/lib/schedule/weekdayUtils';
+import { COMMAND_TYPE_CONFIG, DEFAULT_COMMAND_TYPE_INFO } from '@/lib/schedule/commandConfig';
 import type {
   ScheduleBindingDeviceResp,
   ScheduleCommandRuleResp,
@@ -130,14 +131,6 @@ function renderConstraintBadges(parts: RuleSummaryParts): React.ReactNode {
   return <div className="flex flex-wrap items-center gap-1.5">{badges}</div>;
 }
 
-const COMMAND_TYPE_CONFIG: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; color: string }> = {
-  BRIGHTNESS: { label: 'Brightness', icon: Sun, color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' },
-  VOLUME: { label: 'Volume', icon: Volume2, color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
-  POWER: { label: 'Power', icon: Power, color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' },
-  INPUT_MODE: { label: 'Input', icon: Plug, color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' },
-  COLOR_TEMP: { label: 'Color Temp', icon: Thermometer, color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' },
-  CLEAR_CACHE: { label: 'Clear Cache', icon: Trash2, color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300' },
-};
 
 function formatCommandOpTimes(opTimes: string[] | undefined): string {
   if (!opTimes || opTimes.length === 0) return '—';
@@ -218,6 +211,7 @@ function parseCommandRules(
 
 export default function ScheduleDetailPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { scheduleId = '' } = useParams();
 
@@ -383,54 +377,65 @@ export default function ScheduleDetailPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6 pt-2">
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <Button variant="ghost" className="gap-2" onClick={() => navigate('/dashboard/schedule')}>
-              <ArrowLeft className="h-4 w-4" /> Back
-            </Button>
-            <div className="h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
-              <CalendarDays className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold tracking-tight truncate">{schedule?.name || 'Schedule'}</h1>
-              <p className="text-xs text-muted-foreground truncate">
-                Updated {schedule?.updatedAt ? new Date(schedule.updatedAt).toLocaleString() : '—'}
-              </p>
-            </div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <Button variant="ghost" className="gap-2" onClick={() => navigate('/dashboard/schedule')}>
+            <ArrowLeft className="h-4 w-4" /> Back
+          </Button>
+          <div className="h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+            <CalendarDays className="h-5 w-5" />
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => scheduleQuery.refetch()} className="gap-2">
-              <RefreshCw className={cn('h-4 w-4', scheduleQuery.isFetching ? 'animate-spin' : '')} /> Refresh
-            </Button>
-            <Button variant="outline" onClick={openMetaDialog} className="gap-2" disabled={!schedule}>
-              <Edit3 className="h-4 w-4" /> Edit
-            </Button>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={() => pushMutation.mutate()}
-                  className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
-                  disabled={!schedule || pushMutation.isPending || (schedule?.boundDeviceIds?.length ?? 0) === 0}
-                >
-                  {pushMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  Push to Devices
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs">
-                <p className="font-semibold">Notify devices to fetch updates</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Saves are local only. Push sends a command to all bound devices to download the latest schedule configuration.
-                </p>
-              </TooltipContent>
-            </Tooltip>
+          <div className="min-w-0">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={openMetaDialog}
+                className="text-xl font-bold tracking-tight truncate hover:text-primary transition-colors cursor-pointer"
+                title="Click to edit"
+              >
+                {schedule?.name || 'Schedule'}
+              </button>
+              <span className="inline-flex items-center rounded-md bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
+                P:{schedule?.contentsRules?.length ?? 0}
+              </span>
+              <span className="inline-flex items-center rounded-md bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                C:{schedule?.commandRules?.length ?? 0}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground truncate">
+              Updated {schedule?.updatedAt ? new Date(schedule.updatedAt).toLocaleString() : '—'}
+            </p>
           </div>
         </div>
-
-
-        <div className="flex items-center gap-3">
-          <Switch checked={Boolean(schedule?.enabled)} onCheckedChange={(next) => updateMutation.mutate({ enabled: next })} disabled={!schedule} />
-          <span className="text-sm font-semibold">{schedule?.enabled ? 'Enabled' : 'Disabled'}</span>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mr-2 pr-2 border-r">
+            <Switch checked={Boolean(schedule?.enabled)} onCheckedChange={(next) => updateMutation.mutate({ enabled: next })} disabled={!schedule} />
+            <span className="text-sm font-medium">{schedule?.enabled ? 'Enabled' : 'Disabled'}</span>
+          </div>
+          <Button variant="outline" size="icon" onClick={() => scheduleQuery.refetch()} title="Refresh">
+            <RefreshCw className={cn('h-4 w-4', scheduleQuery.isFetching ? 'animate-spin' : '')} />
+          </Button>
+          <Button variant="outline" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteConfirmOpen(true)} disabled={!schedule} title="Delete schedule">
+            <Trash2 className="h-4 w-4" />
+          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => pushMutation.mutate()}
+                className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
+                disabled={!schedule || pushMutation.isPending || (schedule?.boundDeviceIds?.length ?? 0) === 0}
+              >
+                {pushMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Push
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-xs">
+              <p className="font-semibold">Notify devices to fetch updates</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Push sends a command to all bound devices to download the latest schedule configuration.
+              </p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -481,7 +486,7 @@ export default function ScheduleDetailPage() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" onClick={() => navigate(`/dashboard/devices/${b.deviceId}`)}>
+                        <Button variant="outline" onClick={() => navigate(`/dashboard/devices/${b.deviceId}`, { state: { returnTo: location.pathname } })}>
                           Open device
                         </Button>
                         <Button
@@ -499,37 +504,6 @@ export default function ScheduleDetailPage() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <Card className="border-0 ring-1 ring-foreground/5 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-sm font-bold">Rules Summary</CardTitle>
-                <CardDescription className="text-xs">What will be generated into schedules JSON.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Program rules</span>
-                  <span className="font-semibold">{schedule?.contentsRules?.length ?? 0}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Command rules</span>
-                  <span className="font-semibold">{schedule?.commandRules?.length ?? 0}</span>
-                </div>
-                {unparseableCommandRules.length > 0 ? (
-                  <div className="mt-3 rounded-lg border border-yellow-200/60 bg-yellow-50/50 p-3 text-xs text-yellow-900">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 mt-0.5" />
-                      <div>
-                        <p className="font-semibold">Some command rules are not editable</p>
-                        <p className="mt-1 text-yellow-800">
-                          UI cannot reconstruct operation+opTime from payload. To prevent data loss, command editing is disabled until those rules are removed.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
 
         <TabsContent value="programs" className="space-y-4">
@@ -623,6 +597,19 @@ export default function ScheduleDetailPage() {
                 <Plus className="h-4 w-4" /> Add rule
               </Button>
             </CardHeader>
+            {unparseableCommandRules.length > 0 && (
+              <div className="mx-4 mt-4 rounded-lg border border-yellow-200/60 bg-yellow-50/50 dark:bg-yellow-900/10 p-3 text-xs text-yellow-900 dark:text-yellow-200">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold">Some command rules are not editable</p>
+                    <p className="mt-1 text-yellow-800 dark:text-yellow-300">
+                      UI cannot reconstruct operation+opTime from payload. Command editing is disabled until those rules are removed.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             <CardContent className="p-0">
               {(schedule?.commandRules?.length || 0) === 0 ? (
                 <div className="py-12 text-center text-muted-foreground">
@@ -634,7 +621,7 @@ export default function ScheduleDetailPage() {
                   {schedule?.commandRules?.map((r) => {
                     const parsed = parseScheduleCommandPayloadToUpsert(r.payload);
                     const editable = Boolean(parsed) && unparseableCommandRules.length === 0;
-                    const typeInfo = COMMAND_TYPE_CONFIG[parsed?.operation.type || ''] || { label: 'Unknown', icon: Info, color: 'bg-gray-100 text-gray-800' };
+                    const typeInfo = COMMAND_TYPE_CONFIG[parsed?.operation.type || ''] || DEFAULT_COMMAND_TYPE_INFO;
                     const IconComponent = typeInfo.icon;
                     const valueDesc = getCommandValueDescription(parsed);
                     const cmdConstraints = summarizeCommandLimits(parsed);
@@ -700,16 +687,6 @@ export default function ScheduleDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
-
-      <div className="flex items-center justify-between rounded-lg border p-4">
-        <div>
-          <p className="text-sm font-semibold text-destructive">Danger zone</p>
-          <p className="text-xs text-muted-foreground">Delete schedule and its rules (bindings must be removed first in backend).</p>
-        </div>
-        <Button variant="destructive" onClick={() => setDeleteConfirmOpen(true)} disabled={!schedule} className="gap-2">
-          <Trash2 className="h-4 w-4" /> Delete
-        </Button>
-      </div>
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent className="max-w-[520px]">
