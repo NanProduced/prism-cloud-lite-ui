@@ -98,7 +98,7 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
         {/* Media Summary Table */}
         <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
           <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
-            <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
+            <CardTitle className="text-xs font-semibold flex items-center gap-2 text-foreground/70">
               <Film className="h-4 w-4 text-primary" />
               Media Analytics Summary
             </CardTitle>
@@ -160,7 +160,7 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
               {/* Trend Chart */}
               <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none">
                 <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
+                  <CardTitle className="text-xs font-semibold flex items-center gap-2 text-foreground/70">
                     <TrendingUp className="h-4 w-4 text-pink-500" />
                     Playback Trend
                   </CardTitle>
@@ -169,7 +169,7 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
                   <div className="h-[200px]">
                     {isTrendLoading ? (
                       <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 italic">
-                        LOADING TREND...
+                        Loading trend...
                       </div>
                     ) : trendData.length === 0 ? (
                       <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 italic text-center px-8">
@@ -227,7 +227,7 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
               {/* Device Distribution */}
               <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
                 <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
-                  <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
+                  <CardTitle className="text-xs font-semibold flex items-center gap-2 text-foreground/70">
                     <Monitor className="h-4 w-4 text-pink-500" />
                     Device Distribution
                   </CardTitle>
@@ -235,7 +235,7 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
                 <CardContent className="p-0">
                   {isDevicesLoading ? (
                     <div className="h-[150px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">
-                      LOADING DEVICES...
+                      Loading devices...
                     </div>
                   ) : deviceData.length === 0 ? (
                     <div className="h-[150px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">

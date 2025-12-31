@@ -133,7 +133,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
                 <MonitorSmartphone className="h-5 w-5 text-emerald-500" />
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   Fleet Size
                 </p>
                 <p className="text-2xl font-bold tracking-tighter tabular-nums">
@@ -152,7 +152,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
                 <Activity className="h-5 w-5 text-sky-500" />
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   Avg Availability
                 </p>
                 <p className="text-2xl font-bold tracking-tighter tabular-nums">
@@ -171,7 +171,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
                 <Users className="h-5 w-5 text-violet-500" />
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   Peak Concurrency
                 </p>
                 <p className="text-2xl font-bold tracking-tighter tabular-nums">
@@ -188,7 +188,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
         {/* Active Device Count Chart */}
         <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none">
           <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
+            <CardTitle className="text-xs font-semibold flex items-center gap-2 text-foreground/70">
               <TrendingUp className="h-4 w-4 text-emerald-500" />
               Active Device Count
             </CardTitle>
@@ -197,7 +197,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
             <div className="h-[200px]">
               {isActiveCountLoading ? (
                 <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
-                  LOADING...
+                  Loading...
                 </div>
               ) : activeCountData.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
@@ -253,7 +253,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
         {/* Concurrency Chart */}
         <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none">
           <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
+            <CardTitle className="text-xs font-semibold flex items-center gap-2 text-foreground/70">
               <Users className="h-4 w-4 text-violet-500" />
               Concurrency Trend
             </CardTitle>
@@ -262,7 +262,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
             <div className="h-[200px]">
               {isConcurrencyLoading ? (
                 <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
-                  LOADING...
+                  Loading...
                 </div>
               ) : concurrencyData.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
@@ -325,7 +325,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
         {/* Fleet Online Table */}
         <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
           <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
-            <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
+            <CardTitle className="text-xs font-semibold flex items-center gap-2 text-foreground/70">
               <Wifi className="h-4 w-4 text-primary" />
               Online Summary
             </CardTitle>
@@ -333,7 +333,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
           <CardContent className="p-0">
             {isSummaryLoading ? (
               <div className="h-[400px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">
-                LOADING...
+                Loading...
               </div>
             ) : summaryData.length === 0 ? (
               <div className="h-[400px] flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8">
@@ -403,7 +403,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
               {/* Device Sessions */}
               <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
                 <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
-                  <CardTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-foreground/70">
+                  <CardTitle className="text-xs font-semibold flex items-center gap-2 text-foreground/70">
                     <Clock className="h-4 w-4 text-emerald-500" />
                     Session History
                   </CardTitle>
@@ -411,7 +411,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
                 <CardContent className="p-0">
                   {isSessionsLoading ? (
                     <div className="h-[320px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">
-                      LOADING SESSIONS...
+                      Loading sessions...
                     </div>
                   ) : sessionsData.length === 0 ? (
                     <div className="h-[320px] flex items-center justify-center text-[10px] font-bold opacity-20">

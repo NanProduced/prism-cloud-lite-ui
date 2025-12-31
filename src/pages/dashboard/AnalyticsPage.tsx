@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Download, Calendar, Globe, LayoutDashboard, Wifi, PlayCircle } from 'lucide-react';
+import { Download, Calendar, Globe, Wifi, Layers, Film } from 'lucide-react';
 import type { PlaybackBucket } from '@/services/telemetryApi';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { OverviewTab, PlaybackTab, FleetUptimeTab } from './analytics/components';
+import { FleetUptimeTab, ProgramTab, MediaTab } from './analytics/components';
 import type { AnalyticsTab } from './analytics/types';
 import { useSettingsStore } from '@/store/settingsStore';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
@@ -24,7 +24,7 @@ const BUCKETS: { value: PlaybackBucket; label: string }[] = [
 // --- Main Page Component ---
 
 export default function AnalyticsPage() {
-  const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
+  const [activeTab, setActiveTab] = useState<AnalyticsTab>('online-time');
   const { preferences } = useSettingsStore();
   const tz = preferences.timezone || 'UTC';
 
@@ -90,30 +90,30 @@ export default function AnalyticsPage() {
       {/* GLOBAL CONTROLS / TOOLBAR */}
       <div className="flex items-center gap-4 flex-wrap bg-card border rounded-lg p-2 px-4 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-muted/50 rounded-md px-2 py-1">
-            <Calendar className="h-3.5 w-3.5 text-primary" />
-            <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-1.5">
+            <Calendar className="h-4 w-4 text-primary" />
+            <div className="flex items-center gap-1.5">
               <input
                 type="date"
                 value={timeRange.from}
                 onChange={(e) => setTimeRange((prev) => ({ ...prev, from: e.target.value }))}
-                className="bg-transparent border-none p-0 text-[11px] font-bold focus:ring-0 outline-none w-24"
+                className="bg-transparent border-none p-0 text-xs font-semibold focus:ring-0 outline-none w-28"
               />
-              <span className="text-[10px] font-bold opacity-30 px-1">TO</span>
+              <span className="text-xs font-medium text-muted-foreground">to</span>
               <input
                 type="date"
                 value={timeRange.to}
                 onChange={(e) => setTimeRange((prev) => ({ ...prev, to: e.target.value }))}
-                className="bg-transparent border-none p-0 text-[11px] font-bold focus:ring-0 outline-none w-24"
+                className="bg-transparent border-none p-0 text-xs font-semibold focus:ring-0 outline-none w-28"
               />
             </div>
           </div>
-          
+
           <Separator orientation="vertical" className="h-6 mx-1" />
-          
+
           <div className="flex items-center gap-2">
-            <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground">{tz}</span>
+            <Globe className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground">{tz}</span>
           </div>
         </div>
 
@@ -123,7 +123,7 @@ export default function AnalyticsPage() {
               key={b.value}
               variant={bucket === b.value ? 'secondary' : 'ghost'}
               size="sm"
-              className="h-6 text-[9px] font-bold rounded-sm px-2.5"
+              className="h-7 text-xs font-medium rounded-sm px-3"
               onClick={() => setBucket(b.value)}
             >
               {b.label}
@@ -135,9 +135,9 @@ export default function AnalyticsPage() {
           <Button
             variant="default"
             size="sm"
-            className="h-8 rounded-md font-bold text-[10px] uppercase tracking-wider px-4 gap-2"
+            className="h-8 rounded-md font-semibold text-xs px-4 gap-2"
           >
-            <Download className="h-3.5 w-3.5" />
+            <Download className="h-4 w-4" />
             Export Data
           </Button>
         </div>
@@ -150,38 +150,38 @@ export default function AnalyticsPage() {
       >
         <TabsList className="bg-muted/40 p-1 rounded-lg border shadow-inner w-fit h-9">
           <TabsTrigger
-            value="overview"
-            className="rounded-md px-4 text-[10px] font-bold uppercase tracking-wider data-[state=active]:bg-background gap-1.5 h-7"
-          >
-            <LayoutDashboard className="h-3.5 w-3.5" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger
             value="online-time"
-            className="rounded-md px-4 text-[10px] font-bold uppercase tracking-wider data-[state=active]:bg-background gap-1.5 h-7"
+            className="rounded-md px-4 text-xs font-semibold data-[state=active]:bg-background gap-1.5 h-7"
           >
             <Wifi className="h-3.5 w-3.5" />
             Online Time
           </TabsTrigger>
           <TabsTrigger
-            value="playback"
-            className="rounded-md px-4 text-[10px] font-bold uppercase tracking-wider data-[state=active]:bg-background gap-1.5 h-7"
+            value="programs"
+            className="rounded-md px-4 text-xs font-semibold data-[state=active]:bg-background gap-1.5 h-7"
           >
-            <PlayCircle className="h-3.5 w-3.5" />
-            Playback
+            <Layers className="h-3.5 w-3.5" />
+            Programs
+          </TabsTrigger>
+          <TabsTrigger
+            value="media"
+            className="rounded-md px-4 text-xs font-semibold data-[state=active]:bg-background gap-1.5 h-7"
+          >
+            <Film className="h-3.5 w-3.5" />
+            Media
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="overview" className="flex-1 min-h-0 mt-0 overflow-auto pr-1">
-          <OverviewTab from={fromIso} to={toIso} tz={tz} bucket={bucket} deviceMap={deviceMap} />
-        </TabsContent>
 
         <TabsContent value="online-time" className="flex-1 min-h-0 mt-0 overflow-auto pr-1">
           <FleetUptimeTab from={fromIso} to={toIso} tz={tz} bucket={bucket} deviceMap={deviceMap} />
         </TabsContent>
 
-        <TabsContent value="playback" className="flex-1 min-h-0 mt-0 overflow-auto pr-1">
-          <PlaybackTab from={fromIso} to={toIso} tz={tz} bucket={bucket} deviceMap={deviceMap} />
+        <TabsContent value="programs" className="flex-1 min-h-0 mt-0 overflow-auto pr-1">
+          <ProgramTab from={fromIso} to={toIso} tz={tz} bucket={bucket} deviceMap={deviceMap} />
+        </TabsContent>
+
+        <TabsContent value="media" className="flex-1 min-h-0 mt-0 overflow-auto pr-1">
+          <MediaTab from={fromIso} to={toIso} tz={tz} bucket={bucket} deviceMap={deviceMap} />
         </TabsContent>
       </Tabs>
     </div>
