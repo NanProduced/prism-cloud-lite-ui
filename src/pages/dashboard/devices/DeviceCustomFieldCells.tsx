@@ -238,6 +238,10 @@ function CustomFieldFilterPopover({
   const [open, setOpen] = useState(false);
   const type = fieldDef.fieldType;
 
+  // Rules of Hooks: Always call useValue at the top level
+  const rowDataSource = grid?.state?.rowDataSource?.useValue();
+  const rows = grid?.state?.rows?.useValue() || [];
+
   // Enum Options
   const options = useMemo(() => {
     if (type === 'BOOLEAN') return [{ value: 'true', label: 'True' }, { value: 'false', label: 'False' }];
@@ -250,27 +254,48 @@ function CustomFieldFilterPopover({
 
   const [enumSelected, setEnumSelected] = useState<Set<string>>(new Set());
 
-  const rowDataSource = grid.state.rowDataSource?.useValue?.() ?? null;
-  const dataRange = useMemo(() => {
-    if (type !== 'NUMBER') return [0, 100];
+  // Use API and recursive search to get all possible values for the field
+  const allLeafData = useMemo(() => {
+    if (!open) return [];
     
-    let data: any[] = [];
-    if (Array.isArray(rowDataSource)) {
-      data = rowDataSource;
-    } else if (rowDataSource && Array.isArray(rowDataSource.data)) {
-      data = rowDataSource.data;
+    const result: any[] = [];
+    
+    // 1. Try grid API first
+    if (grid.api && typeof grid.api.forEachNode === 'function') {
+      grid.api.forEachNode((node: any) => {
+        if (node.kind === 'leaf' && node.data) result.push(node.data);
+      });
     }
 
-    if (!Array.isArray(data) || data.length === 0) return [0, 100];
+    // 2. Fallback to rowDataSource
+    if (result.length === 0 && rowDataSource) {
+      const raw = (rowDataSource as any)?.state?.data?.get();
+      if (Array.isArray(raw)) result.push(...raw);
+    }
     
-    const vals = data.map(d => {
-       const item = d?.data || d;
-       return Number(item?.customFieldValues?.[fieldDef.fieldKey]);
+    // 3. Fallback to rows
+    if (result.length === 0 && rows.length > 0) {
+      const stack = [...rows];
+      while (stack.length > 0) {
+        const node = stack.pop();
+        if (node?.kind === 'leaf') result.push(node.data);
+        else if (node?.children) stack.push(...node.children);
+      }
+    }
+
+    return result;
+  }, [open, rows, rowDataSource, grid.api]);
+
+  const dataRange = useMemo(() => {
+    if (type !== 'NUMBER' || !open) return [0, 100];
+    
+    const vals = allLeafData.map(d => {
+       return Number(d?.customFieldValues?.[fieldDef.fieldKey]);
     }).filter(v => !Number.isNaN(v));
     
     if (vals.length === 0) return [0, 100];
     return [Math.floor(Math.min(...vals)), Math.ceil(Math.max(...vals))];
-  }, [rowDataSource, type, fieldDef.fieldKey]);
+  }, [allLeafData, type, fieldDef.fieldKey, open]);
 
   const [range, setRange] = useState<[number, number]>(dataRange);
 

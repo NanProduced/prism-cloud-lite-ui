@@ -201,37 +201,70 @@ function FilterPopover({
   const [open, setOpen] = useState(false);
   const [internalSearch, setInternalSearch] = useState('');
 
-  const rowDataSource = grid.state.rowDataSource?.useValue?.() ?? null;
-  const rows = grid.state.rows?.useValue?.() ?? [];
+  // Rules of Hooks: Always call useValue at the top level
+  // We use optional chaining and provide a dummy atom if the real one is missing
+  const filterModel = grid?.state?.filterModel?.useValue() || {};
+  const rows = grid?.state?.rows?.useValue() || [];
+  const rowDataSource = grid?.state?.rowDataSource?.useValue();
+  
+  // Safe way to get data without calling dynamic hooks
+  const rawData = useMemo(() => {
+    if (!rowDataSource) return [];
+    const ds = rowDataSource as any;
+    if (ds.state?.data?.get) {
+      try {
+        return ds.state.data.get() || [];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  }, [rowDataSource]);
 
   const enumOptions = useMemo(() => {
     if (isStatus) return STATUS_OPTIONS;
     if (isNetwork) return NETWORK_OPTIONS;
-    if (isAutoEnum) {
-      let data: any[] = [];
-      if (Array.isArray(rowDataSource)) {
-        data = rowDataSource;
-      } else if (rowDataSource && Array.isArray(rowDataSource.data)) {
-        data = rowDataSource.data;
+    if (isAutoEnum && open) {
+      const values = new Set<string>();
+      
+      // Attempt to get all records via grid API - Safe for grouped data
+      const allLeafData: any[] = [];
+      if (grid.api && typeof (grid.api as any).forEachNode === 'function') {
+        (grid.api as any).forEachNode((node: any) => {
+          if (node.kind === 'leaf' && node.data) {
+            allLeafData.push(node.data);
+          }
+        });
       }
 
-      if (data.length === 0 && Array.isArray(rows)) {
-        data = rows.filter((r: any) => r.kind === 'leaf').map((r: any) => r.data);
-      }
+      // Combine with raw data if API found nothing
+      const sourceData = allLeafData.length > 0 ? allLeafData : rawData;
 
-      if (!Array.isArray(data) || data.length === 0) return [];
+      if (sourceData.length === 0) return [];
 
-      const unique = Array.from(new Set(data.map((d: any) => {
-         const item = d?.data || d;
-         const val = item?.[columnId];
-         if (val == null || val === '') return null;
-         if (columnId === 'resolution' && typeof val === 'object') return `${val.width} x ${val.height}`;
-         return String(val);
-      }))).filter(Boolean).sort();
-      return unique.map(v => ({ value: String(v), label: String(v) }));
+      sourceData.forEach((item: any) => {
+        if (!item) return;
+        let val = item[columnId];
+        
+        // Smart field probing
+        if (columnId === 'playingProgram') {
+          val = val || item.currentProgram?.name || item.playing_program;
+        } else if (columnId === 'resolution') {
+          if (val && typeof val === 'object') {
+            val = `${val.width} x ${val.height}`;
+          }
+        }
+        
+        if (val != null && val !== '' && val !== '—' && val !== '-') {
+          values.add(String(val));
+        }
+      });
+
+      const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+      return Array.from(values).sort(collator.compare).map(v => ({ value: v, label: v }));
     }
-    return null;
-  }, [isStatus, isNetwork, isAutoEnum, rowDataSource, rows, columnId]);
+    return isAutoEnum ? [] : null;
+  }, [open, rows, rawData, columnId, isStatus, isNetwork, isAutoEnum, grid.api]);
 
   const filteredOptions = useMemo(() => {
     if (!enumOptions || !internalSearch) return enumOptions;
@@ -271,9 +304,13 @@ function FilterPopover({
         func: ({ data }: any) => {
           const item = data?.data || data;
           if (isStatus) return selected.includes(resolveDeviceStatus(item));
+          
           let val = item?.[columnId];
-          if (val == null) return false;
+          // Probing same logic as extraction
+          if (columnId === 'playingProgram') val = val || item.currentProgram?.name || item.playing_program;
           if (columnId === 'resolution' && typeof val === 'object') val = `${val.width} x ${val.height}`;
+          
+          if (val == null) return false;
           const sVal = String(val).toLowerCase();
           return selected.some(s => s.toLowerCase() === sVal);
         }

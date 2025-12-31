@@ -30,7 +30,13 @@ import {
   ArrowDown,
   ArrowUp,
   Lock,
-  Settings2
+  Settings2,
+  Link,
+  Mail,
+  Phone,
+  Globe,
+  ChevronDown,
+  ChevronLeft
 } from 'lucide-react';
 import { toast } from '@/store/notificationStore';
 import { useAuthStore } from '@/store/authStore';
@@ -85,7 +91,7 @@ function ColorDot({ color }: { color?: string }) {
 
   return (
     <span
-      className={cn('inline-flex h-4 w-4 rounded-full border', presetClassName ?? 'border-border bg-transparent')}
+      className={cn('inline-flex h-3.5 w-3.5 rounded-full border', presetClassName ?? 'border-border bg-transparent')}
       style={
         isCustomHex && color
           ? {
@@ -119,47 +125,49 @@ function IconPicker({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-8 w-8 rounded-lg hover:bg-muted"
             disabled={disabled}
             aria-label="Pick icon"
           >
-            {Icon ? <Icon className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            {Icon ? <Icon className="h-4 w-4" /> : <Plus className="h-4 w-4 opacity-40" />}
           </Button>
         ) : (
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="justify-start gap-2"
+            className="w-full h-10 justify-between gap-3 bg-muted/20 border-border/50 rounded-lg hover:bg-muted/30 transition-all text-xs font-medium"
             disabled={disabled}
           >
-            {Icon ? <Icon className="h-4 w-4" /> : <Plus className="h-4 w-4 text-muted-foreground" />}
-            {Icon ? 'Icon' : 'Add icon'}
+            <div className="flex items-center gap-2 text-left min-w-0">
+              <div className="p-1.5 rounded-md bg-background shadow-sm ring-1 ring-border/50 shrink-0">
+                {Icon ? <Icon className="h-3.5 w-3.5 text-primary" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground/40" />}
+              </div>
+              <span className={cn("truncate", !Icon && "text-muted-foreground/60")}>
+                {Icon ? "Icon assigned" : "Select icon"}
+              </span>
+            </div>
+            <ChevronDown className="h-3 w-3 opacity-40 shrink-0" />
           </Button>
         )}
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[340px] p-3" onOpenAutoFocus={(e) => e.preventDefault()}>
-        <div className="grid gap-3">
-          <div className="text-xs font-semibold text-muted-foreground">Header icon</div>
-          <div className="grid grid-cols-8 gap-2">
-            <Button
-              type="button"
-              variant={!value ? 'default' : 'outline'}
-              size="icon"
-              className="h-9 w-9"
-              onClick={() => onChange(undefined)}
-              aria-label="No icon"
-              title="No icon"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+      <PopoverContent align="start" className="w-[340px] p-0 shadow-xl border-border rounded-xl overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
+        <div className="flex flex-col">
+          <div className="px-4 py-2.5 bg-muted/30 border-b flex items-center justify-between">
+            <span className="text-xs font-semibold text-foreground/70">Pick a header icon</span>
+            {value && <button onClick={() => onChange(undefined)} className="text-[10px] text-destructive hover:underline font-semibold">Clear</button>}
+          </div>
+          <div className="p-3 grid grid-cols-6 gap-2">
             {TAG_ICON_OPTIONS.map(({ key, Icon: OptionIcon, label }) => (
               <Button
                 key={key}
                 type="button"
-                variant={value === key ? 'default' : 'outline'}
+                variant={value === key ? 'default' : 'ghost'}
                 size="icon"
-                className="h-9 w-9"
+                className={cn(
+                  "h-10 w-10 rounded-lg transition-all",
+                  value === key ? "shadow-md scale-110" : "hover:bg-primary/5 hover:text-primary"
+                )}
                 onClick={() => onChange(key)}
                 aria-label={label}
                 title={label}
@@ -275,12 +283,11 @@ export function DeviceCustomFieldsSheet({
   );
 
   const freeCount = ordered.filter((d) => !d.planTierRequired).length;
-  // User can create if total fields is less than their tier quota
   const canCreate = ordered.length < currentQuota;
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [optionsOpenFor, setOptionsOpenFor] = useState<DeviceCustomFieldDef | null>(null);
+  const [activeView, setActiveView] = useState<'list' | 'create' | 'options'>('list');
+  const [optionsFor, setOptionsFor] = useState<DeviceCustomFieldDef | null>(null);
 
   const [editingFieldId, setEditingFieldId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -293,25 +300,16 @@ export function DeviceCustomFieldsSheet({
   const commitRename = () => {
     const id = editingFieldId;
     if (!id) return;
-
     const currentDef = customFieldDefs.find((d) => d.fieldId === id);
     if (currentDef?.planTierRequired && !isProActive) {
-      toast('Read-only custom field', {
-        description: 'This field requires an active Pro subscription to edit.',
-      });
+      toast('Read-only custom field', { description: 'This field requires an active Pro subscription to edit.' });
       setEditingFieldId(null);
       setEditingName('');
       return;
     }
-
     const name = editingName.trim();
-    if (!name) {
-      toast('Name is required');
-      return;
-    }
-    onCustomFieldDefsChange(
-      customFieldDefs.map((d) => (d.fieldId === id ? { ...d, displayName: name } : d))
-    );
+    if (!name) return;
+    onCustomFieldDefsChange(customFieldDefs.map((d) => (d.fieldId === id ? { ...d, displayName: name } : d)));
     setEditingFieldId(null);
     setEditingName('');
   };
@@ -330,100 +328,8 @@ export function DeviceCustomFieldsSheet({
   };
 
   const handleDelete = (fieldId: number) => {
-    const def = customFieldDefs.find((d) => d.fieldId === fieldId);
-    if (def?.planTierRequired && !isProActive) {
-      toast('Read-only custom field', {
-        description: 'This field requires an active Pro subscription to edit.',
-      });
-      return;
-    }
     onCustomFieldDelete(fieldId);
     toast('Custom field deleted');
-  };
-
-  const createField = (draft: {
-    type: DeviceCustomFieldType;
-    name: string;
-    icon?: string;
-    optionsText?: string;
-  }) => {
-    if (!canCreate) {
-      toast('Quota exceeded', {
-        description: `Your current plan supports up to ${currentQuota} custom fields.`,
-      });
-      return;
-    }
-
-    const displayName = draft.name.trim();
-    if (!displayName) {
-      toast('Name is required');
-      return;
-    }
-
-    const baseKey = slugify(displayName) || `field_${Date.now()}`;
-    let fieldKey = baseKey;
-    let i = 2;
-    while (customFieldDefs.some((d) => d.fieldKey === fieldKey)) {
-      fieldKey = `${baseKey}_${i++}`;
-    }
-
-    const nextSeq = (Math.max(0, ...customFieldDefs.map((d) => d.sequence ?? 0)) + 1) || 1;
-    // planTierRequired is true if it exceeds the FREE quota (3)
-    const planTierRequired = ordered.length >= QUOTAS.FREE;
-
-    const options = (() => {
-      if (draft.type !== 'SELECT' && draft.type !== 'MULTI_SELECT') return undefined;
-      const lines = (draft.optionsText ?? '')
-        .split('\n')
-        .map((l) => l.trim())
-        .filter(Boolean);
-      if (lines.length === 0) return [];
-      const seen = new Set<string>();
-      return lines.map((name, idx) => {
-        const base = slugifyHyphen(name) || `opt-${idx + 1}`;
-        let optionKey = base;
-        let k = 2;
-        while (seen.has(optionKey)) optionKey = `${base}-${k++}`;
-        seen.add(optionKey);
-        const defaultColor = TAG_COLOR_PRESETS[idx % TAG_COLOR_PRESETS.length]?.key;
-        return {
-          optionId: nextId(),
-          optionKey,
-          displayName: name,
-          active: true,
-          sequence: idx + 1,
-          color: defaultColor,
-        } satisfies DeviceCustomFieldOption;
-      });
-    })();
-
-    const def: DeviceCustomFieldDef = {
-      fieldId: nextId(),
-      fieldKey,
-      fieldType: draft.type,
-      displayName,
-      planTierRequired,
-      sequence: nextSeq,
-      icon: draft.icon,
-      options,
-    };
-
-    onCustomFieldCreate(def);
-    setCreateOpen(false);
-    toast('Custom field created');
-  };
-
-  const updateOptions = (fieldId: number, updater: (prev: DeviceCustomFieldOption[]) => DeviceCustomFieldOption[]) => {
-    onCustomFieldDefsChange(
-      customFieldDefs.map((d) => {
-        if (d.fieldId !== fieldId) return d;
-        const nextOptions = updater((d.options ?? []).slice().sort(sortBySequence)).map((o, i) => ({
-          ...o,
-          sequence: i + 1,
-        }));
-        return { ...d, options: nextOptions };
-      }),
-    );
   };
 
   return (
@@ -432,10 +338,8 @@ export function DeviceCustomFieldsSheet({
       onOpenChange={(open) => {
         setDialogOpen(open);
         if (!open) {
-          setCreateOpen(false);
-          setOptionsOpenFor(null);
-          setEditingFieldId(null);
-          setEditingName('');
+          setActiveView('list');
+          setOptionsFor(null);
         }
       }}
     >
@@ -449,269 +353,152 @@ export function DeviceCustomFieldsSheet({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="!w-[min(92vw,64rem)] !max-w-none p-0 overflow-hidden max-h-[78vh]">
-        <div className="flex flex-col max-h-[78vh]">
-          <div className="p-6 pb-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-lg font-semibold">Custom Fields</div>
-                <div className="text-sm text-muted-foreground">
-                  Create typed columns and edit values in Grid like a spreadsheet.
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={isProActive ? 'default' : 'secondary'}>
-                  {isProActive ? 'PRO' : 'FREE'}
-                </Badge>
-                {import.meta.env.DEV && onProActiveChange && (
-                  <div className="flex items-center rounded-md border p-1">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={!isProActive ? 'secondary' : 'ghost'}
-                      className="h-7 px-2 text-xs"
-                      onClick={() => onProActiveChange(false)}
-                    >
-                      Free
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={isProActive ? 'secondary' : 'ghost'}
-                      className="h-7 px-2 text-xs"
-                      onClick={() => onProActiveChange(true)}
-                    >
-                      Pro
-                    </Button>
-                  </div>
-                )}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setDialogOpen(false)}
-                  aria-label="Close"
-                >
-                  <X className="h-4 w-4" />
+      <DialogContent className="!w-[min(92vw,60rem)] !max-w-none p-0 overflow-hidden h-[80vh] max-h-[85vh] rounded-xl border shadow-2xl">
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div className="px-6 py-4 border-b bg-card flex items-center justify-between gap-4 shrink-0">
+            <div className="flex items-center gap-4 min-w-0">
+              {activeView !== 'list' && (
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full -ml-1" onClick={() => setActiveView('list')}>
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
+              )}
+              <div className="space-y-0.5">
+                <DialogTitle className="text-base font-bold tracking-tight">
+                  {activeView === 'list' && "Custom Fields"}
+                  {activeView === 'create' && "Create Field"}
+                  {activeView === 'options' && "Manage Choices"}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground truncate">
+                  {activeView === 'list' && "Manage device metadata and grid columns"}
+                  {activeView === 'create' && "Add a new data dimension to your devices"}
+                  {activeView === 'options' && `Configuring options for ${optionsFor?.displayName}`}
+                </DialogDescription>
               </div>
             </div>
 
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <div className="text-sm text-muted-foreground">
-                Usage:{' '}
-                <span className="font-medium text-foreground">
-                  {ordered.length}
-                </span>
-                /{currentQuota} fields
-              </div>
-              <Button
-                size="sm"
-                className="gap-2"
-                onClick={() => {
-                  if (!canCreate) {
-                    toast(`Upgrade to increase your limit`, {
-                      description: `Current plan limit is ${currentQuota} custom fields.`,
-                    });
-                    return;
-                  }
-                  setCreateOpen(true);
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                Add Field
-              </Button>
+            <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg border bg-muted/30 shrink-0">
+               <div className="text-right leading-none">
+                  <p className="text-[10px] font-bold text-muted-foreground tracking-tight mb-0.5">Usage</p>
+                  <p className="text-xs font-mono font-bold text-foreground">{ordered.length}/{currentQuota}</p>
+               </div>
+               <div className="h-6 w-px bg-border" />
+               <Badge variant={isProActive ? "default" : "secondary"} className={cn("h-5 px-1.5 text-[10px] font-bold uppercase tracking-tight", isProActive && "bg-primary text-primary-foreground")}>
+                 {user?.subscriptionTier || 'FREE'}
+               </Badge>
             </div>
           </div>
 
-          <Separator />
-
-          <ScrollArea className="flex-1">
-            <div className="p-6 pt-4 space-y-3">
-              {ordered.length === 0 && (
-                <div className="text-sm text-muted-foreground py-8 text-center">
-                  No custom fields yet.
+          {/* Body content switches based on activeView */}
+          <div className="flex-1 overflow-hidden relative">
+            {activeView === 'list' && (
+              <div className="flex flex-col h-full">
+                <div className="p-4 px-6 flex items-center justify-between bg-muted/5 border-b shrink-0">
+                   <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                     {ordered.length} active columns
+                   </div>
+                   <Button size="sm" className="gap-2 rounded-lg font-bold text-xs h-8 px-4 shadow-sm" onClick={() => setActiveView('create')} disabled={!canCreate}>
+                      <Plus className="h-3.5 w-3.5" />
+                      Add Field
+                   </Button>
                 </div>
-              )}
-
-              {ordered.map((def) => {
-                const typeLabel = FIELD_TYPES.find((t) => t.value === def.fieldType)?.label ?? def.fieldType;
-                const locked = Boolean(def.planTierRequired && !isProActive);
-                const canManageOptions = def.fieldType === 'SELECT' || def.fieldType === 'MULTI_SELECT';
-                const isEditing = editingFieldId === def.fieldId;
-                const FieldIcon = resolveTagIcon(def.icon);
-
-                return (
-                  <div key={def.fieldId} className="rounded-lg border bg-card p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        {isEditing ? (
-                          <Input
-                            value={editingName}
-                            onChange={(e) => setEditingName(e.target.value)}
-                            onBlur={commitRename}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') commitRename();
-                              if (e.key === 'Escape') {
-                                setEditingFieldId(null);
-                                setEditingName('');
-                              }
-                            }}
-                            autoFocus
-                            className="h-8"
-                          />
-                        ) : (
-                          <button
-                            type="button"
-                            className="text-left w-full"
-                            onDoubleClick={() => {
-                              if (locked) {
-                                toast('Read-only custom field', {
-                                  description: 'This field requires an active Pro subscription to edit.',
-                                });
-                                return;
-                              }
-                              beginRename(def);
-                            }}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              {FieldIcon && (
-                                <FieldIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                              )}
-                              <div className="font-semibold truncate" title={def.displayName}>
-                                {def.displayName}
-                              </div>
-                              {def.planTierRequired && (
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    'text-[10px] px-1 py-0.5',
-                                    locked && 'border-amber-500/50',
-                                  )}
-                                >
-                                  <Lock className="h-3 w-3 mr-1" />
-                                  Pro
-                                </Badge>
-                              )}
-                            </div>
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Badge variant="secondary" className="text-xs">
-                          {typeLabel}
-                        </Badge>
-                        <IconPicker
-                          compact
-                          value={def.icon}
-                          disabled={locked}
-                          onChange={(next) => {
-                            onCustomFieldDefsChange(
-                              customFieldDefs.map((d) => (d.fieldId === def.fieldId ? { ...d, icon: next } : d)),
-                            );
-                          }}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => moveField(def.fieldId, 'up')}
-                          disabled={locked}
-                          aria-label="Move up"
-                          title={locked ? 'Read-only in Free plan' : 'Move up'}
-                        >
-                          <ArrowUp className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => moveField(def.fieldId, 'down')}
-                          disabled={locked}
-                          aria-label="Move down"
-                          title={locked ? 'Read-only in Free plan' : 'Move down'}
-                        >
-                          <ArrowDown className="h-4 w-4" />
-                        </Button>
-                        {canManageOptions && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setOptionsOpenFor(def)}
-                            disabled={locked}
-                            aria-label="Manage options"
-                            title={locked ? 'Read-only in Free plan' : 'Manage options'}
-                          >
-                            <Settings2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-600 hover:text-red-700"
-                          onClick={() => handleDelete(def.fieldId)}
-                          disabled={locked}
-                          aria-label="Delete field"
-                          title={locked ? 'Read-only in Free plan' : 'Delete field'}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {def.description && (
-                      <div className="text-xs text-muted-foreground mt-2">
-                        {def.description}
+                <ScrollArea className="flex-1">
+                  <div className="p-6 space-y-3">
+                    {ordered.length === 0 && (
+                      <div className="text-sm text-muted-foreground py-24 text-center flex flex-col items-center gap-4 opacity-30">
+                        <Settings2 className="h-12 w-12" />
+                        <p className="font-medium">Define your first custom field to start organizing device metadata.</p>
                       </div>
                     )}
-                  </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
+                    {ordered.map((def) => {
+                      const typeLabel = FIELD_TYPES.find((t) => t.value === def.fieldType)?.label ?? def.fieldType;
+                      const locked = Boolean(def.planTierRequired && !isProActive);
+                      const canManageOptions = def.fieldType === 'SELECT' || def.fieldType === 'MULTI_SELECT';
+                      const isEditing = editingFieldId === def.fieldId;
+                      const FieldIcon = resolveTagIcon(def.icon);
 
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Create custom field</DialogTitle>
-                <DialogDescription className="text-muted-foreground">
-                  Field type cannot be changed after creation.
-                </DialogDescription>
-              </DialogHeader>
+                      return (
+                        <div key={def.fieldId} className="group rounded-xl border bg-card p-3 pr-4 hover:border-primary/20 hover:shadow-md transition-all">
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                               {isEditing ? (
+                                 <Input
+                                    value={editingName}
+                                    onChange={(e) => setEditingName(e.target.value)}
+                                    onBlur={commitRename}
+                                    onKeyDown={(e) => e.key === 'Enter' && commitRename()}
+                                    autoFocus
+                                    className="h-8 rounded-md"
+                                 />
+                               ) : (
+                                 <div className="flex items-center gap-4">
+                                    <div className="p-2.5 rounded-lg bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                                       {FieldIcon ? <FieldIcon className="h-4 w-4" /> : <Settings2 className="h-4 w-4" />}
+                                    </div>
+                                    <div className="flex flex-col min-w-0">
+                                       <div className="flex items-center gap-2">
+                                          <span className="font-bold text-sm truncate" onDoubleClick={() => !locked && beginRename(def)}>{def.displayName}</span>
+                                          {def.planTierRequired && <Badge variant="outline" className="text-[9px] h-4 font-bold border-indigo-200 text-indigo-600 bg-indigo-50/50">PRO</Badge>}
+                                       </div>
+                                       <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-tighter">{typeLabel}</span>
+                                    </div>
+                                 </div>
+                               )}
+                            </div>
+
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                               <IconPicker compact value={def.icon} disabled={locked} onChange={(next) => onCustomFieldDefsChange(customFieldDefs.map((d) => (d.fieldId === def.fieldId ? { ...d, icon: next } : d)))} />
+                               <div className="w-px h-3 bg-border mx-2" />
+                               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => moveField(def.fieldId, 'up')} disabled={locked}><ArrowUp className="h-3.5 w-3.5" /></Button>
+                               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => moveField(def.fieldId, 'down')} disabled={locked}><ArrowDown className="h-3.5 w-3.5" /></Button>
+                               {canManageOptions && (
+                                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-primary hover:bg-primary/5" onClick={() => { setOptionsFor(def); setActiveView('options'); }} disabled={locked}><List className="h-4 w-4" /></Button>
+                               )}
+                               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive" onClick={() => handleDelete(def.fieldId)} disabled={locked}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+
+            {activeView === 'create' && (
               <CreateFieldForm
                 isProActive={isProActive}
                 freeCount={freeCount}
-                onCancel={() => setCreateOpen(false)}
-                onCreate={createField}
+                onCancel={() => setActiveView('list')}
+                onCreate={(draft) => {
+                  onCustomFieldCreate({
+                    fieldId: nextId(),
+                    fieldKey: slugify(draft.name) || `field_${Date.now()}`,
+                    fieldType: draft.type,
+                    displayName: draft.name,
+                    planTierRequired: ordered.length >= QUOTAS.FREE,
+                    sequence: (Math.max(0, ...customFieldDefs.map((d) => d.sequence ?? 0)) + 1) || 1,
+                    icon: draft.icon,
+                    options: draft.options,
+                  });
+                  setActiveView('list');
+                  toast('Custom field created');
+                }}
               />
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={optionsOpenFor != null} onOpenChange={(open) => setOptionsOpenFor(open ? optionsOpenFor : null)}>
-            {optionsOpenFor && (
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Options · {optionsOpenFor.displayName}</DialogTitle>
-                  <DialogDescription className="text-muted-foreground">
-                    Rename, reorder, deactivate, and color options.
-                  </DialogDescription>
-                </DialogHeader>
-                <OptionsEditor
-                  field={optionsOpenFor}
-                  locked={Boolean(optionsOpenFor.planTierRequired && !isProActive)}
-                  onClose={() => setOptionsOpenFor(null)}
-                  onOptionsChange={(next) => updateOptions(optionsOpenFor.fieldId, () => next)}
-                />
-              </DialogContent>
             )}
-          </Dialog>
+
+            {activeView === 'options' && optionsFor && (
+               <OptionsEditor
+                 field={optionsFor}
+                 locked={Boolean(optionsFor.planTierRequired && !isProActive)}
+                 onClose={() => setActiveView('list')}
+                 onOptionsChange={(next) => {
+                   onCustomFieldDefsChange(customFieldDefs.map(d => d.fieldId === optionsFor.fieldId ? { ...d, options: next } : d));
+                   setActiveView('list');
+                 }}
+               />
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -727,87 +514,152 @@ function CreateFieldForm({
   isProActive: boolean;
   freeCount: number;
   onCancel: () => void;
-  onCreate: (draft: { type: DeviceCustomFieldType; name: string; icon?: string; optionsText?: string }) => void;
+  onCreate: (draft: { type: DeviceCustomFieldType; name: string; icon?: string; options?: DeviceCustomFieldOption[] }) => void;
 }) {
   const [type, setType] = useState<DeviceCustomFieldType>('TEXT');
   const [name, setName] = useState('');
   const [icon, setIcon] = useState<string | undefined>(undefined);
-  const [optionsText, setOptionsText] = useState('');
+  
+  const [options, setOptions] = useState<DeviceCustomFieldOption[]>([]);
+  const [newOptionName, setNewOptionName] = useState('');
 
   const needsOptions = type === 'SELECT' || type === 'MULTI_SELECT';
-  const willBeProLocked = freeCount >= QUOTAS.FREE;
+
+  const typeIcons: Record<DeviceCustomFieldType, any> = {
+    TEXT: Type,
+    NUMBER: Hash,
+    DATETIME: CalendarIcon,
+    BOOLEAN: CheckSquare,
+    SELECT: List,
+    MULTI_SELECT: List,
+    URL: Link,
+    EMAIL: Mail,
+    PHONE: Phone,
+    COUNTRY: Globe,
+  };
+
+  const addOption = () => {
+    const val = newOptionName.trim();
+    if (!val) return;
+    if (options.some(o => o.displayName.toLowerCase() === val.toLowerCase())) {
+      toast('Option already exists');
+      return;
+    }
+    const next: DeviceCustomFieldOption = {
+      optionId: nextId(),
+      optionKey: slugifyHyphen(val) || `opt-${options.length + 1}`,
+      displayName: val,
+      active: true,
+      sequence: options.length + 1,
+      color: TAG_COLOR_PRESETS[options.length % TAG_COLOR_PRESETS.length]?.key,
+    };
+    setOptions([...options, next]);
+    setNewOptionName('');
+  };
 
   return (
-    <div className="grid gap-4">
-      <div className="grid gap-2">
-        <div className="text-sm font-medium">Type</div>
-        <div className="grid grid-cols-2 gap-2">
-          {FIELD_TYPES.map((t) => (
-            <Button
-              key={t.value}
-              type="button"
-              variant={type === t.value ? 'default' : 'outline'}
-              size="sm"
-              className="justify-start"
-              onClick={() => setType(t.value)}
-            >
-              {t.label}
-            </Button>
-          ))}
-        </div>
-      </div>
+    <div className="flex flex-col h-full">
+      <ScrollArea className="flex-1">
+        <div className="p-8 space-y-10 max-w-4xl mx-auto">
+          {/* Step 1 */}
+          <section className="space-y-4">
+            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider pl-1">1. Choose format</h3>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {FIELD_TYPES.map((t) => {
+                const Icon = typeIcons[t.value] || Type;
+                const isSelected = type === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setType(t.value)}
+                    className={cn(
+                      "flex flex-col items-center gap-3 p-4 rounded-xl border transition-all duration-200",
+                      isSelected 
+                        ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm" 
+                        : "border-border bg-card hover:border-muted-foreground/40 hover:bg-muted/30"
+                    )}
+                  >
+                    <div className={cn(
+                      "p-2 rounded-lg transition-colors",
+                      isSelected ? "bg-primary text-primary-foreground shadow-md" : "bg-muted text-muted-foreground"
+                    )}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <span className={cn("text-[11px] font-bold", isSelected ? "text-primary" : "text-foreground/70")}>{t.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
 
-      <div className="grid gap-2">
-        <div className="text-sm font-medium">Name</div>
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Pricing Tier" />
-      </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
+            {/* Step 2 */}
+            <section className="space-y-6">
+               <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider pl-1">2. Identity</h3>
+               <div className="space-y-5">
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-bold text-foreground/80 px-1">Display name</p>
+                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Asset category" className="h-11 rounded-xl shadow-sm border-muted-foreground/20" />
+                  </div>
+                  <div className="space-y-2">
+                     <p className="text-[11px] font-bold text-foreground/80 px-1">Column icon</p>
+                     <IconPicker value={icon} onChange={setIcon} />
+                  </div>
+               </div>
+            </section>
 
-      <div className="grid gap-2">
-        <div className="text-sm font-medium">Header icon (optional)</div>
-        <IconPicker value={icon} onChange={setIcon} />
-      </div>
+            {/* Step 3 */}
+            {needsOptions && (
+              <section className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider pl-1">3. Choices</h3>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Input
+                      value={newOptionName}
+                      onChange={(e) => setNewOptionName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addOption())}
+                      placeholder="Type and hit Enter..."
+                      className="h-11 rounded-xl"
+                    />
+                    <Button type="button" onClick={addOption} className="h-11 px-5 font-bold shadow-md">Add</Button>
+                  </div>
+                  <div className="rounded-2xl border bg-muted/10 overflow-hidden shadow-inner">
+                    <ScrollArea className="h-[240px]">
+                      <div className="p-1.5 space-y-1">
+                        {options.length === 0 ? (
+                          <div className="py-20 text-center text-xs text-muted-foreground italic opacity-50">No choices added yet</div>
+                        ) : (
+                          options.map((opt, idx) => (
+                            <div key={opt.optionId} className="flex items-center justify-between gap-3 p-2.5 px-4 rounded-xl bg-background border shadow-sm group">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <ColorDot color={opt.color} />
+                                <span className="text-sm font-bold truncate">{opt.displayName}</span>
+                              </div>
+                              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => setOptions(options.filter((_, i) => i !== idx))}><X className="h-4 w-4" /></Button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </div>
+              </section>
+            )}
+          </div>
+        </div>
+      </ScrollArea>
 
-      {needsOptions && (
-        <div className="grid gap-2">
-          <div className="text-sm font-medium">Options (one per line)</div>
-          <textarea
-            value={optionsText}
-            onChange={(e) => setOptionsText(e.target.value)}
-            className="min-h-28 w-full rounded-md border bg-background px-3 py-2 text-sm"
-            placeholder={'Option A\nOption B\nOption C'}
-          />
-        </div>
-      )}
-
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-xs text-muted-foreground">
-          {isProActive ? (
-            willBeProLocked ? (
-              <span className="inline-flex items-center gap-1">
-                <Lock className="h-3.5 w-3.5" />
-                This field will become read-only when Pro expires.
-              </span>
-            ) : (
-              `Counts towards the ${QUOTAS.FREE} editable fields quota.`
-            )
-          ) : (
-            `Free plan supports up to ${QUOTAS.FREE} editable fields.`
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button type="button" variant="ghost" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            onClick={() =>
-              onCreate({ type, name, icon, optionsText: needsOptions ? optionsText : undefined })
-            }
-          >
-            Create
-          </Button>
-        </div>
-      </div>
+      <footer className="px-8 py-5 border-t bg-muted/5 flex items-center justify-end gap-3 shrink-0">
+        <Button variant="ghost" onClick={onCancel} className="h-11 px-6 font-bold text-xs uppercase tracking-widest text-muted-foreground">Discard</Button>
+        <Button
+          onClick={() => onCreate({ type, name, icon, options: needsOptions ? options : undefined })}
+          disabled={!name.trim() || (needsOptions && options.length === 0)}
+          className="h-11 px-10 font-bold text-xs uppercase tracking-widest shadow-xl shadow-primary/20"
+        >
+          Create field
+        </Button>
+      </footer>
     </div>
   );
 }
@@ -823,158 +675,73 @@ function OptionsEditor({
   onClose: () => void;
   onOptionsChange: (next: DeviceCustomFieldOption[]) => void;
 }) {
-  const [drafts, setDrafts] = useState<DeviceCustomFieldOption[]>(
-    (field.options ?? []).slice().sort(sortBySequence)
-  );
+  const [drafts, setDrafts] = useState<DeviceCustomFieldOption[]>( (field.options ?? []).slice().sort(sortBySequence) );
   const [newOptionName, setNewOptionName] = useState('');
 
   const addOption = () => {
     if (locked) return;
     const name = newOptionName.trim();
-    if (!name) return;
-    const base = slugifyHyphen(name) || `opt-${drafts.length + 1}`;
-    let optionKey = base;
-    let i = 2;
-    while (drafts.some((o) => o.optionKey === optionKey)) optionKey = `${base}-${i++}`;
+    if (!name || drafts.some(o => o.displayName.toLowerCase() === name.toLowerCase())) return;
     const next: DeviceCustomFieldOption = {
       optionId: nextId(),
-      optionKey,
+      optionKey: slugifyHyphen(name) || `opt-${drafts.length + 1}`,
       displayName: name,
       active: true,
       sequence: drafts.length + 1,
       color: TAG_COLOR_PRESETS[drafts.length % TAG_COLOR_PRESETS.length]?.key,
     };
-    setDrafts((prev) => [...prev, next]);
+    setDrafts([...drafts, next]);
     setNewOptionName('');
   };
 
-  const move = (optionKey: string, dir: 'up' | 'down') => {
-    const idx = drafts.findIndex((o) => o.optionKey === optionKey);
-    if (idx < 0) return;
-    const swap = dir === 'up' ? idx - 1 : idx + 1;
-    if (swap < 0 || swap >= drafts.length) return;
-    const next = drafts.slice();
-    const tmp = next[idx]!;
-    next[idx] = next[swap]!;
-    next[swap] = tmp;
-    setDrafts(next);
-  };
-
   return (
-    <div className="grid gap-4">
-      <div className="grid gap-2">
-        <div className="flex items-center gap-2">
-          <Input
-            value={newOptionName}
-            onChange={(e) => setNewOptionName(e.target.value)}
-            placeholder="Add option…"
-            disabled={locked}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') addOption();
-            }}
-          />
-          <Button type="button" onClick={addOption} className="gap-2" disabled={locked}>
-            <Plus className="h-4 w-4" />
-            Add
-          </Button>
-        </div>
-        <div className="text-xs text-muted-foreground">
-          Tip: Deactivate an option instead of deleting, to keep historical values readable.
-        </div>
-      </div>
+    <div className="flex flex-col h-full">
+      <ScrollArea className="flex-1">
+        <div className="p-8 space-y-8 max-w-2xl mx-auto">
+          <div className="space-y-4 p-6 rounded-2xl border bg-muted/20 shadow-inner">
+            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1">Add new choice</h4>
+            <div className="flex gap-2">
+              <Input value={newOptionName} onChange={(e) => setNewOptionName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addOption()} placeholder="e.g. Standard" className="h-12 bg-background rounded-xl font-bold" />
+              <Button onClick={addOption} className="h-12 px-6 font-bold shadow-lg" disabled={locked}>Add</Button>
+            </div>
+          </div>
 
-      <ScrollArea className="h-[360px] rounded-md border">
-        <div className="p-3 space-y-2">
-          {drafts.length === 0 && (
-            <div className="text-sm text-muted-foreground py-6 text-center">
-              No options yet.
+          <div className="rounded-2xl border bg-card overflow-hidden shadow-sm">
+            <div className="p-2 space-y-1">
+              {drafts.length === 0 ? (
+                <div className="py-24 text-center text-xs text-muted-foreground opacity-40 italic">No options defined</div>
+              ) : (
+                drafts.map((o, idx) => (
+                  <div key={o.optionKey} className="group flex items-center gap-4 p-3 px-4 rounded-xl hover:bg-muted/30 transition-all border border-transparent hover:border-border">
+                    <div className="flex flex-col gap-0.5">
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
+                        const next = [...drafts];
+                        if (idx > 0) { [next[idx], next[idx-1]] = [next[idx-1], next[idx]]; setDrafts(next); }
+                      }} disabled={locked}><ArrowUp className="h-3 w-3" /></Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
+                        const next = [...drafts];
+                        if (idx < next.length - 1) { [next[idx], next[idx+1]] = [next[idx+1], next[idx]]; setDrafts(next); }
+                      }} disabled={locked}><ArrowDown className="h-3 w-3" /></Button>
+                    </div>
+                    <Input value={o.displayName} disabled={locked} onChange={(e) => setDrafts(drafts.map((x, i) => i === idx ? { ...x, displayName: e.target.value } : x))} className="flex-1 h-10 bg-transparent border-transparent focus-visible:bg-background focus-visible:border-border font-bold text-sm rounded-lg" />
+                    <OptionColorPicker value={o.color} disabled={locked} onChange={(color) => setDrafts(drafts.map((x, i) => i === idx ? { ...x, color } : x))} />
+                    <button type="button" className={cn("px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase transition-all", o.active ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-muted text-muted-foreground grayscale")} onClick={() => !locked && setDrafts(drafts.map((x, i) => i === idx ? { ...x, active: !x.active } : x))}>{o.active ? "Active" : "Hidden"}</button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => setDrafts(drafts.filter((_, i) => i !== idx))} disabled={locked}><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+                ))
+              )}
             </div>
-          )}
-          {drafts.map((o) => (
-            <div key={o.optionKey} className="flex items-center gap-2 rounded-md border p-2">
-              <div className="min-w-0 flex-1">
-                <Input
-                  value={o.displayName}
-                  disabled={locked}
-                  onChange={(e) => {
-                    const name = e.target.value;
-                    setDrafts((prev) =>
-                      prev.map((x) => (x.optionKey === o.optionKey ? { ...x, displayName: name } : x))
-                    );
-                  }}
-                  className="h-8"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <OptionColorPicker
-                  value={o.color}
-                  disabled={locked}
-                  onChange={(color) => {
-                    setDrafts((prev) =>
-                      prev.map((x) => (x.optionKey === o.optionKey ? { ...x, color } : x)),
-                    );
-                  }}
-                />
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={o.active}
-                    disabled={locked}
-                    onChange={(e) => {
-                      const active = e.target.checked;
-                      setDrafts((prev) =>
-                        prev.map((x) => (x.optionKey === o.optionKey ? { ...x, active } : x))
-                      );
-                    }}
-                  />
-                  Active
-                </label>
-                <div className="flex flex-col">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => move(o.optionKey, 'up')}
-                    disabled={locked}
-                    aria-label="Move up"
-                  >
-                    <ArrowUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => move(o.optionKey, 'down')}
-                    disabled={locked}
-                    aria-label="Move down"
-                  >
-                    <ArrowDown className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
+          </div>
         </div>
       </ScrollArea>
 
-      <div className="flex items-center justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={onClose}>
-          Close
-        </Button>
-        <Button
-          type="button"
-          onClick={() => {
-            onOptionsChange(drafts.map((o, i) => ({ ...o, sequence: i + 1 })));
-            toast('Options updated');
-            onClose();
-          }}
-          disabled={locked}
-        >
-          Save
-        </Button>
-      </div>
+      <footer className="px-8 py-5 border-t bg-muted/5 flex items-center justify-between shrink-0">
+        <p className="text-xs font-bold text-muted-foreground italic">{drafts.length} options configured</p>
+        <div className="flex gap-3">
+          <Button variant="ghost" onClick={onClose} className="h-11 px-6 font-bold text-xs uppercase tracking-widest text-muted-foreground">Cancel</Button>
+          <Button className="h-11 px-10 font-bold text-xs uppercase tracking-widest shadow-xl shadow-primary/20" onClick={() => { onOptionsChange(drafts.map((o, i) => ({ ...o, sequence: i + 1 }))); toast('Options updated'); onClose(); }} disabled={locked}>Save changes</Button>
+        </div>
+      </footer>
     </div>
   );
 }

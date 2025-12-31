@@ -7,8 +7,6 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -124,32 +122,32 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
   return (
     <div className={cn('flex flex-col gap-6', className)}>
       {/* Top Section: Global KPIs and Trends */}
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
-        {/* KPI Summary - Compact */}
-        <div className="xl:col-span-1 grid grid-cols-1 gap-4">
-          <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm bg-background/50 backdrop-blur-sm overflow-hidden">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-emerald-500/10">
-                  <MonitorSmartphone className="h-4 w-4 text-emerald-500" />
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        {/* KPI Summary - Compact Vertical Stack */}
+        <div className="xl:col-span-3 grid grid-cols-1 gap-4">
+          <Card className="rounded-3xl border-none ring-1 ring-muted/60 shadow-sm bg-background/40 backdrop-blur-md overflow-hidden transition-all hover:ring-primary/20">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-600 shadow-inner">
+                  <MonitorSmartphone className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Fleet Size</p>
-                  <p className="text-xl font-bold tracking-tight tabular-nums">{kpis.totalDevices}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Total Fleet</p>
+                  <p className="text-2xl font-black tracking-tighter tabular-nums">{kpis.totalDevices}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm bg-background/50 backdrop-blur-sm overflow-hidden">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-sky-500/10">
-                  <Activity className="h-4 w-4 text-sky-500" />
+          <Card className="rounded-3xl border-none ring-1 ring-muted/60 shadow-sm bg-background/40 backdrop-blur-md overflow-hidden transition-all hover:ring-primary/20">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-2xl bg-sky-500/10 text-sky-600 shadow-inner">
+                  <Activity className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Avg Availability</p>
-                  <p className="text-xl font-bold tracking-tight tabular-nums">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Availability</p>
+                  <p className="text-2xl font-black tracking-tighter tabular-nums text-sky-600">
                     {kpis.avgOnlineRate === null ? '—' : `${Math.round(kpis.avgOnlineRate * 100)}%`}
                   </p>
                 </div>
@@ -158,54 +156,55 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
           </Card>
         </div>
 
-        {/* Global Trends - Compact */}
-        <Card className="xl:col-span-3 rounded-2xl border-none ring-1 ring-muted shadow-sm bg-background/50 backdrop-blur-sm overflow-hidden">
-          <CardHeader className="p-4 pb-0 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-              Fleet Availability & Concurrency
+        {/* Global Trends - More prominent */}
+        <Card className="xl:col-span-9 rounded-3xl border-none ring-1 ring-muted/60 shadow-sm bg-background/40 backdrop-blur-md overflow-hidden">
+          <CardHeader className="p-6 pb-2 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 flex items-center gap-2.5">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              Real-time Fleet Activity
             </CardTitle>
+            <div className="flex items-center gap-4">
+               <div className="flex items-center gap-1.5">
+                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <span className="text-[10px] font-bold text-muted-foreground">Active Devices</span>
+               </div>
+            </div>
           </CardHeader>
-          <CardContent className="p-4 pt-2">
-            <div className="h-[120px]">
+          <CardContent className="p-6 pt-2">
+            <div className="h-[140px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={activeCountData}>
                   <defs>
                     <linearGradient id="colorActiveCount" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.4} />
                   <XAxis
                     dataKey="bucketStart"
                     fontSize={9}
                     tickFormatter={(val) => {
                       try {
                         return formatInTimeZone(new Date(val), tz, bucket === 'HOUR' ? 'HH:mm' : 'MMM d');
-                      } catch {
-                        return val;
-                      }
+                      } catch { return val; }
                     }}
                     tickLine={false}
                     axisLine={false}
+                    dy={10}
                   />
                   <YAxis fontSize={9} tickLine={false} axisLine={false} />
                   <Tooltip
                     labelFormatter={(val) => formatDateTime(val)}
-                    contentStyle={{
-                      borderRadius: '12px',
-                      border: 'none',
-                      boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                      fontSize: '10px',
-                    }}
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold' }}
                   />
                   <Area
                     type="monotone"
                     dataKey="activeDevices"
-                    stroke="#10b981"
-                    strokeWidth={2}
+                    stroke="#6366f1"
+                    strokeWidth={3}
                     fill="url(#colorActiveCount)"
+                    animationDuration={1000}
                   />
                 </AreaChart>
               </ResponsiveContainer>

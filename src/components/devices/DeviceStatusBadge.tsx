@@ -78,25 +78,15 @@ export function DeviceStatusBadge({
         <span className={config.color}>{config.label}</span>
       </Badge>
 
-      {isOnline && powerStatus !== undefined && powerStatus !== null && (
+      {isOnline && powerStatus === 0 && (
         <Badge
           variant="outline"
           className={cn(
-            'flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-300',
-            powerStatus === 1 ? 'bg-emerald-500/5 text-emerald-600 border-emerald-500/20' : 'bg-blue-500/5 text-blue-600 border-blue-500/20'
+            'flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-300 bg-blue-500/5 text-blue-600 border-blue-500/20'
           )}
         >
-          {powerStatus === 1 ? (
-            <>
-              <Power className="h-3 w-3" />
-              <span>Awake</span>
-            </>
-          ) : (
-            <>
-              <Moon className="h-3 w-3" />
-              <span>Sleep</span>
-            </>
-          )}
+          <Moon className="h-3 w-3" />
+          <span>Sleep</span>
         </Badge>
       )}
     </div>
