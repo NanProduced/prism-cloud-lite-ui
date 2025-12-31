@@ -3,8 +3,8 @@ import type { MediaAssetNode } from '@/types/media-library';
 import type { VsnDocument, VsnItem, VsnPage, VsnProgram, VsnRect, VsnRegion } from './types';
 
 export const DEFAULT_BG_COLOR = '0xFF000000';
-export const DEFAULT_BORDER_COLOR = '#000000';
-export const DEFAULT_TEXT_COLOR = '#ffffff';
+export const DEFAULT_BORDER_COLOR = '0xFF000000';
+export const DEFAULT_TEXT_COLOR = '0xFFFFFFFF';
 
 export const DEFAULT_ALPHA = '1.000000';
 export const DEFAULT_PLAY_TIMES = '1';
@@ -127,9 +127,9 @@ export function createItemFromMedia(asset: MediaAssetNode, input: { materialId: 
   }
 
   // Unsupported assets fall back to a text placeholder so the editor remains usable.
-  const durationMs = 8_000;
   return {
     Type: '4',
+    backcolor: '0x00000000',
     Duration: String(durationMs),
     PlayLength: String(durationMs),
     PlayTimes: DEFAULT_PLAY_TIMES,
@@ -149,6 +149,7 @@ export function createTextItem(input?: { durationMs?: number; text?: string }): 
   const durationMs = Math.max(1, input?.durationMs ?? 8_000);
   return {
     Type: '4',
+    backcolor: '0x00000000',
     Duration: String(durationMs),
     PlayLength: String(durationMs),
     PlayTimes: DEFAULT_PLAY_TIMES,

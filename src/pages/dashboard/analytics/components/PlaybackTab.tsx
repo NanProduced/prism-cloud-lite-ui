@@ -11,10 +11,11 @@ interface PlaybackTabProps {
   to: string;
   tz: string;
   bucket: PlaybackBucket;
+  deviceMap?: Record<string, string>;
   className?: string;
 }
 
-export function PlaybackTab({ from, to, tz, bucket, className }: PlaybackTabProps) {
+export function PlaybackTab({ from, to, tz, bucket, deviceMap, className }: PlaybackTabProps) {
   const [activeSubTab, setActiveSubTab] = useState<'program' | 'media'>('program');
 
   return (
@@ -44,11 +45,11 @@ export function PlaybackTab({ from, to, tz, bucket, className }: PlaybackTabProp
         </div>
 
         <TabsContent value="program" className="mt-0 outline-none">
-          <ProgramTab from={from} to={to} tz={tz} bucket={bucket} />
+          <ProgramTab from={from} to={to} tz={tz} bucket={bucket} deviceMap={deviceMap} />
         </TabsContent>
 
         <TabsContent value="media" className="mt-0 outline-none">
-          <MediaTab from={from} to={to} tz={tz} bucket={bucket} />
+          <MediaTab from={from} to={to} tz={tz} bucket={bucket} deviceMap={deviceMap} />
         </TabsContent>
       </Tabs>
     </div>

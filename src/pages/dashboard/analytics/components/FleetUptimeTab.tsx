@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Wifi, Activity, Users, Clock, TrendingUp, MonitorSmartphone } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,7 +23,6 @@ import {
   getDeviceSessions,
   type PlaybackBucket,
 } from '@/services/telemetryApi';
-import { getDevices } from '@/services/deviceApi';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { FleetOnlineTable } from './FleetOnlineTable';
 import { DeviceSessionsTable } from './DeviceSessionsTable';
@@ -34,26 +33,14 @@ interface FleetUptimeTabProps {
   to: string;
   tz: string;
   bucket: PlaybackBucket;
+  deviceMap?: Record<string, string>;
   className?: string;
 }
 
-export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeTabProps) {
+export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: FleetUptimeTabProps) {
   const { formatDateTime } = useTimeFormatter();
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
-
-  // Query for device mapping
-  const { data: devicesRes } = useQuery({
-    queryKey: ['devices', 'list'],
-    queryFn: () => getDevices(),
-  });
-
-  const deviceMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    devicesRes?.data?.forEach((d) => {
-      map[String(d.deviceId)] = d.deviceName;
-    });
-    return map;
-  }, [devicesRes]);
+  const resolvedDeviceMap = deviceMap ?? {};
 
   // Query for fleet online summary
   const { data: summaryRes, isLoading: isSummaryLoading } = useQuery({
@@ -104,7 +91,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
   }, [sessionsRes, selectedDeviceId]);
 
   // Auto-select first device
-  useMemo(() => {
+  useEffect(() => {
     if (!selectedDeviceId && summaryData.length > 0) {
       setSelectedDeviceId(summaryData[0].deviceId);
     }
@@ -113,10 +100,14 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
   // KPI calculations
   const kpis = useMemo(() => {
     if (summaryData.length === 0) {
-      return { totalDevices: 0, avgOnlineRate: 0, peakConcurrent: 0 };
+      return { totalDevices: 0, avgOnlineRate: null as number | null, peakConcurrent: 0 };
     }
     const totalDevices = summaryData.length;
-    const avgOnlineRate = summaryData.reduce((sum, d) => sum + d.onlineRate, 0) / totalDevices;
+    const validRates = summaryData
+      .map((d) => (typeof d.onlineRate === 'number' && Number.isFinite(d.onlineRate) ? d.onlineRate : null))
+      .filter((v): v is number => v !== null);
+    const avgOnlineRate =
+      validRates.length === 0 ? null : validRates.reduce((sum, r) => sum + r, 0) / validRates.length;
     const peakConcurrent = concurrencyData.reduce(
       (max: number, d: { maxConcurrent?: number }) => Math.max(max, d.maxConcurrent || 0),
       0
@@ -125,6 +116,10 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
   }, [summaryData, concurrencyData]);
 
   const selectedDevice = summaryData.find((d) => d.deviceId === selectedDeviceId);
+  const selectedDeviceOnlineRate =
+    typeof selectedDevice?.onlineRate === 'number' && Number.isFinite(selectedDevice.onlineRate)
+      ? selectedDevice.onlineRate
+      : null;
 
   return (
     <div className={cn('space-y-6', className)}>
@@ -161,7 +156,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
                   Avg Availability
                 </p>
                 <p className="text-2xl font-bold tracking-tighter tabular-nums">
-                  {Math.round(kpis.avgOnlineRate * 100)}%
+                  {kpis.avgOnlineRate === null ? '—' : `${Math.round(kpis.avgOnlineRate * 100)}%`}
                 </p>
               </div>
             </div>
@@ -336,13 +331,23 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <FleetOnlineTable
-              data={summaryData}
-              deviceMap={deviceMap}
-              selectedDeviceId={selectedDeviceId || undefined}
-              onSelectDevice={setSelectedDeviceId}
-              className="h-[400px] border-0 rounded-none"
-            />
+            {isSummaryLoading ? (
+              <div className="h-[400px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">
+                LOADING...
+              </div>
+            ) : summaryData.length === 0 ? (
+              <div className="h-[400px] flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8">
+                No online time data in this period
+              </div>
+            ) : (
+              <FleetOnlineTable
+                data={summaryData}
+                deviceMap={resolvedDeviceMap}
+                selectedDeviceId={selectedDeviceId || undefined}
+                onSelectDevice={setSelectedDeviceId}
+                className="h-[400px] border-0 rounded-none"
+              />
+            )}
           </CardContent>
         </Card>
 
@@ -360,7 +365,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-bold truncate max-w-[200px]">
-                          {deviceMap[selectedDevice.deviceId] || selectedDevice.deviceId}
+                          {resolvedDeviceMap[selectedDevice.deviceId] || selectedDevice.deviceId}
                         </p>
                         <p className="text-[10px] text-muted-foreground font-mono">
                           ID: {selectedDevice.deviceId}
@@ -371,18 +376,25 @@ export function FleetUptimeTab({ from, to, tz, bucket, className }: FleetUptimeT
                       variant="secondary"
                       className={cn(
                         'text-[9px] font-bold',
-                        selectedDevice.onlineRate >= 0.9 && 'bg-emerald-500/10 text-emerald-600',
-                        selectedDevice.onlineRate >= 0.5 &&
-                          selectedDevice.onlineRate < 0.9 &&
+                        selectedDeviceOnlineRate !== null &&
+                          selectedDeviceOnlineRate >= 0.9 &&
+                          'bg-emerald-500/10 text-emerald-600',
+                        selectedDeviceOnlineRate !== null &&
+                          selectedDeviceOnlineRate >= 0.5 &&
+                          selectedDeviceOnlineRate < 0.9 &&
                           'bg-amber-500/10 text-amber-600',
-                        selectedDevice.onlineRate < 0.5 && 'bg-rose-500/10 text-rose-600'
+                        selectedDeviceOnlineRate !== null &&
+                          selectedDeviceOnlineRate < 0.5 &&
+                          'bg-rose-500/10 text-rose-600'
                       )}
                     >
-                      {selectedDevice.onlineRate >= 0.9
-                        ? 'EXCELLENT'
-                        : selectedDevice.onlineRate >= 0.5
-                          ? 'FAIR'
-                          : 'POOR'}
+                      {selectedDeviceOnlineRate === null
+                        ? '—'
+                        : selectedDeviceOnlineRate >= 0.9
+                          ? 'EXCELLENT'
+                          : selectedDeviceOnlineRate >= 0.5
+                            ? 'FAIR'
+                            : 'POOR'}
                     </Badge>
                   </div>
                 </CardContent>

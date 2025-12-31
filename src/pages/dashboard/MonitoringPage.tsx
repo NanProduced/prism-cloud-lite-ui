@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Activity,
@@ -8,12 +8,10 @@ import {
   Search,
   Monitor,
   Clock,
-  Copy,
   CheckCircle2,
-  AlertCircle,
+  Calendar,
   Cpu,
   Gauge,
-  Bug,
 } from 'lucide-react';
 import { getDevices } from '@/services/deviceApi';
 import { type Device, resolveDeviceStatus } from '@/types/device';
@@ -24,13 +22,17 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { toast } from '@/lib/toast';
 
 import type { RealtimeMetric, SSEState } from './monitoring/types';
 import { type MonitoringTab } from './monitoring/constants';
 import { DeviceSensorTab, M2SensorTab, ReceiveCardTab } from './monitoring/components';
 import { useMonitoringSSE } from '@/hooks/use-monitoring-sse';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
+
+function toLocalInputValue(date: Date) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60 * 1000);
+  return local.toISOString().slice(0, 16);
+}
 
 export default function MonitoringPage() {
   const queryClient = useQueryClient();
@@ -40,10 +42,35 @@ export default function MonitoringPage() {
   const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<MonitoringTab>('receiveCard');  // 默认显示接收卡Tab
-  const [showDebug, setShowDebug] = useState(false);
+
+  // History window (applies to history queries & initial preload)
+  const [historyDraft, setHistoryDraft] = useState(() => {
+    const now = new Date();
+    const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    return {
+      from: toLocalInputValue(from),
+      to: toLocalInputValue(now),
+    };
+  });
+  const [historyApplied, setHistoryApplied] = useState(historyDraft);
+
+  const canApplyHistoryDraft = useMemo(() => {
+    const fromDate = new Date(historyDraft.from);
+    const toDate = new Date(historyDraft.to);
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) return false;
+    return fromDate.getTime() < toDate.getTime();
+  }, [historyDraft.from, historyDraft.to]);
+
+  const historyRange = useMemo(() => {
+    const fromDate = new Date(historyApplied.from);
+    const toDate = new Date(historyApplied.to);
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) return null;
+    if (fromDate.getTime() >= toDate.getTime()) return null;
+    return { from: fromDate.toISOString(), to: toDate.toISOString() };
+  }, [historyApplied.from, historyApplied.to]);
 
   // SSE & Real-time State - 单设备订阅
-  const sseState = useMonitoringSSE(selectedDeviceId);
+  const sseState = useMonitoringSSE(selectedDeviceId, historyRange ?? undefined);
 
   // --- Queries ---
 
@@ -67,14 +94,6 @@ export default function MonitoringPage() {
   // 单选设备：点击切换选中状态
   const selectDevice = (deviceId: number) => {
     setSelectedDeviceId((prev) => (prev === deviceId ? null : deviceId));
-  };
-
-  const copyDiagnostics = () => {
-    const text = sseState.diagnostics
-      .map((d) => `${d.occurredAt} | ${d.traceId}`)
-      .join('\n');
-    navigator.clipboard.writeText(text);
-    toast.success('Diagnostics copied to clipboard');
   };
 
   // Filter metrics by active tab (3个独立数据源)
@@ -139,29 +158,59 @@ export default function MonitoringPage() {
           </Button>
         </div>
 
+        {/* History Filter */}
+        <Separator orientation="vertical" className="h-8 mx-1" />
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 bg-muted/40 rounded-md px-2 py-1">
+            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              type="datetime-local"
+              value={historyDraft.from}
+              onChange={(e) => setHistoryDraft((p) => ({ ...p, from: e.target.value }))}
+              className="h-7 w-[168px] text-[10px] font-bold"
+            />
+            <span className="text-[10px] font-bold text-muted-foreground/60">TO</span>
+            <Input
+              type="datetime-local"
+              value={historyDraft.to}
+              onChange={(e) => setHistoryDraft((p) => ({ ...p, to: e.target.value }))}
+              className="h-7 w-[168px] text-[10px] font-bold"
+            />
+          </div>
+
+          <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-md">
+            {[1, 6, 24].map((h) => (
+              <Button
+                key={h}
+                variant="ghost"
+                size="sm"
+                className="h-6 text-[9px] font-bold rounded-sm px-2"
+                onClick={() => {
+                  const now = new Date();
+                  const from = new Date(now.getTime() - h * 60 * 60 * 1000);
+                  const next = { from: toLocalInputValue(from), to: toLocalInputValue(now) };
+                  setHistoryDraft(next);
+                  setHistoryApplied(next);
+                }}
+              >
+                {h}h
+              </Button>
+            ))}
+          </div>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-7 rounded-md font-bold text-[10px] uppercase tracking-wider px-3"
+            disabled={!canApplyHistoryDraft}
+            onClick={() => setHistoryApplied(historyDraft)}
+          >
+            Apply
+          </Button>
+        </div>
+
         <div className="flex items-center gap-2 ml-auto">
           <SSEStatus status={sseState.status} />
-          <Separator orientation="vertical" className="h-4 mx-1" />
-          <Button
-            variant={showDebug ? "secondary" : "ghost"}
-            size="icon"
-            className="h-8 w-8 rounded-md"
-            onClick={() => setShowDebug(!showDebug)}
-            title="Toggle Debug Info"
-          >
-            <Bug className="h-3.5 w-3.5" />
-          </Button>
-          {showDebug && (
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-md"
-              onClick={copyDiagnostics}
-              title="Copy Diagnostics"
-            >
-              <Copy className="h-3.5 w-3.5" />
-            </Button>
-          )}
         </div>
       </div>
 
@@ -300,7 +349,7 @@ export default function MonitoringPage() {
 
                 <div className="text-[10px] font-bold text-muted-foreground flex items-center gap-2">
                   <span className="flex items-center gap-1.5">
-                    <Clock className="h-3 w-3" /> Latest:{' '}
+                    <Clock className="h-3 w-3" /> Last updated:{' '}
                     {sseState.lastUpdate > 0
                       ? formatDateTime(sseState.lastUpdate)
                       : '—'}
@@ -313,54 +362,33 @@ export default function MonitoringPage() {
                 value="receiveCard"
                 className="flex-1 mt-3 overflow-auto data-[state=inactive]:hidden"
               >
-                {Object.keys(filteredMetrics).length === 0 ? (
-                  <EmptyState
-                    icon={Cpu}
-                    title="Awaiting Receive Card Data"
-                    description="No receive card telemetry reported for this device yet."
-                  />
-                ) : (
-                  <ReceiveCardTab
-                    deviceId={selectedDeviceId}
-                    metrics={filteredMetrics}
-                  />
-                )}
+                <ReceiveCardTab
+                  deviceId={selectedDeviceId}
+                  metrics={filteredMetrics}
+                  historyRange={historyRange ?? undefined}
+                />
               </TabsContent>
 
               <TabsContent
                 value="device"
                 className="flex-1 mt-3 overflow-auto data-[state=inactive]:hidden"
               >
-                {Object.keys(filteredMetrics).length === 0 ? (
-                  <EmptyState
-                    icon={Monitor}
-                    title="Awaiting Device Sensors"
-                    description="No device sensor data reported for this device yet."
-                  />
-                ) : (
-                  <DeviceSensorTab
-                    deviceId={selectedDeviceId}
-                    metrics={filteredMetrics}
-                  />
-                )}
+                <DeviceSensorTab
+                  deviceId={selectedDeviceId}
+                  metrics={filteredMetrics}
+                  historyRange={historyRange ?? undefined}
+                />
               </TabsContent>
 
               <TabsContent
                 value="m2"
                 className="flex-1 mt-3 overflow-auto data-[state=inactive]:hidden"
               >
-                {Object.keys(filteredMetrics).length === 0 ? (
-                  <EmptyState
-                    icon={Gauge}
-                    title="Awaiting M2 Telemetry"
-                    description="No M2 external sensor data reported for this device yet."
-                  />
-                ) : (
-                  <M2SensorTab
-                    deviceId={selectedDeviceId}
-                    metrics={filteredMetrics}
-                  />
-                )}
+                <M2SensorTab
+                  deviceId={selectedDeviceId}
+                  metrics={filteredMetrics}
+                  historyRange={historyRange ?? undefined}
+                />
               </TabsContent>
             </Tabs>
           )}
@@ -395,22 +423,3 @@ function SSEStatus({ status }: { status: 'connected' | 'reconnecting' | 'error' 
     </div>
   );
 }
-
-function EmptyState({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: any;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center text-center opacity-40 bg-muted/5 rounded-lg border border-dashed h-full min-h-[300px]">
-      <Icon className="h-12 w-12 mb-3" />
-      <h2 className="text-lg font-bold tracking-tight">{title}</h2>
-      <p className="text-xs max-w-xs">{description}</p>
-    </div>
-  );
-}
-

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Film, MonitorPlay, Clock, Monitor, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,12 +30,14 @@ interface MediaTabProps {
   to: string;
   tz: string;
   bucket: PlaybackBucket;
+  deviceMap?: Record<string, string>;
   className?: string;
 }
 
-export function MediaTab({ from, to, tz, bucket, className }: MediaTabProps) {
+export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTabProps) {
   const { formatDateTime } = useTimeFormatter();
   const [selectedMedia, setSelectedMedia] = useState<MediaPlaySummaryItem | null>(null);
+  const resolvedDeviceMap = deviceMap ?? {};
 
   // Query for summary list
   const { data: summaryRes, isLoading: isSummaryLoading } = useQuery({
@@ -77,7 +79,7 @@ export function MediaTab({ from, to, tz, bucket, className }: MediaTabProps) {
   const deviceData = devicesRes?.data || [];
 
   // Auto-select first media
-  useMemo(() => {
+  useEffect(() => {
     if (!selectedMedia && mediaList.length > 0) {
       setSelectedMedia(mediaList[0]);
     }
@@ -102,21 +104,31 @@ export function MediaTab({ from, to, tz, bucket, className }: MediaTabProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <PlaybackTopTable
-              data={mediaList.map(m => ({
-                id: m.mediaId,
-                name: m.mediaTitle || 'Unknown Media',
-                playCount: m.playCount,
-                playSeconds: m.playSeconds
-              }))}
-              type="media"
-              selectedId={selectedMedia?.mediaId}
-              onSelect={(item) => {
-                const m = mediaList.find(m => m.mediaId === item.id);
-                if (m) setSelectedMedia(m);
-              }}
-              className="h-[500px] border-0 rounded-none"
-            />
+            {isSummaryLoading ? (
+              <div className="h-[320px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">
+                Loading...
+              </div>
+            ) : mediaList.length === 0 ? (
+              <div className="h-[320px] flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8">
+                No media playback data in this period
+              </div>
+            ) : (
+              <PlaybackTopTable
+                data={mediaList.map(m => ({
+                  id: m.mediaId,
+                  name: m.mediaTitle || 'Unknown Media',
+                  playCount: m.playCount,
+                  playSeconds: m.playSeconds
+                }))}
+                type="media"
+                selectedId={selectedMedia?.mediaId}
+                onSelect={(item) => {
+                  const m = mediaList.find(m => m.mediaId === item.id);
+                  if (m) setSelectedMedia(m);
+                }}
+                className="h-[320px] border-0 rounded-none"
+              />
+            )}
           </CardContent>
         </Card>
 
@@ -230,7 +242,11 @@ export function MediaTab({ from, to, tz, bucket, className }: MediaTabProps) {
                       No device distribution recorded
                     </div>
                   ) : (
-                    <AnalyticsDeviceTable data={deviceData} className="h-[150px] border-0 rounded-none" />
+                    <AnalyticsDeviceTable
+                      data={deviceData}
+                      deviceMap={resolvedDeviceMap}
+                      className="h-[180px] border-0 rounded-none"
+                    />
                   )}
                 </CardContent>
               </Card>

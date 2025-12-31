@@ -543,15 +543,15 @@ function RegionInspector({
             </Field>
             <Field label="BorderColor">
               <PopoverColorPicker
-                value={borderColor}
-                onChange={(v) => onPatchRect({ BorderColor: v })}
+                value={vsnBgColorToCss(borderColor)}
+                onChange={(v) => onPatchRect({ BorderColor: cssHexToVsnBgColor(v) })}
               />
             </Field>
             <div className="col-span-2">
               <Field label="BackColor (optional)">
                 <PopoverColorPicker
-                  value={backColor || ''}
-                  onChange={(v) => onPatchRect({ BackColor: v || null })}
+                  value={backColor ? vsnBgColorToCss(backColor) : ''}
+                  onChange={(v) => onPatchRect({ BackColor: v ? cssHexToVsnBgColor(v) : null })}
                 />
               </Field>
             </div>
@@ -833,8 +833,15 @@ function ItemInspector({
 
           <Field label="TextColor">
             <PopoverColorPicker
-              value={item.TextColor || '#ffffff'}
-              onChange={(v) => onPatch({ TextColor: v })}
+              value={vsnBgColorToCss(item.TextColor || '0xFFFFFFFF')}
+              onChange={(v) => onPatch({ TextColor: cssHexToVsnBgColor(v) })}
+            />
+          </Field>
+
+          <Field label="BackColor">
+            <PopoverColorPicker
+              value={vsnBgColorToCss(item.backcolor || '0x00000000')}
+              onChange={(v) => onPatch({ backcolor: cssHexToVsnBgColor(v) })}
             />
           </Field>
 

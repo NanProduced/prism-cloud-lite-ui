@@ -1,4 +1,4 @@
-import { useMemo, useId } from 'react';
+import { useCallback, useMemo, useId } from 'react';
 import { useLyteNyte, useClientRowDataSource } from '@lytenyte/hooks/use-lytenyte-core';
 import { LyteNyte } from '@lytenyte/components/lytenyte-core';
 import type {
@@ -7,28 +7,46 @@ import type {
 } from '@1771technologies/lytenyte-core/types';
 import { measureText } from '@1771technologies/lytenyte-shared';
 import { PrismHeaderRenderer } from '@/components/lytenyte/PrismHeaderRenderer';
-import { Monitor } from 'lucide-react';
+import { Clock, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AnalyticsDeviceItem {
-  deviceId: string;
+  deviceId: string | number;
   playCount: number;
+  playSeconds?: number;
+  lastPlayedAt?: string;
 }
 
 interface AnalyticsDeviceTableProps {
   data: AnalyticsDeviceItem[];
+  deviceMap?: Record<string, string>;
   className?: string;
 }
 
-export function AnalyticsDeviceTable({ data, className }: AnalyticsDeviceTableProps) {
+export function AnalyticsDeviceTable({ data, deviceMap, className }: AnalyticsDeviceTableProps) {
   const gridId = useId();
+
+  const formatDuration = useCallback((seconds: number) => {
+    if (!Number.isFinite(seconds) || seconds <= 0) return '—';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  }, []);
+
+  const formatDateTime = useCallback((iso?: string) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleString([], { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }, []);
 
   const columns = useMemo<Column<AnalyticsDeviceItem>[]>(() => [
     {
       id: 'deviceId',
-      name: 'Device ID',
+      name: 'Device',
       type: 'string',
-      width: 200,
+      width: 280,
       field: 'deviceId',
       pin: 'start',
       uiHints: {
@@ -38,26 +56,35 @@ export function AnalyticsDeviceTable({ data, className }: AnalyticsDeviceTablePr
       },
       autosizeCellFn: ({ grid, row }) => {
         if (row.kind !== 'leaf' || !row.data) return null;
-        const text = row.data.deviceId;
+        const deviceId = String(row.data.deviceId);
+        const name = deviceMap?.[deviceId] || deviceId;
         const vp = grid.state.viewport.get() ?? undefined;
-        return measureText(text, vp).width + 36;
+        return Math.max(measureText(name, vp).width + 80, 200);
       },
       cellRenderer: ({ row }: CellRendererParams<AnalyticsDeviceItem>) => {
         if (!row.data) return null;
         const deviceId = String(row.data.deviceId);
+        const name = deviceMap?.[deviceId];
         return (
           <div className="flex items-center gap-2 px-1">
              <Monitor className="h-3 w-3 opacity-40" />
-             <span className="text-xs font-bold font-mono text-foreground/80 truncate">
-               {deviceId}
-             </span>
+             <div className="min-w-0 flex flex-col">
+               <span className="text-xs font-bold text-foreground/80 truncate">
+                 {name || deviceId}
+               </span>
+               {name && (
+                 <span className="text-[10px] font-mono text-muted-foreground truncate">
+                   {deviceId}
+                 </span>
+               )}
+             </div>
           </div>
         );
       },
     },
     {
       id: 'playCount',
-      name: 'Play Count',
+      name: 'Plays',
       type: 'number',
       width: 120,
       field: 'playCount',
@@ -76,7 +103,51 @@ export function AnalyticsDeviceTable({ data, className }: AnalyticsDeviceTablePr
         );
       },
     },
-  ], []);
+    {
+      id: 'playSeconds',
+      name: 'Play Time',
+      type: 'number',
+      width: 130,
+      field: 'playSeconds',
+      uiHints: {
+        sortable: true,
+        resizable: true,
+        movable: false,
+      },
+      cellRenderer: ({ row }: CellRendererParams<AnalyticsDeviceItem>) => {
+        if (!row.data) return null;
+        const seconds = typeof row.data.playSeconds === 'number' ? row.data.playSeconds : NaN;
+        return (
+          <span className="text-xs font-bold tabular-nums px-1">
+            {formatDuration(seconds)}
+          </span>
+        );
+      },
+    },
+    {
+      id: 'lastPlayedAt',
+      name: 'Last Played',
+      type: 'datetime',
+      width: 180,
+      field: 'lastPlayedAt',
+      uiHints: {
+        sortable: true,
+        resizable: true,
+        movable: false,
+      },
+      cellRenderer: ({ row }: CellRendererParams<AnalyticsDeviceItem>) => {
+        if (!row.data) return null;
+        return (
+          <div className="flex items-center gap-1.5 px-1 text-muted-foreground">
+            <Clock className="h-3 w-3 opacity-40" />
+            <span className="text-xs font-semibold tabular-nums">
+              {formatDateTime(row.data.lastPlayedAt as string | undefined)}
+            </span>
+          </div>
+        );
+      },
+    },
+  ], [deviceMap, formatDateTime, formatDuration]);
 
   const dataSource = useClientRowDataSource({ data, reflectData: true });
 
@@ -101,7 +172,7 @@ export function AnalyticsDeviceTable({ data, className }: AnalyticsDeviceTablePr
   });
 
   return (
-    <div className={cn("w-full h-full min-h-[300px] border rounded-lg overflow-hidden bg-background shadow-sm", className)}>
+    <div className={cn("w-full h-full min-h-0 border rounded-lg overflow-hidden bg-background shadow-sm", className)}>
       <LyteNyte grid={grid} />
     </div>
   );

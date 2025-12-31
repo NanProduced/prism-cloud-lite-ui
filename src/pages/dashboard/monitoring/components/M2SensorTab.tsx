@@ -10,6 +10,7 @@ import type { SensorSourceType } from '@/services/telemetryApi';
 interface M2SensorTabProps {
   deviceId: number;  // 单设备模式
   metrics: Record<string, RealtimeMetric>;
+  historyRange?: { from: string; to: string };
   className?: string;
 }
 
@@ -24,6 +25,7 @@ interface HistoryState {
 export function M2SensorTab({
   deviceId,
   metrics,
+  historyRange,
   className,
 }: M2SensorTabProps) {
   // History drawer state
@@ -99,6 +101,8 @@ export function M2SensorTab({
         sourceType={historyState.sourceType}
         metricKeys={historyState.metricKeys}
         title={historyState.title}
+        defaultFromIso={historyRange?.from}
+        defaultToIso={historyRange?.to}
       />
     </div>
   );

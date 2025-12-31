@@ -294,9 +294,9 @@ function PreviewRegionContent({
   if (item.Type === '4' || item.Type === '5') {
     return (
       <div className="h-full w-full flex items-center justify-center p-2 text-center" style={{ 
-        color: item.TextColor || '#fff', 
-        fontSize: `${Number(item.LogFont?.lfHeight) || 32}px`,
-        fontFamily: item.LogFont?.lfFaceName || 'SimHei'
+                        whiteSpace: 'pre-wrap',
+                        color: vsnBgColorToCss(item.TextColor || '0xFFFFFFFF'),
+                        fontFamily: item.LogFont?.lfFaceName ?? 'SimHei',
       }}>
         {item.Text}
       </div>

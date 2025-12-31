@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { X, Cpu, Thermometer, Droplets, TrendingUp, Clock } from 'lucide-react';
 import {
@@ -31,6 +31,8 @@ interface ReceiveCardDetailDrawerProps {
   onClose: () => void;
   deviceId: number;
   card: ReceiveCardTile | null;
+  defaultFromIso?: string;
+  defaultToIso?: string;
 }
 
 // 时间范围选项
@@ -45,19 +47,31 @@ export function ReceiveCardDetailDrawer({
   onClose,
   deviceId,
   card,
+  defaultFromIso,
+  defaultToIso,
 }: ReceiveCardDetailDrawerProps) {
   const { formatDateTime } = useTimeFormatter();
   const [selectedRange, setSelectedRange] = useState<number>(24); // 默认24小时
+  const [mode, setMode] = useState<'preset' | 'range'>('preset');
+  const [customRange, setCustomRange] = useState<{ from: string; to: string } | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!defaultFromIso || !defaultToIso) return;
+    setMode('range');
+    setCustomRange({ from: defaultFromIso, to: defaultToIso });
+  }, [open, defaultFromIso, defaultToIso]);
 
   // 计算时间范围
   const timeRange = useMemo(() => {
+    if (mode === 'range' && customRange) return customRange;
     const now = new Date();
     const from = new Date(now.getTime() - selectedRange * 60 * 60 * 1000);
     return {
       from: from.toISOString(),
       to: now.toISOString(),
     };
-  }, [selectedRange]);
+  }, [mode, customRange, selectedRange]);
 
   // 查询历史数据
   const { data: historyRes, isLoading } = useQuery({
@@ -169,13 +183,30 @@ export function ReceiveCardDetailDrawer({
               </span>
             </div>
             <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-md">
+              {defaultFromIso && defaultToIso && (
+                <Button
+                  variant={mode === 'range' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-6 text-[9px] font-bold rounded-sm px-2.5"
+                  onClick={() => {
+                    setMode('range');
+                    setCustomRange({ from: defaultFromIso, to: defaultToIso });
+                  }}
+                >
+                  Custom
+                </Button>
+              )}
               {TIME_RANGES.map((range) => (
                 <Button
                   key={range.hours}
-                  variant={selectedRange === range.hours ? 'secondary' : 'ghost'}
+                  variant={mode === 'preset' && selectedRange === range.hours ? 'secondary' : 'ghost'}
                   size="sm"
                   className="h-6 text-[9px] font-bold rounded-sm px-2.5"
-                  onClick={() => setSelectedRange(range.hours)}
+                  onClick={() => {
+                    setMode('preset');
+                    setCustomRange(null);
+                    setSelectedRange(range.hours);
+                  }}
                 >
                   {range.label}
                 </Button>

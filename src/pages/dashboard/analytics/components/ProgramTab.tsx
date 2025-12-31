@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Layers, MonitorPlay, Clock, Monitor, TrendingUp, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,12 +32,14 @@ interface ProgramTabProps {
   to: string;
   tz: string;
   bucket: PlaybackBucket;
+  deviceMap?: Record<string, string>;
   className?: string;
 }
 
-export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps) {
+export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: ProgramTabProps) {
   const { formatDateTime } = useTimeFormatter();
   const [selectedProgram, setSelectedProgram] = useState<ProgramPlaySummaryItem | null>(null);
+  const resolvedDeviceMap = deviceMap ?? {};
 
   // Query for summary list
   const { data: summaryRes, isLoading: isSummaryLoading } = useQuery({
@@ -118,7 +120,7 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
   const deviceData = devicesRes?.data || [];
 
   // Auto-select first program
-  useMemo(() => {
+  useEffect(() => {
     if (!selectedProgram && programs.length > 0) {
       setSelectedProgram(programs[0]);
     }
@@ -143,22 +145,32 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <PlaybackTopTable
-              data={programs.map(p => ({
-                id: p.lan ? p.lanProgramId! : p.programId!,
-                name: p.programName,
-                playCount: p.playCount,
-                playSeconds: p.playSeconds,
-                version: p.releaseVersion?.toString()
-              }))}
-              type="program"
-              selectedId={selectedProgram?.lan ? selectedProgram?.lanProgramId : selectedProgram?.programId}
-              onSelect={(item) => {
-                const p = programs.find(p => (p.lan ? p.lanProgramId : p.programId) === item.id);
-                if (p) setSelectedProgram(p);
-              }}
-              className="h-[500px] border-0 rounded-none"
-            />
+            {isSummaryLoading ? (
+              <div className="h-[320px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">
+                Loading...
+              </div>
+            ) : programs.length === 0 ? (
+              <div className="h-[320px] flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8">
+                No program playback data in this period
+              </div>
+            ) : (
+              <PlaybackTopTable
+                data={programs.map(p => ({
+                  id: p.lan ? p.lanProgramId! : p.programId!,
+                  name: p.programName,
+                  playCount: p.playCount,
+                  playSeconds: p.playSeconds,
+                  version: p.releaseVersion?.toString()
+                }))}
+                type="program"
+                selectedId={selectedProgram?.lan ? selectedProgram?.lanProgramId : selectedProgram?.programId}
+                onSelect={(item) => {
+                  const p = programs.find(p => (p.lan ? p.lanProgramId : p.programId) === item.id);
+                  if (p) setSelectedProgram(p);
+                }}
+                className="h-[320px] border-0 rounded-none"
+              />
+            )}
           </CardContent>
         </Card>
 
@@ -289,7 +301,11 @@ export function ProgramTab({ from, to, tz, bucket, className }: ProgramTabProps)
                       No device distribution recorded
                     </div>
                   ) : (
-                    <AnalyticsDeviceTable data={deviceData} className="h-[150px] border-0 rounded-none" />
+                    <AnalyticsDeviceTable
+                      data={deviceData}
+                      deviceMap={resolvedDeviceMap}
+                      className="h-[180px] border-0 rounded-none"
+                    />
                   )}
                 </CardContent>
               </Card>

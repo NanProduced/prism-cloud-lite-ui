@@ -87,6 +87,8 @@ export interface HistoryDrawerProps {
   isReceiveCard?: boolean;
   netPortNum?: number;
   receiveCardNum?: number;
+  defaultFromIso?: string;
+  defaultToIso?: string;
 }
 
 // --- Filter Types ---

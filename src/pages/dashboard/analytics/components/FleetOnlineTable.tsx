@@ -28,6 +28,7 @@ export function FleetOnlineTable({
   const gridId = useId();
 
   const formatDuration = (seconds: number) => {
+    if (!Number.isFinite(seconds) || seconds <= 0) return '—';
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     if (hours > 0) return `${hours}h ${minutes}m`;
@@ -58,7 +59,10 @@ export function FleetOnlineTable({
           const item = row.data as OnlineTimeSummaryItem;
           if (!item) return null;
           const isSelected = item.deviceId === selectedDeviceId;
-          const onlineRate = item.onlineRate;
+          const onlineRate =
+            typeof item.onlineRate === 'number' && Number.isFinite(item.onlineRate)
+              ? item.onlineRate
+              : null;
           const name = deviceMap?.[item.deviceId] || item.deviceId;
           return (
             <div
@@ -68,12 +72,14 @@ export function FleetOnlineTable({
               )}
               onClick={() => onSelectDevice?.(item.deviceId)}
             >
-              {onlineRate >= 0.9 ? (
+              {onlineRate !== null && onlineRate >= 0.9 ? (
                 <Wifi className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-              ) : onlineRate >= 0.5 ? (
+              ) : onlineRate !== null && onlineRate >= 0.5 ? (
                 <Activity className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-              ) : (
+              ) : onlineRate !== null ? (
                 <WifiOff className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+              ) : (
+                <Wifi className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
               )}
               <div className="flex flex-col min-w-0">
                 <span className="text-xs font-bold truncate">{name}</span>
@@ -100,29 +106,32 @@ export function FleetOnlineTable({
         cellRenderer: ({ row }: CellRendererParams<OnlineTimeSummaryItem>) => {
           const item = row.data as OnlineTimeSummaryItem;
           if (!item) return null;
-          const rate = item.onlineRate;
-          const percentage = Math.round(rate * 100);
+          const rate =
+            typeof item.onlineRate === 'number' && Number.isFinite(item.onlineRate)
+              ? item.onlineRate
+              : null;
+          const percentage = rate === null ? null : Math.round(rate * 100);
           return (
             <div className="flex items-center gap-2 px-1">
               <Progress
-                value={percentage}
+                value={percentage ?? 0}
                 className={cn(
                   'h-2 flex-1',
-                  rate >= 0.9 && '[&>div]:bg-emerald-500',
-                  rate >= 0.5 && rate < 0.9 && '[&>div]:bg-amber-500',
-                  rate < 0.5 && '[&>div]:bg-rose-500'
+                  rate !== null && rate >= 0.9 && '[&>div]:bg-emerald-500',
+                  rate !== null && rate >= 0.5 && rate < 0.9 && '[&>div]:bg-amber-500',
+                  rate !== null && rate < 0.5 && '[&>div]:bg-rose-500'
                 )}
               />
               <Badge
                 variant="secondary"
                 className={cn(
                   'text-[9px] font-bold min-w-[40px] justify-center',
-                  rate >= 0.9 && 'bg-emerald-500/10 text-emerald-600',
-                  rate >= 0.5 && rate < 0.9 && 'bg-amber-500/10 text-amber-600',
-                  rate < 0.5 && 'bg-rose-500/10 text-rose-600'
+                  rate !== null && rate >= 0.9 && 'bg-emerald-500/10 text-emerald-600',
+                  rate !== null && rate >= 0.5 && rate < 0.9 && 'bg-amber-500/10 text-amber-600',
+                  rate !== null && rate < 0.5 && 'bg-rose-500/10 text-rose-600'
                 )}
               >
-                {percentage}%
+                {percentage === null ? '—' : `${percentage}%`}
               </Badge>
             </div>
           );
@@ -142,11 +151,15 @@ export function FleetOnlineTable({
         cellRenderer: ({ row }: CellRendererParams<OnlineTimeSummaryItem>) => {
           const item = row.data as OnlineTimeSummaryItem;
           if (!item) return null;
+          const seconds =
+            typeof item.onlineSeconds === 'number' && Number.isFinite(item.onlineSeconds)
+              ? item.onlineSeconds
+              : NaN;
           return (
             <div className="flex items-center gap-1.5 px-1">
               <Wifi className="h-3 w-3 text-emerald-500 opacity-50" />
               <span className="text-xs font-bold tabular-nums text-emerald-600">
-                {formatDuration(item.onlineSeconds)}
+                {formatDuration(seconds)}
               </span>
             </div>
           );
@@ -166,11 +179,15 @@ export function FleetOnlineTable({
         cellRenderer: ({ row }: CellRendererParams<OnlineTimeSummaryItem>) => {
           const item = row.data as OnlineTimeSummaryItem;
           if (!item) return null;
+          const seconds =
+            typeof item.offlineSeconds === 'number' && Number.isFinite(item.offlineSeconds)
+              ? item.offlineSeconds
+              : NaN;
           return (
             <div className="flex items-center gap-1.5 px-1">
               <WifiOff className="h-3 w-3 text-rose-500 opacity-50" />
               <span className="text-xs font-bold tabular-nums text-rose-600">
-                {formatDuration(item.offlineSeconds)}
+                {formatDuration(seconds)}
               </span>
             </div>
           );

@@ -112,7 +112,7 @@ export function PlaybackTopTable({
         id: 'playCount',
         name: 'Plays',
         type: 'number',
-        width: 100,
+        width: 120,
         field: 'playCount',
         uiHints: {
           sortable: true,
@@ -134,9 +134,9 @@ export function PlaybackTopTable({
       },
       {
         id: 'playSeconds',
-        name: 'Air Time',
+        name: 'Play Time',
         type: 'number',
-        width: 100,
+        width: 140,
         field: 'playSeconds',
         uiHints: {
           sortable: true,

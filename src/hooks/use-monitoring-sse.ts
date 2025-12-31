@@ -10,8 +10,12 @@ const INITIAL_HISTORY_LIMIT = 50;
 /**
  * Monitoring SSE Hook - 单设备实时数据订阅 + 历史数据预加载
  * @param selectedDeviceId 设备ID（number类型，契约要求）
+ * @param historyRange 历史数据窗口（UTC ISO）
  */
-export function useMonitoringSSE(selectedDeviceId: number | null) {
+export function useMonitoringSSE(
+  selectedDeviceId: number | null,
+  historyRange?: { from: string; to: string }
+) {
   const [sseState, setSseState] = useState<SSEState>({
     metrics: {},
     lastUpdate: 0,
@@ -21,6 +25,9 @@ export function useMonitoringSSE(selectedDeviceId: number | null) {
 
   const traceIdBuffer = useRef<Set<string>>(new Set());
   const pendingUpdates = useRef<Record<string, RealtimeMetric>>({});
+
+  const historyFrom = historyRange?.from;
+  const historyTo = historyRange?.to;
 
   useEffect(() => {
     // 单设备模式：必须选择设备才订阅
@@ -44,11 +51,15 @@ export function useMonitoringSSE(selectedDeviceId: number | null) {
         // Parallel fetch for Sensor Series and Receive Card Samples
         const [sensorRes, cardRes] = await Promise.all([
           getSensorSeries({ 
-            deviceId: selectedDeviceId, 
+            deviceId: selectedDeviceId,
+            from: historyFrom,
+            to: historyTo,
             limit: 300 // 获取足够多的点以分摊给各个传感器
           }),
           getReceiveCardSamples({ 
-            deviceId: selectedDeviceId, 
+            deviceId: selectedDeviceId,
+            from: historyFrom,
+            to: historyTo,
             limit: 500 // 获取整个拓扑的最近状态
           })
         ]);
@@ -291,7 +302,7 @@ export function useMonitoringSSE(selectedDeviceId: number | null) {
     return () => {
       eventSource.close();
     };
-  }, [selectedDeviceId]);
+  }, [selectedDeviceId, historyFrom, historyTo]);
 
   // Throttled UI Update
   useEffect(() => {
@@ -310,4 +321,3 @@ export function useMonitoringSSE(selectedDeviceId: number | null) {
 
   return sseState;
 }
-

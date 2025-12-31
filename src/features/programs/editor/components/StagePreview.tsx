@@ -880,7 +880,9 @@ const RegionContent = React.memo(function RegionContent({
       <div
         className="h-full w-full overflow-hidden px-2 py-1"
         style={{
-          color: item.TextColor ?? '#ffffff',
+                  whiteSpace: 'pre-wrap',
+                  color: vsnBgColorToCss(item.TextColor ?? '0xFFFFFFFF'),
+                  fontFamily: item.LogFont?.lfFaceName ?? 'SimHei',
           fontSize: `${Math.max(10, Math.min(96, Math.round(fontSize)))}px`,
           fontFamily,
           fontWeight,

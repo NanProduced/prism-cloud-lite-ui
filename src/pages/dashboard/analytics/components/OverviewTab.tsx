@@ -25,6 +25,7 @@ interface OverviewTabProps {
   to: string;
   tz: string;
   bucket: PlaybackBucket;
+  deviceMap?: Record<string, string>;
   className?: string;
 }
 
@@ -67,9 +68,11 @@ export function OverviewTab({ from, to, tz, bucket, className }: OverviewTabProp
   }, [concurrencyRes]);
 
   const formatDuration = (seconds: number) => {
+    if (!Number.isFinite(seconds) || seconds <= 0) return '0m';
     const hours = Math.floor(seconds / 3600);
-    if (hours > 1000) return `${(hours / 1000).toFixed(1)}k hrs`;
-    return `${hours.toLocaleString()} hrs`;
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) return `${hours.toLocaleString()}h ${minutes}m`;
+    return `${minutes}m`;
   };
 
   return (
@@ -120,7 +123,7 @@ export function OverviewTab({ from, to, tz, bucket, className }: OverviewTabProp
                 <Clock className="h-5 w-5 text-sky-500" />
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Air Time</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Play Time</p>
                 <p className="text-2xl font-bold tracking-tighter tabular-nums">
                   {formatDuration(playbackOverview?.programTotal?.playSeconds || 0)}
                 </p>
@@ -161,18 +164,24 @@ export function OverviewTab({ from, to, tz, bucket, className }: OverviewTabProp
           </CardHeader>
           <CardContent className="p-0">
             {isPlaybackLoading ? (
-               <div className="h-[400px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">LOADING TOP PROGRAMS...</div>
+              <div className="h-[280px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">
+                Loading...
+              </div>
+            ) : (playbackOverview?.topPrograms?.length || 0) === 0 ? (
+              <div className="h-[280px] flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8">
+                No program playback data in this period
+              </div>
             ) : (
-              <PlaybackTopTable 
+              <PlaybackTopTable
                 data={playbackOverview?.topPrograms.map(p => ({
                   id: p.lan ? (p.lanProgramId || '') : p.programId!,
                   name: p.programName,
                   playCount: p.playCount,
                   playSeconds: p.playSeconds,
                   version: p.releaseVersion?.toString()
-                })) || []} 
-                type="program" 
-                className="border-0 rounded-none h-[400px]"
+                })) || []}
+                type="program"
+                className="border-0 rounded-none h-[280px]"
               />
             )}
           </CardContent>
@@ -189,17 +198,23 @@ export function OverviewTab({ from, to, tz, bucket, className }: OverviewTabProp
           </CardHeader>
           <CardContent className="p-0">
             {isPlaybackLoading ? (
-               <div className="h-[400px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">LOADING TOP MEDIA...</div>
+              <div className="h-[280px] flex items-center justify-center text-[10px] font-bold opacity-20 italic">
+                Loading...
+              </div>
+            ) : (playbackOverview?.topMedia?.length || 0) === 0 ? (
+              <div className="h-[280px] flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8">
+                No media playback data in this period
+              </div>
             ) : (
-              <PlaybackTopTable 
+              <PlaybackTopTable
                 data={playbackOverview?.topMedia.map(m => ({
                   id: m.mediaId,
                   name: m.mediaTitle || 'Unknown Media',
                   playCount: m.playCount,
                   playSeconds: m.playSeconds
-                })) || []} 
-                type="media" 
-                className="border-0 rounded-none h-[400px]"
+                })) || []}
+                type="media"
+                className="border-0 rounded-none h-[280px]"
               />
             )}
           </CardContent>

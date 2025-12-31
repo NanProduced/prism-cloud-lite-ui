@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   X,
@@ -52,14 +52,36 @@ export function HistoryDrawer({
   isReceiveCard,
   netPortNum,
   receiveCardNum,
+  defaultFromIso,
+  defaultToIso,
 }: HistoryDrawerProps) {
   const { formatDateTime } = useTimeFormatter();
 
+  const toLocalInputValue = (date: Date) => {
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60 * 1000);
+    return local.toISOString().slice(0, 16);
+  };
+
+  const isoToLocalInputValue = (iso?: string) => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return null;
+    return toLocalInputValue(d);
+  };
+
   // Time range state
   const [timeRange, setTimeRange] = useState({
-    from: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
-    to: new Date().toISOString().slice(0, 16),
+    from: toLocalInputValue(new Date(Date.now() - 24 * 60 * 60 * 1000)),
+    to: toLocalInputValue(new Date()),
   });
+
+  useEffect(() => {
+    if (!open) return;
+    const nextFrom = isoToLocalInputValue(defaultFromIso);
+    const nextTo = isoToLocalInputValue(defaultToIso);
+    if (!nextFrom || !nextTo) return;
+    setTimeRange({ from: nextFrom, to: nextTo });
+  }, [open, defaultFromIso, defaultToIso]);
 
   // Receive card selectors
   const [selectedPort, setSelectedPort] = useState<number | undefined>(netPortNum);

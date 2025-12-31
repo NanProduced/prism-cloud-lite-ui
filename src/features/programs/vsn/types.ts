@@ -79,6 +79,7 @@ export type VsnItem = {
   IsScroll?: string;
   Text?: string;
   TextColor?: string;
+  backcolor?: string;
   LogFont?: VsnLogFont;
   [key: string]: unknown;
 };

@@ -9,6 +9,7 @@ import type { SensorSourceType } from '@/services/telemetryApi';
 interface DeviceSensorTabProps {
   deviceId: number;  // 单设备模式
   metrics: Record<string, RealtimeMetric>;
+  historyRange?: { from: string; to: string };
   className?: string;
 }
 
@@ -26,6 +27,7 @@ interface HistoryState {
 export function DeviceSensorTab({
   deviceId,
   metrics,
+  historyRange,
   className,
 }: DeviceSensorTabProps) {
   // History drawer state
@@ -99,6 +101,8 @@ export function DeviceSensorTab({
         isReceiveCard={historyState.isReceiveCard}
         netPortNum={historyState.netPortNum}
         receiveCardNum={historyState.receiveCardNum}
+        defaultFromIso={historyRange?.from}
+        defaultToIso={historyRange?.to}
       />
     </div>
   );

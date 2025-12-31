@@ -7,7 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OverviewTab, PlaybackTab, FleetUptimeTab } from './analytics/components';
 import type { AnalyticsTab } from './analytics/types';
 import { useSettingsStore } from '@/store/settingsStore';
-import { fromZonedTime } from 'date-fns-tz';
+import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
+import { addDays, subDays } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
+import { getDevices } from '@/services/deviceApi';
 
 // --- Constants ---
 
@@ -25,27 +28,48 @@ export default function AnalyticsPage() {
   const { preferences } = useSettingsStore();
   const tz = preferences.timezone || 'UTC';
 
+  const { data: devicesRes } = useQuery({
+    queryKey: ['devices', 'list'],
+    queryFn: () => getDevices(),
+  });
+
+  const deviceMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    devicesRes?.data?.forEach((d) => {
+      map[String(d.deviceId)] = d.deviceName;
+    });
+    return map;
+  }, [devicesRes]);
+
   // Global Controls
   const [timeRange, setTimeRange] = useState(() => {
     const now = new Date();
-    const weekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo = subDays(now, 7);
+    const today = now;
     return {
-      from: weekAgo.toISOString().split('T')[0],
-      to: today.toISOString().split('T')[0],
+      from: formatInTimeZone(weekAgo, tz, 'yyyy-MM-dd'),
+      to: formatInTimeZone(today, tz, 'yyyy-MM-dd'),
     };
   });
   
   const [bucket, setBucket] = useState<PlaybackBucket>('DAY');
 
-  // 使用用户设置的时区将本地日期字符串转换为 UTC ISO 字符串供 API 使用
+  const toUtcIso = (date: string, time: string) => {
+    const utcDate = fromZonedTime(`${date} ${time}`, tz);
+    if (isNaN(utcDate.getTime())) throw new Error('Invalid date conversion');
+    return utcDate.toISOString();
+  };
+
+  const nextDayYmd = (date: string) => {
+    const [year, month, day] = date.split('-').map(Number);
+    const utcMidnight = new Date(Date.UTC(year, month - 1, day));
+    return formatInTimeZone(addDays(utcMidnight, 1), 'UTC', 'yyyy-MM-dd');
+  };
+
+  // Convert local date strings (in tz) to UTC ISO strings for API usage.
   const fromIso = useMemo(() => {
     try {
-      // 假设用户输入的日期是该时区的 00:00:00
-      const dateTimeStr = `${timeRange.from} 00:00:00`;
-      const utcDate = fromZonedTime(dateTimeStr, tz);
-      if (isNaN(utcDate.getTime())) throw new Error('Invalid date');
-      return utcDate.toISOString();
+      return toUtcIso(timeRange.from, '00:00:00');
     } catch (e) {
       console.error('Failed to convert from date:', e);
       return new Date().toISOString();
@@ -54,16 +78,7 @@ export default function AnalyticsPage() {
 
   const toIso = useMemo(() => {
     try {
-      // 假设用户输入的日期是该时区的 23:59:59.999，或者下一天的 00:00:00
-      const [year, month, day] = timeRange.to.split('-').map(Number);
-      const nextDay = new Date(year, month - 1, day + 1);
-      if (isNaN(nextDay.getTime())) throw new Error('Invalid next day');
-      
-      const nextDayStr = nextDay.toISOString().split('T')[0];
-      const dateTimeStr = `${nextDayStr} 00:00:00`;
-      const utcDate = fromZonedTime(dateTimeStr, tz);
-      if (isNaN(utcDate.getTime())) throw new Error('Invalid utc date');
-      return utcDate.toISOString();
+      return toUtcIso(nextDayYmd(timeRange.to), '00:00:00');
     } catch (e) {
       console.error('Failed to convert to date:', e);
       return new Date().toISOString();
@@ -158,18 +173,17 @@ export default function AnalyticsPage() {
         </TabsList>
 
         <TabsContent value="overview" className="flex-1 min-h-0 mt-0 overflow-auto pr-1">
-          <OverviewTab from={fromIso} to={toIso} tz={tz} bucket={bucket} />
+          <OverviewTab from={fromIso} to={toIso} tz={tz} bucket={bucket} deviceMap={deviceMap} />
         </TabsContent>
 
         <TabsContent value="online-time" className="flex-1 min-h-0 mt-0 overflow-auto pr-1">
-          <FleetUptimeTab from={fromIso} to={toIso} tz={tz} bucket={bucket} />
+          <FleetUptimeTab from={fromIso} to={toIso} tz={tz} bucket={bucket} deviceMap={deviceMap} />
         </TabsContent>
 
         <TabsContent value="playback" className="flex-1 min-h-0 mt-0 overflow-auto pr-1">
-          <PlaybackTab from={fromIso} to={toIso} tz={tz} bucket={bucket} />
+          <PlaybackTab from={fromIso} to={toIso} tz={tz} bucket={bucket} deviceMap={deviceMap} />
         </TabsContent>
       </Tabs>
     </div>
   );
 }
-

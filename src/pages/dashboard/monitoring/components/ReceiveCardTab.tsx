@@ -7,6 +7,7 @@ import { ReceiveCardDetailDrawer } from './ReceiveCardDetailDrawer';
 interface ReceiveCardTabProps {
   deviceId: number;  // 单设备模式
   metrics: Record<string, RealtimeMetric>;
+  historyRange?: { from: string; to: string };
   className?: string;
 }
 
@@ -17,6 +18,7 @@ interface ReceiveCardTabProps {
 export function ReceiveCardTab({
   deviceId,
   metrics,
+  historyRange,
   className,
 }: ReceiveCardTabProps) {
   const [selectedCard, setSelectedCard] = useState<ReceiveCardTile | null>(null);
@@ -85,6 +87,8 @@ export function ReceiveCardTab({
         onClose={handleCloseDrawer}
         deviceId={deviceId}
         card={selectedCard}
+        defaultFromIso={historyRange?.from}
+        defaultToIso={historyRange?.to}
       />
     </div>
   );
