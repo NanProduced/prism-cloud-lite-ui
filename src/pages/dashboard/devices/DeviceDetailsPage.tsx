@@ -31,6 +31,7 @@ import {
   Share2,
   Info,
   X,
+  Trash2,
   CalendarDays,
   Send,
   History as HistoryIcon,
@@ -43,6 +44,7 @@ import {
   Unlock,
   Power
 } from "lucide-react";
+import { formatBytes } from "@better-upload/client/helpers";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -86,19 +88,64 @@ import {
   deleteScreenshot, 
   clearScreenshots,
   getDeviceSchedule,
-  getDeviceProgramAllowlist
+  getDeviceProgramAllowlist,
+  clearDevicePrograms,
+  deleteDeviceProgram
 } from "@/services/deviceApi";
 import { getDeviceCommandLogs } from "@/services/logApi";
+import { unpublishProgram } from "@/services/programApi";
 import { useMessageStore } from "@/store/messageStore";
 import { useBreadcrumbStore } from "@/store/breadcrumbStore";
 import { cn } from "@/lib/utils";
+import { buildProgramNameVersionKey, formatVsnDisplayName, parseVsnFilename } from "@/lib/vsn";
 import { useTimeFormatter } from "@/hooks/use-time-formatter";
+import { formatInTimeZone } from 'date-fns-tz';
+
+const ProgramVersionDisplay = ({ name, version, variant = 'default' }: { name?: string; version?: number; variant?: 'default' | 'overlay' }) => {
+  const parsed = useMemo(() => parseVsnFilename(name), [name]);
+  if (!parsed && !name) return <span className="opacity-50">—</span>;
+
+  const displayName = parsed?.programName || parsed?.titleSnapshot || parsed?.fileName || name;
+  const displayVersion = version ?? parsed?.version;
+
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <span className={cn(
+        "truncate",
+        variant === 'overlay' ? "text-base font-bold text-white" : "text-sm font-semibold text-foreground"
+      )}>
+        {displayName}
+      </span>
+      {displayVersion != null && (
+        <Badge 
+          variant="secondary" 
+          className={cn(
+            "h-4.5 px-1.5 text-[9px] font-black border-none shrink-0",
+            variant === 'overlay' 
+              ? "bg-white/20 text-white backdrop-blur-sm" 
+              : "bg-primary/10 text-primary"
+          )}
+        >
+          v{displayVersion}
+        </Badge>
+      )}
+    </div>
+  );
+};
 
 export default function DeviceDetailsPage() {
   const { deviceId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { formatRelative, formatDateTime } = useTimeFormatter();
+  
+  // Live Device Clock state
+  const [liveTime, setLiveTime] = useState<Date>(new Date());
+  
+  useEffect(() => {
+    const timer = setInterval(() => setLiveTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
   const sseConnected = useMessageStore(state => state.sseConnected);
   const setBreadcrumbOverride = useBreadcrumbStore(state => state.setOverride);
   const removeBreadcrumbOverride = useBreadcrumbStore(state => state.removeOverride);
@@ -155,6 +202,80 @@ export default function DeviceDetailsPage() {
   const recentOperations = useMemo(() => commandLogsResponse?.data?.items || [], [commandLogsResponse]);
   const deviceSchedule = scheduleResponse?.data;
   const programAllowlist = allowlistResponse?.data || [];
+  const deviceProps = device?.deviceProperties;
+
+  const allowlistIndex = useMemo(() => {
+    const index = new Map<string, any>();
+    for (const item of programAllowlist || []) {
+      const key = buildProgramNameVersionKey(item?.programName, item?.version);
+      if (key) index.set(key, item);
+    }
+    return index;
+  }, [programAllowlist]);
+
+  const playingVsnName = deviceProps?.vsns?.playing?.name || deviceProps?.info?.info?.playing?.name || device?.playingProgram;
+  const playingParsed = useMemo(() => parseVsnFilename(playingVsnName), [playingVsnName]);
+  const playingDisplayName = useMemo(
+    () => formatVsnDisplayName(playingParsed) || playingVsnName || '--',
+    [playingParsed, playingVsnName]
+  );
+  const playingProgramRef = useMemo(() => {
+    const key = buildProgramNameVersionKey(playingParsed?.programName, playingParsed?.version);
+    return key ? allowlistIndex.get(key) : undefined;
+  }, [allowlistIndex, playingParsed?.programName, playingParsed?.version]);
+
+  const [assetSearch, setAssetSearch] = useState('');
+  const [assetDeleteTarget, setAssetDeleteTarget] = useState<{
+    source: string;
+    vsnName: string;
+    displayName: string;
+    programId?: string;
+  } | null>(null);
+  const [assetClearAllOpen, setAssetClearAllOpen] = useState(false);
+  const [assetActionLoading, setAssetActionLoading] = useState(false);
+
+  const localAssets = useMemo(() => {
+    const rows: Array<{
+      key: string;
+      source: string;
+      vsnName: string;
+      md5?: string;
+      sizeBytes?: number;
+      displayName: string;
+      programId?: string;
+    }> = [];
+
+    const groups = deviceProps?.vsns?.contents || [];
+    for (const group of groups) {
+      for (const vsn of group?.content || []) {
+        const parsed = parseVsnFilename(vsn?.name);
+        const displayName = formatVsnDisplayName(parsed) || vsn?.name || '—';
+        const key = buildProgramNameVersionKey(parsed?.programName, parsed?.version);
+        const ref = key ? allowlistIndex.get(key) : undefined;
+
+        rows.push({
+          key: vsn?.md5 || vsn?.name || `${group?.type}-${Math.random()}`,
+          source: group?.type || 'unknown',
+          vsnName: vsn?.name,
+          md5: vsn?.md5,
+          sizeBytes: vsn?.size,
+          displayName,
+          programId: ref?.programId,
+        });
+      }
+    }
+    return rows;
+  }, [deviceProps?.vsns?.contents, allowlistIndex]);
+
+  const filteredAssets = useMemo(() => {
+    const q = assetSearch.trim().toLowerCase();
+    if (!q) return localAssets;
+    return localAssets.filter((a) => {
+      const name = (a.displayName || '').toLowerCase();
+      const file = (a.vsnName || '').toLowerCase();
+      return name.includes(q) || file.includes(q);
+    });
+  }, [assetSearch, localAssets]);
 
   const [isCapturing, setIsCapturing] = useState(false);
   const [activeScreenshotOpId, setActiveScreenshotOpId] = useState<string | null>(null);
@@ -195,6 +316,9 @@ export default function DeviceDetailsPage() {
       if (Number(updatedId) === Number(deviceId)) {
         queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
         queryClient.invalidateQueries({ queryKey: ['device-screenshots', deviceId] });
+        queryClient.invalidateQueries({ queryKey: ['device-command-logs', deviceId] });
+        queryClient.invalidateQueries({ queryKey: ['device-schedule', deviceId] });
+        queryClient.invalidateQueries({ queryKey: ['device-allowlist', deviceId] });
       }
     };
 
@@ -373,6 +497,62 @@ export default function DeviceDetailsPage() {
     }
   };
 
+  const refreshAfterProgramOps = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
+    queryClient.invalidateQueries({ queryKey: ['device-command-logs', deviceId] });
+    queryClient.invalidateQueries({ queryKey: ['device-allowlist', deviceId] });
+  }, [deviceId, queryClient]);
+
+  const handleConfirmDeleteLocalAsset = useCallback(async () => {
+    if (!assetDeleteTarget || !deviceId) return;
+    setAssetActionLoading(true);
+    try {
+      if (assetDeleteTarget.source === 'internet' && assetDeleteTarget.programId) {
+        const resp = await unpublishProgram(assetDeleteTarget.programId, {
+          scope: 'SELECTED',
+          deviceIds: [Number(deviceId)],
+        });
+        if (!resp.success) {
+          throw new Error(resp.error?.displayMessage || resp.error?.message || 'Unpublish failed');
+        }
+        toast.success('Unpublished from this device');
+      } else {
+        const resp = await deleteDeviceProgram(deviceId, {
+          vsnName: assetDeleteTarget.vsnName,
+          source: assetDeleteTarget.source,
+        });
+        if (!resp.success) {
+          throw new Error(resp.error?.displayMessage || resp.error?.message || 'Delete command failed');
+        }
+        toast.success('Delete command sent');
+      }
+      setAssetDeleteTarget(null);
+      refreshAfterProgramOps();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to delete program');
+    } finally {
+      setAssetActionLoading(false);
+    }
+  }, [assetDeleteTarget, deviceId, refreshAfterProgramOps]);
+
+  const handleConfirmClearAllPrograms = useCallback(async () => {
+    if (!deviceId) return;
+    setAssetActionLoading(true);
+    try {
+      const resp = await clearDevicePrograms(deviceId);
+      if (!resp.success) {
+        throw new Error(resp.error?.displayMessage || resp.error?.message || 'Clear command failed');
+      }
+      toast.success('Clear-all command sent');
+      setAssetClearAllOpen(false);
+      refreshAfterProgramOps();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to clear programs');
+    } finally {
+      setAssetActionLoading(false);
+    }
+  }, [deviceId, refreshAfterProgramOps]);
+
   if (isDeviceLoading) return (
     <div className="flex flex-col items-center justify-center h-[70vh] gap-4">
       <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -536,10 +716,10 @@ export default function DeviceDetailsPage() {
                            </div>
                            <div className="text-white min-w-0">
                               <p className="text-xs text-white/50 mb-0.5">Now playing</p>
-                              <p className="text-base font-semibold truncate max-w-[280px]">{realProps.vsns.playing.name}</p>
+                              <ProgramVersionDisplay name={realProps.vsns.playing.name} variant="overlay" />
                            </div>
-                        </div>
-                     ) : <div />}
+                         </div>
+                      ) : <div />}
 
                      {/* Screenshot Actions */}
                      <div className="hidden xl:flex flex-col gap-2 items-end">
@@ -878,37 +1058,96 @@ export default function DeviceDetailsPage() {
                </CardHeader>
                <CardContent className="p-6">
                   <div className="space-y-3">
-                     {recentOperations.length > 0 ? (
-                        recentOperations.map((op) => (
-                           <div key={op.id} className="p-4 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-colors flex items-center justify-between">
-                              <div className="flex items-center gap-4">
-                                 <div className={cn(
-                                    "h-10 w-10 rounded-xl flex items-center justify-center border",
-                                    op.status === 'SUCCESS' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
-                                    op.status === 'FAILED' ? "bg-rose-500/10 text-rose-600 border-rose-500/20" :
-                                    "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                                 )}>
-                                    <Activity className="h-5 w-5" />
-                                 </div>
-                                 <div>
-                                    <div className="flex items-center gap-2">
-                                       <span className="font-medium text-sm">{op.actionType}</span>
-                                       <Badge variant="outline" className={cn(
-                                          "text-xs h-5 border-none",
-                                          op.status === 'SUCCESS' ? "bg-emerald-500/10 text-emerald-600" :
-                                          op.status === 'FAILED' ? "bg-rose-500/10 text-rose-600" :
-                                          "bg-amber-500/10 text-amber-600"
-                                       )}>
-                                          {op.status === 'SUCCESS' ? 'Done' : op.status === 'FAILED' ? 'Failed' : 'Pending'}
-                                       </Badge>
-                                    </div>
-                                    {op.errorMessage && (
-                                       <p className="text-xs text-rose-500 mt-1 max-w-[200px] truncate">{op.errorMessage}</p>
-                                    )}
-                                 </div>
-                              </div>
+                      {recentOperations.length > 0 ? (
+                         recentOperations.map((op) => (
+                            <div key={op.id} className="p-4 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-colors flex items-center justify-between">
+                               <div className="flex items-center gap-4">
+                                 {(() => {
+                                   const status = (op.status || '').toUpperCase();
+                                   const isAckOnly = (op.trackingLevel || '').toUpperCase() === 'ACK_ONLY';
+                                   const rejected = op.accepted === false;
 
-                              <div className="text-right">
+                                   const isSending = status === 'PUBLISHED' || status === 'DISPATCHED' || status === 'WAITING';
+                                   const isReceived = status === 'CONFIRMED' || status === 'ACKED';
+                                   const isSucceeded = status === 'COMPLETED' || status === 'SUCCEEDED' || (isAckOnly && isReceived);
+                                   const isFailed = rejected || status === 'FAILED' || status === 'EXPIRED';
+
+                                   const icon = isSending ? <Loader2 className="h-5 w-5 animate-spin" /> :
+                                     isSucceeded ? <CheckCircle2 className="h-5 w-5" /> :
+                                       isFailed ? <XCircle className="h-5 w-5" /> :
+                                         <Activity className="h-5 w-5" />;
+
+                                   const toneClass = isSucceeded
+                                     ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                     : isFailed
+                                       ? "bg-rose-500/10 text-rose-600 border-rose-500/20"
+                                       : "bg-amber-500/10 text-amber-600 border-amber-500/20";
+
+                                   return (
+                                     <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center border", toneClass)}>
+                                       {icon}
+                                     </div>
+                                   );
+                                 })()}
+                                  <div>
+                                     <div className="flex items-center gap-2">
+                                       {(() => {
+                                         const type = (op.actionType || '').toUpperCase();
+                                         const status = (op.status || '').toUpperCase();
+                                         const isAckOnly = (op.trackingLevel || '').toUpperCase() === 'ACK_ONLY';
+                                         const rejected = op.accepted === false;
+
+                                         const label = (() => {
+                                           if (type === 'CONTENT_REPORT_SWITCH') return 'Statistics';
+                                           if (type === 'INPUT_MODE') return 'Input Mode';
+                                           if (type === 'CLEAR_DEVICE_PROGRAM') return 'Clear Programs';
+                                           if (type === 'DELETE_DEVICE_VSN') return 'Delete Program';
+                                           if (!type) return 'Unknown';
+                                           return type.charAt(0) + type.slice(1).toLowerCase().replace(/_/g, ' ');
+                                         })();
+
+                                         const isSending = status === 'PUBLISHED' || status === 'DISPATCHED' || status === 'WAITING';
+                                         const isReceived = status === 'CONFIRMED' || status === 'ACKED';
+                                         const isSucceeded = status === 'COMPLETED' || status === 'SUCCEEDED' || (isAckOnly && isReceived);
+                                         const isFailed = rejected || status === 'FAILED' || status === 'EXPIRED';
+
+                                         const statusText = rejected
+                                           ? 'Rejected'
+                                           : isSucceeded
+                                             ? 'Success'
+                                             : status === 'EXPIRED'
+                                               ? 'Expired'
+                                               : status === 'FAILED'
+                                                 ? 'Failed'
+                                                 : isReceived
+                                                   ? 'Received'
+                                                   : isSending
+                                                     ? 'Sending'
+                                                     : status || 'Pending';
+
+                                         const badgeClass = isSucceeded
+                                           ? "bg-emerald-500/10 text-emerald-600"
+                                           : isFailed
+                                             ? "bg-rose-500/10 text-rose-600"
+                                             : "bg-amber-500/10 text-amber-600";
+
+                                         return (
+                                           <>
+                                             <span className="font-medium text-sm">{label}</span>
+                                             <Badge variant="outline" className={cn("text-xs h-5 border-none", badgeClass)}>
+                                               {statusText}
+                                             </Badge>
+                                           </>
+                                         );
+                                       })()}
+                                     </div>
+                                     {op.errorMessage && (
+                                       <p className="text-xs text-rose-500 mt-1 max-w-[320px] break-words">{op.errorMessage}</p>
+                                     )}
+                                  </div>
+                               </div>
+ 
+                               <div className="text-right">
                                  <p className="text-xs text-muted-foreground">{op.createdAt ? formatRelative(op.createdAt) : ''}</p>
                               </div>
                            </div>
@@ -926,45 +1165,97 @@ export default function DeviceDetailsPage() {
 
          <TabsContent value="assets" className="mt-0">
             <Card className="rounded-3xl border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
-               <CardHeader className="px-8 py-6 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
-                  <div className="space-y-1">
-                     <CardTitle className="text-lg font-semibold">Local assets</CardTitle>
-                     <CardDescription className="text-sm text-muted-foreground">Content cached on this device</CardDescription>
-                  </div>
-                  <div className="relative">
-                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                     <Input placeholder="Search..." className="pl-10 h-10 w-56 bg-muted/30 border-none rounded-xl text-sm" />
-                  </div>
-               </CardHeader>
-               <CardContent className="p-0">
-                  <div className="grid grid-cols-12 px-8 py-4 bg-muted/20 text-xs font-medium text-muted-foreground border-b">
-                     <div className="col-span-7">Name</div>
-                     <div className="col-span-2 text-center">Type</div>
-                     <div className="col-span-3 text-right">Size</div>
-                  </div>
-                  <div className="divide-y divide-muted/40 max-h-[500px] overflow-y-auto">
-                     {realProps.vsns?.contents && realProps.vsns.contents.length > 0 ? (
-                        realProps.vsns.contents.map(group => group.content.map(vsn => (
-                           <div key={vsn.md5} className="grid grid-cols-12 px-8 py-4 items-center hover:bg-muted/10 transition-colors">
-                              <div className="col-span-7 flex items-center gap-4">
-                                 <div className="h-10 w-10 rounded-xl bg-card border flex items-center justify-center text-muted-foreground">
-                                    <FileText className="h-5 w-5" />
-                                 </div>
-                                 <p className="font-medium text-sm truncate">{vsn.name}</p>
+                <CardHeader className="px-8 py-6 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
+                   <div className="space-y-1">
+                      <CardTitle className="text-lg font-semibold">Local assets</CardTitle>
+                      <CardDescription className="text-sm text-muted-foreground">Content cached on this device</CardDescription>
+                   </div>
+                   <div className="flex items-center gap-3">
+                      <Button
+                         variant="outline"
+                         size="sm"
+                         className="rounded-xl text-sm gap-2"
+                         onClick={() => setAssetClearAllOpen(true)}
+                      >
+                         <Trash2 className="h-4 w-4" /> Clear all
+                      </Button>
+                      <div className="relative">
+                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                         <Input
+                            placeholder="Search..."
+                            value={assetSearch}
+                            onChange={(e) => setAssetSearch(e.target.value)}
+                            className="pl-10 h-10 w-56 bg-muted/30 border-none rounded-xl text-sm"
+                         />
+                      </div>
+                   </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                   <div className="grid grid-cols-12 px-8 py-4 bg-muted/20 text-xs font-medium text-muted-foreground border-b">
+                      <div className="col-span-6">Name</div>
+                      <div className="col-span-2 text-center">Source</div>
+                      <div className="col-span-2 text-right">Size</div>
+                      <div className="col-span-2 text-right">Actions</div>
+                   </div>
+                   <div className="divide-y divide-muted/40 max-h-[500px] overflow-y-auto">
+                      {localAssets.length > 0 ? (
+                        filteredAssets.length > 0 ? (
+                          filteredAssets.map((asset) => {
+                            const sourceLabel = asset.source === 'internet' ? 'Cloud' : asset.source === 'lan' ? 'LAN' : asset.source;
+                            const sourceClass =
+                              asset.source === 'internet'
+                                ? 'bg-indigo-500/10 text-indigo-600'
+                                : asset.source === 'lan'
+                                  ? 'bg-emerald-500/10 text-emerald-600'
+                                  : 'bg-muted text-muted-foreground';
+
+                                                          return (
+                                                            <div key={asset.key} className="grid grid-cols-12 px-8 py-4 items-center hover:bg-muted/10 transition-colors">
+                                                              <div className="col-span-6 flex items-center gap-4 min-w-0">
+                                                                 <div className="h-10 w-10 rounded-xl bg-card border flex items-center justify-center text-muted-foreground shrink-0">
+                                                                    <FileText className="h-5 w-5" />
+                                                                 </div>
+                                                                 <ProgramVersionDisplay name={asset.vsnName} />
+                                                              </div>
+                                                              <div className="col-span-2 text-center">
+                                                                <Badge variant="outline" className={cn('text-xs border-none', sourceClass)}>
+                                                                  {sourceLabel}
+                                                                </Badge>
+                                                              </div>
+                                                              <div className="col-span-2 text-right">
+                                                                <p className="text-sm tabular-nums">{asset.sizeBytes != null ? formatBytes(asset.sizeBytes) : '—'}</p>
+                                                              </div>
+                                                              <div className="col-span-2 text-right">                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 rounded-xl"
+                                    disabled={assetActionLoading || !asset.vsnName}
+                                    onClick={() =>
+                                      setAssetDeleteTarget({
+                                        source: asset.source,
+                                        vsnName: asset.vsnName,
+                                        displayName: asset.displayName,
+                                        programId: asset.programId,
+                                      })
+                                    }
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </div>
-                              <div className="col-span-2 text-center">
-                                 <Badge variant="outline" className="text-xs border-none bg-indigo-500/10 text-indigo-600">{group.type}</Badge>
-                              </div>
-                              <div className="col-span-3 text-right">
-                                 <p className="text-sm tabular-nums">{(vsn.size / 1024 / 1024).toFixed(1)} MB</p>
-                              </div>
-                           </div>
-                        )))
-                     ) : (
-                        <div className="py-16 flex flex-col items-center justify-center gap-4 text-muted-foreground">
-                           <Database className="h-10 w-10 opacity-30" />
-                           <p className="text-sm">No cached assets</p>
-                        </div>
+                            );
+                          })
+                        ) : (
+                          <div className="py-16 flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                            <Search className="h-10 w-10 opacity-30" />
+                            <p className="text-sm">No matching assets</p>
+                          </div>
+                        )
+                      ) : (
+                         <div className="py-16 flex flex-col items-center justify-center gap-4 text-muted-foreground">
+                            <Database className="h-10 w-10 opacity-30" />
+                            <p className="text-sm">No cached assets</p>
+                         </div>
                      )}
                   </div>
                </CardContent>
@@ -1055,7 +1346,6 @@ export default function DeviceDetailsPage() {
                            <thead>
                               <tr className="bg-muted/30 border-b text-xs font-medium text-muted-foreground">
                                  <th className="px-4 py-3">Program</th>
-                                 <th className="px-4 py-3 text-center">Version</th>
                                  <th className="px-4 py-3">Status</th>
                                  <th className="px-4 py-3 text-right">Progress</th>
                               </tr>
@@ -1087,26 +1377,34 @@ export default function DeviceDetailsPage() {
             </Card>
          </TabsContent>
 
-         <TabsContent value="policy" className="mt-0">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-               <Card className="rounded-3xl border-none ring-1 ring-muted/60 shadow-sm overflow-hidden lg:col-span-1">
-                  <CardHeader className="bg-muted/5 border-b py-5 px-6">
-                     <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
-                        <Clock className="h-4 w-4 text-primary" /> Time
-                     </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6 space-y-6">
-                     <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10 text-center">
-                        <p className="text-xs text-primary/60 mb-2">Device time</p>
-                        <p className="text-4xl font-bold text-primary tabular-nums">{realProps.newrtc?.time?.split(' ')[1] || '--:--'}</p>
-                        <p className="text-sm text-muted-foreground mt-2">{realProps.newrtc?.time?.split(' ')[0] || '--'}</p>
-                     </div>
-                     <div className="space-y-3">
-                        <PolicyData label="Timezone" value={realProps.newrtc?.timezoneId} />
-                     </div>
-                  </CardContent>
-               </Card>
-
+                   <TabsContent value="policy" className="mt-0">
+                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <Card className="rounded-3xl border-none ring-1 ring-muted/60 shadow-sm overflow-hidden lg:col-span-1">
+                           <CardHeader className="bg-muted/5 border-b py-5 px-6">
+                              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+                                 <Clock className="h-4 w-4 text-primary" /> Time
+                              </CardTitle>
+                           </CardHeader>
+                           <CardContent className="p-6 space-y-6">
+                              <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10 text-center">
+                                 <p className="text-xs text-primary/60 mb-2">Device local time</p>
+                                 <p className="text-4xl font-bold text-primary tabular-nums">
+                                   {realProps.newrtc?.timezoneId ? 
+                                     formatInTimeZone(liveTime, realProps.newrtc.timezoneId, 'HH:mm:ss') : 
+                                     '--:--:--'}
+                                 </p>
+                                 <p className="text-sm text-muted-foreground mt-2 font-medium">
+                                   {realProps.newrtc?.timezoneId ? 
+                                     formatInTimeZone(liveTime, realProps.newrtc.timezoneId, 'yyyy-MM-dd') : 
+                                     '--'}
+                                 </p>
+                              </div>
+                              <div className="space-y-3">
+                                 <PolicyData label="Timezone ID" value={realProps.newrtc?.timezoneId} />
+                                 <PolicyData label="Last Sync" value={realProps.newrtc?.time?.split(' ')[1]} />
+                              </div>
+                           </CardContent>
+                        </Card>
                <Card className="rounded-3xl border-none ring-1 ring-muted/60 shadow-sm overflow-hidden lg:col-span-2">
                   <CardHeader className="bg-muted/5 border-b py-5 px-6">
                      <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
@@ -1122,13 +1420,66 @@ export default function DeviceDetailsPage() {
                </Card>
             </div>
          </TabsContent>
-      </Tabs>
+       </Tabs>
 
-      {/* Power Action Confirmation */}
-      <Dialog open={confirmDialog.open} onOpenChange={(open) => !open && setConfirmDialog({ open: false, type: null })}>
-        <DialogContent className="sm:max-w-[440px] rounded-[2.5rem] p-10 overflow-hidden border-none shadow-2xl ring-1 ring-muted/50">
-          <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
-             {confirmDialog.type === 'sleep' ? <Moon className="h-48 w-48" /> : confirmDialog.type === 'wakeup' ? <Power className="h-48 w-48" /> : <RotateCw className="h-48 w-48" />}
+       {/* Local Assets: Delete Single */}
+       <Dialog open={!!assetDeleteTarget} onOpenChange={(open) => !open && setAssetDeleteTarget(null)}>
+         <DialogContent className="sm:max-w-[520px] rounded-[2rem] p-8 border-none shadow-2xl ring-1 ring-muted/50">
+           <DialogHeader className="space-y-3">
+             <DialogTitle className="text-xl font-bold">Remove program from device?</DialogTitle>
+             <DialogDescription className="text-sm text-muted-foreground">
+               {assetDeleteTarget?.source === 'internet' && assetDeleteTarget?.programId
+                 ? 'This will unpublish the program from this device and request the device to delete the cached VSN.'
+                 : 'This will request the device to delete the cached VSN. Cloud publishing state will not be changed.'}
+             </DialogDescription>
+           </DialogHeader>
+
+           <div className="mt-4 space-y-2">
+             <div className="rounded-xl bg-muted/30 p-4">
+               <p className="text-sm font-medium">{assetDeleteTarget?.displayName}</p>
+               <p className="text-xs text-muted-foreground break-all">{assetDeleteTarget?.vsnName}</p>
+             </div>
+           </div>
+
+           <div className="mt-6 flex justify-end gap-3">
+             <Button variant="outline" className="rounded-xl" onClick={() => setAssetDeleteTarget(null)} disabled={assetActionLoading}>
+               Cancel
+             </Button>
+             <Button className="rounded-xl gap-2" onClick={handleConfirmDeleteLocalAsset} disabled={assetActionLoading}>
+               {assetActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+               Remove
+             </Button>
+           </div>
+         </DialogContent>
+       </Dialog>
+
+       {/* Local Assets: Clear All */}
+       <Dialog open={assetClearAllOpen} onOpenChange={setAssetClearAllOpen}>
+         <DialogContent className="sm:max-w-[520px] rounded-[2rem] p-8 border-none shadow-2xl ring-1 ring-muted/50">
+           <DialogHeader className="space-y-3">
+             <DialogTitle className="text-xl font-bold">Clear all cached programs?</DialogTitle>
+             <DialogDescription className="text-sm text-muted-foreground">
+               This sends a device command to clear all downloaded programs. It does not change cloud assignments or schedules.
+             </DialogDescription>
+           </DialogHeader>
+
+           <div className="mt-6 flex justify-end gap-3">
+             <Button variant="outline" className="rounded-xl" onClick={() => setAssetClearAllOpen(false)} disabled={assetActionLoading}>
+               Cancel
+             </Button>
+             <Button className="rounded-xl gap-2" onClick={handleConfirmClearAllPrograms} disabled={assetActionLoading}>
+               {assetActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+               Clear all
+             </Button>
+           </div>
+         </DialogContent>
+       </Dialog>
+
+       {/* Power Action Confirmation */}
+       <Dialog open={confirmDialog.open} onOpenChange={(open) => !open && setConfirmDialog({ open: false, type: null })}>
+         <DialogContent className="sm:max-w-[440px] rounded-[2.5rem] p-10 overflow-hidden border-none shadow-2xl ring-1 ring-muted/50">
+           <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
+              {confirmDialog.type === 'sleep' ? <Moon className="h-48 w-48" /> : confirmDialog.type === 'wakeup' ? <Power className="h-48 w-48" /> : <RotateCw className="h-48 w-48" />}
           </div>
           <DialogHeader className="relative z-10 space-y-4">
             <div className={cn(
@@ -1309,10 +1660,7 @@ function VisibilityRow({ name, id, source, status, progress }: { name: string, i
    return (
       <tr className="hover:bg-muted/5 transition-colors">
          <td className="px-4 py-3">
-            <span className="text-sm font-medium">{name}</span>
-         </td>
-         <td className="px-4 py-3 text-center">
-            <code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">{id}</code>
+            <ProgramVersionDisplay name={name} version={id} />
          </td>
          <td className="px-4 py-3">
             <div className="flex items-center gap-2">

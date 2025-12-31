@@ -19,7 +19,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
 import { CountryPicker } from '@/components/ui/country-picker';
 import { 
   DropdownMenu,
@@ -79,12 +78,14 @@ function filterItemToText(filter?: FilterModelItem<Device>): string {
   if (filter.kind === 'func') {
     const prismSelected = (filter as any).prismSelected as string[];
     if (prismSelected) return prismSelected.join(', ');
-    const prismRange = (filter as any).prismRange as [number, number];
-    if (prismRange) return `${prismRange[0]} - ${prismRange[1]}`;
-    return '';
+    return 'Active Filter';
   }
   if (filter.kind === 'string') return String(filter.value ?? '');
-  if (filter.kind === 'number') return filter.value == null ? '' : String(filter.value);
+  if (filter.kind === 'number') {
+     const f = filter as FilterNumber<Device>;
+     const opMap: any = { equals: '=', not_equals: '!=', greater_than: '>', less_than: '<', greater_than_or_equals: '>=', less_than_or_equals: '<=' };
+     return `${opMap[f.operator] || ''}${f.value}`;
+  }
   if (filter.kind === 'date') return filter.value == null ? '' : String(filter.value);
   return '';
 }
@@ -238,10 +239,6 @@ function CustomFieldFilterPopover({
   const [open, setOpen] = useState(false);
   const type = fieldDef.fieldType;
 
-  // Rules of Hooks: Always call useValue at the top level
-  const rowDataSource = grid?.state?.rowDataSource?.useValue();
-  const rows = grid?.state?.rows?.useValue() || [];
-
   // Enum Options
   const options = useMemo(() => {
     if (type === 'BOOLEAN') return [{ value: 'true', label: 'True' }, { value: 'false', label: 'False' }];
@@ -254,51 +251,6 @@ function CustomFieldFilterPopover({
 
   const [enumSelected, setEnumSelected] = useState<Set<string>>(new Set());
 
-  // Use API and recursive search to get all possible values for the field
-  const allLeafData = useMemo(() => {
-    if (!open) return [];
-    
-    const result: any[] = [];
-    
-    // 1. Try grid API first
-    if (grid.api && typeof grid.api.forEachNode === 'function') {
-      grid.api.forEachNode((node: any) => {
-        if (node.kind === 'leaf' && node.data) result.push(node.data);
-      });
-    }
-
-    // 2. Fallback to rowDataSource
-    if (result.length === 0 && rowDataSource) {
-      const raw = (rowDataSource as any)?.state?.data?.get();
-      if (Array.isArray(raw)) result.push(...raw);
-    }
-    
-    // 3. Fallback to rows
-    if (result.length === 0 && rows.length > 0) {
-      const stack = [...rows];
-      while (stack.length > 0) {
-        const node = stack.pop();
-        if (node?.kind === 'leaf') result.push(node.data);
-        else if (node?.children) stack.push(...node.children);
-      }
-    }
-
-    return result;
-  }, [open, rows, rowDataSource, grid.api]);
-
-  const dataRange = useMemo(() => {
-    if (type !== 'NUMBER' || !open) return [0, 100];
-    
-    const vals = allLeafData.map(d => {
-       return Number(d?.customFieldValues?.[fieldDef.fieldKey]);
-    }).filter(v => !Number.isNaN(v));
-    
-    if (vals.length === 0) return [0, 100];
-    return [Math.floor(Math.min(...vals)), Math.ceil(Math.max(...vals))];
-  }, [allLeafData, type, fieldDef.fieldKey, open]);
-
-  const [range, setRange] = useState<[number, number]>(dataRange);
-
   // Default values
   const [operator, setOperator] = useState('contains');
   const [value, setValue] = useState('');
@@ -308,14 +260,13 @@ function CustomFieldFilterPopover({
   useEffect(() => {
     if (open) {
       setEnumSelected(new Set(current?.prismSelected || []));
-      setRange(current?.prismRange || dataRange);
       setOperator(current?.operator || (type === 'NUMBER' ? 'equals' : 'contains'));
       setValue(current?.value != null ? String(current.value) : '');
       hasInitialized.current = true;
     } else {
       hasInitialized.current = false;
     }
-  }, [open, type, dataRange]);
+  }, [open, type]);
 
   const apply = () => {
     if (!hasInitialized.current) return;
@@ -339,20 +290,20 @@ function CustomFieldFilterPopover({
           }
         } as any);
       }
-    } else if (type === 'NUMBER') {
-      onApply({
-        kind: 'func', prismRange: range,
-        func: ({ data }: any) => {
-          const val = Number(data.customFieldValues?.[fieldDef.fieldKey]);
-          return !Number.isNaN(val) && val >= range[0] && val <= range[1];
-        }
-      } as any);
     } else {
       const trimmed = value.trim();
       if (!trimmed) onApply(undefined);
       else {
-        if (type === 'DATETIME') onApply({ kind: 'date', operator, value: trimmed } as any);
-        else onApply({ kind: 'string', operator, value: trimmed } as any);
+        if (type === 'NUMBER') {
+          const num = Number(trimmed);
+          if (!Number.isNaN(num)) {
+            onApply({ kind: 'number', operator: operator as any, value: num } as any);
+          }
+        } else if (type === 'DATETIME') {
+          onApply({ kind: 'date', operator, value: trimmed } as any);
+        } else {
+          onApply({ kind: 'string', operator, value: trimmed } as any);
+        }
       }
     }
     setOpen(false);
@@ -374,14 +325,6 @@ function CustomFieldFilterPopover({
              }
           } as any);
        }
-    } else if (updates.range) {
-       onApply({
-          kind: 'func', prismRange: updates.range,
-          func: ({ data }: any) => {
-             const val = Number(data.customFieldValues?.[fieldDef.fieldKey]);
-             return !Number.isNaN(val) && val >= updates.range[0] && val <= updates.range[1];
-          }
-       } as any);
     }
   };
 
@@ -446,46 +389,40 @@ function CustomFieldFilterPopover({
             </div>
           )}
 
-          {type === 'NUMBER' && (
-            <div className="grid gap-4 py-2">
-              <div className="flex items-center justify-between">
-                 <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Range</div>
-                 <div className="text-xs font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                    {range[0]} - {range[1]}
-                 </div>
-              </div>
-              <div className="px-2">
-                 <Slider 
-                    value={range} 
-                    onValueChange={(v) => { setRange(v as [number, number]); handleLiveChange({ range: v }); }} 
-                    min={dataRange[0]}
-                    max={dataRange[1]} 
-                    step={1} 
-                    className="cursor-pointer"
-                 />
-              </div>
-            </div>
-          )}
-
-          {!options && type !== 'NUMBER' && (
+          {!options && (
             <div className="grid gap-3">
               <OperatorSelect
                 value={operator}
                 onValueChange={(v: any) => { setOperator(v); if(value) apply(); }}
-                options={[
+                options={type === 'NUMBER' ? [
+                  { value: 'equals', label: 'Equals' },
+                  { value: 'not_equals', label: 'Not equals' },
+                  { value: 'greater_than', label: 'Greater than' },
+                  { value: 'less_than', label: 'Less than' },
+                  { value: 'greater_than_or_equals', label: 'Greater or equal' },
+                  { value: 'less_than_or_equals', label: 'Less or equal' },
+                ] : [
                   { value: 'contains', label: 'Contains' },
                   { value: 'equals', label: 'Equals' },
                   { value: 'begins_with', label: 'Begins with' },
                 ]}
               />
               <Input
+                type={type === 'NUMBER' ? 'number' : 'text'}
                 value={value}
                 onChange={(e) => {
                    const v = e.target.value; setValue(v);
                    if (!v.trim()) onApply(undefined);
-                   else onApply({ kind: (type === 'DATETIME' ? 'date' : 'string'), operator, value: v } as any);
+                   else {
+                     if (type === 'NUMBER') {
+                       const num = Number(v);
+                       if (!Number.isNaN(num)) onApply({ kind: 'number', operator: operator as any, value: num });
+                     } else {
+                       onApply({ kind: (type === 'DATETIME' ? 'date' : 'string'), operator, value: v } as any);
+                     }
+                   }
                 }}
-                placeholder="Search value..."
+                placeholder={type === 'NUMBER' ? "Enter number..." : "Search value..."}
                 className="h-9 text-sm"
                 autoFocus
               />

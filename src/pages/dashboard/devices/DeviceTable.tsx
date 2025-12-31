@@ -730,7 +730,9 @@ export function DeviceTable({
         if (data.kind !== 'leaf' || !data.data) return '';
         return data.data.tags.map(t => t.tagName).join(', ');
       },
-      floatingCellRenderer: DeviceGridFloatingFilterCell,
+      floatingCellRenderer: (params) => (
+        <DeviceGridFloatingFilterCell {...params} allTags={tags} />
+      ),
       uiHints: {
         sortable: false,
         rowGroupable: false,

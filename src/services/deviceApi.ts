@@ -267,3 +267,24 @@ export async function getDeviceProgramAllowlist(deviceId: string | number): Prom
     apiClient.get(`/devices/${deviceId}/program-allowlist`)
   );
 }
+
+/**
+ * Clear all programs cached on device (device API: DELETE api/clrprgms)
+ */
+export async function clearDevicePrograms(deviceId: string | number): Promise<BffResponse<any>> {
+  return handleRequest<any>(
+    apiClient.post(`/devices/${deviceId}/programs/clear`)
+  );
+}
+
+/**
+ * Delete a specific program (VSN) from device (device API: DELETE api/vsns/sources/{source}/vsns/{vsnName})
+ */
+export async function deleteDeviceProgram(
+  deviceId: string | number,
+  data: { programId?: string; vsnName?: string; source?: string }
+): Promise<BffResponse<any>> {
+  return handleRequest<any>(
+    apiClient.post(`/devices/${deviceId}/programs/delete`, data)
+  );
+}

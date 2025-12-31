@@ -13,12 +13,12 @@ import type {
 import type { Device } from '@/types/device';
 import { resolveDeviceStatus } from '@/types/device';
 import { useEffect, useMemo, useState, useRef } from 'react';
+import { resolveTagIcon, hexToRgba } from '@/components/devices/tagging';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Slider } from '@/components/ui/slider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,7 +57,8 @@ const NETWORK_OPTIONS = [
 export function DeviceGridFloatingFilterCell({
   grid,
   column,
-}: HeaderFloatingCellRendererParams<Device>) {
+  allTags,
+}: HeaderFloatingCellRendererParams<Device> & { allTags?: any[] }) {
   const filterModel = grid.state.filterModel.useValue();
   const current = filterModel[column.id] as (FilterModelItem<Device> & Record<string, any>) | undefined;
   
@@ -66,12 +67,12 @@ export function DeviceGridFloatingFilterCell({
   const isStatus = column.id === 'onlineStatus';
   const isNetwork = column.id === 'networkType';
   const isAutoEnum = ['model', 'version', 'resolution', 'playingProgram'].includes(column.id);
-  const isNumericRange = ['brightness', 'storagePct', 'networkStrength'].includes(column.id);
+  const isNumeric = ['brightness', 'storagePct', 'networkStrength'].includes(column.id) || column.type === 'number';
   const isTags = column.id === 'tags';
   const isTime = column.id === 'lastReportTime';
 
-  const hideInput = isStatus || isNetwork || isNumericRange || isTime || isAutoEnum;
-  const value = filterItemToText(current, { isStatus, isNetwork, isTime, isNumericRange });
+  const hideInput = isStatus || isNetwork || isNumeric || isTime || isAutoEnum || isTags;
+  const value = filterItemToText(current, { isStatus, isNetwork, isTime, isNumeric, isTags });
 
   const handleChange = (raw: string) => {
     if (hideInput) return;
@@ -134,9 +135,10 @@ export function DeviceGridFloatingFilterCell({
         isStatus={isStatus}
         isNetwork={isNetwork}
         isAutoEnum={isAutoEnum}
-        isNumericRange={isNumericRange}
+        isNumeric={isNumeric}
         isTags={isTags}
         isTime={isTime}
+        allTags={allTags}
         hideInput={hideInput}
         grid={grid}
         current={current}
@@ -159,13 +161,18 @@ function filterItemToText(filter?: FilterModelItem<Device>, opts?: any): string 
   if (filter.kind === 'func' || filter.kind === 'combination') {
     const f = filter as any;
     if (f.prismSelected?.length > 0) return f.prismSelected.join(', ');
-    if (f.prismRange) return `${f.prismRange[0]} - ${f.prismRange[1]}${opts?.isNumericRange ? '%' : ''}`;
+    if (f.prismRange) return `${f.prismRange[0]} - ${f.prismRange[1]}${opts?.isNumeric ? '%' : ''}`;
     if (f.prismDate) {
       const { start, end } = f.prismDate;
       if (start && end) return `${start} to ${end}`;
       return start ? `Since ${start}` : end ? `Before ${end}` : 'Date Filter';
     }
     return 'Active Filter';
+  }
+  if (filter.kind === 'number') {
+     const f = filter as FilterNumber<Device>;
+     const opMap: any = { equals: '=', not_equals: '!=', greater_than: '>', less_than: '<', greater_than_or_equals: '>=', less_than_or_equals: '<=' };
+     return `${opMap[f.operator] || ''}${f.value}`;
   }
   return String((filter as any).value ?? '');
 }
@@ -196,18 +203,16 @@ function prefixToDateOperator(p?: string): FilterDateOperator {
 }
 
 function FilterPopover({
-  columnId, columnName, columnType, isStatus, isNetwork, isAutoEnum, isNumericRange, isTags, isTime, grid, current, onApply, onClear
+  columnId, columnName, columnType, isStatus, isNetwork, isAutoEnum, isNumeric, isTags, isTime, allTags, grid, current, onApply, onClear
 }: any) {
   const [open, setOpen] = useState(false);
   const [internalSearch, setInternalSearch] = useState('');
 
   // Rules of Hooks: Always call useValue at the top level
-  // We use optional chaining and provide a dummy atom if the real one is missing
   const filterModel = grid?.state?.filterModel?.useValue() || {};
   const rows = grid?.state?.rows?.useValue() || [];
   const rowDataSource = grid?.state?.rowDataSource?.useValue();
   
-  // Safe way to get data without calling dynamic hooks
   const rawData = useMemo(() => {
     if (!rowDataSource) return [];
     const ds = rowDataSource as any;
@@ -224,10 +229,16 @@ function FilterPopover({
   const enumOptions = useMemo(() => {
     if (isStatus) return STATUS_OPTIONS;
     if (isNetwork) return NETWORK_OPTIONS;
-    if (isAutoEnum && open) {
+    if (isTags && allTags) {
+       return allTags.map((t: any) => ({ 
+         value: t.tagName, 
+         label: t.tagName,
+         color: t.color,
+         icon: t.icon ? resolveTagIcon(t.icon) : null
+       }));
+    }
+    if ((isAutoEnum || isTags) && open) {
       const values = new Set<string>();
-      
-      // Attempt to get all records via grid API - Safe for grouped data
       const allLeafData: any[] = [];
       if (grid.api && typeof (grid.api as any).forEachNode === 'function') {
         (grid.api as any).forEachNode((node: any) => {
@@ -236,35 +247,31 @@ function FilterPopover({
           }
         });
       }
-
-      // Combine with raw data if API found nothing
       const sourceData = allLeafData.length > 0 ? allLeafData : rawData;
-
       if (sourceData.length === 0) return [];
-
       sourceData.forEach((item: any) => {
         if (!item) return;
-        let val = item[columnId];
         
-        // Smart field probing
+        if (isTags) {
+          (item.tags || []).forEach((t: any) => {
+            if (t?.tagName) values.add(t.tagName);
+          });
+          return;
+        }
+
+        let val = item[columnId];
         if (columnId === 'playingProgram') {
           val = val || item.currentProgram?.name || item.playing_program;
         } else if (columnId === 'resolution') {
-          if (val && typeof val === 'object') {
-            val = `${val.width} x ${val.height}`;
-          }
+          if (val && typeof val === 'object') val = `${val.width} x ${val.height}`;
         }
-        
-        if (val != null && val !== '' && val !== '—' && val !== '-') {
-          values.add(String(val));
-        }
+        if (val != null && val !== '' && val !== '—' && val !== '-') values.add(String(val));
       });
-
       const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
       return Array.from(values).sort(collator.compare).map(v => ({ value: v, label: v }));
     }
-    return isAutoEnum ? [] : null;
-  }, [open, rows, rawData, columnId, isStatus, isNetwork, isAutoEnum, grid.api]);
+    return (isAutoEnum || isTags) ? [] : null;
+  }, [open, rawData, columnId, isStatus, isNetwork, isAutoEnum, isTags, allTags, grid.api]);
 
   const filteredOptions = useMemo(() => {
     if (!enumOptions || !internalSearch) return enumOptions;
@@ -273,7 +280,6 @@ function FilterPopover({
   }, [enumOptions, internalSearch]);
 
   const [enumSelected, setEnumSelected] = useState<Set<string>>(new Set());
-  const [range, setRange] = useState<[number, number]>([0, 100]);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [operator, setOperator] = useState('contains');
   const [value, setValue] = useState('');
@@ -283,16 +289,15 @@ function FilterPopover({
   useEffect(() => {
     if (open) {
       setEnumSelected(new Set(current?.prismSelected || []));
-      setRange(current?.prismRange || [0, 100]);
       setDateRange(current?.prismDate || { start: '', end: '' });
-      setOperator(current?.operator || (columnType === 'number' ? 'equals' : 'contains'));
+      setOperator(current?.operator || (isNumeric ? 'equals' : 'contains'));
       setValue(current?.value != null ? String(current.value) : '');
       setInternalSearch('');
       hasInitialized.current = true;
     } else {
       hasInitialized.current = false;
     }
-  }, [open, columnType]); // Removed current/initial deps to break loop
+  }, [open, isNumeric]);
 
   const handleLiveChange = (updates: any) => {
     if (!hasInitialized.current) return;
@@ -305,27 +310,17 @@ function FilterPopover({
           const item = data?.data || data;
           if (isStatus) return selected.includes(resolveDeviceStatus(item));
           
+          if (isTags) {
+            const deviceTags = (item.tags || []).map((t: any) => t.tagName);
+            return selected.some(s => deviceTags.includes(s));
+          }
+
           let val = item?.[columnId];
-          // Probing same logic as extraction
           if (columnId === 'playingProgram') val = val || item.currentProgram?.name || item.playing_program;
           if (columnId === 'resolution' && typeof val === 'object') val = `${val.width} x ${val.height}`;
-          
           if (val == null) return false;
           const sVal = String(val).toLowerCase();
           return selected.some(s => s.toLowerCase() === sVal);
-        }
-      });
-    } else if (updates.range) {
-      onApply({
-        kind: 'func', prismRange: updates.range,
-        func: ({ data }: any) => {
-          const item = data?.data || data;
-          let val = (columnId === 'storagePct' && item.totalStorage) 
-            ? ((item.totalStorage - item.freeStorage) / item.totalStorage) * 100 
-            : item?.[columnId];
-          if (val == null) return false;
-          if (columnId === 'networkStrength' && !(item.networkType === '4G' || item.networkType === 'FOUR_G')) return false;
-          return val >= updates.range[0] && val <= updates.range[1];
         }
       });
     } else if (updates.date) {
@@ -361,7 +356,7 @@ function FilterPopover({
                 </div>
                 <h4 className="font-bold text-sm tracking-tight">{columnName}</h4>
              </div>
-             {current && <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] uppercase font-bold text-muted-foreground hover:text-destructive" onClick={() => { onClear(); setOpen(false); }}>Reset</Button>}
+             {current && <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] font-bold text-muted-foreground hover:text-destructive" onClick={() => { onClear(); setOpen(false); }}>Reset</Button>}
           </header>
           <div className="p-4 space-y-4">
             {enumOptions && (
@@ -383,9 +378,25 @@ function FilterPopover({
                           if (n.has(opt.value)) n.delete(opt.value); else n.add(opt.value);
                           setEnumSelected(n); handleLiveChange({ enum: n });
                         }}>
-                          <div className="flex items-center gap-2.5">
-                            {Icon && <Icon className={cn("h-3 w-3", opt.color)} />}
-                            <span className={cn(checked && "font-semibold")}>{opt.label}</span>
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {isTags && opt.color ? (
+                              <div 
+                                className="flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[10px] font-bold"
+                                style={{ 
+                                  borderColor: opt.color, 
+                                  color: opt.color,
+                                  backgroundColor: hexToRgba(opt.color, 0.1)
+                                }}
+                              >
+                                {Icon && <Icon className="h-3 w-3" />}
+                                <span className="truncate">{opt.label}</span>
+                              </div>
+                            ) : (
+                              <>
+                                {Icon && <Icon className={cn("h-3 w-3", opt.color)} />}
+                                <span className={cn(checked && "font-semibold")}>{opt.label}</span>
+                              </>
+                            )}
                           </div>
                           {checked && <Check className="h-3.5 w-3.5" />}
                         </button>
@@ -399,24 +410,13 @@ function FilterPopover({
                 </div>
               </div>
             )}
-            {isNumericRange && (
-              <div className="space-y-6 py-2">
-                <div className="flex items-center justify-between">
-                   <div className="text-[10px] font-bold text-muted-foreground uppercase">Range Value</div>
-                   <Badge variant="outline" className="font-mono text-[10px] bg-background">{range[0]}% - {range[1]}%</Badge>
-                </div>
-                <div className="px-2">
-                   <Slider value={range} onValueChange={(v: any) => { setRange(v); handleLiveChange({ range: v }); }} max={100} step={1} />
-                </div>
-              </div>
-            )}
             {isTime && (
               <div className="space-y-4 py-1">
                 {['start', 'end'].map(key => (
                   <div key={key} className="grid gap-2">
                      <div className="flex items-center gap-2">
                         <Calendar className="h-3 w-3 text-muted-foreground" />
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase">{key} Date</label>
+                        <label className="text-[10px] font-bold text-muted-foreground">{key} date</label>
                      </div>
                      <Input type="date" className="h-9 text-xs bg-muted/20 border-transparent" value={(dateRange as any)[key]} onChange={e => {
                         const n = { ...dateRange, [key]: e.target.value };
@@ -429,17 +429,43 @@ function FilterPopover({
                 </div>
               </div>
             )}
-            {!enumOptions && !isNumericRange && !isTime && (
+            {!enumOptions && !isTime && (
               <div className="space-y-3">
-                <OperatorSelect value={operator} onValueChange={(v: any) => { setOperator(v); if(value) onApply({ kind: columnType === 'number' ? 'number' : 'string', operator: v, value: columnType === 'number' ? Number(value) : value } as any); }} options={columnType === 'number' ? [{ value: 'equals', label: 'Equals' }, { value: 'not_equals', label: 'Not equals' }, { value: 'greater_than', label: 'Greater than' }, { value: 'less_than', label: 'Less than' }] : [{ value: 'contains', label: 'Contains' }, { value: 'not_contains', label: 'Not contains' }, { value: 'equals', label: 'Equals' }, { value: 'begins_with', label: 'Begins with' }]} />
+                <OperatorSelect 
+                  value={operator} 
+                  onValueChange={(v: any) => { 
+                    setOperator(v); 
+                    if(value) onApply({ kind: isNumeric ? 'number' : 'string', operator: v, value: isNumeric ? Number(value) : value } as any); 
+                  }} 
+                  options={isNumeric ? [
+                    { value: 'equals', label: 'Equals' }, 
+                    { value: 'not_equals', label: 'Not equals' }, 
+                    { value: 'greater_than', label: 'Greater than' }, 
+                    { value: 'less_than', label: 'Less than' },
+                    { value: 'greater_than_or_equals', label: 'Greater or equal' },
+                    { value: 'less_than_or_equals', label: 'Less or equal' }
+                  ] : [
+                    { value: 'contains', label: 'Contains' }, 
+                    { value: 'not_contains', label: 'Not contains' }, 
+                    { value: 'equals', label: 'Equals' }, 
+                    { value: 'begins_with', label: 'Begins with' }
+                  ]} 
+                />
                 <div className="relative">
                   {isTags && <TagIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />}
-                  <Input value={value} onChange={e => {
-                    const v = e.target.value; setValue(v);
-                    if (!v.trim()) onApply(undefined);
-                    else if (isTags) onApply({ kind: 'func', func: ({ data }: any) => (data?.data || data).tags?.some((t: any) => t.tagName.toLowerCase().includes(v.toLowerCase())) });
-                    else onApply({ kind: columnType === 'number' ? 'number' : 'string', operator, value: columnType === 'number' ? Number(v) : v });
-                  }} placeholder={isTags ? "Filter by tag name..." : "Enter text..."} className={cn("h-9 text-xs", isTags && "pl-8")} autoFocus />
+                  <Input 
+                    type={isNumeric ? 'number' : 'text'}
+                    value={value} 
+                    onChange={e => {
+                      const v = e.target.value; setValue(v);
+                      if (!v.trim()) onApply(undefined);
+                      else if (isTags) onApply({ kind: 'func', func: ({ data }: any) => (data?.data || data).tags?.some((t: any) => t.tagName.toLowerCase().includes(v.toLowerCase())) });
+                      else onApply({ kind: isNumeric ? 'number' : 'string', operator, value: isNumeric ? Number(v) : v });
+                    }} 
+                    placeholder={isTags ? "Filter by tag name..." : isNumeric ? "Enter number..." : "Enter text..."} 
+                    className={cn("h-9 text-xs", isTags && "pl-8")} 
+                    autoFocus 
+                  />
                 </div>
               </div>
             )}

@@ -91,7 +91,7 @@ function ColorDot({ color }: { color?: string }) {
 
   return (
     <span
-      className={cn('inline-flex h-3.5 w-3.5 rounded-full border', presetClassName ?? 'border-border bg-transparent')}
+      className={cn('inline-flex h-3 w-3 rounded-full border', presetClassName ?? 'border-border bg-transparent')}
       style={
         isCustomHex && color
           ? {
@@ -354,20 +354,25 @@ export function DeviceCustomFieldsSheet({
       </DialogTrigger>
 
       <DialogContent className="!w-[min(92vw,60rem)] !max-w-none p-0 overflow-hidden h-[80vh] max-h-[85vh] rounded-xl border shadow-2xl">
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full bg-background">
           {/* Header */}
           <div className="px-6 py-4 border-b bg-card flex items-center justify-between gap-4 shrink-0">
             <div className="flex items-center gap-4 min-w-0">
               {activeView !== 'list' && (
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full -ml-1" onClick={() => setActiveView('list')}>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 rounded-full hover:bg-muted -ml-1 transition-colors" 
+                  onClick={() => setActiveView('list')}
+                >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
               )}
               <div className="space-y-0.5">
                 <DialogTitle className="text-base font-bold tracking-tight">
-                  {activeView === 'list' && "Custom Fields"}
-                  {activeView === 'create' && "Create Field"}
-                  {activeView === 'options' && "Manage Choices"}
+                  {activeView === 'list' && "Custom fields"}
+                  {activeView === 'create' && "Create new field"}
+                  {activeView === 'options' && "Manage choices"}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground truncate">
                   {activeView === 'list' && "Manage device metadata and grid columns"}
@@ -380,26 +385,31 @@ export function DeviceCustomFieldsSheet({
             <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg border bg-muted/30 shrink-0">
                <div className="text-right leading-none">
                   <p className="text-[10px] font-bold text-muted-foreground tracking-tight mb-0.5">Usage</p>
-                  <p className="text-xs font-mono font-bold text-foreground">{ordered.length}/{currentQuota}</p>
+                  <p className="text-xs font-mono font-bold text-foreground">
+                    {ordered.length}/{currentQuota}
+                  </p>
                </div>
                <div className="h-6 w-px bg-border" />
-               <Badge variant={isProActive ? "default" : "secondary"} className={cn("h-5 px-1.5 text-[10px] font-bold uppercase tracking-tight", isProActive && "bg-primary text-primary-foreground")}>
+               <Badge 
+                variant={isProActive ? "default" : "secondary"} 
+                className={cn("h-5 px-1.5 text-[10px] font-bold tracking-tight", isProActive && "bg-primary text-primary-foreground")}
+               >
                  {user?.subscriptionTier || 'FREE'}
                </Badge>
             </div>
           </div>
 
           {/* Body content switches based on activeView */}
-          <div className="flex-1 overflow-hidden relative">
+          <div className="flex-1 overflow-hidden relative flex flex-col">
             {activeView === 'list' && (
               <div className="flex flex-col h-full">
                 <div className="p-4 px-6 flex items-center justify-between bg-muted/5 border-b shrink-0">
-                   <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                   <div className="text-[11px] font-bold text-muted-foreground tracking-tight">
                      {ordered.length} active columns
                    </div>
                    <Button size="sm" className="gap-2 rounded-lg font-bold text-xs h-8 px-4 shadow-sm" onClick={() => setActiveView('create')} disabled={!canCreate}>
                       <Plus className="h-3.5 w-3.5" />
-                      Add Field
+                      Add field
                    </Button>
                 </div>
                 <ScrollArea className="flex-1">
@@ -438,9 +448,9 @@ export function DeviceCustomFieldsSheet({
                                     <div className="flex flex-col min-w-0">
                                        <div className="flex items-center gap-2">
                                           <span className="font-bold text-sm truncate" onDoubleClick={() => !locked && beginRename(def)}>{def.displayName}</span>
-                                          {def.planTierRequired && <Badge variant="outline" className="text-[9px] h-4 font-bold border-indigo-200 text-indigo-600 bg-indigo-50/50">PRO</Badge>}
+                                          {def.planTierRequired && <Badge variant="outline" className="text-[9px] h-4 font-bold border-indigo-200 text-indigo-600 bg-indigo-50/50">Pro</Badge>}
                                        </div>
-                                       <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-tighter">{typeLabel}</span>
+                                       <span className="text-[10px] font-semibold text-muted-foreground/60 tracking-tight">{typeLabel}</span>
                                     </div>
                                  </div>
                                )}
@@ -506,8 +516,6 @@ export function DeviceCustomFieldsSheet({
 }
 
 function CreateFieldForm({
-  isProActive,
-  freeCount,
   onCancel,
   onCreate,
 }: {
@@ -558,12 +566,12 @@ function CreateFieldForm({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       <ScrollArea className="flex-1">
         <div className="p-8 space-y-10 max-w-4xl mx-auto">
           {/* Step 1 */}
           <section className="space-y-4">
-            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider pl-1">1. Choose format</h3>
+            <h3 className="text-xs font-bold text-muted-foreground pl-1">1. Choose data format</h3>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {FIELD_TYPES.map((t) => {
                 const Icon = typeIcons[t.value] || Type;
@@ -596,14 +604,14 @@ function CreateFieldForm({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
             {/* Step 2 */}
             <section className="space-y-6">
-               <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider pl-1">2. Identity</h3>
+               <h3 className="text-xs font-bold text-muted-foreground pl-1">2. Identity</h3>
                <div className="space-y-5">
                   <div className="space-y-2">
                     <p className="text-[11px] font-bold text-foreground/80 px-1">Display name</p>
-                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Asset category" className="h-11 rounded-xl shadow-sm border-muted-foreground/20" />
+                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Asset category" className="h-10 rounded-xl shadow-sm border-muted-foreground/20" />
                   </div>
                   <div className="space-y-2">
-                     <p className="text-[11px] font-bold text-foreground/80 px-1">Column icon</p>
+                     <p className="text-[11px] font-bold text-foreground/80 px-1">Column icon (Optional)</p>
                      <IconPicker value={icon} onChange={setIcon} />
                   </div>
                </div>
@@ -612,7 +620,7 @@ function CreateFieldForm({
             {/* Step 3 */}
             {needsOptions && (
               <section className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider pl-1">3. Choices</h3>
+                <h3 className="text-xs font-bold text-muted-foreground pl-1">3. Choices</h3>
                 <div className="space-y-3">
                   <div className="flex gap-2">
                     <Input
@@ -620,9 +628,9 @@ function CreateFieldForm({
                       onChange={(e) => setNewOptionName(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addOption())}
                       placeholder="Type and hit Enter..."
-                      className="h-11 rounded-xl"
+                      className="h-10 rounded-xl"
                     />
-                    <Button type="button" onClick={addOption} className="h-11 px-5 font-bold shadow-md">Add</Button>
+                    <Button type="button" onClick={addOption} className="h-10 px-4 font-bold shadow-md">Add</Button>
                   </div>
                   <div className="rounded-2xl border bg-muted/10 overflow-hidden shadow-inner">
                     <ScrollArea className="h-[240px]">
@@ -631,12 +639,12 @@ function CreateFieldForm({
                           <div className="py-20 text-center text-xs text-muted-foreground italic opacity-50">No choices added yet</div>
                         ) : (
                           options.map((opt, idx) => (
-                            <div key={opt.optionId} className="flex items-center justify-between gap-3 p-2.5 px-4 rounded-xl bg-background border shadow-sm group">
+                            <div key={opt.optionId} className="flex items-center justify-between gap-3 p-2 px-3.5 rounded-xl bg-background border shadow-sm group">
                               <div className="flex items-center gap-3 min-w-0">
                                 <ColorDot color={opt.color} />
-                                <span className="text-sm font-bold truncate">{opt.displayName}</span>
+                                <span className="text-[13px] font-semibold truncate">{opt.displayName}</span>
                               </div>
-                              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => setOptions(options.filter((_, i) => i !== idx))}><X className="h-4 w-4" /></Button>
+                              <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => setOptions(options.filter((_, i) => i !== idx))}><X className="h-3.5 w-3.5" /></Button>
                             </div>
                           ))
                         )}
@@ -650,12 +658,13 @@ function CreateFieldForm({
         </div>
       </ScrollArea>
 
-      <footer className="px-8 py-5 border-t bg-muted/5 flex items-center justify-end gap-3 shrink-0">
-        <Button variant="ghost" onClick={onCancel} className="h-11 px-6 font-bold text-xs uppercase tracking-widest text-muted-foreground">Discard</Button>
+      {/* Footer */}
+      <footer className="px-8 py-4 border-t bg-muted/5 flex items-center justify-end gap-3 shrink-0">
+        <Button variant="ghost" onClick={onCancel} className="h-9 px-6 font-bold text-xs tracking-tight text-muted-foreground">Discard</Button>
         <Button
           onClick={() => onCreate({ type, name, icon, options: needsOptions ? options : undefined })}
           disabled={!name.trim() || (needsOptions && options.length === 0)}
-          className="h-11 px-10 font-bold text-xs uppercase tracking-widest shadow-xl shadow-primary/20"
+          className="h-9 px-8 font-bold text-xs tracking-tight shadow-lg shadow-primary/10"
         >
           Create field
         </Button>
@@ -695,14 +704,14 @@ function OptionsEditor({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       <ScrollArea className="flex-1">
         <div className="p-8 space-y-8 max-w-2xl mx-auto">
           <div className="space-y-4 p-6 rounded-2xl border bg-muted/20 shadow-inner">
-            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1">Add new choice</h4>
+            <h4 className="text-xs font-bold text-muted-foreground pl-1">Add new choice</h4>
             <div className="flex gap-2">
-              <Input value={newOptionName} onChange={(e) => setNewOptionName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addOption()} placeholder="e.g. Standard" className="h-12 bg-background rounded-xl font-bold" />
-              <Button onClick={addOption} className="h-12 px-6 font-bold shadow-lg" disabled={locked}>Add</Button>
+              <Input value={newOptionName} onChange={(e) => setNewOptionName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addOption()} placeholder="e.g. Standard" className="h-11 bg-background rounded-xl font-bold" />
+              <Button onClick={addOption} className="h-11 px-6 font-bold shadow-lg" disabled={locked}>Add</Button>
             </div>
           </div>
 
@@ -712,7 +721,7 @@ function OptionsEditor({
                 <div className="py-24 text-center text-xs text-muted-foreground opacity-40 italic">No options defined</div>
               ) : (
                 drafts.map((o, idx) => (
-                  <div key={o.optionKey} className="group flex items-center gap-4 p-3 px-4 rounded-xl hover:bg-muted/30 transition-all border border-transparent hover:border-border">
+                  <div key={o.optionKey} className="group flex items-center gap-4 p-2.5 px-4 rounded-xl hover:bg-muted/30 transition-all border border-transparent hover:border-border">
                     <div className="flex flex-col gap-0.5">
                       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
                         const next = [...drafts];
@@ -725,7 +734,7 @@ function OptionsEditor({
                     </div>
                     <Input value={o.displayName} disabled={locked} onChange={(e) => setDrafts(drafts.map((x, i) => i === idx ? { ...x, displayName: e.target.value } : x))} className="flex-1 h-10 bg-transparent border-transparent focus-visible:bg-background focus-visible:border-border font-bold text-sm rounded-lg" />
                     <OptionColorPicker value={o.color} disabled={locked} onChange={(color) => setDrafts(drafts.map((x, i) => i === idx ? { ...x, color } : x))} />
-                    <button type="button" className={cn("px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase transition-all", o.active ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-muted text-muted-foreground grayscale")} onClick={() => !locked && setDrafts(drafts.map((x, i) => i === idx ? { ...x, active: !x.active } : x))}>{o.active ? "Active" : "Hidden"}</button>
+                    <button type="button" className={cn("px-2.5 py-1 rounded-lg border text-[10px] font-bold transition-all", o.active ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-muted text-muted-foreground grayscale")} onClick={() => !locked && setDrafts(drafts.map((x, i) => i === idx ? { ...x, active: !x.active } : x))}>{o.active ? "Active" : "Hidden"}</button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => setDrafts(drafts.filter((_, i) => i !== idx))} disabled={locked}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))
@@ -735,11 +744,11 @@ function OptionsEditor({
         </div>
       </ScrollArea>
 
-      <footer className="px-8 py-5 border-t bg-muted/5 flex items-center justify-between shrink-0">
+      <footer className="px-8 py-4 border-t bg-muted/5 flex items-center justify-between shrink-0">
         <p className="text-xs font-bold text-muted-foreground italic">{drafts.length} options configured</p>
         <div className="flex gap-3">
-          <Button variant="ghost" onClick={onClose} className="h-11 px-6 font-bold text-xs uppercase tracking-widest text-muted-foreground">Cancel</Button>
-          <Button className="h-11 px-10 font-bold text-xs uppercase tracking-widest shadow-xl shadow-primary/20" onClick={() => { onOptionsChange(drafts.map((o, i) => ({ ...o, sequence: i + 1 }))); toast('Options updated'); onClose(); }} disabled={locked}>Save changes</Button>
+          <Button variant="ghost" onClick={onClose} className="h-9 px-6 font-bold text-xs text-muted-foreground">Cancel</Button>
+          <Button className="h-9 px-10 font-bold text-xs shadow-lg shadow-primary/10" onClick={() => { onOptionsChange(drafts.map((o, i) => ({ ...o, sequence: i + 1 }))); toast('Options updated'); onClose(); }} disabled={locked}>Save changes</Button>
         </div>
       </footer>
     </div>
