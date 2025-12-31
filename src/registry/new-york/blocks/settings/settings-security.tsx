@@ -59,6 +59,7 @@ import {
   InputGroupInput,
 } from "@/registry/new-york/ui/input-group";
 import { Separator } from "@/registry/new-york/ui/separator";
+import { resolveIpLocation } from "@/lib/maptiler";
 
 export interface SecuritySession {
   id: string;
@@ -121,6 +122,22 @@ function formatRelativeTime(date: Date): string {
   if (hours < 24) return `${hours}h ago`;
   if (days < 7) return `${days}d ago`;
   return formatDate(date);
+}
+
+function IpLocationDisplay({ ip, fallback }: { ip: string; fallback: string }) {
+  const [location, setLocation] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useState(() => {
+    if (!ip || ip.includes(':') || ip === '127.0.0.1') return;
+    setLoading(true);
+    resolveIpLocation(ip).then(loc => {
+      if (loc) setLocation(loc);
+    }).finally(() => setLoading(false));
+  });
+
+  if (loading) return <span className="animate-pulse">Locating...</span>;
+  return <span>{location || fallback}</span>;
 }
 
 export default function SettingsSecurity({
@@ -545,7 +562,7 @@ export default function SettingsSecurity({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-1 gap-x-4 text-xs text-muted-foreground">
                           <div className="flex items-center gap-1.5">
                             <MapPin className="size-3 opacity-70" />
-                            <span>{session.ipAddress} ({session.location})</span>
+                            <span>{session.ipAddress} (<IpLocationDisplay ip={session.ipAddress} fallback={session.location} />)</span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <Clock className="size-3 opacity-70" />
@@ -629,7 +646,7 @@ export default function SettingsSecurity({
                         <div className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs">
                           <span className="flex items-center gap-1">
                             <MapPin className="size-3" />
-                            {event.location}
+                            <IpLocationDisplay ip={event.ipAddress} fallback={event.location} />
                           </span>
                           <span>•</span>
                           <span>{event.ipAddress}</span>

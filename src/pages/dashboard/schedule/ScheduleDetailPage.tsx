@@ -562,6 +562,7 @@ export default function ScheduleDetailPage() {
         }}
         initialRule={editingContentsRule}
         existingPriorities={contentsPriorities}
+        existingRules={schedule?.contentsRules || []}
         onSave={saveContentsRule}
       />
 

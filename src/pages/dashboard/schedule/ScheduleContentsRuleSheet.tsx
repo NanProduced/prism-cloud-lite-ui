@@ -30,9 +30,10 @@ export function ScheduleContentsRuleSheet(props: {
   onOpenChange: (open: boolean) => void;
   initialRule?: ScheduleContentsRuleResp | null;
   existingPriorities: number[];
+  existingRules: ScheduleContentsRuleResp[];
   onSave: (req: UpsertScheduleContentsRuleReq) => void;
 }) {
-  const { open, onOpenChange, initialRule, existingPriorities, onSave } = props;
+  const { open, onOpenChange, initialRule, existingPriorities, existingRules, onSave } = props;
 
   const [type, setType] = useState<'rotation' | 'spot'>('rotation');
   const [priority, setPriority] = useState<number>(1);
@@ -71,6 +72,16 @@ export function ScheduleContentsRuleSheet(props: {
     return existingPriorities.filter((p) => p !== initialRule!.priority);
   }, [existingPriorities, initialRule, isEdit]);
 
+  const programVersionLock = useMemo(() => {
+    if (!selectedProgramId) return null;
+    const others = (existingRules || []).filter((r) => r.programId === selectedProgramId && r.id !== initialRule?.id);
+    if (others.length === 0) return null;
+    return {
+      lockedReleaseProgramId: others[0].releaseProgramId,
+      lockedReleaseVersion: others[0].releaseVersion ?? null,
+    };
+  }, [existingRules, initialRule?.id, selectedProgramId]);
+
   const selectedReleaseProgramId = useMemo(() => {
     if (manualReleaseProgramId.trim()) {
       const n = Number(manualReleaseProgramId);
@@ -78,6 +89,14 @@ export function ScheduleContentsRuleSheet(props: {
     }
     return selectedDeviceProgramId && selectedDeviceProgramId > 0 ? selectedDeviceProgramId : null;
   }, [manualReleaseProgramId, selectedDeviceProgramId]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!programVersionLock) return;
+    if (selectedDeviceProgramId !== programVersionLock.lockedReleaseProgramId) {
+      setSelectedDeviceProgramId(programVersionLock.lockedReleaseProgramId);
+    }
+  }, [open, programVersionLock, selectedDeviceProgramId]);
 
   // Load Initial State
   useEffect(() => {
@@ -141,8 +160,16 @@ export function ScheduleContentsRuleSheet(props: {
       toast.error('Priority already exists in this schedule');
       return;
     }
+    if (!Number.isFinite(priority) || priority < 0) {
+      toast.error('Priority must be >= 0');
+      return;
+    }
     if (!selectedReleaseProgramId) {
       toast.error('Please select a published program version');
+      return;
+    }
+    if (programVersionLock && selectedReleaseProgramId !== programVersionLock.lockedReleaseProgramId) {
+      toast.error('This schedule can only use one version per program');
       return;
     }
 
@@ -247,25 +274,35 @@ export function ScheduleContentsRuleSheet(props: {
              </div>
              
              {selectedProgramId && (
-                 <div className="space-y-2">
-                    <label className="text-xs font-semibold text-muted-foreground">Version</label>
-                    <Select
-                      value={selectedDeviceProgramId ? String(selectedDeviceProgramId) : '__none__'}
-                      onValueChange={(v) => setSelectedDeviceProgramId(v === '__none__' ? null : Number(v))}
-                    >
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Select version" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {versions.map((v: ProgramVersionResp) => (
-                            <SelectItem key={v.deviceProgramId} value={String(v.deviceProgramId)}>
-                              v{v.version} ({new Date(v.createdAt).toLocaleDateString()})
-                            </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                 </div>
-             )}
+                  <div className="space-y-2">
+                     <label className="text-xs font-semibold text-muted-foreground">Version</label>
+                     <Select
+                       value={selectedDeviceProgramId ? String(selectedDeviceProgramId) : '__none__'}
+                       onValueChange={(v) => setSelectedDeviceProgramId(v === '__none__' ? null : Number(v))}
+                       disabled={Boolean(programVersionLock)}
+                     >
+                       <SelectTrigger className="h-11">
+                         <SelectValue placeholder="Select version" />
+                       </SelectTrigger>
+                       <SelectContent>
+                         {versions.map((v: ProgramVersionResp) => (
+                             <SelectItem key={v.deviceProgramId} value={String(v.deviceProgramId)}>
+                               v{v.version} ({new Date(v.createdAt).toLocaleDateString()})
+                             </SelectItem>
+                         ))}
+                       </SelectContent>
+                     </Select>
+                     {programVersionLock ? (
+                       <p className="text-[11px] text-muted-foreground">
+                         This program is already used by other rules in this schedule. Version is locked to{' '}
+                         {programVersionLock.lockedReleaseVersion != null
+                           ? `v${programVersionLock.lockedReleaseVersion}`
+                           : `deviceProgramId=${programVersionLock.lockedReleaseProgramId}`}
+                         .
+                       </p>
+                     ) : null}
+                  </div>
+              )}
           </div>
 
           <div className="h-px bg-border" />

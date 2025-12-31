@@ -69,6 +69,7 @@ import { getDevices, executeDeviceAction } from "@/services/deviceApi";
 import { getGpsLatest, setGpsOverride, deleteGpsOverride } from "@/services/telemetryApi";
 import { useTimeFormatter } from "@/hooks/use-time-formatter";
 import { useSettingsStore } from "@/store/settingsStore";
+import { reverseGeocode, type ResolvedAddress } from "@/lib/maptiler";
 
 import { getDeviceLayers, HEATMAP_LAYER, TRACKS_LAYER } from "./mapLayers";
 import { buildHeatmapPoints, buildTracks } from "./mapMockData";
@@ -126,6 +127,7 @@ export default function MapPage() {
   // --- New Map Features ---
   const [sensorMetrics, setSensorMetrics] = useState<Record<string, any>>({});
   const [followEnabled, setFollowEnabled] = useState(false);
+  const [resolvedAddress, setResolvedAddress] = useState<string | null>(null);
 
   // --- SSE Logic ---
 
@@ -269,6 +271,23 @@ export default function MapPage() {
 
     return () => eventSource.close();
   }, [selectedDeviceId, followEnabled]);
+
+  // Reverse Geocoding for Selected Device
+  useEffect(() => {
+    if (!selectedLocation) {
+      setResolvedAddress(null);
+      return;
+    }
+
+    const resolve = async () => {
+      const result = await reverseGeocode(selectedLocation.lng, selectedLocation.lat);
+      if (result) {
+        setResolvedAddress(result.fullText);
+      }
+    };
+
+    resolve();
+  }, [selectedLocation]);
 
   const devices = useMemo(() => {
     const baseDevices = devicesRes?.data || [];
@@ -912,13 +931,20 @@ export default function MapPage() {
                     </div>
 
                     <div className="space-y-2.5">
-                      <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-2xl border border-muted/60 shadow-inner">
+                      <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-2xl border border-muted/60 shadow-inner group/address">
                         <MapPin className="h-4 w-4 text-primary shrink-0" />
                         <div className="min-w-0 flex-1">
                            <p className="text-[11px] font-bold text-foreground/70 uppercase tracking-widest leading-none mb-1.5">
                              {selectedLocation.source === 'manual' ? 'Manual Override' : 'GPS'}
                            </p>
-                           <p className="text-xs font-mono text-muted-foreground font-semibold truncate tracking-tight">{formatLocation(selectedLocation)}</p>
+                           <p className="text-xs font-medium text-muted-foreground leading-tight tracking-tight">
+                              {resolvedAddress || formatLocation(selectedLocation)}
+                           </p>
+                           {resolvedAddress && (
+                             <p className="text-[10px] font-mono text-muted-foreground/50 mt-1 tabular-nums group-hover/address:text-muted-foreground/80 transition-colors">
+                               {formatLocation(selectedLocation)}
+                             </p>
+                           )}
                         </div>
                       </div>
                     </div>
