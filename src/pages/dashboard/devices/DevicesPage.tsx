@@ -146,12 +146,10 @@ export default function DevicesPage() {
     };
 
     window.addEventListener('prism.device.updated', handleDeviceUpdate);
-    window.addEventListener('prism.device.status.changed', handleDeviceUpdate);
     window.addEventListener('prism.telemetry.gps.reported', handleGlobalGps);
     
     return () => {
       window.removeEventListener('prism.device.updated', handleDeviceUpdate);
-      window.removeEventListener('prism.device.status.changed', handleDeviceUpdate);
       window.removeEventListener('prism.telemetry.gps.reported', handleGlobalGps);
     };
   }, [queryClient]);

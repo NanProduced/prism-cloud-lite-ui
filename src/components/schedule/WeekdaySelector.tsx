@@ -1,22 +1,26 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { BACKEND_WEEKDAY_LABELS } from "@/lib/schedule/weekdayUtils"
 
 export interface WeekdaySelectorProps {
-  value: number[] // 0=Sun, 1=Mon, ..., 6=Sat
+  /**
+   * Selected weekday indices using backend convention:
+   * 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
+   */
+  value: number[]
   onChange: (value: number[]) => void
   disabled?: boolean
 }
 
-const WEEKDAYS = [
-  { label: "Sun", value: 0 },
-  { label: "Mon", value: 1 },
-  { label: "Tue", value: 2 },
-  { label: "Wed", value: 3 },
-  { label: "Thu", value: 4 },
-  { label: "Fri", value: 5 },
-  { label: "Sat", value: 6 },
-]
+/**
+ * Weekdays using backend convention:
+ * index 0 = Monday, index 6 = Sunday
+ */
+const WEEKDAYS = BACKEND_WEEKDAY_LABELS.map((label, index) => ({
+  label,
+  value: index,
+}))
 
 export function WeekdaySelector({ value, onChange, disabled }: WeekdaySelectorProps) {
   const toggleDay = (dayIndex: number) => {
@@ -28,8 +32,10 @@ export function WeekdaySelector({ value, onChange, disabled }: WeekdaySelectorPr
   }
 
   const selectAll = () => onChange([0, 1, 2, 3, 4, 5, 6])
-  const selectWorkdays = () => onChange([1, 2, 3, 4, 5])
-  const selectWeekend = () => onChange([0, 6])
+  // Workdays: Mon(0), Tue(1), Wed(2), Thu(3), Fri(4)
+  const selectWorkdays = () => onChange([0, 1, 2, 3, 4])
+  // Weekend: Sat(5), Sun(6)
+  const selectWeekend = () => onChange([5, 6])
   const clear = () => onChange([])
 
   return (

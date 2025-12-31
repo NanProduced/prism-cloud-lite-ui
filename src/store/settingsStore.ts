@@ -2,6 +2,11 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getUserSettings, updateUserSettings } from '@/services/userApi';
 import type { UserSettingsOverrides } from '@/types/user';
+import {
+  defaultNotificationSettings,
+  isNotificationSettingsV2,
+  type NotificationSettingsV2,
+} from '@/types/notificationSettings';
 
 export type DateFormatPreset =
   | "YYYY-MM-DD"
@@ -23,9 +28,11 @@ export interface UserPreferences {
 
 interface SettingsState {
   preferences: UserPreferences;
+  notificationSettings: NotificationSettingsV2;
   isLoading: boolean;
   fetchSettings: () => Promise<void>;
   updatePreferences: (patch: Partial<UserPreferences>) => Promise<void>;
+  updateNotificationSettings: (next: NotificationSettingsV2) => Promise<void>;
 }
 
 const getBrowserTimezone = () => {
@@ -51,6 +58,7 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
       preferences: defaultPreferences,
+      notificationSettings: defaultNotificationSettings,
       isLoading: false,
       fetchSettings: async () => {
         set({ isLoading: true });
@@ -59,11 +67,15 @@ export const useSettingsStore = create<SettingsState>()(
           if (res.success && res.data) {
             const ui = res.data.ui || {};
             const backendPrefs = ui.preferences || {};
+            const backendNotificationSettings = ui.notifications;
             set({
               preferences: {
                 ...defaultPreferences,
                 ...backendPrefs,
-              }
+              },
+              notificationSettings: isNotificationSettingsV2(backendNotificationSettings)
+                ? backendNotificationSettings
+                : defaultNotificationSettings,
             });
           }
         } finally {
@@ -91,6 +103,25 @@ export const useSettingsStore = create<SettingsState>()(
         } catch (error) {
           // Revert on error
           set({ preferences: current });
+          throw error;
+        }
+      },
+      updateNotificationSettings: async (next) => {
+        const current = get().notificationSettings;
+        set({ notificationSettings: next });
+
+        try {
+          const res = await getUserSettings();
+          const currentUi = res.data?.ui || {};
+
+          await updateUserSettings({
+            ui: {
+              ...currentUi,
+              notifications: next,
+            },
+          } satisfies Partial<UserSettingsOverrides>);
+        } catch (error) {
+          set({ notificationSettings: current });
           throw error;
         }
       },

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, ArrowLeft, CalendarDays, Edit3, Loader2, Plus, RefreshCw, Send, Trash2, Unlink2 } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Calendar, CalendarDays, Clock, Edit3, Info, Loader2, Plug, Plus, Power, RefreshCw, Send, Sun, Thermometer, Trash2, Unlink2, Volume2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +32,12 @@ import {
   unbindDeviceFromSchedule,
   updateSchedule,
 } from '@/services/scheduleApi';
+import {
+  formatWeekdaySelection,
+  formatTimeRange,
+  formatDateRange,
+  weekdayBooleanToIndices,
+} from '@/lib/schedule/weekdayUtils';
 import type {
   ScheduleBindingDeviceResp,
   ScheduleCommandRuleResp,
@@ -43,17 +50,139 @@ import { ScheduleBindDevicesDialog } from './ScheduleBindDevicesDialog';
 import { ScheduleContentsRuleSheet } from './ScheduleContentsRuleSheet';
 import { ScheduleCommandRuleSheet } from './ScheduleCommandRuleSheet';
 import { ScheduleVisualizer } from '@/components/schedule/ScheduleVisualizer';
+import { ScheduleOnboarding } from '@/components/schedule/ScheduleOnboarding';
 
 function getBffDisplayError(res: { error?: { displayMessage?: string; message?: string } } | null | undefined): string {
   return res?.error?.displayMessage || res?.error?.message || 'Request failed';
 }
 
-function summarizeLimits(rule: Pick<ScheduleContentsRuleResp, 'ifLimitTime' | 'ifLimitDate' | 'ifLimitWeekday'>): string {
-  const parts: string[] = [];
-  if (rule.ifLimitTime) parts.push('time');
-  if (rule.ifLimitDate) parts.push('date');
-  if (rule.ifLimitWeekday) parts.push('weekday');
-  return parts.length ? parts.join(', ') : '—';
+interface RuleSummaryParts {
+  time?: string;
+  date?: string;
+  weekday?: string;
+}
+
+function summarizeLimits(rule: ScheduleContentsRuleResp): RuleSummaryParts {
+  const parts: RuleSummaryParts = {};
+
+  // Time formatting
+  if (rule.ifLimitTime && rule.limitTime) {
+    const timeSlots = Array.isArray(rule.limitTime) ? rule.limitTime : [rule.limitTime];
+    const formatted = timeSlots
+      .map((slot: { start?: string; end?: string }) => formatTimeRange(slot.start, slot.end))
+      .filter((s: string) => s !== '—');
+    if (formatted.length > 0) {
+      parts.time = formatted.length > 1 ? formatted.join(' | ') : formatted[0];
+    }
+  }
+
+  // Date formatting
+  if (rule.ifLimitDate && rule.limitDate) {
+    const dateObj = rule.limitDate as { start?: string; end?: string };
+    const formatted = formatDateRange(dateObj.start, dateObj.end);
+    if (formatted !== '—') {
+      parts.date = formatted;
+    }
+  }
+
+  // Weekday formatting
+  if (rule.ifLimitWeekday && rule.limitWeekday) {
+    const indices = weekdayBooleanToIndices(rule.limitWeekday as boolean[]);
+    if (indices.length > 0) {
+      parts.weekday = formatWeekdaySelection(indices);
+    }
+  }
+
+  return parts;
+}
+
+function renderConstraintBadges(parts: RuleSummaryParts): React.ReactNode {
+  const badges: React.ReactNode[] = [];
+
+  if (parts.time) {
+    badges.push(
+      <span key="time" className="inline-flex items-center gap-1 rounded-md bg-violet-50 dark:bg-violet-900/20 px-2 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
+        <Clock className="h-3 w-3 opacity-60" /> {parts.time}
+      </span>
+    );
+  }
+
+  if (parts.weekday) {
+    badges.push(
+      <span key="weekday" className="inline-flex items-center gap-1 rounded-md bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+        <Calendar className="h-3 w-3 opacity-60" /> {parts.weekday}
+      </span>
+    );
+  }
+
+  if (parts.date) {
+    badges.push(
+      <span key="date" className="inline-flex items-center gap-1 rounded-md bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+        <CalendarDays className="h-3 w-3 opacity-60" /> {parts.date}
+      </span>
+    );
+  }
+
+  if (badges.length === 0) {
+    return <span className="text-xs text-muted-foreground">No constraints (always active)</span>;
+  }
+
+  return <div className="flex flex-wrap items-center gap-1.5">{badges}</div>;
+}
+
+const COMMAND_TYPE_CONFIG: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; color: string }> = {
+  BRIGHTNESS: { label: 'Brightness', icon: Sun, color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' },
+  VOLUME: { label: 'Volume', icon: Volume2, color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+  POWER: { label: 'Power', icon: Power, color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' },
+  INPUT_MODE: { label: 'Input', icon: Plug, color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' },
+  COLOR_TEMP: { label: 'Color Temp', icon: Thermometer, color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' },
+  CLEAR_CACHE: { label: 'Clear Cache', icon: Trash2, color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300' },
+};
+
+function formatCommandOpTimes(opTimes: string[] | undefined): string {
+  if (!opTimes || opTimes.length === 0) return '—';
+  return opTimes.map((t) => t.slice(0, 5)).join(', ');
+}
+
+function getCommandValueDescription(parsed: UpsertScheduleCommandRuleReq | null): string | null {
+  if (!parsed) return null;
+  const body = parsed.operation.body as Record<string, unknown>;
+  switch (parsed.operation.type) {
+    case 'BRIGHTNESS':
+      return `${Math.round(((body.brightness as number) ?? 0) / 255 * 100)}%`;
+    case 'VOLUME':
+      return `${Math.round(((body.musicvolume as number) ?? 0) / 15 * 100)}%`;
+    case 'POWER':
+      return (body.command as string) || 'wakeup';
+    case 'INPUT_MODE':
+      return ((body.inputmode as string) || 'hdmi').toUpperCase();
+    case 'COLOR_TEMP':
+      return `${(body.colortemp as number) || 6500}K`;
+    default:
+      return null;
+  }
+}
+
+function summarizeCommandLimits(parsed: UpsertScheduleCommandRuleReq | null): RuleSummaryParts {
+  if (!parsed) return {};
+  const parts: RuleSummaryParts = {};
+
+  if (parsed.ifLimitDate && parsed.limitDate) {
+    const dateObj = parsed.limitDate as { start?: string; end?: string };
+    const formatted = formatDateRange(dateObj.start, dateObj.end);
+    if (formatted !== '—') {
+      parts.date = formatted;
+    }
+  }
+
+  if (parsed.ifLimitWeekday && parsed.limitWeekday) {
+    const indices = weekdayBooleanToIndices(parsed.limitWeekday as boolean[]);
+    if (indices.length > 0) {
+      parts.weekday = formatWeekdaySelection(indices);
+    }
+  }
+
+  return parts;
 }
 
 function toUpsertContentsRule(rule: ScheduleContentsRuleResp): UpsertScheduleContentsRuleReq {
@@ -266,7 +395,7 @@ export default function ScheduleDetailPage() {
             <div className="min-w-0">
               <h1 className="text-xl font-bold tracking-tight truncate">{schedule?.name || 'Schedule'}</h1>
               <p className="text-xs text-muted-foreground truncate">
-                {scheduleId.slice(0, 8)} · Updated {schedule?.updatedAt ? new Date(schedule.updatedAt).toLocaleString() : '—'}
+                Updated {schedule?.updatedAt ? new Date(schedule.updatedAt).toLocaleString() : '—'}
               </p>
             </div>
           </div>
@@ -277,19 +406,31 @@ export default function ScheduleDetailPage() {
             <Button variant="outline" onClick={openMetaDialog} className="gap-2" disabled={!schedule}>
               <Edit3 className="h-4 w-4" /> Edit
             </Button>
-            <Button onClick={() => pushMutation.mutate()} className="gap-2" disabled={!schedule || pushMutation.isPending}>
-              {pushMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Push Updates
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => pushMutation.mutate()}
+                  className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
+                  disabled={!schedule || pushMutation.isPending || (schedule?.boundDeviceIds?.length ?? 0) === 0}
+                >
+                  {pushMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Push to Devices
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <p className="font-semibold">Notify devices to fetch updates</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Saves are local only. Push sends a command to all bound devices to download the latest schedule configuration.
+                </p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
+
 
         <div className="flex items-center gap-3">
           <Switch checked={Boolean(schedule?.enabled)} onCheckedChange={(next) => updateMutation.mutate({ enabled: next })} disabled={!schedule} />
           <span className="text-sm font-semibold">{schedule?.enabled ? 'Enabled' : 'Disabled'}</span>
-          <span className="text-xs text-muted-foreground">
-            Changes affect all bound devices; push updates to trigger devices to fetch the latest schedule.
-          </span>
         </div>
       </div>
 
@@ -301,9 +442,13 @@ export default function ScheduleDetailPage() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          
-          {/* Visualizer */}
-          <ScheduleVisualizer rules={schedule?.contentsRules || []} commandRules={schedule?.commandRules || []} />
+
+          {/* Visualizer or Onboarding */}
+          {(schedule?.contentsRules?.length || 0) === 0 && (schedule?.commandRules?.length || 0) === 0 ? (
+            <ScheduleOnboarding variant="empty-schedule" />
+          ) : (
+            <ScheduleVisualizer rules={schedule?.contentsRules || []} commandRules={schedule?.commandRules || []} />
+          )}
 
           <Card className="border-0 ring-1 ring-foreground/5 shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/10 border-b flex flex-row items-center justify-between gap-3">
@@ -420,13 +565,23 @@ export default function ScheduleDetailPage() {
                       <div key={r.id} className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0">
                           <div className="flex items-center gap-3">
-                            <span className="text-sm font-semibold">{r.type}</span>
-                            <span className="text-xs text-muted-foreground">priority {r.priority}</span>
-                            <span className="text-xs text-muted-foreground font-mono">releaseProgramId={r.releaseProgramId}</span>
+                            <span className={cn(
+                              "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium",
+                              r.type === 'spot' ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                            )}>
+                              {r.type === 'spot' ? 'Spot' : 'Rotation'}
+                            </span>
+                            <span className="text-xs text-muted-foreground">Priority {r.priority}</span>
+                            {r.releaseVersion != null && (
+                              <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">v{r.releaseVersion}</span>
+                            )}
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1 truncate">
-                            {r.deviceTitleSnapshot || r.programId || '—'} · limits: {summarizeLimits(r)}
+                          <p className="text-sm font-medium mt-1 truncate">
+                            {r.deviceTitleSnapshot || 'Untitled Program'}
                           </p>
+                          <div className="mt-1.5">
+                            {renderConstraintBadges(summarizeLimits(r))}
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
@@ -479,19 +634,41 @@ export default function ScheduleDetailPage() {
                   {schedule?.commandRules?.map((r) => {
                     const parsed = parseScheduleCommandPayloadToUpsert(r.payload);
                     const editable = Boolean(parsed) && unparseableCommandRules.length === 0;
+                    const typeInfo = COMMAND_TYPE_CONFIG[parsed?.operation.type || ''] || { label: 'Unknown', icon: Info, color: 'bg-gray-100 text-gray-800' };
+                    const IconComponent = typeInfo.icon;
+                    const valueDesc = getCommandValueDescription(parsed);
+                    const cmdConstraints = summarizeCommandLimits(parsed);
                     return (
                       <div key={r.id} className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-semibold">{parsed?.operation.type || 'UNKNOWN'}</span>
-                            <span className="text-xs text-muted-foreground">rule #{r.id}</span>
-                            <span className={cn('text-xs', editable ? 'text-emerald-600' : 'text-yellow-700')}>
-                              {editable ? 'editable' : 'read-only'}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={cn('inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium', typeInfo.color)}>
+                              <IconComponent className="h-3 w-3" /> {typeInfo.label}
                             </span>
+                            {valueDesc && (
+                              <span className="text-sm font-semibold text-foreground">{valueDesc}</span>
+                            )}
+                            {!editable && (
+                              <span className="text-xs text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 px-1.5 py-0.5 rounded">
+                                read-only
+                              </span>
+                            )}
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1 truncate">
-                            opTime: {parsed?.opTime?.join(', ') || '—'} · payload stored in backend
-                          </p>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <span className="inline-flex items-center gap-1 rounded-md bg-violet-50 dark:bg-violet-900/20 px-2 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
+                              <Clock className="h-3 w-3 opacity-60" /> {formatCommandOpTimes(parsed?.opTime)}
+                            </span>
+                            {cmdConstraints.weekday && (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                                <Calendar className="h-3 w-3 opacity-60" /> {cmdConstraints.weekday}
+                              </span>
+                            )}
+                            {cmdConstraints.date && (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                <CalendarDays className="h-3 w-3 opacity-60" /> {cmdConstraints.date}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
@@ -537,16 +714,38 @@ export default function ScheduleDetailPage() {
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent className="max-w-[520px]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete schedule?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will delete schedule rules. Bound devices will stop receiving this schedule after you unbind and push updates.
+            <AlertDialogTitle className="flex items-center gap-2">
+              {schedule && schedule.boundDeviceIds.length > 0 && (
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold">!</span>
+              )}
+              Delete schedule?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                {schedule && schedule.boundDeviceIds.length > 0 ? (
+                  <>
+                    <p className="text-destructive font-medium flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" /> This schedule has {schedule.boundDeviceIds.length} bound device{schedule.boundDeviceIds.length > 1 ? 's' : ''}.
+                    </p>
+                    <p>
+                      Deleting it will require you to manually unbind all devices and push updates again. This may cause content playback interruptions.
+                    </p>
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                      <p className="font-medium text-destructive">Recommended action:</p>
+                      <p className="mt-1 text-muted-foreground">First unbind devices from this schedule, then delete it to avoid disruption.</p>
+                    </div>
+                  </>
+                ) : (
+                  <p>This schedule has no bound devices and can be safely deleted.</p>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => deleteMutation.mutate()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Delete
+              {schedule && schedule.boundDeviceIds.length > 0 ? 'Delete anyway' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

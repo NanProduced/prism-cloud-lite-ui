@@ -14,10 +14,8 @@ import type { UpsertScheduleCommandRuleReq, ScheduleCommandActionType } from '@/
 import { WeekdaySelector } from '@/components/schedule/WeekdaySelector';
 import { cn } from '@/lib/utils';
 
-const WEEKDAY_MAP: Record<string, number> = {
-  "SUN": 0, "MON": 1, "TUE": 2, "WED": 3, "THU": 4, "FRI": 5, "SAT": 6
-};
-const WEEKDAY_REV = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+// Note: Weekday index follows backend convention: 0=Mon, 1=Tue, ..., 6=Sun
+// See docs/integration/program-and-schedule.md for details
 
 export function ScheduleCommandRuleSheet(props: {
   open: boolean;
@@ -80,15 +78,16 @@ export function ScheduleCommandRuleSheet(props: {
         const d = initialRule.limitDate as any;
         setDateRange({ start: d.start || "", end: d.end || "" });
     }
+    // Limit Weekday (backend convention: 0=Mon, 1=Tue, ..., 6=Sun)
     setIfLimitWeekday(Boolean(initialRule.ifLimitWeekday));
     if (initialRule.limitWeekday && Array.isArray(initialRule.limitWeekday)) {
-        const raw = initialRule.limitWeekday as any[];
+        const raw = initialRule.limitWeekday as boolean[];
         if (raw.length === 7 && typeof raw[0] === 'boolean') {
+            // Backend boolean[7] format: index 0=Mon, 6=Sun
             const nums = raw.map((b, i) => b ? i : -1).filter(n => n >= 0);
             setWeekdays(nums);
         } else {
-            const nums = raw.map(s => WEEKDAY_MAP[s] ?? -1).filter(n => n >= 0);
-            setWeekdays(nums);
+            setWeekdays([]);
         }
     }
 

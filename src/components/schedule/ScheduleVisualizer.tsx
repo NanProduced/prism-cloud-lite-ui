@@ -1,10 +1,13 @@
-import { startOfDay, addDays, format, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isWithinInterval, parseISO } from "date-fns"
-import { ChevronLeft, ChevronRight, Info } from "lucide-react"
+import { addDays, format, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isWithinInterval, parseISO } from "date-fns"
+import { ChevronLeft, ChevronRight, Clock, Info, AlertTriangle, List, BarChart3, Sun, Volume2, Power, Plug, Thermometer, Trash2, Calendar, CalendarDays } from "lucide-react"
 import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { isDateAllowedByWeekday, formatWeekdaySelection, formatTimeRange, formatDateRange, weekdayBooleanToIndices } from "@/lib/schedule/weekdayUtils"
+import { useSettingsStore } from "@/store/settingsStore"
 
 // Types
 interface ScheduleVisualizerProps {
@@ -24,17 +27,32 @@ interface TimelineBlock {
   icon?: React.ReactNode
 }
 
-const WEEKDAY_MAP: Record<string, number> = {
-  "SUN": 0, "MON": 1, "TUE": 2, "WED": 3, "THU": 4, "FRI": 5, "SAT": 6
-};
+interface ActiveRule {
+  id: number
+  type: 'rotation' | 'spot'
+  priority: number
+  programName: string
+  version?: number
+  timeSlots: string[]
+  isActiveToday: boolean
+  rule: any
+}
+
+interface ActiveCommand {
+  id: number
+  actionType: string
+  opTimes: string[]
+  valueDesc: string | null
+  isActiveToday: boolean
+  rule: any
+}
 
 // Helpers
 function getDayStatus(date: Date, rules: any[]) {
   let hasRotation = false
   let hasSpot = false
-  
+
   for (const rule of rules) {
-    // 1. Check Date Range
     if (rule.ifLimitDate && rule.limitDate) {
       try {
         const start = parseISO(rule.limitDate.start)
@@ -42,54 +60,175 @@ function getDayStatus(date: Date, rules: any[]) {
         if (!isWithinInterval(date, { start, end })) continue
       } catch (e) { continue }
     }
-    
-    // 2. Check Weekday
-    if (rule.ifLimitWeekday && Array.isArray(rule.limitWeekday)) {
-      const dayIdx = getDay(date) // 0=Sun
-      const raw = rule.limitWeekday as string[];
-      const allowedDays = raw.map(s => WEEKDAY_MAP[s] ?? -1);
-      
-      if (!allowedDays.includes(dayIdx)) continue
+
+    if (rule.ifLimitWeekday && !isDateAllowedByWeekday(date, rule.limitWeekday)) {
+      continue
     }
-    
+
     if (rule.type === 'spot') hasSpot = true
     else hasRotation = true
   }
-  
+
   return { hasRotation, hasSpot }
+}
+
+function getActiveRulesForDate(date: Date, rules: any[]): ActiveRule[] {
+  const activeRules: ActiveRule[] = []
+
+  for (const rule of rules) {
+    let isActiveToday = true
+
+    // Check Date Range
+    if (rule.ifLimitDate && rule.limitDate) {
+      try {
+        const start = parseISO(rule.limitDate.start)
+        const end = parseISO(rule.limitDate.end)
+        if (!isWithinInterval(date, { start, end })) isActiveToday = false
+      } catch (e) { isActiveToday = false }
+    }
+
+    // Check Weekday
+    if (isActiveToday && rule.ifLimitWeekday && !isDateAllowedByWeekday(date, rule.limitWeekday)) {
+      isActiveToday = false
+    }
+
+    // Get time slots
+    let timeSlots: string[] = []
+    if (rule.ifLimitTime && rule.limitTime) {
+      const slots = Array.isArray(rule.limitTime) ? rule.limitTime : [rule.limitTime]
+      timeSlots = slots.map((slot: { start?: string; end?: string }) =>
+        formatTimeRange(slot.start, slot.end)
+      ).filter((s: string) => s !== '—')
+    } else {
+      timeSlots = ['All day']
+    }
+
+    activeRules.push({
+      id: rule.id,
+      type: rule.type,
+      priority: rule.priority,
+      programName: rule.deviceTitleSnapshot || 'Untitled Program',
+      version: rule.releaseVersion,
+      timeSlots,
+      isActiveToday,
+      rule
+    })
+  }
+
+  return activeRules.sort((a, b) => {
+    // Active rules first, then by priority
+    if (a.isActiveToday !== b.isActiveToday) return a.isActiveToday ? -1 : 1
+    return a.priority - b.priority
+  })
+}
+
+function getActiveCommandsForDate(date: Date, commandRules: any[]): ActiveCommand[] {
+  const activeCommands: ActiveCommand[] = []
+
+  for (const rule of commandRules) {
+    let payload = rule.payload
+    if (typeof payload === 'string') {
+      try { payload = JSON.parse(payload) } catch { continue }
+    }
+    if (!payload) continue
+
+    // Backend returns snake_case: op_time, if_limit_weekday, limit_weekday, etc.
+    const opTimes = payload?.op_time || payload?.opTime || []
+    if (!Array.isArray(opTimes) || opTimes.length === 0) continue
+
+    // Parse operation structure (backend uses author_url + content)
+    const operation = payload?.operation || {}
+    const authorUrl = (operation?.author_url || '').toLowerCase()
+
+    // Infer action type from author_url
+    let actionType = 'UNKNOWN'
+    if (authorUrl === 'api/brightness') actionType = 'BRIGHTNESS'
+    else if (authorUrl === 'api/volume') actionType = 'VOLUME'
+    else if (authorUrl === 'api/action') actionType = 'POWER'
+    else if (authorUrl === 'api/inputmode') actionType = 'INPUT_MODE'
+    else if (authorUrl === 'api/colortemp') actionType = 'COLOR_TEMP'
+    else if (authorUrl === 'api/clrresunused') actionType = 'CLEAR_CACHE'
+
+    // Parse content (JSON string in operation.content)
+    let body: Record<string, unknown> = {}
+    try {
+      const content = operation?.content
+      if (typeof content === 'string') body = JSON.parse(content)
+      else if (typeof content === 'object' && content) body = content as Record<string, unknown>
+    } catch { /* ignore */ }
+
+    // Get value description
+    let valueDesc: string | null = null
+    switch (actionType) {
+      case 'BRIGHTNESS':
+        valueDesc = `${Math.round(((body.brightness as number) ?? 0) / 255 * 100)}%`
+        break
+      case 'VOLUME':
+        valueDesc = `${Math.round(((body.musicvolume as number) ?? 0) / 15 * 100)}%`
+        break
+      case 'POWER':
+        valueDesc = (body.command as string) || 'wakeup'
+        break
+      case 'INPUT_MODE':
+        valueDesc = ((body.inputmode as string) || 'hdmi').toUpperCase()
+        break
+      case 'COLOR_TEMP':
+        valueDesc = `${(body.colortemp as number) || 6500}K`
+        break
+    }
+
+    // Check if active today based on date/weekday limits
+    let isActiveToday = true
+    const ifLimitDate = payload?.if_limit_date || payload?.ifLimitDate
+    const limitDate = payload?.limit_date || payload?.limitDate
+    if (ifLimitDate && limitDate) {
+      try {
+        const start = parseISO(limitDate.start)
+        const end = parseISO(limitDate.end)
+        if (!isWithinInterval(date, { start, end })) isActiveToday = false
+      } catch { isActiveToday = false }
+    }
+
+    const ifLimitWeekday = payload?.if_limit_weekday || payload?.ifLimitWeekday
+    const limitWeekday = payload?.limit_weekday || payload?.limitWeekday
+    if (isActiveToday && ifLimitWeekday && !isDateAllowedByWeekday(date, limitWeekday)) {
+      isActiveToday = false
+    }
+
+    activeCommands.push({
+      id: rule.id,
+      actionType,
+      opTimes: opTimes.map((t: string) => t.slice(0, 5)),
+      valueDesc,
+      isActiveToday,
+      rule
+    })
+  }
+
+  return activeCommands
 }
 
 function computeTimeline(date: Date, rules: any[], commandRules: any[] = []): TimelineBlock[] {
   const blocks: TimelineBlock[] = []
-  
-  // 1. Program Rules
+
+  // Program Rules
   for (const rule of rules) {
-    // Basic Eligibility
     if (rule.ifLimitDate && rule.limitDate) {
-       try {
+      try {
         const start = parseISO(rule.limitDate.start)
         const end = parseISO(rule.limitDate.end)
         if (!isWithinInterval(date, { start, end })) continue
       } catch (e) { continue }
     }
-    if (rule.ifLimitWeekday && Array.isArray(rule.limitWeekday)) {
-       const dayIdx = getDay(date)
-       const raw = rule.limitWeekday as string[];
-       const allowedDays = raw.map(s => WEEKDAY_MAP[s] ?? -1);
-       if (!allowedDays.includes(dayIdx)) continue
+    if (rule.ifLimitWeekday && !isDateAllowedByWeekday(date, rule.limitWeekday)) {
+      continue
     }
 
-    // Time Mapping
     let timeSlots: {start: string, end: string}[] = []
-    
-    if (rule.ifLimitTime) {
-        if (Array.isArray(rule.limitTime)) {
-            timeSlots = rule.limitTime
-        } else if (typeof rule.limitTime === 'object' && rule.limitTime !== null) {
-            timeSlots = [rule.limitTime as {start: string, end: string}]
-        } else {
-             timeSlots = [{ start: "00:00:00", end: "23:59:59" }]
-        }
+    if (rule.ifLimitTime && rule.limitTime) {
+      const rawSlots = Array.isArray(rule.limitTime) ? rule.limitTime : [rule.limitTime]
+      // Normalize time slot keys (handle start/startTime/start_time variants)
+      timeSlots = rawSlots.map((slot: Record<string, unknown>) => normalizeTimeSlot(slot))
     } else {
       timeSlots = [{ start: "00:00:00", end: "23:59:59" }]
     }
@@ -98,11 +237,13 @@ function computeTimeline(date: Date, rules: any[], commandRules: any[] = []): Ti
       const startMin = parseTime(slot.start)
       const endMin = parseTime(slot.end)
       const totalMin = 1440
-      
+      // Handle cross-midnight case
+      const effectiveEnd = endMin <= startMin ? totalMin : endMin
+
       blocks.push({
         id: `${rule.id}-${slot.start}`,
         startPercent: (startMin / totalMin) * 100,
-        widthPercent: ((endMin - startMin) / totalMin) * 100,
+        widthPercent: ((effectiveEnd - startMin) / totalMin) * 100,
         type: rule.type,
         priority: rule.priority,
         color: rule.type === 'spot' ? 'bg-rose-500' : 'bg-blue-500',
@@ -111,75 +252,99 @@ function computeTimeline(date: Date, rules: any[], commandRules: any[] = []): Ti
     }
   }
 
-  // 2. Command Rules
+  // Command Rules (backend uses snake_case: op_time, if_limit_weekday, etc.)
   for (const rule of commandRules) {
-      let payload = rule.payload;
-      // Handle payload string or object
-      if (typeof payload === 'string') {
-          try { payload = JSON.parse(payload) } catch {}
-      }
-      
-      // Basic Eligibility (similar checks if payload has ifLimitDate etc.)
-      if (rule.ifLimitDate || payload?.ifLimitDate) {
-          // ... (skipped for MVP brevity, assuming commands mostly daily or similar logic)
-      }
+    let payload = rule.payload
+    if (typeof payload === 'string') {
+      try { payload = JSON.parse(payload) } catch {}
+    }
 
-      // opTime is usually array of strings "HH:mm:ss"
-      // Wait, in ScheduleCommandRuleResp, payload is the FULL commandSchedule JSON from device protocol?
-      // Or is it our internal structure?
-      // Based on schedulePayload.ts, the 'payload' stored in DB is the `commandSchedule` item.
-      // It contains `opTime` array.
-      
-      const opTimes = payload?.opTime || [];
-      if (!Array.isArray(opTimes)) continue;
+    // Check date/weekday limits
+    const ifLimitDate = payload?.if_limit_date || payload?.ifLimitDate
+    const limitDate = payload?.limit_date || payload?.limitDate
+    if (ifLimitDate && limitDate) {
+      try {
+        const start = parseISO(limitDate.start)
+        const end = parseISO(limitDate.end)
+        if (!isWithinInterval(date, { start, end })) continue
+      } catch { continue }
+    }
 
-      for (const t of opTimes) {
-          const min = parseTime(t);
-          const totalMin = 1440;
-          
-          blocks.push({
-              id: `cmd-${rule.id}-${t}`,
-              startPercent: (min / totalMin) * 100,
-              widthPercent: 1, // small width for icon
-              type: 'command',
-              priority: 999, // On top
-              color: 'bg-yellow-500',
-              rule: rule,
-              icon: <div className="h-2 w-2 rounded-full bg-yellow-400 ring-1 ring-white" />
-          })
-      }
+    const ifLimitWeekday = payload?.if_limit_weekday || payload?.ifLimitWeekday
+    const limitWeekday = payload?.limit_weekday || payload?.limitWeekday
+    if (ifLimitWeekday && !isDateAllowedByWeekday(date, limitWeekday)) {
+      continue
+    }
+
+    const opTimes = payload?.op_time || payload?.opTime || []
+    if (!Array.isArray(opTimes)) continue
+
+    for (const t of opTimes) {
+      const min = parseTime(t)
+      const totalMin = 1440
+
+      blocks.push({
+        id: `cmd-${rule.id}-${t}`,
+        startPercent: (min / totalMin) * 100,
+        widthPercent: 1,
+        type: 'command',
+        priority: 999,
+        color: 'bg-yellow-500',
+        rule: rule,
+        icon: <div className="h-2 w-2 rounded-full bg-yellow-400 ring-1 ring-white" />
+      })
+    }
   }
 
   return blocks.sort((a, b) => a.priority - b.priority)
 }
 
 function parseTime(t: string) {
-  if (!t) return 0;
+  if (!t) return 0
   const [h, m] = t.split(':').map(Number)
   return (h || 0) * 60 + (m || 0)
+}
+
+const COMMAND_TYPE_CONFIG: Record<string, { icon: React.ComponentType<{ className?: string }>; label: string; color: string }> = {
+  BRIGHTNESS: { icon: Sun, label: 'Brightness', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' },
+  VOLUME: { icon: Volume2, label: 'Volume', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+  POWER: { icon: Power, label: 'Power', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' },
+  INPUT_MODE: { icon: Plug, label: 'Input', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' },
+  COLOR_TEMP: { icon: Thermometer, label: 'Color Temp', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' },
+  CLEAR_CACHE: { icon: Trash2, label: 'Clear Cache', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300' },
+}
+
+// Helper: Normalize time slot keys (backend may use start/start_time/startTime variants)
+function normalizeTimeSlot(slot: Record<string, unknown>): { start: string; end: string } {
+  const start = (slot.start || slot.startTime || slot.start_time || '00:00:00') as string
+  const end = (slot.end || slot.endTime || slot.end_time || '23:59:59') as string
+  return { start, end }
 }
 
 export function ScheduleVisualizer({ rules, commandRules = [], className }: ScheduleVisualizerProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(new Date())
-  
+  const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list')
+  const timezone = useSettingsStore((s) => s.preferences.timezone)
+
   // Calendar Grid Generation
   const calendarDays = useMemo(() => {
     const start = startOfMonth(currentMonth)
     const end = endOfMonth(currentMonth)
     const days = eachDayOfInterval({ start, end })
-    
-    // Padding for start of week (Sun)
     const startDay = getDay(start)
     const padding = Array(startDay).fill(null)
-    
     return [...padding, ...days]
   }, [currentMonth])
 
+  // Active Rules for Selected Date
+  const activeRules = useMemo(() => getActiveRulesForDate(selectedDate, rules), [selectedDate, rules])
+  const activeCommands = useMemo(() => getActiveCommandsForDate(selectedDate, commandRules), [selectedDate, commandRules])
+
   // Timeline Data
-  const timelineBlocks = useMemo(() => {
-    return computeTimeline(selectedDate, rules, commandRules)
-  }, [selectedDate, rules, commandRules])
+  const timelineBlocks = useMemo(() => computeTimeline(selectedDate, rules, commandRules), [selectedDate, rules, commandRules])
+
+  const activeCount = activeRules.filter(r => r.isActiveToday).length + activeCommands.filter(c => c.isActiveToday).length
 
   return (
     <div className={cn("grid grid-cols-1 lg:grid-cols-3 gap-6", className)}>
@@ -191,10 +356,10 @@ export function ScheduleVisualizer({ rules, commandRules = [], className }: Sche
           </CardTitle>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addDays(currentMonth, -30))}>
-               <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addDays(currentMonth, 30))}>
-               <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </CardHeader>
@@ -207,7 +372,7 @@ export function ScheduleVisualizer({ rules, commandRules = [], className }: Sche
               if (!day) return <div key={i} />
               const { hasRotation, hasSpot } = getDayStatus(day, rules)
               const isSelected = isSameDay(day, selectedDate)
-              
+
               return (
                 <button
                   key={day.toISOString()}
@@ -221,91 +386,257 @@ export function ScheduleVisualizer({ rules, commandRules = [], className }: Sche
                 >
                   {format(day, "d")}
                   <div className="absolute bottom-1 flex gap-0.5">
-                     {hasRotation && <div className={cn("h-1 w-1 rounded-full", isSelected ? "bg-white" : "bg-blue-400")} />}
-                     {hasSpot && <div className={cn("h-1 w-1 rounded-full", isSelected ? "bg-white" : "bg-rose-500")} />}
+                    {hasRotation && <div className={cn("h-1 w-1 rounded-full", isSelected ? "bg-white" : "bg-blue-400")} />}
+                    {hasSpot && <div className={cn("h-1 w-1 rounded-full", isSelected ? "bg-white" : "bg-rose-500")} />}
                   </div>
                 </button>
               )
             })}
           </div>
           <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
-             <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-blue-400" /> Rotation</div>
-             <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-rose-500" /> Spot</div>
-             <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-yellow-400" /> Command</div>
+            <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-blue-400" /> Rotation</div>
+            <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-rose-500" /> Spot</div>
+            <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-yellow-400" /> Command</div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Micro View: Timeline */}
+      {/* Main Content: Rule List / Timeline */}
       <Card className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle className="text-sm font-medium flex items-center justify-between">
-             <span>Schedule for {format(selectedDate, "yyyy-MM-dd")}</span>
-             <span className="text-xs font-normal text-muted-foreground">{timelineBlocks.length} active items</span>
-          </CardTitle>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-sm font-medium">
+                Schedule for {format(selectedDate, "EEEE, MMM d, yyyy")}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {activeCount} active item{activeCount !== 1 ? 's' : ''} on this day
+              </p>
+            </div>
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'list' | 'timeline')} className="h-8">
+              <TabsList className="h-8">
+                <TabsTrigger value="list" className="h-7 px-2 gap-1 text-xs">
+                  <List className="h-3.5 w-3.5" /> List
+                </TabsTrigger>
+                <TabsTrigger value="timeline" className="h-7 px-2 gap-1 text-xs">
+                  <BarChart3 className="h-3.5 w-3.5" /> Timeline
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="relative pt-6 pb-2">
-            {/* Time Axis Labels */}
-            <div className="flex justify-between text-xs text-muted-foreground mb-1 select-none">
-              <span>00:00</span>
-              <span>06:00</span>
-              <span>12:00</span>
-              <span>18:00</span>
-              <span>23:59</span>
-            </div>
-
-            {/* Timeline Track */}
-            <div className="relative h-16 w-full bg-slate-100 dark:bg-slate-900 rounded-lg overflow-hidden border">
-              {/* Hour Grid Lines */}
-              {[0, 6, 12, 18].map(h => (
-                 <div key={h} className="absolute top-0 bottom-0 border-l border-slate-200 dark:border-slate-800" style={{ left: `${(h/24)*100}%` }} />
-              ))}
-
-              {timelineBlocks.length === 0 ? (
-                 <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
-                    No programs scheduled for this day
-                 </div>
-              ) : (
-                timelineBlocks.map(block => (
-                  <Tooltip key={block.id}>
-                    <TooltipTrigger asChild>
+          {viewMode === 'list' ? (
+            <div className="space-y-4">
+              {/* Program Rules Section */}
+              {activeRules.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Programs</h4>
+                  <div className="space-y-2">
+                    {activeRules.map((r) => (
                       <div
-                        style={{ left: `${block.startPercent}%`, width: `${block.widthPercent}%` }}
+                        key={r.id}
                         className={cn(
-                          "absolute top-2 bottom-2 rounded-md transition-all hover:brightness-110 cursor-pointer border border-white/10 z-10",
-                          block.color,
-                          block.type === 'command' && "top-0 bottom-auto h-2 w-2 rounded-full -ml-1 border-none shadow-sm z-20"
+                          "p-3 rounded-lg border transition-colors",
+                          r.isActiveToday
+                            ? "bg-card border-border"
+                            : "bg-muted/30 border-transparent opacity-50"
                         )}
                       >
-                         {block.type === 'command' && <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-0.5 h-16 bg-yellow-400/50 -z-10" />}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={cn(
+                                "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium",
+                                r.type === 'spot'
+                                  ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300"
+                                  : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                              )}>
+                                {r.type === 'spot' ? 'Spot' : 'Rotation'}
+                              </span>
+                              <span className="text-xs text-muted-foreground">Priority {r.priority}</span>
+                              {r.version != null && (
+                                <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">v{r.version}</span>
+                              )}
+                              {!r.isActiveToday && (
+                                <span className="text-xs text-amber-600 dark:text-amber-400">Not active today</span>
+                              )}
+                            </div>
+                            <p className="text-sm font-medium mt-1 truncate">{r.programName}</p>
+                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                              {r.timeSlots.map((slot, i) => (
+                                <span key={i} className="inline-flex items-center gap-1 rounded-md bg-violet-50 dark:bg-violet-900/20 px-2 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
+                                  <Clock className="h-3 w-3 opacity-60" /> {slot}
+                                </span>
+                              ))}
+                              {r.rule.ifLimitWeekday && r.rule.limitWeekday && (
+                                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                                  <Calendar className="h-3 w-3 opacity-60" /> {formatWeekdaySelection(weekdayBooleanToIndices(r.rule.limitWeekday))}
+                                </span>
+                              )}
+                              {r.rule.ifLimitDate && r.rule.limitDate && (
+                                <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                  <CalendarDays className="h-3 w-3 opacity-60" /> {formatDateRange(r.rule.limitDate.start, r.rule.limitDate.end)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                       {block.type === 'command' ? (
-                           <div className="text-xs">
-                               <p className="font-semibold">Command</p>
-                               <pre className="mt-1 font-mono text-[10px]">{JSON.stringify(block.rule.payload?.operation || {}, null, 2)}</pre>
-                           </div>
-                       ) : (
-                           <>
-                               <p className="font-semibold">{block.type === 'spot' ? 'Spot' : 'Rotation'}</p>
-                               <p className="text-xs">Priority: {block.priority}</p>
-                               <p className="text-xs font-mono">v{block.rule.releaseVersion}</p>
-                           </>
-                       )}
-                    </TooltipContent>
-                  </Tooltip>
-                ))
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Command Rules Section */}
+              {activeCommands.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Commands</h4>
+                  <div className="space-y-2">
+                    {activeCommands.map((c) => {
+                      const typeInfo = COMMAND_TYPE_CONFIG[c.actionType] || { icon: Info, label: 'Unknown', color: 'bg-gray-100 text-gray-800' }
+                      const IconComponent = typeInfo.icon
+                      return (
+                        <div
+                          key={c.id}
+                          className={cn(
+                            "p-3 rounded-lg border transition-colors",
+                            c.isActiveToday
+                              ? "bg-card border-border"
+                              : "bg-muted/30 border-transparent opacity-50"
+                          )}
+                        >
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={cn('inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium', typeInfo.color)}>
+                              <IconComponent className="h-3 w-3" /> {typeInfo.label}
+                            </span>
+                            {c.valueDesc && (
+                              <span className="text-sm font-semibold">{c.valueDesc}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <span className="inline-flex items-center gap-1 rounded-md bg-violet-50 dark:bg-violet-900/20 px-2 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
+                              <Clock className="h-3 w-3 opacity-60" /> {c.opTimes.join(', ')}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {activeRules.length === 0 && activeCommands.length === 0 && (
+                <div className="py-8 text-center text-muted-foreground">
+                  <p className="text-sm font-medium">No rules configured</p>
+                  <p className="text-xs mt-1">Add program or command rules to see them here.</p>
+                </div>
               )}
             </div>
-            
-             <div className="mt-4 p-3 bg-muted/30 rounded-lg text-xs text-muted-foreground flex gap-2">
-               <Info className="h-4 w-4 shrink-0" />
-               <p>
-                 Higher priority items (e.g. Spot) will display on top. Commands are shown as yellow markers.
-               </p>
-             </div>
+          ) : (
+            /* Timeline View */
+            <div className="space-y-4">
+              <div className="relative pt-2 pb-2">
+                {/* Time Axis Labels */}
+                <div className="flex justify-between text-xs text-muted-foreground mb-1 select-none">
+                  <span>00:00</span>
+                  <span>06:00</span>
+                  <span>12:00</span>
+                  <span>18:00</span>
+                  <span>23:59</span>
+                </div>
+
+                {/* Timeline Track */}
+                <div className="relative h-20 w-full bg-slate-100 dark:bg-slate-900 rounded-lg overflow-hidden border">
+                  {/* Hour Grid Lines */}
+                  {[0, 6, 12, 18].map(h => (
+                    <div key={h} className="absolute top-0 bottom-0 border-l border-slate-200 dark:border-slate-800" style={{ left: `${(h/24)*100}%` }} />
+                  ))}
+
+                  {timelineBlocks.length === 0 ? (
+                    <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
+                      No programs scheduled for this day
+                    </div>
+                  ) : (
+                    timelineBlocks.map(block => {
+                      const programName = block.rule?.deviceTitleSnapshot || block.rule?.programName || ''
+                      const isWideEnough = block.widthPercent > 8
+                      return (
+                        <Tooltip key={block.id}>
+                          <TooltipTrigger asChild>
+                            <div
+                              style={{ left: `${block.startPercent}%`, width: `${Math.max(block.widthPercent, 0.5)}%` }}
+                              className={cn(
+                                "absolute top-2 bottom-2 rounded-md transition-all hover:brightness-110 cursor-pointer border border-white/20 z-10 overflow-hidden",
+                                block.color,
+                                block.type === 'command' && "top-1 bottom-auto h-3 w-3 rounded-full -ml-1.5 border-none shadow-sm z-20"
+                              )}
+                            >
+                              {block.type === 'command' && (
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0.5 h-16 bg-yellow-400/50 -z-10" />
+                              )}
+                              {block.type !== 'command' && isWideEnough && (
+                                <div className="h-full flex flex-col justify-center px-1.5 py-1">
+                                  <span className="text-[10px] font-semibold text-white truncate leading-tight">{programName}</span>
+                                  <span className="text-[9px] text-white/80 font-medium">{block.type === 'spot' ? 'Spot' : 'Rot'} P{block.priority}</span>
+                                </div>
+                              )}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            {block.type === 'command' ? (
+                              <div className="text-xs space-y-1">
+                                <p className="font-semibold">Command Rule</p>
+                                <p className="text-muted-foreground">Click to view in Commands tab</p>
+                              </div>
+                            ) : (
+                              <div className="text-xs space-y-1">
+                                <p className="font-semibold">{programName || 'Untitled Program'}</p>
+                                <div className="flex items-center gap-2">
+                                  <span className={cn(
+                                    "px-1.5 py-0.5 rounded text-[10px] font-medium",
+                                    block.type === 'spot' ? "bg-rose-100 text-rose-700" : "bg-blue-100 text-blue-700"
+                                  )}>
+                                    {block.type === 'spot' ? 'Spot' : 'Rotation'}
+                                  </span>
+                                  <span>Priority {block.priority}</span>
+                                  {block.rule.releaseVersion != null && (
+                                    <span className="font-mono">v{block.rule.releaseVersion}</span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Timezone & Disclaimer Info */}
+          <div className="mt-4 space-y-2 pt-4 border-t">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              <span>Displaying in timezone: <span className="font-mono font-medium text-foreground">{timezone}</span></span>
+            </div>
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg text-xs flex gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <div className="space-y-1 text-amber-800 dark:text-amber-200">
+                <p className="font-medium">Preview Disclaimer</p>
+                <p className="text-amber-700 dark:text-amber-300">
+                  This is a visual preview based on your settings timezone. Actual device execution depends on each device's configured timezone and may differ.
+                </p>
+              </div>
+            </div>
+            <div className="p-3 bg-muted/30 rounded-lg text-xs text-muted-foreground flex gap-2">
+              <Info className="h-4 w-4 shrink-0" />
+              <p>
+                Higher priority items (e.g. Spot) display on top. Commands shown as yellow markers.
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

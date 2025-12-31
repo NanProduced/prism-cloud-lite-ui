@@ -2,12 +2,8 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from '@/store/notificationStore';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CreditCard } from 'lucide-react';
 
-import SettingsNotifications, { 
-  type NotificationPreferences, 
-  defaultPreferences as defaultNotificationPreferences 
-} from '@/registry/new-york/blocks/settings/settings-notifications';
+import SettingsNotifications from '@/registry/new-york/blocks/settings/settings-notifications';
 import SettingsPreferences, { type PreferencesData } from '@/registry/new-york/blocks/settings/settings-preferences';
 import SettingsProfile, { type ProfileData } from '@/registry/new-york/blocks/settings/settings-profile';
 import SettingsSecurity from '@/registry/new-york/blocks/settings/settings-security';
@@ -17,15 +13,12 @@ import type { APIKey } from '@/registry/new-york/blocks/settings/settings-api-ke
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/registry/new-york/ui/tabs';
 import BillingPage from '../BillingPage';
 
-import { DeviceDefaultsCard, type DeviceDefaults } from './DeviceDefaultsCard';
 import { ProgramDraftPolicyCard } from './ProgramDraftPolicyCard';
 import { getProgramDraftSavePolicy, setProgramDraftSavePolicy, type ProgramDraftSavePolicy } from '@/features/programs/storage/draftPolicyDb';
-import { useSettingsStore, type UserPreferences } from '@/store/settingsStore';
+import { useSettingsStore } from '@/store/settingsStore';
 import {
   getUserProfile,
   updateUserProfile,
-  getUserSettings,
-  updateUserSettings,
   getActiveSessions,
   revokeSession,
   revokeAllSessions,
@@ -38,7 +31,7 @@ import {
   bindPhoneRequest,
   bindPhoneConfirm,
 } from '@/services/userApi';
-import type { UserProfile, UserSettingsOverrides, UserSession, UserSecurityEvent, UserApiKey } from '@/types/user';
+import type { UserProfile, UserSession, UserSecurityEvent, UserApiKey } from '@/types/user';
 import { getErrorMessage } from '@/services/authApi';
 import { useAuthStore } from '@/store/authStore';
 import { UAParser } from 'ua-parser-js';
@@ -47,7 +40,6 @@ const TAB_ITEMS = [
   { value: 'profile', label: 'Profile' },
   { value: 'preferences', label: 'Preferences' },
   { value: 'notifications', label: 'Notifications' },
-  { value: 'device-defaults', label: 'Device Defaults' },
   { value: 'security', label: 'Security' },
   { value: 'api-keys', label: 'API Keys' },
   { value: 'billing', label: 'Billing' },
@@ -77,7 +69,12 @@ export default function SettingsPage() {
     }
   }, [searchParams, activeTab]);
 
-  const { preferences: globalPreferences, updatePreferences } = useSettingsStore();
+  const {
+    preferences: globalPreferences,
+    updatePreferences,
+    notificationSettings,
+    updateNotificationSettings,
+  } = useSettingsStore();
 
   const [programDraftPolicy, setProgramDraftPolicyState] = useState<ProgramDraftSavePolicy>(() => getProgramDraftSavePolicy());
 
@@ -86,11 +83,6 @@ export default function SettingsPage() {
   const { data: profileData, isLoading: isProfileLoading } = useQuery({
     queryKey: ['user', 'profile'],
     queryFn: getUserProfile,
-  });
-
-  const { data: settingsData } = useQuery({
-    queryKey: ['user', 'settings'],
-    queryFn: getUserSettings,
   });
 
   const { data: sessionsData, isLoading: isSessionsLoading } = useQuery({
@@ -126,17 +118,6 @@ export default function SettingsPage() {
 
       window.dispatchEvent(new Event('prism-profile-updated')); // Notify other components if needed
       toast.success('Profile updated');
-    },
-    onError: (error: any) => {
-      toast.error(getErrorMessage(error));
-    },
-  });
-
-  const updateSettingsMutation = useMutation({
-    mutationFn: updateUserSettings,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user', 'settings'] });
-      toast.success('Settings saved');
     },
     onError: (error: any) => {
       toast.error(getErrorMessage(error));
@@ -239,19 +220,7 @@ export default function SettingsPage() {
   };
 
   // Map backend settings to UI preferences
-  const uiSettings = settingsData?.data?.ui || {};
-  
   const preferences: any = globalPreferences;
-
-  const notifications: NotificationPreferences = uiSettings.notifications?.categories 
-    ? uiSettings.notifications 
-    : defaultNotificationPreferences;
-
-  const deviceDefaults: DeviceDefaults = uiSettings.deviceDefaults || {
-    brightness: 80,
-    volume: 50,
-    rebootTime: '03:00',
-  };
 
   const sessions: SecuritySession[] = (sessionsData?.data || []).map(s => {
     const parser = new UAParser(s.userAgent || '');
@@ -387,21 +356,16 @@ export default function SettingsPage() {
 
         <TabsContent className="mt-0" forceMount value="notifications">
           <SettingsNotifications
-            preferences={notifications}
+            settings={notificationSettings}
             onSave={async (next) => {
-              const newUi = { ...uiSettings, notifications: next };
-              updateSettingsMutation.mutateAsync({ ui: newUi });
+              try {
+                await updateNotificationSettings(next);
+                toast.success('Settings saved');
+              } catch (error: any) {
+                toast.error(getErrorMessage(error));
+                throw error;
+              }
             }}
-          />
-        </TabsContent>
-
-        <TabsContent className="mt-0" forceMount value="device-defaults">
-          <DeviceDefaultsCard
-            onSave={async (next) => {
-              const newUi = { ...uiSettings, deviceDefaults: next };
-              updateSettingsMutation.mutateAsync({ ui: newUi });
-            }}
-            value={deviceDefaults}
           />
         </TabsContent>
 

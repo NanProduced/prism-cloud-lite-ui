@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarDays, ChevronRight, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { AlertTriangle, CalendarDays, ChevronRight, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ import { toast } from '@/store/notificationStore';
 
 import type { ScheduleListResp } from '@/types/schedule';
 import { createSchedule, deleteSchedule, getSchedules, updateSchedule } from '@/services/scheduleApi';
+import { ScheduleOnboarding } from '@/components/schedule/ScheduleOnboarding';
 
 function getBffDisplayError(res: { error?: { displayMessage?: string; message?: string } } | null | undefined): string {
   return res?.error?.displayMessage || res?.error?.message || 'Request failed';
@@ -142,12 +143,19 @@ export default function SchedulePage() {
               <RefreshCw className="h-5 w-5 animate-spin" />
               <span className="text-sm">Loading...</span>
             </div>
+          ) : schedules.length === 0 && !query ? (
+            <div className="p-6">
+              <ScheduleOnboarding variant="empty-list" />
+              <div className="mt-6 text-center">
+                <Button onClick={() => setCreateOpen(true)} className="gap-2">
+                  <Plus className="h-4 w-4" /> Create your first schedule
+                </Button>
+              </div>
+            </div>
           ) : schedules.length === 0 ? (
             <div className="py-16 text-center text-muted-foreground">
-              <p className="text-sm font-semibold">No schedules yet</p>
-              <Button variant="link" onClick={() => setCreateOpen(true)}>
-                Create your first schedule
-              </Button>
+              <p className="text-sm font-semibold">No matching schedules</p>
+              <p className="text-xs mt-1">Try a different search term.</p>
             </div>
           ) : (
             <div className="divide-y">
@@ -241,9 +249,32 @@ export default function SchedulePage() {
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent className="max-w-[520px]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete schedule?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will delete the schedule and its rules. Bound devices will stop receiving it after you unbind and push updates.
+            <AlertDialogTitle className="flex items-center gap-2">
+              {deleteTarget && deleteTarget.boundDevices > 0 && (
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold">!</span>
+              )}
+              Delete schedule?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                {deleteTarget && deleteTarget.boundDevices > 0 ? (
+                  <>
+                    <p className="text-destructive font-medium flex items-center gap-1.5">
+                      <AlertTriangle className="h-4 w-4" />
+                      This schedule has {deleteTarget.boundDevices} bound device{deleteTarget.boundDevices > 1 ? 's' : ''}.
+                    </p>
+                    <p>
+                      Deleting it will require you to manually unbind all devices and push updates again. This may cause content playback interruptions.
+                    </p>
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                      <p className="font-medium text-destructive">Recommended action:</p>
+                      <p className="mt-1 text-muted-foreground">First unbind devices from this schedule, then delete it to avoid disruption.</p>
+                    </div>
+                  </>
+                ) : (
+                  <p>This schedule has no bound devices and can be safely deleted.</p>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -264,7 +295,7 @@ export default function SchedulePage() {
               disabled={!deleteTarget || deleteMutation.isPending}
             >
               {deleteMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : null}
-              Delete
+              {deleteTarget && deleteTarget.boundDevices > 0 ? 'Delete anyway' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -15,15 +15,8 @@ import type { ProgramListResp, ProgramVersionResp } from '@/types/program';
 import type { ScheduleContentsRuleResp, UpsertScheduleContentsRuleReq } from '@/types/schedule';
 import { WeekdaySelector } from '@/components/schedule/WeekdaySelector';
 
-// Helpers for Date Input (Using native for MVP)
-function dateToString(d: string | undefined) {
-    return d || "";
-}
-
-const WEEKDAY_MAP: Record<string, number> = {
-  "SUN": 0, "MON": 1, "TUE": 2, "WED": 3, "THU": 4, "FRI": 5, "SAT": 6
-};
-const WEEKDAY_REV = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+// Note: Weekday index follows backend convention: 0=Mon, 1=Tue, ..., 6=Sun
+// See docs/integration/program-and-schedule.md for details
 
 export function ScheduleContentsRuleSheet(props: {
   open: boolean;
@@ -127,19 +120,20 @@ export function ScheduleContentsRuleSheet(props: {
         setDateRange({ start: "", end: "" });
     }
 
-    // Limit Weekday
+    // Limit Weekday (backend convention: 0=Mon, 1=Tue, ..., 6=Sun)
     setIfLimitWeekday(Boolean(initialRule?.ifLimitWeekday));
     if (initialRule?.limitWeekday && Array.isArray(initialRule.limitWeekday)) {
-        const raw = initialRule.limitWeekday as any[];
+        const raw = initialRule.limitWeekday as boolean[];
         if (raw.length === 7 && typeof raw[0] === 'boolean') {
+            // Backend boolean[7] format: index 0=Mon, 6=Sun
             const nums = raw.map((b, i) => b ? i : -1).filter(n => n >= 0);
             setWeekdays(nums);
         } else {
-            const nums = raw.map(s => WEEKDAY_MAP[s] ?? -1).filter(n => n >= 0);
-            setWeekdays(nums);
+            setWeekdays([]);
         }
     } else {
-        setWeekdays([1, 2, 3, 4, 5]); // Default workdays
+        // Default to workdays: Mon(0), Tue(1), Wed(2), Thu(3), Fri(4)
+        setWeekdays([0, 1, 2, 3, 4]);
     }
     
   }, [initialRule, open]);
@@ -152,7 +146,7 @@ export function ScheduleContentsRuleSheet(props: {
   const selectedVersionLabel = useMemo(() => {
     const found = versions.find((v: ProgramVersionResp) => v.deviceProgramId === selectedDeviceProgramId);
     if (!found) return '';
-    return `v${found.version} · deviceProgramId=${found.deviceProgramId}`;
+    return `v${found.version}`;
   }, [selectedDeviceProgramId, versions]);
 
   function handleSave() {
@@ -297,7 +291,7 @@ export function ScheduleContentsRuleSheet(props: {
                          This program is already used by other rules in this schedule. Version is locked to{' '}
                          {programVersionLock.lockedReleaseVersion != null
                            ? `v${programVersionLock.lockedReleaseVersion}`
-                           : `deviceProgramId=${programVersionLock.lockedReleaseProgramId}`}
+                           : 'the existing version'}
                          .
                        </p>
                      ) : null}
