@@ -200,12 +200,33 @@ export default function ProgramEditorPage() {
     load();
   }, [programId, baseVersion, hasBaseFromUrl, isInitializing, navigate, programQuery.isLoading, programQuery.data]);
 
+  // --- Capture Cover Screenshot ---
+  const captureCover = useCallback(async (): Promise<{ base64: string; contentType: string } | null> => {
+    const container = stageCaptureContainerRef.current;
+    const stage = container?.querySelector('[data-testid="program-stage"]') as HTMLElement | null;
+    if (!stage) return null;
+    try {
+      const dataUrl = await toPng(stage, { cacheBust: true, pixelRatio: 1 });
+      return { base64: dataUrl, contentType: 'image/png' };
+    } catch {
+      return null;
+    }
+  }, []);
+
   // --- Mutations ---
   const saveMutation = useMutation({
-    mutationFn: (newVsn: VsnDocument) => {
+    mutationFn: async (newVsn: VsnDocument) => {
       const draftId = draft?.draftId ?? draft?.id;
       if (!draftId) throw new Error('Draft not initialized');
-      return saveProgramDraft(programId!, draftId, { vsnJson: JSON.stringify(sanitizeVsnForPersist(newVsn)) });
+
+      // Capture cover screenshot
+      const cover = await captureCover();
+
+      return saveProgramDraft(programId!, draftId, {
+        vsnJson: JSON.stringify(sanitizeVsnForPersist(newVsn)),
+        coverBase64: cover?.base64,
+        coverContentType: cover?.contentType,
+      });
     },
     onSuccess: (res) => {
       setDirty(false);
@@ -550,18 +571,6 @@ export default function ProgramEditorPage() {
         return;
       }
     }
-
-    const captureCover = async (): Promise<{ base64: string; contentType: string } | null> => {
-      const container = stageCaptureContainerRef.current;
-      const stage = container?.querySelector('[data-testid=\"program-stage\"]') as HTMLElement | null;
-      if (!stage) return null;
-      try {
-        const dataUrl = await toPng(stage, { cacheBust: true, pixelRatio: 1 });
-        return { base64: dataUrl, contentType: 'image/png' };
-      } catch (e) {
-        return null;
-      }
-    };
 
     const base = draft.baseVersion ?? 0;
     const hasRelease = (program?.versions?.length || 0) > 0;

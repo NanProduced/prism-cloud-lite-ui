@@ -592,8 +592,10 @@ function pickActiveItem(
   currentTime: number,
   isPlaying: boolean,
 ): { item: VsnItem | null; startTime: number } {
-  const items = region.Items?.Item ?? [];
-  if (!Array.isArray(items) || items.length === 0) return { item: null, startTime: 0 };
+  const rawItems = region.Items?.Item;
+  // Handle case where Item is a single object instead of array
+  const items: VsnItem[] = rawItems == null ? [] : Array.isArray(rawItems) ? rawItems : [rawItems];
+  if (items.length === 0) return { item: null, startTime: 0 };
 
   // Calculate total duration of the track
   let trackDuration = 0;
@@ -604,13 +606,16 @@ function pickActiveItem(
     let accumulated = 0;
     const seekTime = trackDuration > 0 ? time % trackDuration : 0;
     for (let i = 0; i < items.length; i++) {
-      const duration = Number(items[i].Duration) || 0;
+      const it = items[i];
+      if (!it) continue;
+      const duration = Number(it.Duration) || 0;
       if (seekTime >= accumulated && seekTime < accumulated + duration) {
-        return { item: items[i] as VsnItem, startTime: accumulated, index: i };
+        return { item: it, startTime: accumulated, index: i };
       }
       accumulated += duration;
     }
-    return { item: items[0] as VsnItem, startTime: 0, index: 0 };
+    const first = items[0];
+    return first ? { item: first, startTime: 0, index: 0 } : { item: null, startTime: 0, index: -1 };
   };
 
   // If we are playing, strictly follow the playhead
@@ -619,11 +624,12 @@ function pickActiveItem(
   }
 
   // If not playing, and we have a selection:
-  if (selection.regionIndex === regionIndex && selection.itemIndex != null) {
-    const selectedItem = items[selection.itemIndex] as VsnItem;
+  if (selection.regionIndex === regionIndex && selection.itemIndex != null && selection.itemIndex < items.length) {
+    const selectedItem = items[selection.itemIndex];
+    if (!selectedItem) return findItemAt(currentTime);
     let selectedStartTime = 0;
-    for (let i = 0; i < selection.itemIndex; i++) {
-      selectedStartTime += Number(items[i].Duration) || 0;
+    for (let i = 0; i < selection.itemIndex && i < items.length; i++) {
+      selectedStartTime += Number(items[i]?.Duration) || 0;
     }
     const selectedEndTime = selectedStartTime + (Number(selectedItem.Duration) || 0);
 
@@ -829,12 +835,13 @@ const RegionContent = React.memo(function RegionContent({
     const fit = item.ReserveAS === '1' ? 'contain' : 'fill';
 
     return src ? (
-      <img 
+      <img
         key={materialId || src}
-        className="h-full w-full" 
-        style={{ objectFit: fit }} 
-        src={src} 
-        alt={material?.name ?? 'Image'} 
+        className="h-full w-full"
+        style={{ objectFit: fit }}
+        src={src}
+        alt={material?.name ?? 'Image'}
+        crossOrigin="anonymous"
       />
     ) : (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -858,6 +865,7 @@ const RegionContent = React.memo(function RegionContent({
           playsInline
           preload="metadata"
           loop={item.Loop === '1'}
+          crossOrigin="anonymous"
         />
       );
     }
