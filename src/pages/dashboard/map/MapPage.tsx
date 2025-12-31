@@ -272,23 +272,6 @@ export default function MapPage() {
     return () => eventSource.close();
   }, [selectedDeviceId, followEnabled]);
 
-  // Reverse Geocoding for Selected Device
-  useEffect(() => {
-    if (!selectedLocation) {
-      setResolvedAddress(null);
-      return;
-    }
-
-    const resolve = async () => {
-      const result = await reverseGeocode(selectedLocation.lng, selectedLocation.lat);
-      if (result) {
-        setResolvedAddress(result.fullText);
-      }
-    };
-
-    resolve();
-  }, [selectedLocation]);
-
   const devices = useMemo(() => {
     const baseDevices = devicesRes?.data || [];
     // Key by string for reliable matching
@@ -410,6 +393,23 @@ export default function MapPage() {
     if (!selectedDevice) return null;
     return resolveDeviceLocation(selectedDevice, locationMode) ?? null;
   }, [locationMode, selectedDevice]);
+
+  // Reverse Geocoding for Selected Device
+  useEffect(() => {
+    if (!selectedLocation) {
+      setResolvedAddress(null);
+      return;
+    }
+
+    const resolve = async () => {
+      const result = await reverseGeocode(selectedLocation.lng, selectedLocation.lat);
+      if (result) {
+        setResolvedAddress(result.fullText);
+      }
+    };
+
+    resolve();
+  }, [selectedLocation]);
 
   const deviceLayers = useMemo(() => getDeviceLayers(), []);
 
