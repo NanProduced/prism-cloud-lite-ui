@@ -20,7 +20,15 @@ import {
   Crosshair, 
   Loader2,
   AlertCircle,
-  MapPinOff
+  MapPinOff,
+  Camera,
+  RefreshCw,
+  Monitor,
+  Info,
+  ExternalLink,
+  Zap,
+  Play,
+  X
 } from "lucide-react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -49,9 +57,11 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { DeviceStatusBadge } from "@/components/devices/DeviceStatusBadge";
+import { TagChip } from "@/components/devices/TagChip";
+import { ProgramVersionDisplay } from "@/components/programs/ProgramVersionDisplay";
 import { cn } from "@/lib/utils";
 import { type Device, resolveDeviceStatus, type DeviceStatus } from "@/types/device";
-import { getDevices } from "@/services/deviceApi";
+import { getDevices, executeDeviceAction } from "@/services/deviceApi";
 import { getGpsLatest, setGpsOverride, deleteGpsOverride } from "@/services/telemetryApi";
 import { useTimeFormatter } from "@/hooks/use-time-formatter";
 import { useSettingsStore } from "@/store/settingsStore";
@@ -106,12 +116,28 @@ export default function MapPage() {
   const [selectedTrackIds, setSelectedTrackIds] = useState<string[]>([]);
   const [realtimeGps, setRealtimeGps] = useState<Record<string, any>>({});
   const [pulsingDeviceIds, setPulsingDeviceIds] = useState<Set<string>>(new Set());
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [activeScreenshotOpId, setActiveScreenshotOpId] = useState<string | null>(null);
 
   // --- SSE Logic ---
 
   useEffect(() => {
     const handleDeviceUpdate = () => {
       queryClient.invalidateQueries({ queryKey: ['devices'] });
+    };
+
+    const handleOperationUpdate = (event: any) => {
+      const { scope, data } = event.detail;
+      if (activeScreenshotOpId && scope.operationId === activeScreenshotOpId) {
+        if (data.status === 'CONFIRMED' || data.status === 'COMPLETED') {
+          toast.success('Screenshot captured');
+          setActiveScreenshotOpId(null);
+          queryClient.invalidateQueries({ queryKey: ['devices'] });
+        } else if (data.status === 'FAILED' || data.status === 'EXPIRED') {
+          toast.error(`Screenshot failed: ${data.status}`);
+          setActiveScreenshotOpId(null);
+        }
+      }
     };
 
     const handleGlobalGps = (event: any) => {
@@ -144,12 +170,14 @@ export default function MapPage() {
     };
 
     window.addEventListener('prism.device.updated', handleDeviceUpdate);
+    window.addEventListener('prism.operation.updated', handleOperationUpdate);
     window.addEventListener('prism.telemetry.gps.reported', handleGlobalGps);
     return () => {
       window.removeEventListener('prism.device.updated', handleDeviceUpdate);
+      window.removeEventListener('prism.operation.updated', handleOperationUpdate);
       window.removeEventListener('prism.telemetry.gps.reported', handleGlobalGps);
     };
-  }, [queryClient]);
+  }, [queryClient, activeScreenshotOpId]);
 
   useEffect(() => {
     if (!selectedDeviceId) return;
@@ -625,17 +653,36 @@ export default function MapPage() {
                           className="h-5 px-2 border-none text-[9px] font-bold uppercase tracking-wider transition-colors duration-300"
                         />
                       </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-[9px] font-medium text-muted-foreground/60">
-                        <span className="font-mono uppercase tracking-normal">{device.id?.slice(0, 12) ?? "Unknown"}</span>
+                      
+                      {/* Tags list instead of ID */}
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {(device.tags || []).length > 0 ? (
+                           device.tags?.slice(0, 3).map(tag => (
+                             <TagChip 
+                               key={tag.id} 
+                               tag={tag} 
+                               className="h-4 px-1.5 text-[8px] border-none shadow-none bg-muted/50" 
+                               textClassName="max-w-[60px]"
+                             />
+                           ))
+                        ) : (
+                          <span className="text-[9px] text-muted-foreground/40 italic pl-1">No tags</span>
+                        )}
+                        {device.tags && device.tags.length > 3 && (
+                          <Badge variant="ghost" className="h-4 px-1 text-[8px] text-muted-foreground/50">+{device.tags.length - 3}</Badge>
+                        )}
+                      </div>
+
+                      <div className="mt-2 flex items-center gap-2 text-[9px] font-medium text-muted-foreground/50">
                         {location ? (
                           <>
-                            <div className="h-0.5 w-0.5 rounded-full bg-muted-foreground/30" />
+                            <MapPin className="h-2.5 w-2.5" />
                             <span className="font-mono">{formatLocation(location)}</span>
                           </>
                         ) : (
-                          <div className="flex items-center gap-1.5 ml-auto">
-                            <MapPinOff className="h-2.5 w-2.5 text-amber-500/50" />
-                            <span className="text-amber-600/80 font-bold uppercase tracking-tighter">Off-Grid</span>
+                          <div className="flex items-center gap-1.5">
+                            <MapPinOff className="h-2.5 w-2.5 text-amber-500/30" />
+                            <span className="text-amber-600/60 font-bold uppercase tracking-tighter">Off-Grid</span>
                           </div>
                         )}
                       </div>
@@ -692,84 +739,145 @@ export default function MapPage() {
               <Popup
                 longitude={selectedLocation.lng}
                 latitude={selectedLocation.lat}
-                closeButton
+                closeButton={false}
                 closeOnClick={false}
                 onClose={() => setSelectedDeviceId(null)}
-                offset={12}
+                offset={15}
+                anchor="bottom"
+                className="device-map-popup"
               >
-                <div className="min-w-[240px] p-1">
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-bold text-foreground">{selectedDevice?.deviceName}</div>
-                      <div className="mt-0.5 text-[10px] text-muted-foreground font-mono uppercase tracking-tight">{selectedDevice?.id?.slice(0, 16)}</div>
+                <Card className="min-w-[280px] overflow-hidden border-none shadow-2xl ring-1 ring-black/5 animate-in zoom-in-95 duration-200">
+                  {/* Screenshot Header */}
+                  <div className="relative aspect-video bg-zinc-900 group">
+                    {selectedDevice?.lastScreenshotUrl ? (
+                      <img 
+                        src={selectedDevice.lastScreenshotUrl} 
+                        className="h-full w-full object-cover transition-transform group-hover:scale-105 duration-500" 
+                        alt="Screenshot" 
+                      />
+                    ) : (
+                      <div className="h-full w-full flex flex-col items-center justify-center gap-2 text-zinc-500 bg-zinc-900/50">
+                        <Monitor className="h-8 w-8 opacity-20" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">No Preview</span>
+                      </div>
+                    )}
+                    
+                    {/* Status Overlays */}
+                    <div className="absolute top-2 left-2 right-2 flex items-start justify-between">
+                       <DeviceStatusBadge status={selectedDevice!.status} className="h-5 px-2 bg-black/40 backdrop-blur-md border-none text-[9px] font-black" />
+                       <Button 
+                          variant="secondary" 
+                          size="icon" 
+                          className="h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white border-white/10 backdrop-blur-md"
+                          onClick={() => setSelectedDeviceId(null)}
+                        >
+                          <X className="h-4 w-4" />
+                       </Button>
                     </div>
-                    {selectedDevice && (
-                      <Badge
-                        variant="outline"
-                        className={cn("h-5 px-2 border-none text-[9px] font-bold uppercase tracking-wider", getStatusBadgeClassName(selectedDevice.status))}
-                      >
-                        {getStatusLabel(selectedDevice.status)}
-                      </Badge>
+
+                    {/* Refresh Button */}
+                    <div className="absolute bottom-2 right-2">
+                       <Button 
+                          size="icon" 
+                          variant="secondary" 
+                          className="h-8 w-8 rounded-full bg-primary shadow-lg hover:scale-110 transition-all active:scale-95"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!selectedDevice) return;
+                            setIsCapturing(true);
+                            try {
+                              const res = await executeDeviceAction(selectedDevice.id, { type: 'SCREENSHOT', body: {} });
+                              if (res.data?.operationId) setActiveScreenshotOpId(res.data.operationId);
+                              toast.info("Capture command sent");
+                            } catch (err) {
+                              toast.error("Failed to refresh screenshot");
+                            } finally {
+                              setIsCapturing(false);
+                            }
+                          }}
+                          disabled={isCapturing || selectedDevice!.status !== 'online'}
+                        >
+                          {isCapturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                       </Button>
+                    </div>
+
+                    {/* Playing Info Overlay */}
+                    {selectedDevice?.playingProgram && (
+                      <div className="absolute bottom-2 left-2 right-12">
+                        <div className="bg-black/60 backdrop-blur-md rounded-lg p-1.5 border border-white/10 flex items-center gap-2 max-w-full">
+                           <div className="h-5 w-5 rounded bg-emerald-500 flex items-center justify-center shrink-0">
+                              <Play className="h-3 w-3 text-white fill-white/20" />
+                           </div>
+                           <ProgramVersionDisplay 
+                             name={selectedDevice.playingProgram} 
+                             variant="overlay" 
+                             className="text-[10px] font-bold" 
+                           />
+                        </div>
+                      </div>
                     )}
                   </div>
 
-                  <div className="space-y-1.5 mb-4">
-                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground/80 font-medium">
-                      <div className="h-1 w-1 rounded-full bg-muted-foreground/30" />
-                      <span>{selectedLocation.source === 'manual' ? 'Manual Override' : 'Reported GPS'}</span>
+                  <div className="p-4 space-y-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="text-sm font-bold text-foreground truncate">{selectedDevice?.deviceName}</h3>
+                        <span className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded uppercase">{selectedDevice?.deviceProperties?.info?.info?.model || "Standard"}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedDevice?.tags?.slice(0, 2).map(tag => (
+                          <TagChip key={tag.id} tag={tag} className="h-4 px-1.5 text-[8px] border-none shadow-none bg-muted/50" />
+                        ))}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] text-foreground font-mono bg-muted/30 p-1.5 rounded-lg border border-muted/50">
-                      <MapPin className="h-3 w-3 text-primary/60" />
-                      {formatLocation(selectedLocation)}
+
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-xl border border-muted/50">
+                        <MapPin className="h-3.5 w-3.5 text-primary/60" />
+                        <div className="min-w-0 flex-1">
+                           <p className="text-[10px] font-bold text-foreground/80 leading-none mb-1">
+                             {selectedLocation.source === 'manual' ? 'Manual Override' : 'Live GPS'}
+                           </p>
+                           <p className="text-[10px] font-mono text-muted-foreground truncate">{formatLocation(selectedLocation)}</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex flex-col gap-2 pt-3 border-t">
-                    <div className="grid grid-cols-2 gap-2">
+
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-muted/60">
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="h-8 text-[10px] px-2 gap-1.5 rounded-lg border-2" 
+                        className="h-8 text-[10px] font-bold gap-1.5 rounded-lg border-2"
                         onClick={() => {
-                          if (selectedDevice) {
-                             const loc = resolveDeviceLocation(selectedDevice, locationMode);
-                             setManualInput({ 
-                               lat: loc?.lat.toString() || "", 
-                               lng: loc?.lng.toString() || "" 
-                             });
-                             setShowLocationDialog(true);
-                          }
+                          const loc = resolveDeviceLocation(selectedDevice!, locationMode);
+                          setManualInput({ 
+                            lat: loc?.lat.toString() || "", 
+                            lng: loc?.lng.toString() || "" 
+                          });
+                          setShowLocationDialog(true);
                         }}
-                        disabled={setOverrideMutation.isPending}
                       >
-                        {setOverrideMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <MapPin className="h-3 w-3" />}
+                        <Crosshair className="h-3 w-3" />
                         Set Manual
                       </Button>
-                      <Button variant="default" size="sm" className="h-8 text-[10px] px-2 rounded-lg shadow-sm" onClick={() => navigate(`/dashboard/devices/${selectedDevice?.id}`)}>
+                      <Button 
+                        variant="default" 
+                        size="sm" 
+                        className="h-8 text-[10px] font-bold gap-1.5 rounded-lg shadow-sm"
+                        onClick={() => navigate(`/dashboard/devices/${selectedDevice?.id}`)}
+                      >
                         Details
+                        <ExternalLink className="h-3 w-3" />
                       </Button>
                     </div>
 
-                    {selectedDevice?.manualLocation && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 text-[10px] px-2 text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 rounded-lg" 
-                        onClick={() => deleteOverrideMutation.mutate(selectedDevice!.id)}
-                        disabled={deleteOverrideMutation.isPending}
-                      >
-                        {deleteOverrideMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-                        Clear Manual
-                      </Button>
+                    {selectedLocation.timestamp && (
+                      <p className="text-[9px] text-muted-foreground/40 text-center italic tabular-nums pt-1">
+                        Updated {formatDateTime(selectedLocation.timestamp)}
+                      </p>
                     )}
                   </div>
-
-                  {selectedLocation.timestamp && (
-                    <div className="text-[9px] text-muted-foreground/60 pt-3 mt-3 border-t text-center italic">
-                      Updated {formatDateTime(selectedLocation.timestamp)}
-                    </div>
-                  )}
-                </div>
+                </Card>
               </Popup>
             )}
           </MapGL>

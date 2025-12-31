@@ -329,7 +329,7 @@ function PageInspector({
         />
         {showDevFields && (
           <div className="mt-2 space-y-1">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">VSN Internal</p>
+            <p className="text-[10px] font-bold text-muted-foreground tracking-tight">VSN Internal</p>
             <Input value={page.BgColor} onChange={(e) => onPatch({ BgColor: e.target.value })} className="h-8 text-xs font-mono" />
           </div>
         )}
@@ -464,7 +464,7 @@ function RegionInspector({
 
       <Collapsible defaultOpen className="space-y-2">
         <CollapsibleTrigger asChild>
-          <button className="flex w-full items-center justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">
+          <button className="flex w-full items-center justify-between text-xs font-bold tracking-tight text-muted-foreground hover:text-foreground">
             Rect
             <ChevronDown className="h-3 w-3 transition-transform duration-200" />
           </button>
@@ -685,7 +685,7 @@ function ItemInspector({
 
           <Collapsible className="space-y-2">
             <CollapsibleTrigger asChild>
-              <button className="flex w-full items-center justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">
+              <button className="flex w-full items-center justify-between text-xs font-bold tracking-tight text-muted-foreground hover:text-foreground">
                 {showDevFields ? 'inEffect' : 'Transition'}
                 <ChevronDown className="h-3 w-3 transition-transform duration-200" />
               </button>
@@ -849,7 +849,7 @@ function ItemInspector({
 
           <Collapsible defaultOpen className="space-y-2">
             <CollapsibleTrigger asChild>
-              <button className="flex w-full items-center justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">
+              <button className="flex w-full items-center justify-between text-xs font-bold tracking-tight text-muted-foreground hover:text-foreground">
                 Font
                 <ChevronDown className="h-3 w-3 transition-transform duration-200" />
               </button>

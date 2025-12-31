@@ -191,53 +191,56 @@ export const ColorPickerSelection = ({ className, ...props }: ColorPickerSelecti
 
 export const ColorPickerHue = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => {
   const { hue, setHue } = useColorPicker();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { dir, ...sliderProps } = props as any;
+  
   return (
-    <Root
-      value={[hue]}
-      max={360}
-      step={1}
-      className={cn('relative flex h-4 w-full touch-none items-center', className)}
-      onValueChange={([v]) => setHue(v)}
-      {...sliderProps}
-    >
-      <Track className="relative h-2 w-full grow rounded-full bg-[linear-gradient(to_right,#f00_0%,#ff0_17%,#0f0_33%,#0ff_50%,#00f_67%,#f0f_83%,#f00_100%)]">
-        <Range className="absolute h-full" />
-      </Track>
-      <Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
-    </Root>
+    <div className={cn('relative flex h-4 w-full items-center group', className)} {...props}>
+      <div className="relative h-2 w-full grow rounded-full bg-[linear-gradient(to_right,#f00_0%,#ff0_17%,#0f0_33%,#0ff_50%,#00f_67%,#f0f_83%,#f00_100%)] shadow-inner" />
+      <input
+        type="range"
+        min={0}
+        max={360}
+        step={1}
+        value={hue}
+        onChange={(e) => setHue(Number(e.target.value))}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+      />
+      <div 
+        className="absolute h-4 w-4 rounded-full border-2 border-white bg-primary shadow-md pointer-events-none transition-transform group-active:scale-110"
+        style={{ left: `calc(${(hue / 360) * 100}% - 8px)` }}
+      />
+    </div>
   );
 };
 
 export const ColorPickerAlpha = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => {
   const { alpha, setAlpha, hue, saturation, lightness } = useColorPicker();
   const color = Color.hsl(hue, saturation, lightness).hex();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { dir, ...sliderProps } = props as any;
   
   return (
-    <Root
-      value={[alpha]}
-      max={100}
-      step={1}
-      className={cn('relative flex h-4 w-full touch-none items-center', className)}
-      onValueChange={([v]) => setAlpha(v)}
-      {...sliderProps}
-    >
-      <Track
-        className="relative h-2 w-full grow rounded-full"
+    <div className={cn('relative flex h-4 w-full items-center group', className)} {...props}>
+      <div
+        className="relative h-2 w-full grow rounded-full shadow-inner"
         style={{
           background: `
             linear-gradient(to right, transparent, ${color}),
             url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYGAQYcAP3uCTZhw1gGGYhAGBZIA/nYDCgBDAm9BGDWAAJyRCgLaBCAAgXwixzAS0pgAAAABJRU5ErkJggg==")
           `,
         }}
-      >
-        <Range className="absolute h-full rounded-full" />
-      </Track>
-      <Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
-    </Root>
+      />
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={1}
+        value={alpha}
+        onChange={(e) => setAlpha(Number(e.target.value))}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+      />
+      <div 
+        className="absolute h-4 w-4 rounded-full border-2 border-white bg-primary shadow-md pointer-events-none transition-transform group-active:scale-110"
+        style={{ left: `calc(${(alpha / 100) * 100}% - 8px)` }}
+      />
+    </div>
   );
 };
 
@@ -288,7 +291,7 @@ export const ColorPickerOutput = ({ className, ...props }: ComponentProps<typeof
       <SelectContent>
         {formats.map((format) => (
           <SelectItem key={format} value={format} className="text-[10px] font-bold">
-            {format.toUpperCase()}
+            {format}
           </SelectItem>
         ))}
       </SelectContent>

@@ -721,7 +721,7 @@ function RegionBox({
         ) : (
           <div className="flex flex-col items-center gap-1 opacity-20 group-hover:opacity-40 transition-opacity">
             <ImageIcon className="h-5 w-5" />
-            <span className="text-[10px] font-bold uppercase tracking-tighter">Empty</span>
+            <span className="text-[10px] font-bold tracking-tighter">Empty</span>
           </div>
         )}
 

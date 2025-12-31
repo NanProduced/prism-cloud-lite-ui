@@ -111,9 +111,14 @@ export function ScheduleContentsRuleSheet(props: {
     // Limit Weekday
     setIfLimitWeekday(Boolean(initialRule?.ifLimitWeekday));
     if (initialRule?.limitWeekday && Array.isArray(initialRule.limitWeekday)) {
-        const raw = initialRule.limitWeekday as any as string[];
-        const nums = raw.map(s => WEEKDAY_MAP[s] ?? -1).filter(n => n >= 0);
-        setWeekdays(nums);
+        const raw = initialRule.limitWeekday as any[];
+        if (raw.length === 7 && typeof raw[0] === 'boolean') {
+            const nums = raw.map((b, i) => b ? i : -1).filter(n => n >= 0);
+            setWeekdays(nums);
+        } else {
+            const nums = raw.map(s => WEEKDAY_MAP[s] ?? -1).filter(n => n >= 0);
+            setWeekdays(nums);
+        }
     } else {
         setWeekdays([1, 2, 3, 4, 5]); // Default workdays
     }
@@ -146,6 +151,9 @@ export function ScheduleContentsRuleSheet(props: {
       type,
       priority,
       releaseProgramId: selectedReleaseProgramId,
+      ifLimitTime,
+      ifLimitDate,
+      ifLimitWeekday,
     };
 
     if (ifLimitTime) {
@@ -153,11 +161,12 @@ export function ScheduleContentsRuleSheet(props: {
          toast.error("Please set start and end time");
          return;
       }
-      req.ifLimitTime = true;
       req.limitTime = {
           start: limitTime.start.length === 5 ? limitTime.start + ":00" : limitTime.start,
           end: limitTime.end.length === 5 ? limitTime.end + ":00" : limitTime.end
       };
+    } else {
+      req.limitTime = null;
     }
     
     if (ifLimitDate) {
@@ -165,8 +174,9 @@ export function ScheduleContentsRuleSheet(props: {
           toast.error("Please select start and end dates");
           return;
       }
-      req.ifLimitDate = true;
       req.limitDate = dateRange as any;
+    } else {
+      req.limitDate = null;
     }
     
     if (ifLimitWeekday) {
@@ -174,8 +184,11 @@ export function ScheduleContentsRuleSheet(props: {
            toast.error("Please select at least one weekday");
            return;
        }
-       req.ifLimitWeekday = true;
-       req.limitWeekday = weekdays.map(n => WEEKDAY_REV[n]);
+       const boolArr = new Array(7).fill(false);
+       weekdays.forEach(n => { if(n>=0 && n<7) boolArr[n] = true; });
+       req.limitWeekday = boolArr;
+    } else {
+       req.limitWeekday = null;
     }
 
     onSave(req);
@@ -185,7 +198,7 @@ export function ScheduleContentsRuleSheet(props: {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-[540px] w-full overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>{isEdit ? 'Edit Rule' : 'Add Rule'}</SheetTitle>
+          <SheetTitle>{isEdit ? 'Edit rule' : 'Add rule'}</SheetTitle>
           <SheetDescription>
             Configure what to play and when.
           </SheetDescription>
@@ -195,25 +208,25 @@ export function ScheduleContentsRuleSheet(props: {
             
           {/* Section 1: Content */}
           <div className="space-y-4">
-             <h3 className="text-sm font-medium leading-none text-primary">1. Content Strategy</h3>
+             <h3 className="text-sm font-medium leading-none text-primary">1. Content strategy</h3>
              <div className="grid grid-cols-2 gap-4">
                  <div className="space-y-2">
-                    <label className="text-xs font-semibold">Mode</label>
+                    <label className="text-xs font-semibold text-muted-foreground">Mode</label>
                     <Tabs value={type} onValueChange={(v) => setType(v as any)} className="w-full">
-                        <TabsList className="w-full">
-                            <TabsTrigger value="rotation" className="flex-1">Rotation</TabsTrigger>
-                            <TabsTrigger value="spot" className="flex-1">Spot</TabsTrigger>
+                        <TabsList className="w-full h-11 bg-muted/50 p-1">
+                            <TabsTrigger value="rotation" className="flex-1 rounded-lg">Rotation</TabsTrigger>
+                            <TabsTrigger value="spot" className="flex-1 rounded-lg">Spot</TabsTrigger>
                         </TabsList>
                     </Tabs>
                  </div>
                  <div className="space-y-2">
-                    <label className="text-xs font-semibold">Priority</label>
-                    <Input type="number" value={priority} onChange={(e) => setPriority(Number(e.target.value))} />
+                    <label className="text-xs font-semibold text-muted-foreground">Priority</label>
+                    <Input type="number" value={priority} onChange={(e) => setPriority(Number(e.target.value))} className="h-11 rounded-xl" />
                  </div>
              </div>
              
              <div className="space-y-2">
-                <label className="text-xs font-semibold">Program</label>
+                <label className="text-xs font-semibold text-muted-foreground">Program</label>
                 <Select
                   value={selectedProgramId || '__none__'}
                   onValueChange={(v) => {
@@ -222,8 +235,8 @@ export function ScheduleContentsRuleSheet(props: {
                     setSelectedDeviceProgramId(null);
                   }}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Program" />
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder="Select program" />
                   </SelectTrigger>
                   <SelectContent>
                      {programList.map((p: ProgramListResp) => (
@@ -235,13 +248,13 @@ export function ScheduleContentsRuleSheet(props: {
              
              {selectedProgramId && (
                  <div className="space-y-2">
-                    <label className="text-xs font-semibold">Version</label>
+                    <label className="text-xs font-semibold text-muted-foreground">Version</label>
                     <Select
                       value={selectedDeviceProgramId ? String(selectedDeviceProgramId) : '__none__'}
                       onValueChange={(v) => setSelectedDeviceProgramId(v === '__none__' ? null : Number(v))}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Version" />
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Select version" />
                       </SelectTrigger>
                       <SelectContent>
                         {versions.map((v: ProgramVersionResp) => (
@@ -255,58 +268,69 @@ export function ScheduleContentsRuleSheet(props: {
              )}
           </div>
 
-          <div className="h-[1px] bg-border" />
+          <div className="h-px bg-border" />
 
           {/* Section 2: Time Constraints */}
           <div className="space-y-6">
-             <h3 className="text-sm font-medium leading-none text-primary">2. Playback Constraints</h3>
+             <h3 className="text-sm font-medium leading-none text-primary">2. Playback constraints</h3>
              
              {/* Date Range */}
-             <div className="space-y-3 rounded-lg border p-3">
+             <div className="space-y-4 rounded-xl border p-4 bg-muted/5">
                  <div className="flex items-center justify-between">
-                     <label className="text-sm font-medium">Valid Date Range</label>
+                     <div className="space-y-0.5">
+                        <label className="text-sm font-semibold">Valid date range</label>
+                        <p className="text-xs text-muted-foreground">Schedule only triggers within this period.</p>
+                     </div>
                      <Switch checked={ifLimitDate} onCheckedChange={setIfLimitDate} />
                  </div>
                  {ifLimitDate && (
-                     <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                            <span className="text-xs text-muted-foreground">Start</span>
-                            <Input type="date" value={dateRange.start} onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))} />
+                     <div className="grid grid-cols-2 gap-3 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">Start date</span>
+                            <Input type="date" value={dateRange.start} onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))} className="rounded-lg h-10" />
                         </div>
-                        <div className="space-y-1">
-                            <span className="text-xs text-muted-foreground">End</span>
-                            <Input type="date" value={dateRange.end} onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))} />
+                        <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">End date</span>
+                            <Input type="date" value={dateRange.end} onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))} className="rounded-lg h-10" />
                         </div>
                      </div>
                  )}
              </div>
 
              {/* Weekday */}
-             <div className="space-y-3 rounded-lg border p-3">
+             <div className="space-y-4 rounded-xl border p-4 bg-muted/5">
                  <div className="flex items-center justify-between">
-                     <label className="text-sm font-medium">Weekly Recurrence</label>
+                     <div className="space-y-0.5">
+                        <label className="text-sm font-semibold">Weekly recurrence</label>
+                        <p className="text-xs text-muted-foreground">Specify days of the week.</p>
+                     </div>
                      <Switch checked={ifLimitWeekday} onCheckedChange={setIfLimitWeekday} />
                  </div>
                  {ifLimitWeekday && (
-                     <WeekdaySelector value={weekdays} onChange={setWeekdays} />
+                     <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <WeekdaySelector value={weekdays} onChange={setWeekdays} />
+                     </div>
                  )}
              </div>
 
              {/* Time Range */}
-             <div className="space-y-3 rounded-lg border p-3">
+             <div className="space-y-4 rounded-xl border p-4 bg-muted/5">
                  <div className="flex items-center justify-between">
-                     <label className="text-sm font-medium">Daily Time Range</label>
+                     <div className="space-y-0.5">
+                        <label className="text-sm font-semibold">Daily time range</label>
+                        <p className="text-xs text-muted-foreground">Set active hours within each day.</p>
+                     </div>
                      <Switch checked={ifLimitTime} onCheckedChange={setIfLimitTime} />
                  </div>
                  {ifLimitTime && (
-                     <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                            <span className="text-xs text-muted-foreground">Start</span>
-                            <Input type="time" step="1" value={limitTime.start} onChange={(e) => setLimitTime(prev => ({ ...prev, start: e.target.value }))} />
+                     <div className="grid grid-cols-2 gap-3 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">Start time</span>
+                            <Input type="time" step="1" value={limitTime.start} onChange={(e) => setLimitTime(prev => ({ ...prev, start: e.target.value }))} className="rounded-lg h-10" />
                         </div>
-                        <div className="space-y-1">
-                            <span className="text-xs text-muted-foreground">End</span>
-                            <Input type="time" step="1" value={limitTime.end} onChange={(e) => setLimitTime(prev => ({ ...prev, end: e.target.value }))} />
+                        <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">End time</span>
+                            <Input type="time" step="1" value={limitTime.end} onChange={(e) => setLimitTime(prev => ({ ...prev, end: e.target.value }))} className="rounded-lg h-10" />
                         </div>
                      </div>
                  )}
@@ -315,9 +339,9 @@ export function ScheduleContentsRuleSheet(props: {
           </div>
         </div>
 
-        <SheetFooter>
-           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-           <Button onClick={handleSave}>Save Changes</Button>
+        <SheetFooter className="gap-3 pt-4 border-t mt-4">
+           <Button variant="ghost" onClick={() => onOpenChange(false)} className="h-11 px-8 font-semibold">Cancel</Button>
+           <Button onClick={handleSave} className="h-11 px-10 font-bold shadow-lg shadow-primary/20">Save changes</Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

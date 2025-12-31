@@ -202,3 +202,15 @@
 .animate-prism-breath {
   animation: prism-breath 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* MapLibre Popup Overrides */
+.device-map-popup .maplibregl-popup-content {
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 1rem !important;
+}
+
+.device-map-popup .maplibregl-popup-tip {
+  border-top-color: hsl(var(--card)) !important;
+}

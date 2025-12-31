@@ -201,17 +201,90 @@ export default function ProgramEditorPage() {
   }, [programId, baseVersion, hasBaseFromUrl, isInitializing, navigate, programQuery.isLoading, programQuery.data]);
 
   // --- Capture Cover Screenshot ---
+  const captureVideoFrameAsDataUrl = useCallback((video: HTMLVideoElement): string | null => {
+    try {
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+      if (!width || !height) return null;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      ctx.drawImage(video, 0, 0, width, height);
+      return canvas.toDataURL('image/png');
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const captureCoverStage = useCallback(async (stage: HTMLElement): Promise<string> => {
+    const captureOptions = {
+      pixelRatio: 1,
+      // Avoid mutating URLs (e.g. presigned S3 URLs); use fetch cache controls instead.
+      fetchRequestInit: { cache: 'no-store' as const, credentials: 'include' as const },
+    };
+
+    const hasVideo = stage.querySelector('video') != null;
+    if (!hasVideo) {
+      return toPng(stage, captureOptions);
+    }
+
+    const stagingRoot = document.createElement('div');
+    stagingRoot.style.position = 'fixed';
+    stagingRoot.style.left = '-100000px';
+    stagingRoot.style.top = '0';
+    stagingRoot.style.width = `${stage.clientWidth}px`;
+    stagingRoot.style.height = `${stage.clientHeight}px`;
+    stagingRoot.style.pointerEvents = 'none';
+    stagingRoot.style.zIndex = '-1';
+
+    const clone = stage.cloneNode(true) as HTMLElement;
+    clone.style.width = `${stage.clientWidth}px`;
+    clone.style.height = `${stage.clientHeight}px`;
+
+    const originalVideos = Array.from(stage.querySelectorAll('video'));
+    const clonedVideos = Array.from(clone.querySelectorAll('video'));
+
+    clonedVideos.forEach((clonedVideo, idx) => {
+      const originalVideo = originalVideos[idx] ?? null;
+      const poster = (clonedVideo as HTMLVideoElement).poster || originalVideo?.poster || '';
+      const frameDataUrl = originalVideo ? captureVideoFrameAsDataUrl(originalVideo) : null;
+
+      const img = document.createElement('img');
+      img.className = clonedVideo.className;
+      img.alt = '';
+      img.decoding = 'async';
+      img.loading = 'eager';
+      img.src = frameDataUrl || poster;
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = (clonedVideo as HTMLElement).style.objectFit || 'contain';
+      img.setAttribute('crossorigin', 'anonymous');
+
+      clonedVideo.replaceWith(img);
+    });
+
+    stagingRoot.appendChild(clone);
+    document.body.appendChild(stagingRoot);
+    try {
+      return await toPng(clone, captureOptions);
+    } finally {
+      stagingRoot.remove();
+    }
+  }, [captureVideoFrameAsDataUrl]);
+
   const captureCover = useCallback(async (): Promise<{ base64: string; contentType: string } | null> => {
     const container = stageCaptureContainerRef.current;
     const stage = container?.querySelector('[data-testid="program-stage"]') as HTMLElement | null;
     if (!stage) return null;
     try {
-      const dataUrl = await toPng(stage, { cacheBust: true, pixelRatio: 1 });
+      const dataUrl = await captureCoverStage(stage);
       return { base64: dataUrl, contentType: 'image/png' };
     } catch {
       return null;
     }
-  }, []);
+  }, [captureCoverStage]);
 
   // --- Mutations ---
   const saveMutation = useMutation({
@@ -535,7 +608,7 @@ export default function ProgramEditorPage() {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center gap-4 bg-background">
         <RefreshCw className="h-10 w-10 animate-spin text-primary/40" />
-        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Booting Canvas Editor...</p>
+        <p className="text-xs font-bold text-muted-foreground/60">Booting Canvas Editor...</p>
       </div>
     );
   }
@@ -780,8 +853,8 @@ export default function ProgramEditorPage() {
         <div className="flex items-start gap-3">
           <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => navigate('/dashboard/programs')}><ArrowLeft className="h-4 w-4" /></Button>
           <div className="min-w-0">
-            <h1 className="truncate text-xl font-semibold tracking-tight uppercase">{program.name}</h1>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+            <h1 className="truncate text-xl font-semibold tracking-tight">{program.name}</h1>
+            <p className="text-[10px] font-bold text-muted-foreground">
               {canvasWidth}×{canvasHeight} · {baseVersion != null ? `v${baseVersion}` : 'Blank'} · {saveStatus}
             </p>
           </div>
@@ -789,7 +862,7 @@ export default function ProgramEditorPage() {
 
         <div className="flex items-center gap-2">
           <Select value={baseVersion === null ? 'blank' : String(baseVersion)} onValueChange={(v) => requestBaseVersionChange(v === 'blank' ? null : Number(v))}>
-            <SelectTrigger className="h-9 w-[110px] text-[10px] font-black uppercase bg-muted/20 border-none"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-9 w-[110px] text-[11px] font-bold bg-muted/20 border-none"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="blank" className="text-xs font-bold">Blank</SelectItem>
               {versionOptions.map(v => <SelectItem key={v} value={String(v)} className="text-xs font-bold">v{v}</SelectItem>)}
@@ -801,9 +874,9 @@ export default function ProgramEditorPage() {
           <Button variant="ghost" size="icon" onClick={undo} disabled={past.length === 0}><Undo2 className="h-4 w-4" /></Button>
           <Button variant="ghost" size="icon" onClick={redo} disabled={future.length === 0}><Redo2 className="h-4 w-4" /></Button>
           
-          <Button variant="outline" size="sm" onClick={handleSaveManually} disabled={saveMutation.isPending || (!dirty && !autosavePending)} className="font-bold text-[10px] uppercase h-9 px-4">Save</Button>
-          <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)} className="font-bold text-[10px] uppercase h-9 px-4">Preview</Button>
-          <Button size="sm" onClick={handlePublish} disabled={saveMutation.isPending} className="font-bold text-[10px] uppercase h-9 px-6 shadow-lg shadow-primary/20">Publish</Button>
+          <Button variant="outline" size="sm" onClick={handleSaveManually} disabled={saveMutation.isPending || (!dirty && !autosavePending)} className="font-bold text-xs h-9 px-4">Save</Button>
+          <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)} className="font-bold text-xs h-9 px-4">Preview</Button>
+          <Button size="sm" onClick={handlePublish} disabled={saveMutation.isPending} className="font-bold text-xs h-9 px-6 shadow-lg shadow-primary/20">Publish</Button>
         </div>
       </div>
 

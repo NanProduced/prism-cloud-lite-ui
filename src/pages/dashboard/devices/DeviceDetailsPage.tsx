@@ -79,6 +79,7 @@ import { DeviceStatusBadge } from "@/components/devices/DeviceStatusBadge";
 import { SlideToUnlock } from "@/components/ui/slide-to-unlock";
 import { BatchCommandDialog } from "@/features/devices/commands/BatchCommandDialog";
 import { ScreenshotManagerDialog } from "@/components/devices/ScreenshotManagerDialog";
+import { ProgramVersionDisplay } from "@/components/programs/ProgramVersionDisplay";
 import type { DeviceDetails } from "@/types/device-details";
 import { resolveDeviceStatus } from "@/types/device";
 import { 
@@ -100,38 +101,6 @@ import { cn } from "@/lib/utils";
 import { buildProgramNameVersionKey, formatVsnDisplayName, parseVsnFilename } from "@/lib/vsn";
 import { useTimeFormatter } from "@/hooks/use-time-formatter";
 import { formatInTimeZone } from 'date-fns-tz';
-
-const ProgramVersionDisplay = ({ name, version, variant = 'default' }: { name?: string; version?: number; variant?: 'default' | 'overlay' }) => {
-  const parsed = useMemo(() => parseVsnFilename(name), [name]);
-  if (!parsed && !name) return <span className="opacity-50">—</span>;
-
-  const displayName = parsed?.programName || parsed?.titleSnapshot || parsed?.fileName || name;
-  const displayVersion = version ?? parsed?.version;
-
-  return (
-    <div className="flex items-center gap-2 min-w-0">
-      <span className={cn(
-        "truncate",
-        variant === 'overlay' ? "text-base font-bold text-white" : "text-sm font-semibold text-foreground"
-      )}>
-        {displayName}
-      </span>
-      {displayVersion != null && (
-        <Badge 
-          variant="secondary" 
-          className={cn(
-            "h-4.5 px-1.5 text-[9px] font-black border-none shrink-0",
-            variant === 'overlay' 
-              ? "bg-white/20 text-white backdrop-blur-sm" 
-              : "bg-primary/10 text-primary"
-          )}
-        >
-          v{displayVersion}
-        </Badge>
-      )}
-    </div>
-  );
-};
 
 export default function DeviceDetailsPage() {
   const { deviceId } = useParams();

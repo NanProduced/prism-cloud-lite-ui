@@ -169,7 +169,7 @@ export function AdvancedTimeline({
         {/* 左侧：轨道表头 */}
         <div className="z-30 w-36 flex-none border-r bg-card/50 backdrop-blur-sm">
           <div style={{ height: HEADER_HEIGHT }} className="border-b bg-muted/10 flex items-center px-3 justify-between">
-            <span className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase">Tracks</span>
+            <span className="text-[10px] font-bold text-muted-foreground tracking-tight">Tracks</span>
           </div>
           <div className="flex flex-col">
             {regions.map((region, idx) => (

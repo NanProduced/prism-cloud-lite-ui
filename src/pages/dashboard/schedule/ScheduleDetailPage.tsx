@@ -62,12 +62,12 @@ function toUpsertContentsRule(rule: ScheduleContentsRuleResp): UpsertScheduleCon
     type: rule.type,
     priority: rule.priority,
     releaseProgramId: rule.releaseProgramId,
-    ifLimitTime: rule.ifLimitTime || undefined,
-    limitTime: rule.ifLimitTime ? (rule.limitTime as any) : undefined,
-    ifLimitDate: rule.ifLimitDate || undefined,
-    limitDate: rule.ifLimitDate ? (rule.limitDate as any) : undefined,
-    ifLimitWeekday: rule.ifLimitWeekday || undefined,
-    limitWeekday: rule.ifLimitWeekday ? (rule.limitWeekday as any) : undefined,
+    ifLimitTime: Boolean(rule.ifLimitTime),
+    limitTime: rule.ifLimitTime ? rule.limitTime : null,
+    ifLimitDate: Boolean(rule.ifLimitDate),
+    limitDate: rule.ifLimitDate ? rule.limitDate : null,
+    ifLimitWeekday: Boolean(rule.ifLimitWeekday),
+    limitWeekday: rule.ifLimitWeekday ? rule.limitWeekday : null,
   };
 }
 
