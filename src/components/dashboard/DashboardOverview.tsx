@@ -2,11 +2,12 @@ import { useEffect, useState, useMemo, type ComponentType } from "react";
 import { useQuery } from '@tanstack/react-query';
 import { getDevices } from '@/services/deviceApi';
 import { getMediaUsage } from '@/services/mediaApi';
+import { getUserQuotaOverview, getUserSubscription } from "@/services/userApi";
 import { useAuthStore } from '@/store/authStore';
 import { useMessageStore } from '@/store/messageStore';
 import { getAvatarById } from "@/lib/avatars";
 import { useTimeFormatter } from "@/hooks/use-time-formatter";
-import { formatBytes } from '@better-upload/client/helpers';
+import { formatBytes, cn } from "@/lib/utils";
 import { type Device, resolveDeviceStatus } from '@/types/device';
 import {
   Area,
@@ -44,7 +45,6 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
 
 import { getActiveDeviceCountBuckets, getPlaybackOverview } from '@/services/telemetryApi';
 
@@ -78,6 +78,16 @@ export function DashboardOverview() {
     queryFn: getMediaUsage,
   });
 
+  const { data: quotaRes } = useQuery({
+    queryKey: ['user', 'quota', 'overview'],
+    queryFn: getUserQuotaOverview,
+  });
+
+  const { data: subscriptionRes } = useQuery({
+    queryKey: ['user', 'subscription'],
+    queryFn: getUserSubscription,
+  });
+
   const { data: trendRes } = useQuery({
     queryKey: ['telemetry', 'active-device-count'],
     queryFn: () => getActiveDeviceCountBuckets({
@@ -103,9 +113,18 @@ export function DashboardOverview() {
   const onlinePercentage = totalCount > 0 ? Math.round((onlineCount / totalCount) * 100) : 0;
 
   const usage = usageRes?.data;
-  const storageUsedLabel = usage ? formatBytes(usage.usedBytes) : '0 GB';
-  const storageQuotaLabel = usage ? formatBytes(usage.quotaBytes) : '2 GB';
-  const storagePercentage = usage ? Math.round((usage.usedBytes / usage.quotaBytes) * 100) : 0;
+  const storageUsedLabel = usage ? formatBytes(usage.usedBytes) : '0 Bytes';
+  const storageQuotaLabel = usage ? (usage.quotaBytes === -1 ? '∞' : formatBytes(usage.quotaBytes)) : '2 GB';
+  const storagePercentage = usage ? (usage.quotaBytes === -1 ? 0 : Math.round((usage.usedBytes / usage.quotaBytes) * 100)) : 0;
+
+  const programsQuota = useMemo(() => {
+    const metric = quotaRes?.data?.metrics?.find(m => m.resource === 'programs');
+    return {
+      used: metric?.used || 0,
+      limit: metric?.limit || 20,
+      percent: metric?.percent || 0
+    };
+  }, [quotaRes]);
 
   const onlineTrendData = useMemo(() => {
     if (!Array.isArray(trendRes?.data)) return [];
@@ -129,6 +148,14 @@ export function DashboardOverview() {
     getAvatarById(user?.avatarId || 'm-1'), 
     [user?.avatarId]
   );
+
+  const currentTierRaw = (subscriptionRes?.data?.tier || user?.subscriptionTier || "FREE").toUpperCase();
+  const tierMap: Record<string, string> = {
+    'FREE': 'Free',
+    'PRO': 'Pro',
+    'ULTRA': 'Ultra'
+  };
+  const currentTierLabel = tierMap[currentTierRaw] || currentTierRaw;
 
   const pendingTasksList = useMemo(() => {
     const tasks = recentMessages.filter(m => m.kind === 'TASK' && m.status === 'RUNNING').slice(0, 2);
@@ -177,7 +204,7 @@ export function DashboardOverview() {
               <h3 className="font-semibold text-lg">{user?.displayName || 'Prism User'}</h3>
               <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
                 <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 capitalize">
-                  {user?.subscriptionTier || 'Lite'} Plan
+                  {currentTierLabel} Plan
                 </Badge>
                 <span className="truncate max-w-[150px]">{user?.email}</span>
               </div>
@@ -196,10 +223,10 @@ export function DashboardOverview() {
             onClick={() => navigate("/dashboard/devices")}
           />
           <MetricCard
-            title="Published Versions"
-            value="8"
-            total="/ 10"
-            percentage={80}
+            title="Total Programs"
+            value={String(programsQuota.used)}
+            total={`/ ${programsQuota.limit === -1 ? '∞' : programsQuota.limit}`}
+            percentage={programsQuota.percent}
             color="bg-blue-500"
             icon={Layers}
             onClick={() => navigate("/dashboard/programs")}

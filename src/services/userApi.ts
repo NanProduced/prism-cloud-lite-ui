@@ -28,6 +28,12 @@ export const updateUserProfile = (data: UpdateProfileRequest) =>
 export const getUserStorageQuota = () =>
   handleRequest(apiClient.get<BffResponse<UserStorageQuotaView>>('/user/quota/storage'));
 
+export const getUserQuotaOverview = () =>
+  handleRequest(apiClient.get<BffResponse<UserQuotaOverviewView>>('/user/quota/overview'));
+
+export const getUserStorageLedger = () =>
+  handleRequest(apiClient.get<BffResponse<UserStorageLedgerView>>('/user/quota/storage/ledger'));
+
 // Security - Phone Binding
 export const bindPhoneRequest = (data: BindPhoneRequest) =>
   handleRequest(apiClient.post<BffResponse<void>>('/user/security/phone/bind/request', data));

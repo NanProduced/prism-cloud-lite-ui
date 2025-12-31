@@ -258,6 +258,7 @@ function OptionColorPicker({
 
 export function DeviceCustomFieldsSheet({
   customFieldDefs,
+  tier = 'FREE',
   isProActive,
   onProActiveChange,
   onCustomFieldDefsChange,
@@ -265,6 +266,7 @@ export function DeviceCustomFieldsSheet({
   onCustomFieldDelete,
 }: {
   customFieldDefs: DeviceCustomFieldDef[];
+  tier?: string;
   isProActive: boolean;
   onProActiveChange?: (next: boolean) => void;
   onCustomFieldDefsChange: (next: DeviceCustomFieldDef[]) => void;
@@ -273,9 +275,9 @@ export function DeviceCustomFieldsSheet({
 }) {
   const { user } = useAuthStore();
   const currentQuota = useMemo(() => {
-    const tier = (user?.subscriptionTier || 'FREE') as keyof typeof QUOTAS;
-    return QUOTAS[tier] || QUOTAS.FREE;
-  }, [user]);
+    const t = (tier || 'FREE').toUpperCase() as keyof typeof QUOTAS;
+    return QUOTAS[t] || QUOTAS.FREE;
+  }, [tier]);
 
   const ordered = useMemo(
     () => customFieldDefs.slice().sort(sortBySequence),
@@ -394,7 +396,12 @@ export function DeviceCustomFieldsSheet({
                 variant={isProActive ? "default" : "secondary"} 
                 className={cn("h-5 px-1.5 text-[10px] font-bold tracking-tight", isProActive && "bg-primary text-primary-foreground")}
                >
-                 {user?.subscriptionTier || 'FREE'}
+                 {(() => {
+                   const normalized = (tier || 'FREE').toUpperCase();
+                   if (normalized === 'PRO') return 'Pro';
+                   if (normalized === 'ULTRA') return 'Ultra';
+                   return 'Free';
+                 })()}
                </Badge>
             </div>
           </div>

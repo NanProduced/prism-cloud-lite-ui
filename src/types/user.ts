@@ -95,13 +95,38 @@ export interface BindPhoneConfirmRequest {
 
 
 export interface UserStorageQuotaView {
-
   quotaBytes: number;
-
   usedBytes: number;
-
   availableBytes: number | null;
-
   percent: number | null;
+}
 
+export interface UserQuotaMetric {
+  resource: string;
+  used: number;
+  limit: number;
+  percent: number | null;
+}
+
+export interface UserQuotaOverviewView {
+  metrics: UserQuotaMetric[];
+  programVersionsPerProgram: number;
+}
+
+export interface StorageLedgerSource {
+  sourceType: string;
+  totalBytes: number;
+  totalCount: number;
+  items: Array<{
+    fileType: string;
+    totalBytes: number;
+    totalCount: number;
+  }>;
+}
+
+export interface UserStorageLedgerView {
+  quotaBytes: number;
+  ledgerTotalBytes: number;
+  mismatchBytes: number;
+  sources: StorageLedgerSource[];
 }

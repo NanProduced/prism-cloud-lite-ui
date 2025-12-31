@@ -36,6 +36,7 @@ interface DeviceTableProps {
   devices: Device[];
   customFieldDefs: DeviceCustomFieldDef[];
   tags: Tag[];
+  tier?: string;
   isProActive: boolean;
   selectedDeviceIds: Set<string>;
   pulsingDeviceIds?: Set<string>;
@@ -92,6 +93,7 @@ export function DeviceTable({
   devices,
   customFieldDefs,
   tags,
+  tier,
   isProActive,
   selectedDeviceIds,
   pulsingDeviceIds,
@@ -1036,6 +1038,7 @@ export function DeviceTable({
         grid={grid}
         defaultColumns={columns}
         customFieldDefs={customFieldDefs}
+        tier={tier}
         isProActive={isProActive}
         onBatchCommand={onBatchCommand}
         onProActiveChange={onProActiveChange}

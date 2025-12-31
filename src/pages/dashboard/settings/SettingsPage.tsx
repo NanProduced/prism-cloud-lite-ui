@@ -290,15 +290,6 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6">
-      <header className="rounded-xl border bg-card px-5 py-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-xl font-semibold">Settings</h1>
-          <p className="text-sm text-muted-foreground">
-            Customize timezone, notifications, and account security.
-          </p>
-        </div>
-      </header>
-
       <Tabs
         className="space-y-6"
         onValueChange={(next) => {

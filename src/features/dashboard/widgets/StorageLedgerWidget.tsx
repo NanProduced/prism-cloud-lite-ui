@@ -1,11 +1,10 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '@/services/apiClient';
-import { formatBytes } from '@better-upload/client/helpers';
+import { formatBytes, cn } from '@/lib/utils';
 import { HardDrive, PieChart, Info, AlertTriangle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 
 export const StorageLedgerWidget = () => {
   const { data: ledgerRes, isLoading } = useQuery({
@@ -23,8 +22,9 @@ export const StorageLedgerWidget = () => {
 
   const totalUsed = ledger?.ledgerTotalBytes || 0;
   const quotaBytes = ledger?.quotaBytes || 0;
-  const availableBytes = quotaBytes > 0 ? Math.max(0, quotaBytes - totalUsed) : null;
-  const percent = quotaBytes > 0 ? Math.min(100, Math.round((totalUsed / quotaBytes) * 100)) : 0;
+  const isUnlimited = quotaBytes === -1;
+  const availableBytes = (!isUnlimited && quotaBytes > 0) ? Math.max(0, quotaBytes - totalUsed) : null;
+  const percent = (!isUnlimited && quotaBytes > 0) ? Math.min(100, Math.round((totalUsed / quotaBytes) * 100)) : 0;
   const mismatch = ledger?.mismatchBytes || 0;
 
   return (
@@ -35,8 +35,8 @@ export const StorageLedgerWidget = () => {
             <HardDrive className="h-4 w-4 text-blue-500" />
             <div className="flex flex-col">
               <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none">Cloud Storage</span>
-              <span className="text-sm font-black tracking-tight">
-                {formatBytes(totalUsed)} / {quotaBytes === -1 ? '鈭?' : formatBytes(quotaBytes)}
+              <span className="text-sm font-bold tracking-tight text-foreground/80">
+                {formatBytes(totalUsed)} / {isUnlimited ? '∞' : formatBytes(quotaBytes)}
               </span>
             </div>
           </div>
@@ -53,9 +53,9 @@ export const StorageLedgerWidget = () => {
                 </Tooltip>
               </TooltipProvider>
             )}
-            {quotaBytes > 0 && (
+            {!isUnlimited && quotaBytes > 0 && (
               <span className={cn(
-                "text-[10px] font-black px-1.5 py-0.5 rounded",
+                "text-[10px] font-bold px-1.5 py-0.5 rounded",
                 percent > 90 ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
               )}>
                 {percent}%
@@ -63,7 +63,7 @@ export const StorageLedgerWidget = () => {
             )}
           </div>
         </div>
-        {quotaBytes > 0 && (
+        {!isUnlimited && quotaBytes > 0 && (
           <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
             <div 
               className={cn("h-full transition-all duration-500", percent > 90 ? "bg-red-500" : "bg-blue-500")}
@@ -78,10 +78,10 @@ export const StorageLedgerWidget = () => {
           {sources.map((source: any) => (
             <div key={source.sourceType} className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase text-muted-foreground">
+                <span className="text-[10px] font-bold uppercase text-muted-foreground">
                   {source.sourceType?.replace('_', ' ')}
                 </span>
-                <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">
+                <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded font-bold">
                   {source.totalCount} items • {formatBytes(source.totalBytes)}
                 </span>
               </div>

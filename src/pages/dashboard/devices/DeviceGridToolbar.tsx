@@ -26,6 +26,7 @@ interface DeviceGridToolbarProps {
   grid: Grid<Device>;
   defaultColumns: Column<Device>[];
   customFieldDefs: DeviceCustomFieldDef[];
+  tier?: string;
   isProActive: boolean;
   onBatchCommand: () => void;
   onProActiveChange?: (next: boolean) => void;
@@ -40,6 +41,7 @@ export function DeviceGridToolbar({
   grid,
   defaultColumns,
   customFieldDefs,
+  tier,
   isProActive,
   onBatchCommand,
   onProActiveChange,
@@ -283,6 +285,7 @@ export function DeviceGridToolbar({
           />
           <DeviceCustomFieldsSheet
             customFieldDefs={customFieldDefs}
+            tier={tier}
             isProActive={isProActive}
             onProActiveChange={onProActiveChange}
             onCustomFieldDefsChange={onCustomFieldDefsChange}

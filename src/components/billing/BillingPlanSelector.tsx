@@ -22,7 +22,10 @@ import {
 } from "@/services/userApi";
 import type { SubscriptionSnapshot } from "@/types/user";
 import { useTimeFormatter } from "@/hooks/use-time-formatter";
+import { useAuthStore } from "@/store/authStore";
+import { useQueryClient } from "@tanstack/react-query";
 import HexTaBillingPlanSelector, { type SelectablePlan } from "@lytenyte/components/ui/billing-plan-selector";
+import confetti from 'canvas-confetti';
 
 interface BillingPlanSelectorProps {
   open: boolean;
@@ -38,6 +41,9 @@ export function BillingPlanSelector({ open, onOpenChange }: BillingPlanSelectorP
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [showRedeemInput, setShowRedeemInput] = useState(false);
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
+
+  const { updateUser } = useAuthStore();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (open) {
@@ -62,14 +68,42 @@ export function BillingPlanSelector({ open, onOpenChange }: BillingPlanSelectorP
     try {
       const res = await redeemSubscriptionCode({ code: redeemCode.trim() });
       if (res.success && res.data) {
+        // Trigger Celebration
+        const duration = 5 * 1000;
+        const animationEnd = Date.now() + duration;
+        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+
+        const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+        const interval: any = setInterval(function() {
+          const timeLeft = animationEnd - Date.now();
+
+          if (timeLeft <= 0) {
+            return clearInterval(interval);
+          }
+
+          const particleCount = 50 * (timeLeft / duration);
+          confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+          confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+        }, 250);
+
         toast.success(t('billing.redeem.success'));
         // Success with re-login guidance
         toast.info(t('billing.reloginNotice'), { duration: 8000 });
+        
+        // Update local and global state
         setSubscription(res.data);
+        updateUser({ subscriptionTier: res.data.tier });
+        
+        // Invalidate all related queries for real-time update
+        queryClient.invalidateQueries({ queryKey: ['user', 'subscription'] });
+        queryClient.invalidateQueries({ queryKey: ['user', 'quota'] });
+        queryClient.invalidateQueries({ queryKey: ['media', 'usage'] });
+        
         setShowRedeemInput(false);
         setRedeemCode("");
       } else {
-        toast.error(t('billing.redeem.error'));
+        toast.error(res.error?.displayMessage || t('billing.redeem.error'));
       }
     } catch (error) {
       toast.error(t('auth.errors.networkError'));

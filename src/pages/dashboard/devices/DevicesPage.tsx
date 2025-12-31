@@ -2,17 +2,18 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DeviceTable } from './DeviceTable';
 import { DeviceCardView } from './DeviceCardView';
-import { 
-  getDevices, 
-  getCustomFieldDefs, 
-  createCustomFieldDef, 
-  deleteCustomFieldDef, 
+import {
+  getDevices,
+  getCustomFieldDefs,
+  createCustomFieldDef,
+  deleteCustomFieldDef,
   updateDeviceCustomFieldValues,
   updateCustomFieldDef,
   getTags,
   createTag as apiCreateTag,
   updateDeviceTags
 } from '@/services/deviceApi';
+import { getUserSubscription } from '@/services/userApi';
 import { type Device, type Tag, resolveDeviceStatus } from '@/types/device';
 import type { DeviceCustomFieldDef, DeviceCustomFieldValue } from '@/types/device-custom-field';
 import { DeviceFilters, type DeviceFilterState } from '@/components/devices/DeviceFilters';
@@ -32,6 +33,12 @@ export default function DevicesPage() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   
+  const { data: subscriptionRes } = useQuery({
+    queryKey: ['user', 'subscription'],
+    queryFn: getUserSubscription,
+    enabled: !!user,
+  });
+
   const { data: bffResponse, isLoading: isDevicesLoading } = useQuery({
     queryKey: ['devices'],
     queryFn: () => getDevices(),
@@ -51,11 +58,13 @@ export default function DevicesPage() {
   const customFieldDefs = useMemo(() => cfResponse?.data || [], [cfResponse]);
   const tags = useMemo(() => tagsResponse?.data || [], [tagsResponse]);
 
+  const currentTierRaw = subscriptionRes?.data?.tier || user?.subscriptionTier || "FREE";
+  const effectiveTier = currentTierRaw.toUpperCase();
+
   // Determine if Pro features are active based on actual subscription
   const isProActive = useMemo(() => {
-    return user?.subscriptionTier === 'PRO' || user?.subscriptionTier === 'ULTRA';
-  }, [user]);
-
+    return effectiveTier === 'PRO' || effectiveTier === 'ULTRA';
+  }, [effectiveTier]);
   // Mutations
   const updateFieldValueMutation = useMutation({
     mutationFn: ({ deviceId, fieldId, value }: { deviceId: string; fieldId: number; value: DeviceCustomFieldValue }) => 
@@ -425,6 +434,7 @@ export default function DevicesPage() {
             devices={fullDevices.length > 0 ? fullDevices : devices}
             customFieldDefs={customFieldDefs}
             tags={tags}
+            tier={effectiveTier}
             isProActive={isProActive}
             selectedDeviceIds={selectedDeviceIds}
             pulsingDeviceIds={pulsingDeviceIds}
