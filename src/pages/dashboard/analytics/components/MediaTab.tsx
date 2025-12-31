@@ -38,6 +38,8 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
   const { formatDateTime } = useTimeFormatter();
   const [selectedMedia, setSelectedMedia] = useState<MediaPlaySummaryItem | null>(null);
   const resolvedDeviceMap = deviceMap ?? {};
+  const masterTableHeight = 'h-[340px] sm:h-[420px] lg:h-[520px]';
+  const deviceTableHeight = 'h-[260px] sm:h-[300px]';
 
   // Query for summary list
   const { data: summaryRes, isLoading: isSummaryLoading } = useQuery({
@@ -94,10 +96,10 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
 
   return (
     <div className={cn('flex flex-col gap-6', className)}>
-      <div className="flex flex-col lg:flex-row gap-6 items-stretch min-h-[600px]">
-        {/* LEFT: Master Table (65%) */}
-        <div className="flex-[6.5] flex flex-col gap-4">
-          <Card className="flex-1 rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] gap-6 items-start">
+        {/* LEFT: Master Table */}
+        <div className="min-w-0">
+          <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
             <CardHeader className="p-4 pb-2 bg-muted/5 border-b flex flex-row items-center justify-between">
               <CardTitle className="text-xs font-bold flex items-center gap-2 text-foreground/80">
                 <Film className="h-4 w-4 text-pink-500" />
@@ -107,13 +109,13 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
                 {mediaList.length} Items Tracked
               </div>
             </CardHeader>
-            <CardContent className="p-0 flex-1">
+            <CardContent className="p-0">
               {isSummaryLoading ? (
-                <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 italic">
+                <div className={cn(masterTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20 italic')}>
                   Loading...
                 </div>
               ) : mediaList.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8">
+                <div className={cn(masterTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8')}>
                   No media playback data
                 </div>
               ) : (
@@ -130,15 +132,15 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
                     const m = mediaList.find(m => m.mediaId === item.id);
                     if (m) setSelectedMedia(m);
                   }}
-                  className="h-full border-0 rounded-none min-h-[550px]"
+                  className={cn(masterTableHeight, 'border-0 rounded-none')}
                 />
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* RIGHT: Detail Panel (35%) */}
-        <div className="flex-[3.5] flex flex-col gap-4">
+        {/* RIGHT: Detail Panel */}
+        <div className="min-w-0 flex flex-col gap-4">
           {selectedMedia ? (
             <>
               {/* Context Header */}
@@ -213,23 +215,23 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
               </Card>
 
               {/* Device Distribution */}
-              <Card className="flex-1 rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
+              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
                 <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
                   <CardTitle className="text-xs font-bold flex items-center gap-2 text-foreground/80">
                     <Monitor className="h-4 w-4 text-pink-500" />
                     Device Distribution
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-0 flex-1">
+                <CardContent className="p-0">
                   {isDevicesLoading ? (
-                    <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
+                    <div className={cn(deviceTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20')}>
                       Loading...
                     </div>
                   ) : (
                     <AnalyticsDeviceTable
                       data={deviceData}
                       deviceMap={resolvedDeviceMap}
-                      className="h-full border-0 rounded-none min-h-[250px]"
+                      className={cn(deviceTableHeight, 'border-0 rounded-none')}
                     />
                   )}
                 </CardContent>

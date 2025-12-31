@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Download, Calendar, Globe, Wifi, Layers, Film } from 'lucide-react';
+import { Download, Globe, Wifi, Layers, Film } from 'lucide-react';
 import type { PlaybackBucket } from '@/services/telemetryApi';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -12,6 +12,7 @@ import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { addDays, subDays } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
+import { getDevices } from '@/services/deviceApi';
 
 // --- Constants ---
 
@@ -173,15 +174,15 @@ export default function AnalyticsPage() {
           <BucketSelector value={bucket} onChange={setBucket} />
         </div>
 
-        <TabsContent value="online-time" className="flex-1 min-h-0 mt-0 overflow-auto pr-1">
+        <TabsContent value="online-time" className="flex-1 min-h-0 mt-0 overflow-x-hidden overflow-y-auto pr-1">
           <FleetUptimeTab from={fromIso} to={toIso} tz={tz} bucket={bucket} deviceMap={deviceMap} />
         </TabsContent>
-
-        <TabsContent value="programs" className="flex-1 min-h-0 mt-0 overflow-auto pr-1">
+ 
+        <TabsContent value="programs" className="flex-1 min-h-0 mt-0 overflow-x-hidden overflow-y-auto pr-1">
           <ProgramTab from={fromIso} to={toIso} tz={tz} bucket={bucket} deviceMap={deviceMap} />
         </TabsContent>
-
-        <TabsContent value="media" className="flex-1 min-h-0 mt-0 overflow-auto pr-1">
+ 
+        <TabsContent value="media" className="flex-1 min-h-0 mt-0 overflow-x-hidden overflow-y-auto pr-1">
           <MediaTab from={fromIso} to={toIso} tz={tz} bucket={bucket} deviceMap={deviceMap} />
         </TabsContent>
       </Tabs>

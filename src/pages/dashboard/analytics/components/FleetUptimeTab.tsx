@@ -39,6 +39,8 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
   const { formatDateTime } = useTimeFormatter();
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const resolvedDeviceMap = deviceMap ?? {};
+  const summaryTableHeight = 'h-[340px] sm:h-[420px] lg:h-[520px]';
+  const sessionsTableHeight = 'h-[340px] sm:h-[420px]';
 
   // Query for fleet online summary
   const { data: summaryRes, isLoading: isSummaryLoading } = useQuery({
@@ -214,10 +216,10 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
       </div>
 
       {/* Main Analysis Section: Master-Detail Layout */}
-      <div className="flex flex-col lg:flex-row gap-6 items-stretch min-h-[600px]">
-        {/* LEFT: Master Table (65%) */}
-        <div className="flex-[6.5] flex flex-col gap-4">
-          <Card className="flex-1 rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] gap-6 items-start">
+        {/* LEFT: Master Table */}
+        <div className="min-w-0">
+          <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
             <CardHeader className="p-4 pb-2 bg-muted/5 border-b flex flex-row items-center justify-between">
               <CardTitle className="text-xs font-bold flex items-center gap-2 text-foreground/80">
                 <Wifi className="h-4 w-4 text-primary" />
@@ -227,13 +229,13 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
                 {summaryData.length} Devices Recorded
               </div>
             </CardHeader>
-            <CardContent className="p-0 flex-1">
+            <CardContent className="p-0">
               {isSummaryLoading ? (
-                <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 italic">
+                <div className={cn(summaryTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20 italic')}>
                   Loading...
                 </div>
               ) : summaryData.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8">
+                <div className={cn(summaryTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8')}>
                   No online time data in this period
                 </div>
               ) : (
@@ -242,15 +244,15 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
                   deviceMap={resolvedDeviceMap}
                   selectedDeviceId={selectedDeviceId || undefined}
                   onSelectDevice={setSelectedDeviceId}
-                  className="h-full border-0 rounded-none min-h-[500px]"
+                  className={cn(summaryTableHeight, 'border-0 rounded-none')}
                 />
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* RIGHT: Detail Panel (35%) */}
-        <div className="flex-[3.5] flex flex-col gap-4">
+        {/* RIGHT: Detail Panel */}
+        <div className="min-w-0 flex flex-col gap-4">
           {selectedDevice ? (
             <>
               {/* Selected Device Context Card */}
@@ -316,24 +318,24 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
               </Card>
 
               {/* Session History Table */}
-              <Card className="flex-1 rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
+              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
                 <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
                   <CardTitle className="text-xs font-bold flex items-center gap-2 text-foreground/80">
                     <Clock className="h-4 w-4 text-primary" />
                     Connection History
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-0 flex-1">
+                <CardContent className="p-0">
                   {isSessionsLoading ? (
-                    <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 italic">
+                    <div className={cn(sessionsTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20 italic')}>
                       Loading...
                     </div>
                   ) : sessionsData.length === 0 ? (
-                    <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
+                    <div className={cn(sessionsTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20')}>
                       No session history
                     </div>
                   ) : (
-                    <DeviceSessionsTable data={sessionsData} className="h-full border-0 rounded-none min-h-[400px]" />
+                    <DeviceSessionsTable data={sessionsData} className={cn(sessionsTableHeight, 'border-0 rounded-none')} />
                   )}
                 </CardContent>
               </Card>

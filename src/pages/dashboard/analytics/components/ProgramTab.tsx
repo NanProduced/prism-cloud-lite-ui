@@ -40,6 +40,8 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
   const { formatDateTime } = useTimeFormatter();
   const [selectedProgram, setSelectedProgram] = useState<ProgramPlaySummaryItem | null>(null);
   const resolvedDeviceMap = deviceMap ?? {};
+  const masterTableHeight = 'h-[340px] sm:h-[420px] lg:h-[520px]';
+  const deviceTableHeight = 'h-[260px] sm:h-[300px]';
 
   // Query for summary list
   const { data: summaryRes, isLoading: isSummaryLoading } = useQuery({
@@ -93,6 +95,7 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
       'playback', 
       'program', 
       selectedProgram?.lan ? selectedProgram?.lanProgramId : selectedProgram?.programId, 
+      selectedProgram?.lan ? 'LAN' : selectedProgram?.releaseVersion,
       'devices', 
       from, 
       to
@@ -135,10 +138,10 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
 
   return (
     <div className={cn('flex flex-col gap-6', className)}>
-      <div className="flex flex-col lg:flex-row gap-6 items-stretch min-h-[600px]">
-        {/* LEFT: Master Table (65%) */}
-        <div className="flex-[6.5] flex flex-col gap-4">
-          <Card className="flex-1 rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] gap-6 items-start">
+        {/* LEFT: Master Table */}
+        <div className="min-w-0">
+          <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
             <CardHeader className="p-4 pb-2 bg-muted/5 border-b flex flex-row items-center justify-between">
               <CardTitle className="text-xs font-bold flex items-center gap-2 text-foreground/80">
                 <Layers className="h-4 w-4 text-primary" />
@@ -148,13 +151,13 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
                 {programs.length} Programs Tracked
               </div>
             </CardHeader>
-            <CardContent className="p-0 flex-1">
+            <CardContent className="p-0">
               {isSummaryLoading ? (
-                <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 italic">
+                <div className={cn(masterTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20 italic')}>
                   Loading...
                 </div>
               ) : programs.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8">
+                <div className={cn(masterTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8')}>
                   No program playback data
                 </div>
               ) : (
@@ -172,15 +175,15 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
                     const p = programs.find(p => (p.lan ? p.lanProgramId : p.programId) === item.id);
                     if (p) setSelectedProgram(p);
                   }}
-                  className="h-full border-0 rounded-none min-h-[550px]"
+                  className={cn(masterTableHeight, 'border-0 rounded-none')}
                 />
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* RIGHT: Detail Panel (35%) */}
-        <div className="flex-[3.5] flex flex-col gap-4">
+        {/* RIGHT: Detail Panel */}
+        <div className="min-w-0 flex flex-col gap-4">
           {selectedProgram ? (
             <>
               {/* Context Header */}
@@ -260,23 +263,23 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
               </Card>
 
               {/* Device Distribution */}
-              <Card className="flex-1 rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
+              <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
                 <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
                   <CardTitle className="text-xs font-bold flex items-center gap-2 text-foreground/80">
                     <Monitor className="h-4 w-4 text-primary" />
                     Device Distribution
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-0 flex-1">
+                <CardContent className="p-0">
                   {isDevicesLoading ? (
-                    <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
+                    <div className={cn(deviceTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20')}>
                       Loading...
                     </div>
                   ) : (
                     <AnalyticsDeviceTable
                       data={deviceData}
                       deviceMap={resolvedDeviceMap}
-                      className="h-full border-0 rounded-none min-h-[250px]"
+                      className={cn(deviceTableHeight, 'border-0 rounded-none')}
                     />
                   )}
                 </CardContent>
