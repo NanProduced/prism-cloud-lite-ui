@@ -28,7 +28,11 @@ import {
   ExternalLink,
   Zap,
   Play,
-  X
+  X,
+  Thermometer,
+  Sun,
+  Wifi,
+  Navigation
 } from "lucide-react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -118,6 +122,10 @@ export default function MapPage() {
   const [pulsingDeviceIds, setPulsingDeviceIds] = useState<Set<string>>(new Set());
   const [isCapturing, setIsCapturing] = useState(false);
   const [activeScreenshotOpId, setActiveScreenshotOpId] = useState<string | null>(null);
+  
+  // --- New Map Features ---
+  const [sensorMetrics, setSensorMetrics] = useState<Record<string, any>>({});
+  const [followEnabled, setFollowEnabled] = useState(false);
 
   // --- SSE Logic ---
 
@@ -145,11 +153,13 @@ export default function MapPage() {
       const deviceId = scope.deviceId;
       if (!deviceId) return;
 
+      const deviceIdStr = String(deviceId);
+
       if (data?.points?.length) {
         const lastPoint = data.points[data.points.length - 1];
         setRealtimeGps(prev => ({
           ...prev,
-          [deviceId]: {
+          [deviceIdStr]: {
             lat: lastPoint.latitude,
             lng: lastPoint.longitude,
             source: 'reported',
@@ -157,12 +167,21 @@ export default function MapPage() {
           }
         }));
 
+        // Follow Mode Logic
+        if (followEnabled && selectedDeviceId === deviceIdStr) {
+          mapRef.current?.flyTo({ 
+            center: [lastPoint.longitude, lastPoint.latitude], 
+            speed: 0.8,
+            curve: 1
+          });
+        }
+
         // Trigger pulse effect
-        setPulsingDeviceIds(prev => new Set(prev).add(deviceId));
+        setPulsingDeviceIds(prev => new Set(prev).add(deviceIdStr));
         setTimeout(() => {
           setPulsingDeviceIds(prev => {
             const next = new Set(prev);
-            next.delete(deviceId);
+            next.delete(deviceIdStr);
             return next;
           });
         }, 5000); // Pulse for 5 seconds
@@ -177,14 +196,44 @@ export default function MapPage() {
       window.removeEventListener('prism.operation.updated', handleOperationUpdate);
       window.removeEventListener('prism.telemetry.gps.reported', handleGlobalGps);
     };
-  }, [queryClient, activeScreenshotOpId]);
+  }, [queryClient, activeScreenshotOpId, followEnabled, selectedDeviceId]);
+
+  // Sensor Streaming for Selected Device
+  useEffect(() => {
+    if (!selectedDeviceId) {
+      setSensorMetrics({});
+      return;
+    }
+
+    const url = `/api/sse/monitoring/stream?deviceIds=${selectedDeviceId}`;
+    const eventSource = new EventSource(url, { withCredentials: true });
+
+    eventSource.addEventListener('prism', (event: any) => {
+      try {
+        const envelope = JSON.parse(event.data);
+        if (envelope.type === 'telemetry.sensor.reported' && envelope.data?.items) {
+          const items = envelope.data.items;
+          const newMetrics: Record<string, any> = {};
+          
+          items.forEach((item: any) => {
+            if (item.sensorType === 'temperature') newMetrics.temp = item.sensorValue;
+            if (item.sensorType === 'bright') newMetrics.bright = item.screenBrightValue || item.sensorValue;
+            if (item.sensorType === 'signal') newMetrics.signal = item.sensorValue;
+          });
+
+          setSensorMetrics(prev => ({ ...prev, ...newMetrics }));
+        }
+      } catch (e) {
+        console.error('[SSE Map Sensors] Parse error', e);
+      }
+    });
+
+    return () => eventSource.close();
+  }, [selectedDeviceId]);
 
   useEffect(() => {
     if (!selectedDeviceId) return;
-    // ... rest of the existing SSE logic for selected device if still needed ...
-    // Actually, we now have global GPS updates, but the map/stream might provide more frequent updates?
-    // Let's keep it for now but the global one is primary for the list.
-
+    
     const url = `/api/sse/map/stream?deviceId=${selectedDeviceId}`;
     const eventSource = new EventSource(url, { withCredentials: true });
 
@@ -193,23 +242,33 @@ export default function MapPage() {
         const envelope = JSON.parse(event.data);
         if (envelope.type === 'telemetry.gps.reported' && envelope.data?.points?.length) {
           const lastPoint = envelope.data.points[envelope.data.points.length - 1];
+          const deviceIdStr = String(selectedDeviceId);
+          
           setRealtimeGps(prev => ({
             ...prev,
-            [selectedDeviceId]: {
+            [deviceIdStr]: {
               lat: lastPoint.latitude,
               lng: lastPoint.longitude,
               source: 'reported',
               timestamp: envelope.occurredAt
             }
           }));
+
+          // Follow Mode for direct stream too
+          if (followEnabled) {
+            mapRef.current?.flyTo({ 
+              center: [lastPoint.longitude, lastPoint.latitude], 
+              speed: 0.8
+            });
+          }
         }
       } catch (e) {
-        console.error('[SSE Map] Parse error', e);
+        console.error('[SSE Map GPS] Parse error', e);
       }
     });
 
     return () => eventSource.close();
-  }, [selectedDeviceId]);
+  }, [selectedDeviceId, followEnabled]);
 
   const devices = useMemo(() => {
     const baseDevices = devicesRes?.data || [];
@@ -650,39 +709,39 @@ export default function MapPage() {
                         <DeviceStatusBadge
                           status={device.status}
                           pulse={pulsingDeviceIds.has(device.id)}
-                          className="h-5 px-2 border-none text-[9px] font-bold uppercase tracking-wider transition-colors duration-300"
+                          className="h-5.5 px-2.5 border-none text-[10px] font-black uppercase tracking-wider transition-colors duration-300 shadow-sm"
                         />
                       </div>
                       
                       {/* Tags list instead of ID */}
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      <div className="mt-2 flex flex-wrap gap-1.5">
                         {(device.tags || []).length > 0 ? (
                            device.tags?.slice(0, 3).map(tag => (
                              <TagChip 
                                key={tag.id} 
                                tag={tag} 
-                               className="h-4 px-1.5 text-[8px] border-none shadow-none bg-muted/50" 
-                               textClassName="max-w-[60px]"
+                               className="h-5 px-2 text-[10px] border-none shadow-sm bg-muted/60 font-bold" 
+                               textClassName="max-w-[80px]"
                              />
                            ))
                         ) : (
-                          <span className="text-[9px] text-muted-foreground/40 italic pl-1">No tags</span>
+                          <span className="text-[10px] text-muted-foreground/40 italic pl-1">No tags</span>
                         )}
                         {device.tags && device.tags.length > 3 && (
-                          <Badge variant="ghost" className="h-4 px-1 text-[8px] text-muted-foreground/50">+{device.tags.length - 3}</Badge>
+                          <Badge variant="ghost" className="h-5 px-1.5 text-[10px] text-muted-foreground/60 font-bold">+{device.tags.length - 3}</Badge>
                         )}
                       </div>
 
-                      <div className="mt-2 flex items-center gap-2 text-[9px] font-medium text-muted-foreground/50">
+                      <div className="mt-2.5 flex items-center gap-2 text-[11px] font-semibold text-muted-foreground/60">
                         {location ? (
                           <>
-                            <MapPin className="h-2.5 w-2.5" />
-                            <span className="font-mono">{formatLocation(location)}</span>
+                            <MapPin className="h-3 w-3 text-primary/40" />
+                            <span className="font-mono tracking-tight">{formatLocation(location)}</span>
                           </>
                         ) : (
                           <div className="flex items-center gap-1.5">
-                            <MapPinOff className="h-2.5 w-2.5 text-amber-500/30" />
-                            <span className="text-amber-600/60 font-bold uppercase tracking-tighter">Off-Grid</span>
+                            <MapPinOff className="h-3 w-3 text-amber-500/40" />
+                            <span className="text-amber-600/70 font-black uppercase tracking-tighter">Off-Grid</span>
                           </div>
                         )}
                       </div>
@@ -763,12 +822,26 @@ export default function MapPage() {
                     )}
                     
                     {/* Status Overlays */}
-                    <div className="absolute top-2 left-2 right-2 flex items-start justify-between">
-                       <DeviceStatusBadge status={selectedDevice!.status} className="h-5 px-2 bg-black/40 backdrop-blur-md border-none text-[9px] font-black" />
+                    <div className="absolute top-3 left-3 right-3 flex items-start justify-between">
+                       <div className="flex items-center gap-1.5">
+                          <DeviceStatusBadge status={selectedDevice!.status} className="h-6 px-3 bg-black/60 backdrop-blur-md border-none text-[11px] font-black shadow-lg" />
+                          <Button 
+                             variant="secondary" 
+                             size="sm" 
+                             className={cn(
+                               "h-6 px-2 rounded-lg backdrop-blur-md border-none text-[10px] font-bold shadow-lg transition-all",
+                               followEnabled ? "bg-primary text-white" : "bg-black/60 text-white/70 hover:text-white"
+                             )}
+                             onClick={() => setFollowEnabled(!followEnabled)}
+                          >
+                             <Navigation className={cn("h-3 w-3 mr-1", followEnabled && "fill-white animate-pulse")} />
+                             {followEnabled ? 'Following' : 'Follow'}
+                          </Button>
+                       </div>
                        <Button 
                           variant="secondary" 
                           size="icon" 
-                          className="h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white border-white/10 backdrop-blur-md"
+                          className="h-8 w-8 rounded-full bg-black/60 hover:bg-black/80 text-white border-white/20 backdrop-blur-md shadow-lg transition-all"
                           onClick={() => setSelectedDeviceId(null)}
                         >
                           <X className="h-4 w-4" />
@@ -776,11 +849,11 @@ export default function MapPage() {
                     </div>
 
                     {/* Refresh Button */}
-                    <div className="absolute bottom-2 right-2">
+                    <div className="absolute bottom-3 right-3">
                        <Button 
                           size="icon" 
                           variant="secondary" 
-                          className="h-8 w-8 rounded-full bg-primary shadow-lg hover:scale-110 transition-all active:scale-95"
+                          className="h-10 w-10 rounded-full bg-primary text-white shadow-xl hover:scale-110 hover:rotate-12 transition-all active:scale-95 border-2 border-white/20"
                           onClick={async (e) => {
                             e.stopPropagation();
                             if (!selectedDevice) return;
@@ -797,57 +870,64 @@ export default function MapPage() {
                           }}
                           disabled={isCapturing || selectedDevice!.status !== 'online'}
                         >
-                          {isCapturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                          {isCapturing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
                        </Button>
                     </div>
 
                     {/* Playing Info Overlay */}
                     {selectedDevice?.playingProgram && (
-                      <div className="absolute bottom-2 left-2 right-12">
-                        <div className="bg-black/60 backdrop-blur-md rounded-lg p-1.5 border border-white/10 flex items-center gap-2 max-w-full">
-                           <div className="h-5 w-5 rounded bg-emerald-500 flex items-center justify-center shrink-0">
-                              <Play className="h-3 w-3 text-white fill-white/20" />
+                      <div className="absolute bottom-3 left-3 right-14">
+                        <div className="bg-black/70 backdrop-blur-xl rounded-xl p-2 border border-white/20 flex items-center gap-2.5 max-w-full shadow-2xl">
+                           <div className="h-6 w-6 rounded-lg bg-emerald-500 flex items-center justify-center shrink-0 shadow-inner">
+                              <Play className="h-3.5 w-3.5 text-white fill-white/20" />
                            </div>
                            <ProgramVersionDisplay 
                              name={selectedDevice.playingProgram} 
                              variant="overlay" 
-                             className="text-[10px] font-bold" 
+                             className="text-xs font-bold" 
                            />
                         </div>
                       </div>
                     )}
                   </div>
 
-                  <div className="p-4 space-y-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <h3 className="text-sm font-bold text-foreground truncate">{selectedDevice?.deviceName}</h3>
-                        <span className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded uppercase">{selectedDevice?.deviceProperties?.info?.info?.model || "Standard"}</span>
+                  <div className="p-5 space-y-5">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="text-base font-bold text-foreground truncate tracking-tight">{selectedDevice?.deviceName}</h3>
+                        <span className="text-[11px] font-black text-muted-foreground bg-muted px-2 py-0.5 rounded-lg uppercase tracking-wider">{selectedDevice?.deviceProperties?.info?.info?.model || "Standard"}</span>
                       </div>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedDevice?.tags?.slice(0, 2).map(tag => (
-                          <TagChip key={tag.id} tag={tag} className="h-4 px-1.5 text-[8px] border-none shadow-none bg-muted/50" />
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedDevice?.tags?.slice(0, 3).map(tag => (
+                          <TagChip key={tag.id} tag={tag} className="h-5 px-2 text-[10px] font-bold border-none shadow-sm bg-muted/60" />
                         ))}
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-xl border border-muted/50">
-                        <MapPin className="h-3.5 w-3.5 text-primary/60" />
+                    {/* Sensors Row */}
+                    <div className="flex items-center gap-2">
+                       <SensorBadge icon={Thermometer} value={sensorMetrics.temp} unit="°C" color="text-orange-500" />
+                       <SensorBadge icon={Sun} value={sensorMetrics.bright} unit="%" color="text-amber-500" />
+                       <SensorBadge icon={Wifi} value={sensorMetrics.signal} unit="dBm" color="text-blue-500" />
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-2xl border border-muted/60 shadow-inner">
+                        <MapPin className="h-4 w-4 text-primary shrink-0" />
                         <div className="min-w-0 flex-1">
-                           <p className="text-[10px] font-bold text-foreground/80 leading-none mb-1">
-                             {selectedLocation.source === 'manual' ? 'Manual Override' : 'Live GPS'}
+                           <p className="text-[11px] font-bold text-foreground/70 uppercase tracking-widest leading-none mb-1.5">
+                             {selectedLocation.source === 'manual' ? 'Manual Override' : 'GPS'}
                            </p>
-                           <p className="text-[10px] font-mono text-muted-foreground truncate">{formatLocation(selectedLocation)}</p>
+                           <p className="text-xs font-mono text-muted-foreground font-semibold truncate tracking-tight">{formatLocation(selectedLocation)}</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-muted/60">
+                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-muted/80">
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="h-8 text-[10px] font-bold gap-1.5 rounded-lg border-2"
+                        className="h-10 text-xs font-bold gap-2 rounded-xl border-2 hover:bg-muted/50 transition-all"
                         onClick={() => {
                           const loc = resolveDeviceLocation(selectedDevice!, locationMode);
                           setManualInput({ 
@@ -857,22 +937,23 @@ export default function MapPage() {
                           setShowLocationDialog(true);
                         }}
                       >
-                        <Crosshair className="h-3 w-3" />
-                        Set Manual
+                        <Crosshair className="h-3.5 w-3.5" />
+                        Location
                       </Button>
                       <Button 
                         variant="default" 
                         size="sm" 
-                        className="h-8 text-[10px] font-bold gap-1.5 rounded-lg shadow-sm"
+                        className="h-10 text-xs font-bold gap-2 rounded-xl shadow-lg shadow-primary/20"
                         onClick={() => navigate(`/dashboard/devices/${selectedDevice?.id}`)}
                       >
                         Details
-                        <ExternalLink className="h-3 w-3" />
+                        <ExternalLink className="h-3.5 w-3.5" />
                       </Button>
                     </div>
 
                     {selectedLocation.timestamp && (
-                      <p className="text-[9px] text-muted-foreground/40 text-center italic tabular-nums pt-1">
+                      <p className="text-[10px] text-muted-foreground/50 text-center font-medium tabular-nums pt-1 flex items-center justify-center gap-1.5">
+                        <RefreshCw className="h-2.5 w-2.5" />
                         Updated {formatDateTime(selectedLocation.timestamp)}
                       </p>
                     )}
@@ -987,6 +1068,16 @@ export default function MapPage() {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function SensorBadge({ icon: Icon, value, unit, color }: { icon: any, value?: string | number, unit: string, color: string }) {
+  if (value === undefined || value === null) return null;
+  return (
+    <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-muted/50 border border-muted/50 shadow-sm shrink-0">
+       <Icon className={cn("h-3 w-3", color)} />
+       <span className="text-[11px] font-black tabular-nums">{value}<span className="text-[9px] ml-0.5 opacity-50 font-bold">{unit}</span></span>
     </div>
   );
 }
