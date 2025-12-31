@@ -4,6 +4,7 @@ import type { WidgetType } from '../types';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus } from 'lucide-react';
+import { cn } from "@/lib/utils";
 import {
   Sheet,
   SheetContent,
@@ -47,33 +48,44 @@ export const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
                 <div className="grid grid-cols-1 gap-3">
                   {Object.values(WIDGET_REGISTRY)
                     .filter(w => w.category === category)
-                    .map(widget => (
-                      <div 
-                        key={widget.type}
-                        className="flex items-center justify-between p-4 rounded-xl border bg-card hover:bg-accent transition-colors group"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 rounded-lg bg-primary/10 text-primary">
-                            {widget.icon}
-                          </div>
-                          <div>
-                            <div className="text-sm font-bold">{widget.title}</div>
-                            <div className="text-xs text-muted-foreground">{widget.description}</div>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => {
-                            onAddWidget(widget.type, widget.defaultLayout);
-                            onClose();
-                          }}
+                    .map(widget => {
+                      const isExisting = existingWidgetTypes.includes(widget.type);
+                      return (
+                        <div 
+                          key={widget.type}
+                          className={cn(
+                            "flex items-center justify-between p-4 rounded-xl border bg-card transition-colors group",
+                            isExisting ? "opacity-50 grayscale-[0.5]" : "hover:bg-accent"
+                          )}
                         >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 rounded-lg bg-primary/10 text-primary">
+                              {widget.icon}
+                            </div>
+                            <div>
+                              <div className="text-sm font-bold flex items-center gap-2">
+                                {widget.title}
+                                {isExisting && <span className="text-[10px] font-normal px-1.5 py-0.5 bg-muted rounded text-muted-foreground italic">Added</span>}
+                              </div>
+                              <div className="text-xs text-muted-foreground">{widget.description}</div>
+                            </div>
+                          </div>
+                          {!isExisting && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => {
+                                onAddWidget(widget.type, widget.defaultLayout);
+                                onClose();
+                              }}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             ))}

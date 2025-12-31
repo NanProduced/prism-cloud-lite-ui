@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Film, MonitorPlay, Clock, Monitor, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useNavigate } from 'react-router-dom';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -37,7 +38,7 @@ interface MediaTabProps {
 export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTabProps) {
   const { formatDateTime } = useTimeFormatter();
   const [selectedMedia, setSelectedMedia] = useState<MediaPlaySummaryItem | null>(null);
-  const resolvedDeviceMap = deviceMap ?? {};
+  const navigate = useNavigate();
   const masterTableHeight = 'h-[340px] sm:h-[420px] lg:h-[520px]';
   const deviceTableHeight = 'h-[260px] sm:h-[300px]';
 
@@ -79,6 +80,11 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
   });
 
   const deviceData = devicesRes?.data || [];
+
+  const openDevice = (deviceId: string) => {
+    if (!deviceMap?.[deviceId]) return;
+    navigate(`/dashboard/devices/${deviceId}`);
+  };
 
   // Auto-select first media
   useEffect(() => {
@@ -155,9 +161,13 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
                         <p className="text-sm font-bold truncate max-w-[250px]">
                           {selectedMedia.mediaTitle || 'Unknown Media'}
                         </p>
-                        <p className="text-[10px] font-mono text-muted-foreground">
-                          ID: {selectedMedia.mediaId} | Type: {selectedMedia.itemType}
-                        </p>
+                        {selectedMedia.itemType && (
+                          <div className="mt-1">
+                            <Badge variant="outline" className="text-[9px] font-semibold">
+                              {selectedMedia.itemType}
+                            </Badge>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -167,7 +177,7 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
               {/* Trend Chart */}
               <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
                 <CardHeader className="p-4 pb-0">
-                  <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  <CardTitle className="text-[10px] font-bold tracking-widest text-muted-foreground flex items-center gap-2">
                     <TrendingUp className="h-3.5 w-3.5 text-pink-500" />
                     Playback Trend
                   </CardTitle>
@@ -230,7 +240,8 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
                   ) : (
                     <AnalyticsDeviceTable
                       data={deviceData}
-                      deviceMap={resolvedDeviceMap}
+                      deviceMap={deviceMap}
+                      onOpenDevice={openDevice}
                       className={cn(deviceTableHeight, 'border-0 rounded-none')}
                     />
                   )}
@@ -240,7 +251,7 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center opacity-30 border-2 border-dashed rounded-3xl p-8 bg-muted/5">
               <Film className="h-12 w-12 mb-3" />
-              <p className="text-xs font-bold uppercase tracking-widest">Select a Media Asset</p>
+              <p className="text-xs font-bold tracking-widest">Select a media asset</p>
             </div>
           )}
         </div>

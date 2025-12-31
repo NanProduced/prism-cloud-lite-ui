@@ -57,6 +57,7 @@ import { PrismIcon } from "@/components/shared/logo";
 import { getAvatarById } from "@/lib/avatars";
 import { useAuthStore } from "@/store/authStore";
 import { useMessageStore } from "@/store/messageStore";
+import { useSettingsStore } from "@/store/settingsStore";
 import { useTimeFormatter } from "@/hooks/use-time-formatter";
 import { logout } from "@/services/authApi";
 import { getMediaUsage } from "@/services/mediaApi";
@@ -148,7 +149,7 @@ const notifications = [
 export function DashboardShell({ children }: PropsWithChildren) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isBillingOpen, setIsBillingOpen] = useState(false);
+  const { isBillingOpen, setBillingOpen } = useSettingsStore();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, clearAuth } = useAuthStore();
@@ -292,7 +293,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
             tier={user?.subscriptionTier} 
             navigate={navigate} 
             usage={usageData?.data ?? undefined}
-            onUpgrade={() => setIsBillingOpen(true)}
+            onUpgrade={() => setBillingOpen(true)}
           />
         </SidebarFooter>
         <SidebarRail />
@@ -379,7 +380,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
       <AIChatWindow isOpen={isChatOpen} />
       <AIChatBubble isOpen={isChatOpen} onClick={() => setIsChatOpen(!isChatOpen)} />
       <Suspense fallback={null}>
-        <BillingPlanSelector open={isBillingOpen} onOpenChange={setIsBillingOpen} />
+        <BillingPlanSelector open={isBillingOpen} onOpenChange={setBillingOpen} />
       </Suspense>
     </SidebarProvider>
   );

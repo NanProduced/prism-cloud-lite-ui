@@ -1,4 +1,4 @@
-import { useMemo, useId, useEffect } from 'react';
+import { useMemo, useId } from 'react';
 import { useLyteNyte, useClientRowDataSource } from '@lytenyte/hooks/use-lytenyte-core';
 import { LyteNyte } from '@lytenyte/components/lytenyte-core';
 import type { CellRendererParams, Column } from '@1771technologies/lytenyte-core/types';
@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import type { OnlineTimeSummaryItem } from '@/services/telemetryApi';
+import { useLyteNyteAutosize } from '@/hooks/use-lytenyte-autosize';
 
 interface FleetOnlineTableProps {
   data: OnlineTimeSummaryItem[];
@@ -51,7 +52,8 @@ export function FleetOnlineTable({
         },
         autosizeCellFn: ({ grid, row }) => {
           if (row.kind !== 'leaf' || !row.data) return null;
-          const name = deviceMap?.[row.data.deviceId] || row.data.deviceId;
+          const id = String(row.data.deviceId);
+          const name = deviceMap ? (deviceMap[id] || 'Deleted device') : '—';
           const vp = grid.state.viewport.get() ?? undefined;
           return measureText(name, vp).width + 80;
         },
@@ -63,7 +65,8 @@ export function FleetOnlineTable({
             typeof item.onlineRate === 'number' && Number.isFinite(item.onlineRate)
               ? item.onlineRate
               : null;
-          const name = deviceMap?.[item.deviceId] || item.deviceId;
+          const id = String(item.deviceId);
+          const name = deviceMap ? (deviceMap[id] || 'Deleted device') : '—';
           return (
             <div
               className={cn(
@@ -83,9 +86,6 @@ export function FleetOnlineTable({
               )}
               <div className="flex flex-col min-w-0">
                 <span className="text-xs font-bold truncate">{name}</span>
-                {deviceMap?.[item.deviceId] && (
-                  <span className="text-[9px] opacity-40 font-mono truncate">{item.deviceId}</span>
-                )}
               </div>
               {isSelected && <ChevronRight className="h-3 w-3 ml-auto shrink-0" />}
             </div>
@@ -217,18 +217,11 @@ export function FleetOnlineTable({
     floatingRowEnabled: false,
   });
 
-  // Auto-size columns on mount and when data changes
-  useEffect(() => {
-    if (data.length > 0) {
-      const timer = setTimeout(() => {
-        grid.actions.autosizeAllColumns();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [grid, data]);
+  const { containerRef } = useLyteNyteAutosize(grid, [data.length, selectedDeviceId]);
 
   return (
     <div
+      ref={containerRef}
       className={cn(
         'w-full h-full min-h-[300px] border rounded-xl overflow-hidden bg-background',
         className

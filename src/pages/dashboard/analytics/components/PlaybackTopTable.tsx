@@ -1,4 +1,4 @@
-import { useMemo, useId, useEffect } from 'react';
+import { useMemo, useId } from 'react';
 import { useLyteNyte, useClientRowDataSource } from '@lytenyte/hooks/use-lytenyte-core';
 import { LyteNyte } from '@lytenyte/components/lytenyte-core';
 import type { CellRendererParams, Column } from '@1771technologies/lytenyte-core/types';
@@ -8,6 +8,7 @@ import { Film, Layers, Clock, Hash, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import type { TopPlaybackItem } from '../types';
+import { useLyteNyteAutosize } from '@/hooks/use-lytenyte-autosize';
 
 interface PlaybackTopTableProps {
   data: TopPlaybackItem[];
@@ -180,18 +181,11 @@ export function PlaybackTopTable({
     floatingRowEnabled: false,
   });
 
-  // Auto-size columns on mount and when data changes
-  useEffect(() => {
-    if (data.length > 0) {
-      const timer = setTimeout(() => {
-        grid.actions.autosizeAllColumns();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [grid, data]);
+  const { containerRef } = useLyteNyteAutosize(grid, [data.length, type, selectedId]);
 
   return (
     <div
+      ref={containerRef}
       className={cn(
         'w-full h-full min-h-[300px] border rounded-xl overflow-hidden bg-background',
         className

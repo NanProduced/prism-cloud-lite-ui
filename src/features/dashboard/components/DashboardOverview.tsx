@@ -28,6 +28,7 @@ export const DashboardOverview: React.FC = () => {
     updateWidgetLayout,
     addWidget,
     removeWidget,
+    updateWidgetSettings,
     resetLayout,
   } = useDashboardLayout();
 
@@ -105,6 +106,7 @@ export const DashboardOverview: React.FC = () => {
           isEditMode={isEditMode}
           onLayoutChange={updateWidgetLayout}
           onRemoveWidget={removeWidget}
+          onUpdateWidgetSettings={updateWidgetSettings}
         />
       </div>
 
@@ -116,14 +118,16 @@ export const DashboardOverview: React.FC = () => {
       />
 
       {/* Footer Info */}
-      <div className="mt-auto py-8 flex items-center justify-between border-t text-xs text-muted-foreground">
-        <div className="flex items-center gap-4">
-          <span>Version 1.0.0</span>
-          <span>Last updated: {layout.updatedAt ? new Date(layout.updatedAt).toLocaleString() : 'Never'}</span>
+      <div className="mt-auto py-6 flex items-center justify-between border-t border-muted/50 text-[10px] text-muted-foreground font-bold uppercase tracking-widest px-2">
+        <div className="flex items-center gap-6">
+          <span className="flex items-center gap-1.5 text-primary/60">
+            <Monitor className="h-3 w-3" />
+            Prism Cloud Lite
+          </span>
+          <span className="opacity-40">System Online</span>
         </div>
-        <div className="flex items-center gap-1">
-          <Monitor className="h-3 w-3" />
-          <span>Prism Cloud Lite</span>
+        <div className="flex items-center gap-4 opacity-40">
+          <span>Last synced: {layout.updatedAt ? new Date(layout.updatedAt).toLocaleTimeString() : 'Just now'}</span>
         </div>
       </div>
     </div>

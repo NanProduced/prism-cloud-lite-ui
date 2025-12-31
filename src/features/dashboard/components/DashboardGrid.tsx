@@ -11,6 +11,7 @@ interface DashboardGridProps {
   isEditMode: boolean;
   onLayoutChange: (layout: any[]) => void;
   onRemoveWidget: (id: string) => void;
+  onUpdateWidgetSettings: (id: string, settings: any) => void;
 }
 
 export const DashboardGrid: React.FC<DashboardGridProps> = ({
@@ -18,6 +19,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
   isEditMode,
   onLayoutChange,
   onRemoveWidget,
+  onUpdateWidgetSettings,
 }) => {
   const { width, containerRef, mounted } = useContainerWidth();
 
@@ -56,7 +58,10 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
                   onRemove={widget.pinned ? undefined : () => onRemoveWidget(widget.id)}
                   dragHandleProps={{ className: 'cursor-grab' }}
                 >
-                  <WidgetComponent />
+                  <WidgetComponent 
+                    settings={widget.settings} 
+                    onUpdateSettings={(s: any) => onUpdateWidgetSettings(widget.id, s)}
+                  />
                 </WidgetFrame>
               </div>
             );

@@ -26,6 +26,7 @@ import {
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { PlaybackTopTable } from './PlaybackTopTable';
 import { AnalyticsDeviceTable } from '@/components/analytics/AnalyticsDeviceTable';
+import { useNavigate } from 'react-router-dom';
 
 interface ProgramTabProps {
   from: string;
@@ -39,7 +40,7 @@ interface ProgramTabProps {
 export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: ProgramTabProps) {
   const { formatDateTime } = useTimeFormatter();
   const [selectedProgram, setSelectedProgram] = useState<ProgramPlaySummaryItem | null>(null);
-  const resolvedDeviceMap = deviceMap ?? {};
+  const navigate = useNavigate();
   const masterTableHeight = 'h-[340px] sm:h-[420px] lg:h-[520px]';
   const deviceTableHeight = 'h-[260px] sm:h-[300px]';
 
@@ -122,6 +123,11 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
 
   const deviceData = devicesRes?.data || [];
 
+  const openDevice = (deviceId: string) => {
+    if (!deviceMap?.[deviceId]) return;
+    navigate(`/dashboard/devices/${deviceId}`);
+  };
+
   // Auto-select first program
   useEffect(() => {
     if (!selectedProgram && programs.length > 0) {
@@ -198,9 +204,6 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
                         <p className="text-sm font-bold truncate max-w-[250px]">
                           {selectedProgram.programName}
                         </p>
-                        <p className="text-[10px] font-mono text-muted-foreground">
-                          ID: {selectedProgram.lan ? selectedProgram.lanProgramId : selectedProgram.programId}
-                        </p>
                       </div>
                     </div>
                     {selectedProgram.lan && (
@@ -215,7 +218,7 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
               {/* Trend Chart */}
               <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
                 <CardHeader className="p-4 pb-0">
-                  <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  <CardTitle className="text-[10px] font-bold tracking-widest text-muted-foreground flex items-center gap-2">
                     <TrendingUp className="h-3.5 w-3.5 text-primary" />
                     Playback Trend
                   </CardTitle>
@@ -278,7 +281,8 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
                   ) : (
                     <AnalyticsDeviceTable
                       data={deviceData}
-                      deviceMap={resolvedDeviceMap}
+                      deviceMap={deviceMap}
+                      onOpenDevice={openDevice}
                       className={cn(deviceTableHeight, 'border-0 rounded-none')}
                     />
                   )}
@@ -288,7 +292,7 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center opacity-30 border-2 border-dashed rounded-3xl p-8 bg-muted/5">
               <Layers className="h-12 w-12 mb-3" />
-              <p className="text-xs font-bold uppercase tracking-widest">Select a Program</p>
+              <p className="text-xs font-bold tracking-widest">Select a program</p>
             </div>
           )}
         </div>

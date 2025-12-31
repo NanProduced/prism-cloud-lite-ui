@@ -54,7 +54,7 @@ export const DeviceHealthWidget = () => {
 
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">Uptime Rate</span>
+          <span className="text-muted-foreground">Online Rate</span>
           <span className="font-medium">{onlinePercentage}%</span>
         </div>
         <Progress value={onlinePercentage} className="h-1.5" />

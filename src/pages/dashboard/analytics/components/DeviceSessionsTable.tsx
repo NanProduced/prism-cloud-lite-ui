@@ -1,4 +1,4 @@
-import { useMemo, useId, useEffect } from 'react';
+import { useMemo, useId } from 'react';
 import { useLyteNyte, useClientRowDataSource } from '@lytenyte/hooks/use-lytenyte-core';
 import { LyteNyte } from '@lytenyte/components/lytenyte-core';
 import type { CellRendererParams, Column } from '@1771technologies/lytenyte-core/types';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/toast';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import type { DeviceSession } from '../types';
+import { useLyteNyteAutosize } from '@/hooks/use-lytenyte-autosize';
 
 interface DeviceSessionsTableProps {
   data: DeviceSession[];
@@ -173,18 +174,11 @@ export function DeviceSessionsTable({ data, className }: DeviceSessionsTableProp
     floatingRowEnabled: false,
   });
 
-  // Auto-size columns on mount and when data changes
-  useEffect(() => {
-    if (data.length > 0) {
-      const timer = setTimeout(() => {
-        grid.actions.autosizeAllColumns();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [grid, data]);
+  const { containerRef } = useLyteNyteAutosize(grid, [data.length]);
 
   return (
     <div
+      ref={containerRef}
       className={cn(
         'w-full h-full min-h-[300px] border rounded-xl overflow-hidden bg-background',
         className

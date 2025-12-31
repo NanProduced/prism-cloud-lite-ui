@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Download, Globe, Wifi, Layers, Film } from 'lucide-react';
+import { Globe, Wifi, Layers, Film } from 'lucide-react';
 import type { PlaybackBucket } from '@/services/telemetryApi';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -34,7 +34,7 @@ function BucketSelector({ value, onChange }: { value: PlaybackBucket; onChange: 
           variant={value === b.value ? 'secondary' : 'ghost'}
           size="sm"
           className={cn(
-            'h-7 text-[10px] font-bold uppercase tracking-wider rounded-md px-3 transition-all',
+            'h-7 text-[10px] font-bold tracking-wider rounded-md px-3 transition-all',
             value === b.value ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'
           )}
           onClick={() => onChange(b.value)}
@@ -53,18 +53,20 @@ export default function AnalyticsPage() {
   const { preferences } = useSettingsStore();
   const tz = preferences.timezone || 'UTC';
 
-  const { data: devicesRes } = useQuery({
+  const { data: devicesRes, isLoading: isDevicesLoading } = useQuery({
     queryKey: ['devices', 'list'],
     queryFn: () => getDevices(),
   });
 
   const deviceMap = useMemo(() => {
+    if (isDevicesLoading) return undefined;
+    if (!Array.isArray(devicesRes?.data)) return undefined;
     const map: Record<string, string> = {};
-    devicesRes?.data?.forEach((d) => {
+    devicesRes.data.forEach((d) => {
       map[String(d.deviceId)] = d.deviceName;
     });
     return map;
-  }, [devicesRes]);
+  }, [devicesRes, isDevicesLoading]);
 
   // Global Controls
   const [timeRange, setTimeRange] = useState(() => {
@@ -85,12 +87,6 @@ export default function AnalyticsPage() {
     return utcDate.toISOString();
   };
 
-  const nextDayYmd = (date: string) => {
-    const [year, month, day] = date.split('-').map(Number);
-    const utcMidnight = new Date(Date.UTC(year, month - 1, day));
-    return formatInTimeZone(addDays(utcMidnight, 1), 'UTC', 'yyyy-MM-dd');
-  };
-
   // Convert local date strings (in tz) to UTC ISO strings for API usage.
   const fromIso = useMemo(() => {
     try {
@@ -103,7 +99,8 @@ export default function AnalyticsPage() {
 
   const toIso = useMemo(() => {
     try {
-      return toUtcIso(nextDayYmd(timeRange.to), '00:00:00');
+      const start = fromZonedTime(`${timeRange.to} 00:00:00`, tz);
+      return addDays(start, 1).toISOString();
     } catch (e) {
       console.error('Failed to convert to date:', e);
       return new Date().toISOString();
@@ -127,17 +124,6 @@ export default function AnalyticsPage() {
             <Globe className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs font-medium text-muted-foreground">{tz}</span>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2 ml-auto">
-          <Button
-            variant="default"
-            size="sm"
-            className="h-8 rounded-md font-semibold text-xs px-4 gap-2"
-          >
-            <Download className="h-4 w-4" />
-            Export Data
-          </Button>
         </div>
       </div>
 

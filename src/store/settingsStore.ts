@@ -30,9 +30,11 @@ interface SettingsState {
   preferences: UserPreferences;
   notificationSettings: NotificationSettingsV2;
   isLoading: boolean;
+  isBillingOpen: boolean;
   fetchSettings: () => Promise<void>;
   updatePreferences: (patch: Partial<UserPreferences>) => Promise<void>;
   updateNotificationSettings: (next: NotificationSettingsV2) => Promise<void>;
+  setBillingOpen: (open: boolean) => void;
 }
 
 const getBrowserTimezone = () => {
@@ -60,6 +62,7 @@ export const useSettingsStore = create<SettingsState>()(
       preferences: defaultPreferences,
       notificationSettings: defaultNotificationSettings,
       isLoading: false,
+      isBillingOpen: false,
       fetchSettings: async () => {
         set({ isLoading: true });
         try {
@@ -125,6 +128,7 @@ export const useSettingsStore = create<SettingsState>()(
           throw error;
         }
       },
+      setBillingOpen: (open) => set({ isBillingOpen: open }),
     }),
     {
       name: 'prism-settings-storage',

@@ -25,6 +25,8 @@ import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { FleetOnlineTable } from './FleetOnlineTable';
 import { DeviceSessionsTable } from './DeviceSessionsTable';
 import type { DeviceSession } from '../types';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 interface FleetUptimeTabProps {
   from: string;
@@ -38,7 +40,7 @@ interface FleetUptimeTabProps {
 export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: FleetUptimeTabProps) {
   const { formatDateTime } = useTimeFormatter();
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
-  const resolvedDeviceMap = deviceMap ?? {};
+  const navigate = useNavigate();
   const summaryTableHeight = 'h-[340px] sm:h-[420px] lg:h-[520px]';
   const sessionsTableHeight = 'h-[340px] sm:h-[420px]';
 
@@ -120,6 +122,11 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
     typeof selectedDevice?.onlineRate === 'number' && Number.isFinite(selectedDevice.onlineRate)
       ? selectedDevice.onlineRate
       : null;
+  const selectedDeviceName =
+    selectedDeviceId && deviceMap
+      ? deviceMap[String(selectedDeviceId)] || 'Deleted device'
+      : null;
+  const canOpenDevice = Boolean(selectedDeviceId && deviceMap?.[String(selectedDeviceId)]);
 
   return (
     <div className={cn('flex flex-col gap-6', className)}>
@@ -134,7 +141,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
                   <MonitorSmartphone className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Total Fleet</p>
+                  <p className="text-[10px] font-bold text-muted-foreground tracking-[0.1em]">Total fleet</p>
                   <p className="text-2xl font-black tracking-tighter tabular-nums">{kpis.totalDevices}</p>
                 </div>
               </div>
@@ -148,7 +155,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
                   <Activity className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Availability</p>
+                  <p className="text-[10px] font-bold text-muted-foreground tracking-[0.1em]">Availability</p>
                   <p className="text-2xl font-black tracking-tighter tabular-nums text-sky-600">
                     {kpis.avgOnlineRate === null ? '—' : `${Math.round(kpis.avgOnlineRate * 100)}%`}
                   </p>
@@ -161,7 +168,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
         {/* Global Trends - More prominent */}
         <Card className="xl:col-span-9 rounded-3xl border-none ring-1 ring-muted/60 shadow-sm bg-background/40 backdrop-blur-md overflow-hidden">
           <CardHeader className="p-6 pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 flex items-center gap-2.5">
+            <CardTitle className="text-[11px] font-black tracking-[0.2em] text-muted-foreground/80 flex items-center gap-2.5">
               <TrendingUp className="h-4 w-4 text-primary" />
               Real-time Fleet Activity
             </CardTitle>
@@ -241,7 +248,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
               ) : (
                 <FleetOnlineTable
                   data={summaryData}
-                  deviceMap={resolvedDeviceMap}
+                  deviceMap={deviceMap}
                   selectedDeviceId={selectedDeviceId || undefined}
                   onSelectDevice={setSelectedDeviceId}
                   className={cn(summaryTableHeight, 'border-0 rounded-none')}
@@ -266,10 +273,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-bold truncate max-w-[200px]">
-                            {resolvedDeviceMap[selectedDevice.deviceId] || selectedDevice.deviceId}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground font-mono">
-                            ID: {selectedDevice.deviceId}
+                            {selectedDeviceName || '—'}
                           </p>
                         </div>
                       </div>
@@ -292,27 +296,38 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
                         {selectedDeviceOnlineRate === null
                           ? '—'
                           : selectedDeviceOnlineRate >= 0.9
-                            ? 'EXCELLENT'
+                            ? 'Excellent'
                             : selectedDeviceOnlineRate >= 0.5
-                              ? 'FAIR'
-                              : 'POOR'}
+                              ? 'Fair'
+                              : 'Poor'}
                       </Badge>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <div className="p-2 rounded-xl bg-background border border-muted/20">
-                        <p className="text-[9px] font-bold text-muted-foreground uppercase">Rate</p>
+                        <p className="text-[9px] font-bold text-muted-foreground">Rate</p>
                         <p className="text-sm font-bold text-emerald-500">
                           {selectedDeviceOnlineRate === null ? '—' : `${Math.round(selectedDeviceOnlineRate * 100)}%`}
                         </p>
                       </div>
                       <div className="p-2 rounded-xl bg-background border border-muted/20">
-                        <p className="text-[9px] font-bold text-muted-foreground uppercase">Uptime</p>
+                        <p className="text-[9px] font-bold text-muted-foreground">Uptime</p>
                         <p className="text-sm font-bold text-primary">
                           {Math.floor(selectedDevice.onlineSeconds / 3600)}h {Math.floor((selectedDevice.onlineSeconds % 3600) / 60)}m
                         </p>
                       </div>
                     </div>
+
+                    {canOpenDevice && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-8 text-xs font-semibold"
+                        onClick={() => navigate(`/dashboard/devices/${selectedDeviceId}`)}
+                      >
+                        View device
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -343,7 +358,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center opacity-30 border-2 border-dashed rounded-3xl p-8 bg-muted/5">
               <MonitorSmartphone className="h-12 w-12 mb-3" />
-              <p className="text-xs font-bold uppercase tracking-widest">Select a Device</p>
+              <p className="text-xs font-bold tracking-widest">Select a device</p>
               <p className="text-[10px] mt-1">Select from the summary list to view detailed telemetry</p>
             </div>
           )}

@@ -47,7 +47,7 @@ export const AttentionWidget = () => {
       </div>
 
       <div 
-        onClick={() => navigate('/dashboard/logs?statuses=FAILED,EXPIRED')}
+        onClick={() => navigate('/dashboard/logs?tab=terminal&statuses=FAILED,EXPIRED')}
         className="flex items-center gap-3 p-3 rounded-xl border border-red-100 bg-red-50/50 dark:bg-red-900/10 dark:border-red-900/30 cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
       >
         <div className="p-2 bg-red-500 rounded-lg">

@@ -26,6 +26,7 @@ import { SubscriptionWidget } from './widgets/SubscriptionWidget';
 import { WeatherWidget } from './widgets/WeatherWidget';
 import { CalendarWidget } from './widgets/CalendarWidget';
 import { MemoWidget } from './widgets/MemoWidget';
+import { PinnedDevicesWidget } from './widgets/PinnedDevicesWidget';
 
 export const WIDGET_REGISTRY: Record<WidgetType, WidgetDefinition> = {
   DEVICE_HEALTH: {
@@ -109,7 +110,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetDefinition> = {
     title: 'Pinned Devices',
     description: 'Live status of selected screens',
     icon: <Monitor className="h-4 w-4" />,
-    component: () => <div className="p-4 text-xs text-muted-foreground">Coming Soon...</div>,
+    component: PinnedDevicesWidget,
     defaultLayout: { w: 1, h: 2 },
     category: 'Insight',
   },

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useId, useEffect } from 'react';
+import { useCallback, useMemo, useId } from 'react';
 import { useLyteNyte, useClientRowDataSource } from '@lytenyte/hooks/use-lytenyte-core';
 import { LyteNyte } from '@lytenyte/components/lytenyte-core';
 import type {
@@ -9,6 +9,7 @@ import { measureText } from '@1771technologies/lytenyte-shared';
 import { PrismHeaderRenderer } from '@/components/lytenyte/PrismHeaderRenderer';
 import { Clock, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLyteNyteAutosize } from '@/hooks/use-lytenyte-autosize';
 
 interface AnalyticsDeviceItem {
   deviceId: string | number;
@@ -20,10 +21,11 @@ interface AnalyticsDeviceItem {
 interface AnalyticsDeviceTableProps {
   data: AnalyticsDeviceItem[];
   deviceMap?: Record<string, string>;
+  onOpenDevice?: (deviceId: string) => void;
   className?: string;
 }
 
-export function AnalyticsDeviceTable({ data, deviceMap, className }: AnalyticsDeviceTableProps) {
+export function AnalyticsDeviceTable({ data, deviceMap, onOpenDevice, className }: AnalyticsDeviceTableProps) {
   const gridId = useId();
 
   const formatDuration = useCallback((seconds: number) => {
@@ -57,26 +59,25 @@ export function AnalyticsDeviceTable({ data, deviceMap, className }: AnalyticsDe
       autosizeCellFn: ({ grid, row }) => {
         if (row.kind !== 'leaf' || !row.data) return null;
         const deviceId = String(row.data.deviceId);
-        const name = deviceMap?.[deviceId] || deviceId;
+        const name = deviceMap ? (deviceMap[deviceId] || 'Deleted device') : '—';
         const vp = grid.state.viewport.get() ?? undefined;
         return Math.max(measureText(name, vp).width + 80, 200);
       },
       cellRenderer: ({ row }: CellRendererParams<AnalyticsDeviceItem>) => {
         if (!row.data) return null;
         const deviceId = String(row.data.deviceId);
-        const name = deviceMap?.[deviceId];
+        const name = deviceMap ? (deviceMap[deviceId] || 'Deleted device') : '—';
+        const canOpen = Boolean(deviceMap?.[deviceId]) && typeof onOpenDevice === 'function';
         return (
-          <div className="flex items-center gap-2 px-1">
+          <div
+            className={cn('flex items-center gap-2 px-1', canOpen && 'cursor-pointer')}
+            onClick={() => (canOpen ? onOpenDevice?.(deviceId) : undefined)}
+          >
              <Monitor className="h-3 w-3 opacity-40" />
              <div className="min-w-0 flex flex-col">
                <span className="text-xs font-bold text-foreground/80 truncate">
-                 {name || deviceId}
+                 {name}
                </span>
-               {name && (
-                 <span className="text-[10px] font-mono text-muted-foreground truncate">
-                   {deviceId}
-                 </span>
-               )}
              </div>
           </div>
         );
@@ -171,18 +172,13 @@ export function AnalyticsDeviceTable({ data, deviceMap, className }: AnalyticsDe
     floatingRowEnabled: false,
   });
 
-  // Auto-size columns on mount and when data changes
-  useEffect(() => {
-    if (data.length > 0) {
-      const timer = setTimeout(() => {
-        grid.actions.autosizeAllColumns();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [grid, data]);
+  const { containerRef } = useLyteNyteAutosize(grid, [data.length, Boolean(onOpenDevice)]);
 
   return (
-    <div className={cn("w-full h-full min-h-0 border rounded-lg overflow-hidden bg-background shadow-sm", className)}>
+    <div
+      ref={containerRef}
+      className={cn("w-full h-full min-h-0 border rounded-lg overflow-hidden bg-background shadow-sm", className)}
+    >
       <LyteNyte grid={grid} />
     </div>
   );
