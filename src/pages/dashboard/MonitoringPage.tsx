@@ -9,7 +9,6 @@ import {
   Monitor,
   Clock,
   CheckCircle2,
-  Calendar,
   Cpu,
   Gauge,
 } from 'lucide-react';
@@ -28,6 +27,7 @@ import { type MonitoringTab } from './monitoring/constants';
 import { DeviceSensorTab, M2SensorTab, ReceiveCardTab } from './monitoring/components';
 import { useMonitoringSSE } from '@/hooks/use-monitoring-sse';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 
 function toLocalInputValue(date: Date) {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60 * 1000);
@@ -53,13 +53,6 @@ export default function MonitoringPage() {
     };
   });
   const [historyApplied, setHistoryApplied] = useState(historyDraft);
-
-  const canApplyHistoryDraft = useMemo(() => {
-    const fromDate = new Date(historyDraft.from);
-    const toDate = new Date(historyDraft.to);
-    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) return false;
-    return fromDate.getTime() < toDate.getTime();
-  }, [historyDraft.from, historyDraft.to]);
 
   const historyRange = useMemo(() => {
     const fromDate = new Date(historyApplied.from);
@@ -161,52 +154,15 @@ export default function MonitoringPage() {
         {/* History Filter */}
         <Separator orientation="vertical" className="h-8 mx-1" />
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-2 bg-muted/40 rounded-md px-2 py-1">
-            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              type="datetime-local"
-              value={historyDraft.from}
-              onChange={(e) => setHistoryDraft((p) => ({ ...p, from: e.target.value }))}
-              className="h-7 w-[168px] text-[10px] font-bold"
-            />
-            <span className="text-[10px] font-bold text-muted-foreground/60">TO</span>
-            <Input
-              type="datetime-local"
-              value={historyDraft.to}
-              onChange={(e) => setHistoryDraft((p) => ({ ...p, to: e.target.value }))}
-              className="h-7 w-[168px] text-[10px] font-bold"
-            />
-          </div>
-
-          <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-md">
-            {[1, 6, 24].map((h) => (
-              <Button
-                key={h}
-                variant="ghost"
-                size="sm"
-                className="h-6 text-[9px] font-bold rounded-sm px-2"
-                onClick={() => {
-                  const now = new Date();
-                  const from = new Date(now.getTime() - h * 60 * 60 * 1000);
-                  const next = { from: toLocalInputValue(from), to: toLocalInputValue(now) };
-                  setHistoryDraft(next);
-                  setHistoryApplied(next);
-                }}
-              >
-                {h}h
-              </Button>
-            ))}
-          </div>
-
-          <Button
-            variant="secondary"
-            size="sm"
-            className="h-7 rounded-md font-bold text-[10px] uppercase tracking-wider px-3"
-            disabled={!canApplyHistoryDraft}
-            onClick={() => setHistoryApplied(historyDraft)}
-          >
-            Apply
-          </Button>
+          <DateRangePicker
+            value={historyDraft}
+            onChange={(val) => {
+              setHistoryDraft(val);
+              // For monitoring, we apply immediately when a preset is chosen or range changes
+              setHistoryApplied(val);
+            }}
+            showTime={true}
+          />
         </div>
 
         <div className="flex items-center gap-2 ml-auto">

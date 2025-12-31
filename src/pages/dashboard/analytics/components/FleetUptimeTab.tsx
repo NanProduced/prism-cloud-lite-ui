@@ -320,8 +320,8 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
         </Card>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Main Content */}
+      <div className="flex flex-col gap-6">
         {/* Fleet Online Table */}
         <Card className="rounded-2xl border-none ring-1 ring-muted shadow-none overflow-hidden">
           <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
@@ -418,7 +418,7 @@ export function FleetUptimeTab({ from, to, tz, bucket, deviceMap, className }: F
                       No sessions recorded in this period
                     </div>
                   ) : (
-                    <DeviceSessionsTable data={sessionsData} className="h-[320px] border-0 rounded-none" />
+                    <DeviceSessionsTable data={sessionsData} className="h-[400px] border-0 rounded-none" />
                   )}
                 </CardContent>
               </Card>

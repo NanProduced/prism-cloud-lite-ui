@@ -4,13 +4,14 @@ import type { PlaybackBucket } from '@/services/telemetryApi';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 import { FleetUptimeTab, ProgramTab, MediaTab } from './analytics/components';
 import type { AnalyticsTab } from './analytics/types';
 import { useSettingsStore } from '@/store/settingsStore';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { addDays, subDays } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
-import { getDevices } from '@/services/deviceApi';
+import { DateRangePicker } from '@/components/shared/DateRangePicker';
 
 // --- Constants ---
 
@@ -20,6 +21,29 @@ const BUCKETS: { value: PlaybackBucket; label: string }[] = [
   { value: 'WEEK', label: 'Weekly' },
   { value: 'MONTH', label: 'Monthly' },
 ];
+
+// --- Internal Components ---
+
+function BucketSelector({ value, onChange }: { value: PlaybackBucket; onChange: (v: PlaybackBucket) => void }) {
+  return (
+    <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-lg border shadow-sm">
+      {BUCKETS.map((b) => (
+        <Button
+          key={b.value}
+          variant={value === b.value ? 'secondary' : 'ghost'}
+          size="sm"
+          className={cn(
+            'h-7 text-[10px] font-bold uppercase tracking-wider rounded-md px-3 transition-all',
+            value === b.value ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'
+          )}
+          onClick={() => onChange(b.value)}
+        >
+          {b.label}
+        </Button>
+      ))}
+    </div>
+  );
+}
 
 // --- Main Page Component ---
 
@@ -90,24 +114,11 @@ export default function AnalyticsPage() {
       {/* GLOBAL CONTROLS / TOOLBAR */}
       <div className="flex items-center gap-4 flex-wrap bg-card border rounded-lg p-2 px-4 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-1.5">
-            <Calendar className="h-4 w-4 text-primary" />
-            <div className="flex items-center gap-1.5">
-              <input
-                type="date"
-                value={timeRange.from}
-                onChange={(e) => setTimeRange((prev) => ({ ...prev, from: e.target.value }))}
-                className="bg-transparent border-none p-0 text-xs font-semibold focus:ring-0 outline-none w-28"
-              />
-              <span className="text-xs font-medium text-muted-foreground">to</span>
-              <input
-                type="date"
-                value={timeRange.to}
-                onChange={(e) => setTimeRange((prev) => ({ ...prev, to: e.target.value }))}
-                className="bg-transparent border-none p-0 text-xs font-semibold focus:ring-0 outline-none w-28"
-              />
-            </div>
-          </div>
+          <DateRangePicker
+            value={timeRange}
+            onChange={(val) => setTimeRange(val)}
+            showTime={false}
+          />
 
           <Separator orientation="vertical" className="h-6 mx-1" />
 
@@ -115,20 +126,6 @@ export default function AnalyticsPage() {
             <Globe className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs font-medium text-muted-foreground">{tz}</span>
           </div>
-        </div>
-
-        <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-md ml-4">
-          {BUCKETS.map((b) => (
-            <Button
-              key={b.value}
-              variant={bucket === b.value ? 'secondary' : 'ghost'}
-              size="sm"
-              className="h-7 text-xs font-medium rounded-sm px-3"
-              onClick={() => setBucket(b.value)}
-            >
-              {b.label}
-            </Button>
-          ))}
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
@@ -148,29 +145,33 @@ export default function AnalyticsPage() {
         onValueChange={(v) => setActiveTab(v as AnalyticsTab)}
         className="space-y-4 flex-1 flex flex-col min-h-0"
       >
-        <TabsList className="bg-muted/40 p-1 rounded-lg border shadow-inner w-fit h-9">
-          <TabsTrigger
-            value="online-time"
-            className="rounded-md px-4 text-xs font-semibold data-[state=active]:bg-background gap-1.5 h-7"
-          >
-            <Wifi className="h-3.5 w-3.5" />
-            Online Time
-          </TabsTrigger>
-          <TabsTrigger
-            value="programs"
-            className="rounded-md px-4 text-xs font-semibold data-[state=active]:bg-background gap-1.5 h-7"
-          >
-            <Layers className="h-3.5 w-3.5" />
-            Programs
-          </TabsTrigger>
-          <TabsTrigger
-            value="media"
-            className="rounded-md px-4 text-xs font-semibold data-[state=active]:bg-background gap-1.5 h-7"
-          >
-            <Film className="h-3.5 w-3.5" />
-            Media
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between">
+          <TabsList className="bg-muted/40 p-1 rounded-lg border shadow-inner w-fit h-9">
+            <TabsTrigger
+              value="online-time"
+              className="rounded-md px-4 text-xs font-semibold data-[state=active]:bg-background gap-1.5 h-7"
+            >
+              <Wifi className="h-3.5 w-3.5" />
+              Online Time
+            </TabsTrigger>
+            <TabsTrigger
+              value="programs"
+              className="rounded-md px-4 text-xs font-semibold data-[state=active]:bg-background gap-1.5 h-7"
+            >
+              <Layers className="h-3.5 w-3.5" />
+              Programs
+            </TabsTrigger>
+            <TabsTrigger
+              value="media"
+              className="rounded-md px-4 text-xs font-semibold data-[state=active]:bg-background gap-1.5 h-7"
+            >
+              <Film className="h-3.5 w-3.5" />
+              Media
+            </TabsTrigger>
+          </TabsList>
+
+          <BucketSelector value={bucket} onChange={setBucket} />
+        </div>
 
         <TabsContent value="online-time" className="flex-1 min-h-0 mt-0 overflow-auto pr-1">
           <FleetUptimeTab from={fromIso} to={toIso} tz={tz} bucket={bucket} deviceMap={deviceMap} />
