@@ -136,14 +136,24 @@ export default function MediaLibraryPage() {
       queryClient.invalidateQueries({ queryKey: ['media'] });
     };
 
+    const handleMessageUpdated = (event: any) => {
+      const message = event?.detail;
+      if (!message || typeof message !== 'object') return;
+      if (message.type !== 'media.transcode') return;
+      if (message.status !== 'SUCCESS') return;
+      handleRefresh();
+    };
+
     window.addEventListener('prism.device.updated' as any, handleRefresh);
     window.addEventListener('prism.operation.updated' as any, handleRefresh);
     window.addEventListener('prism.subscription.updated' as any, handleRefresh);
+    window.addEventListener('prism.message.updated' as any, handleMessageUpdated);
 
     return () => {
       window.removeEventListener('prism.device.updated' as any, handleRefresh);
       window.removeEventListener('prism.operation.updated' as any, handleRefresh);
       window.removeEventListener('prism.subscription.updated' as any, handleRefresh);
+      window.removeEventListener('prism.message.updated' as any, handleMessageUpdated);
     };
   }, [queryClient]);
 

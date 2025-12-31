@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { addDays, subDays } from "date-fns";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import {
   Bell,
   CheckCircle2,
@@ -32,6 +34,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -54,7 +57,7 @@ import {
 } from "@/services/messageApi";
 import { retryTranscodeTask } from "@/services/mediaApi";
 import { useMessageStore } from "@/store/messageStore";
-import type { MessageListItem, MessageKind, MessageStatus } from "@/types/message";
+import type { MessageDetail, MessageListItem, MessageKind, MessageStatus } from "@/types/message";
 import { cn } from "@/lib/utils";
 import { toast } from "@/store/notificationStore";
 import { useTimeFormatter } from "@/hooks/use-time-formatter";
@@ -62,10 +65,11 @@ import { renderMessage } from "@/lib/message-renderer";
 
 export default function MessagesPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { fetchInitialData } = useMessageStore();
-  const { formatDateTime } = useTimeFormatter();
+  const { fetchInitialData, sseConnected } = useMessageStore();
+  const { formatDateTime, timeZone } = useTimeFormatter();
 
   // Tab mapping for sidebar compatibility
   const tabParam = searchParams.get('tab');
@@ -76,9 +80,12 @@ export default function MessagesPage() {
   }, [tabParam]);
 
   // Filters
-  const [dateRange, setDateRange] = useState({
-    from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    to: new Date().toISOString().split('T')[0],
+  const [dateRange, setDateRange] = useState(() => {
+    const now = new Date();
+    return {
+      from: formatInTimeZone(subDays(now, 7), timeZone, 'yyyy-MM-dd'),
+      to: formatInTimeZone(now, timeZone, 'yyyy-MM-dd'),
+    };
   });
   const [readFilter, setReadFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -88,7 +95,52 @@ export default function MessagesPage() {
 
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
 
+  useEffect(() => {
+    const now = new Date();
+    setDateRange({
+      from: formatInTimeZone(subDays(now, 7), timeZone, 'yyyy-MM-dd'),
+      to: formatInTimeZone(now, timeZone, 'yyyy-MM-dd'),
+    });
+    setPage(0);
+  }, [timeZone]);
+
+  const stateMessageId = (location.state as any)?.openMessageId as string | undefined;
+  const urlMessageId = searchParams.get('messageId') || undefined;
+
+  useEffect(() => {
+    if (!stateMessageId) return;
+    setSelectedMessageId(stateMessageId);
+    navigate(location.pathname + location.search, { replace: true, state: {} });
+  }, [stateMessageId, navigate, location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!urlMessageId) return;
+    setSelectedMessageId(urlMessageId);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.delete('messageId');
+      return next;
+    }, { replace: true });
+  }, [urlMessageId, setSearchParams]);
+
   // --- Queries ---
+
+  const fromIso = useMemo(() => {
+    try {
+      return fromZonedTime(`${dateRange.from} 00:00:00`, timeZone).toISOString();
+    } catch {
+      return new Date().toISOString();
+    }
+  }, [dateRange.from, timeZone]);
+
+  const toIso = useMemo(() => {
+    try {
+      const start = fromZonedTime(`${dateRange.to} 00:00:00`, timeZone);
+      return addDays(start, 1).toISOString();
+    } catch {
+      return new Date().toISOString();
+    }
+  }, [dateRange.to, timeZone]);
 
   const { data: messagesData, isLoading, isFetching } = useQuery({
     queryKey: ['messages', activeTab, readFilter, statusFilter, searchKeyword, dateRange, page],
@@ -97,8 +149,8 @@ export default function MessagesPage() {
       read: readFilter,
       status: statusFilter === 'all' ? undefined : statusFilter,
       keyword: searchKeyword,
-      from: new Date(dateRange.from).toISOString(),
-      to: new Date(dateRange.to + 'T23:59:59').toISOString(),
+      from: fromIso,
+      to: toIso,
       page,
       size: pageSize
     }),
@@ -109,11 +161,25 @@ export default function MessagesPage() {
     queryFn: getUnreadCount,
   });
 
-  const { data: detailRes } = useQuery({
+  const { data: detailRes, isLoading: isDetailLoading } = useQuery({
     queryKey: ['messages', 'detail', selectedMessageId],
     queryFn: () => getMessageDetail(selectedMessageId!),
     enabled: !!selectedMessageId,
   });
+
+  // Fallback polling for task progress when SSE is disconnected (detail page only).
+  useEffect(() => {
+    if (!selectedMessageId) return;
+    if (sseConnected) return;
+    const status = detailRes?.data?.status;
+    if (status !== 'PENDING' && status !== 'RUNNING') return;
+
+    const intervalId = window.setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ['messages', 'detail', selectedMessageId] });
+    }, 3000);
+
+    return () => window.clearInterval(intervalId);
+  }, [selectedMessageId, sseConnected, detailRes?.data?.status, queryClient]);
 
   // --- SSE Integration ---
   useEffect(() => {
@@ -149,8 +215,8 @@ export default function MessagesPage() {
   });
 
   const retryTranscodeMutation = useMutation({
-    mutationFn: ({ taskId, assetId, presetId, options }: { taskId: string, assetId: string, presetId: string, options?: any }) => 
-      retryTranscodeTask(taskId, { assetId, presetId, options }),
+    mutationFn: ({ taskId, assetId, presetId, targetFolderId, options }: { taskId: string, assetId: string, presetId: string, targetFolderId?: string | null, options?: any }) =>
+      retryTranscodeTask(taskId, { assetId, presetId, targetFolderId, options }),
     onSuccess: (res) => {
       if (res.success && res.data) {
         toast.success('Retrying transcoding task');
@@ -186,10 +252,12 @@ export default function MessagesPage() {
   };
 
   const setQuickRange = (days: number) => {
+    const now = new Date();
     setDateRange({
-      from: new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      to: new Date().toISOString().split('T')[0],
+      from: formatInTimeZone(subDays(now, days), timeZone, 'yyyy-MM-dd'),
+      to: formatInTimeZone(now, timeZone, 'yyyy-MM-dd'),
     });
+    setPage(0);
   };
 
   const handleMessageClick = (message: MessageListItem) => {
@@ -223,7 +291,7 @@ export default function MessagesPage() {
           <button
             type="button"
             className={cn(
-              'rounded-lg px-6 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-1.5',
+              'rounded-lg px-6 py-1.5 text-[10px] font-bold tracking-wide transition-all flex items-center gap-1.5',
               activeTab === 'all' ? 'bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.03]' : 'text-muted-foreground/60 hover:text-muted-foreground',
             )}
             onClick={() => handleTabChange('all')}
@@ -234,7 +302,7 @@ export default function MessagesPage() {
           <button
             type="button"
             className={cn(
-              'rounded-lg px-6 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-1.5',
+              'rounded-lg px-6 py-1.5 text-[10px] font-bold tracking-wide transition-all flex items-center gap-1.5',
               activeTab === 'NOTIFICATION' ? 'bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.03]' : 'text-muted-foreground/60 hover:text-muted-foreground',
             )}
             onClick={() => handleTabChange('notifications')}
@@ -245,7 +313,7 @@ export default function MessagesPage() {
           <button
             type="button"
             className={cn(
-              'rounded-lg px-6 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-1.5',
+              'rounded-lg px-6 py-1.5 text-[10px] font-bold tracking-wide transition-all flex items-center gap-1.5',
               activeTab === 'TASK' ? 'bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.03]' : 'text-muted-foreground/60 hover:text-muted-foreground',
             )}
             onClick={() => handleTabChange('tasks')}
@@ -261,22 +329,31 @@ export default function MessagesPage() {
               variant="ghost" 
               size="sm" 
               onClick={() => setQuickRange(1)}
-              className={cn("h-7 px-3 text-[10px] font-bold uppercase rounded-lg", dateRange.from === new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] && "bg-background shadow-sm")}
+              className={cn(
+                "h-7 px-3 text-[10px] font-bold rounded-lg",
+                dateRange.from === formatInTimeZone(subDays(new Date(), 1), timeZone, 'yyyy-MM-dd') && "bg-background shadow-sm"
+              )}
             >24H</Button>
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => setQuickRange(7)}
-              className={cn("h-7 px-3 text-[10px] font-bold uppercase rounded-lg", dateRange.from === new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] && "bg-background shadow-sm")}
+              className={cn(
+                "h-7 px-3 text-[10px] font-bold rounded-lg",
+                dateRange.from === formatInTimeZone(subDays(new Date(), 7), timeZone, 'yyyy-MM-dd') && "bg-background shadow-sm"
+              )}
             >7D</Button>
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => setQuickRange(30)}
-              className={cn("h-7 px-3 text-[10px] font-bold uppercase rounded-lg", dateRange.from === new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] && "bg-background shadow-sm")}
+              className={cn(
+                "h-7 px-3 text-[10px] font-bold rounded-lg",
+                dateRange.from === formatInTimeZone(subDays(new Date(), 30), timeZone, 'yyyy-MM-dd') && "bg-background shadow-sm"
+              )}
             >30D</Button>
           </div>
-          <Button variant="outline" size="sm" className="h-9 rounded-xl font-bold text-[10px] uppercase tracking-widest px-4" onClick={handleMarkAllRead} disabled={unreadRes?.data?.count === 0}>
+          <Button variant="outline" size="sm" className="h-9 rounded-xl font-bold text-[10px] tracking-wide px-4" onClick={handleMarkAllRead} disabled={unreadRes?.data?.count === 0}>
             <CheckCheck className="mr-2 h-3.5 w-3.5" />
             Mark read
           </Button>
@@ -294,14 +371,14 @@ export default function MessagesPage() {
             <Input
               type="date"
               value={dateRange.from}
-              onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
+              onChange={(e) => { setDateRange(prev => ({ ...prev, from: e.target.value })); setPage(0); }}
               className="h-8 w-32 border-none bg-transparent font-bold text-xs p-0 focus-visible:ring-0 cursor-pointer"    
             />
-            <span className="text-[10px] font-bold opacity-30">TO</span>
+            <span className="text-[10px] font-bold opacity-30">to</span>
             <Input
               type="date"
               value={dateRange.to}
-              onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
+              onChange={(e) => { setDateRange(prev => ({ ...prev, to: e.target.value })); setPage(0); }}
               className="h-8 w-32 border-none bg-transparent font-bold text-xs p-0 focus-visible:ring-0 cursor-pointer"    
             />
           </div>
@@ -312,7 +389,7 @@ export default function MessagesPage() {
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground/60" />
           <div className="flex flex-col">
-            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/50 leading-none mb-0.5">Read Status</span>
+            <span className="text-[8px] font-semibold tracking-wide text-muted-foreground/60 leading-none mb-0.5">Read status</span>
             <Select value={readFilter} onValueChange={(v) => setReadFilter(v as any)}>
               <SelectTrigger className="h-6 border-none bg-transparent font-bold text-xs p-0 focus:ring-0 shadow-none w-24">
                 <SelectValue placeholder="All" />
@@ -331,7 +408,7 @@ export default function MessagesPage() {
         <div className="flex items-center gap-2">
           <Activity className="h-4 w-4 text-muted-foreground/60" />
           <div className="flex flex-col">
-            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/50 leading-none mb-0.5">Status</span>
+            <span className="text-[8px] font-semibold tracking-wide text-muted-foreground/60 leading-none mb-0.5">Status</span>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="h-6 border-none bg-transparent font-bold text-xs p-0 focus:ring-0 shadow-none w-24">
                 <SelectValue placeholder="All" />
@@ -360,23 +437,23 @@ export default function MessagesPage() {
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
-           {unreadRes?.data && unreadRes.data.count > 0 && (
-             <Badge className="bg-rose-500 hover:bg-rose-600 text-white border-none rounded-full h-5 px-2 text-[10px] font-black tabular-nums shadow-lg shadow-rose-500/20">
-               {unreadRes.data.count} UNREAD
-             </Badge>
-           )}
+            {unreadRes?.data && unreadRes.data.count > 0 && (
+              <Badge className="bg-rose-500 hover:bg-rose-600 text-white border-none rounded-full h-5 px-2 text-[10px] font-black tabular-nums shadow-lg shadow-rose-500/20">
+                {unreadRes.data.count} unread
+              </Badge>
+            )}
         </div>
       </Card>
 
       {/* CONTENT */}
       <Card className="flex-1 flex flex-col min-h-0 border rounded-2xl bg-card shadow-sm overflow-hidden">
         <div className="flex-1 overflow-auto custom-scrollbar">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center h-full p-24 space-y-4">
-              <RefreshCw className="h-8 w-8 animate-spin text-primary/40" />
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Syncing Messages...</p>
-            </div>
-          ) : messages.length === 0 ? (
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center h-full p-24 space-y-4">
+                <RefreshCw className="h-8 w-8 animate-spin text-primary/40" />
+                <p className="text-[10px] font-semibold tracking-wide text-muted-foreground/50">Syncing messages…</p>
+              </div>
+            ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full p-24 text-center">
               <div className="h-20 w-20 bg-muted/50 rounded-3xl flex items-center justify-center mb-6 border border-dashed">
                 <Mail className="h-8 w-8 text-muted-foreground opacity-20" />
@@ -405,7 +482,7 @@ export default function MessagesPage() {
 
         {totalPages > 1 && (
           <div className="px-6 py-3 border-t bg-muted/5 flex items-center justify-between">
-            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+            <p className="text-[10px] text-muted-foreground font-bold tracking-wide">
               Showing {page * pageSize + 1} to {Math.min((page + 1) * pageSize, total)} of {total} messages 
             </p>
             <div className="flex items-center gap-1">
@@ -438,7 +515,26 @@ export default function MessagesPage() {
       {/* DETAIL DIALOG */}
       <Dialog open={!!selectedMessageId} onOpenChange={(open) => !open && setSelectedMessageId(null)}>
         <DialogContent className="max-w-2xl overflow-hidden rounded-[2rem] p-0 border-none shadow-2xl">
-          {detailRes?.data && (
+          {isDetailLoading && (
+            <div className="p-10 flex items-center justify-center gap-3 text-muted-foreground">
+              <RefreshCw className="h-5 w-5 animate-spin" />
+              <span className="text-sm font-medium">Loading message…</span>
+            </div>
+          )}
+
+          {detailRes && !detailRes.success && (
+            <div className="p-10">
+              <p className="text-base font-semibold">Unable to load this message</p>
+              <p className="text-sm text-muted-foreground mt-2">{detailRes.error?.displayMessage || 'Please try again.'}</p>
+              <div className="mt-6 flex justify-end">
+                <Button className="rounded-xl font-semibold" onClick={() => setSelectedMessageId(null)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {detailRes?.success && detailRes.data && (
             <div className="flex flex-col">
               <div className="bg-primary/5 p-8 border-b relative">
                 <div className="flex items-center gap-4">
@@ -449,25 +545,31 @@ export default function MessagesPage() {
                     {getStatusIcon(detailRes.data.kind, detailRes.data.status)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <Badge variant="outline" className="mb-2 text-[8px] font-black uppercase tracking-widest bg-background/50">
-                      {detailRes.data.kind}
+                    <Badge variant="outline" className="mb-2 text-[8px] font-semibold tracking-wide bg-background/50">
+                      {detailRes.data.kind === 'TASK' ? 'Task' : 'Notification'}
                     </Badge>
                     <DialogTitle className="text-xl font-bold tracking-tight">
                       {renderMessage(detailRes.data).title}
                     </DialogTitle>
                     <div className="flex items-center gap-3 mt-1.5">
-                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold tracking-tight">
                         <Clock className="h-3 w-3" />
                         {formatDateTime(detailRes.data.createdAt)}
                       </div>
                       {detailRes.data.status && (
                         <Badge className={cn(
-                          "h-5 text-[9px] px-2 font-black uppercase border-none",
+                          "h-5 text-[9px] px-2 font-semibold border-none",
                           detailRes.data.status === 'SUCCESS' ? "bg-emerald-500 text-white" :
                           detailRes.data.status === 'FAILED' ? "bg-rose-500 text-white" :
                           "bg-blue-500 text-white animate-pulse"
                         )}>
-                          {detailRes.data.status}
+                          {detailRes.data.status === 'SUCCESS'
+                            ? 'Success'
+                            : detailRes.data.status === 'FAILED'
+                              ? 'Failed'
+                              : detailRes.data.status === 'RUNNING'
+                                ? 'Running'
+                                : 'Pending'}
                         </Badge>
                       )}
                     </div>
@@ -477,11 +579,21 @@ export default function MessagesPage() {
 
               <div className="p-8 space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
                 <div className="space-y-3">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Message Summary</p>
+                  <p className="text-[10px] font-semibold tracking-wide text-muted-foreground">Message summary</p>
                   <p className="text-sm leading-relaxed text-foreground font-medium">
                     {renderMessage(detailRes.data).summary}
                   </p>
                 </div>
+
+                {detailRes.data.type === 'media.transcode' && (
+                  <TranscodeTaskDetails
+                    message={detailRes.data}
+                    sseConnected={sseConnected}
+                    onOpenMediaLibrary={() => navigate('/dashboard/media')}
+                    onRetry={(args) => retryTranscodeMutation.mutate(args)}
+                    isRetrying={retryTranscodeMutation.isPending}
+                  />
+                )}
 
                 {/* Related Resources Grid */}
                 {(() => {
@@ -489,54 +601,72 @@ export default function MessagesPage() {
                   const assetId = payload.output?.assetId || payload.source?.assetId;
                   const assetTitle = payload.source?.title || payload.output?.title;
 
-                  if (!detailRes.data.deviceId && !detailRes.data.programId && !assetId) return null;
+                  const showAssetCard = detailRes.data.type !== 'media.transcode' && !!assetId;
+                  const showDeviceCard = !!detailRes.data.deviceName;
+                  const showProgramCard = !!detailRes.data.programName;
+
+                  if (!showDeviceCard && !showProgramCard && !showAssetCard) return null;
 
                   return (
                     <div className="grid grid-cols-2 gap-4">
-                      {detailRes.data.deviceId && (
+                      {showDeviceCard && (
                         <div className="p-4 rounded-2xl bg-muted/30 border shadow-sm flex items-center justify-between group">
                           <div className="flex items-center gap-3">
                             <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600">
                                <Monitor className="h-4 w-4" />
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Device</span>
+                              <span className="text-[9px] font-semibold text-muted-foreground tracking-wide leading-none mb-1">Device</span>
                               <span className="text-xs font-bold truncate max-w-[150px]">
-                                {detailRes.data.deviceName || 'Prism Device'}
+                                {detailRes.data.deviceName}
                               </span>
                             </div>
                           </div>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => navigate(`/dashboard/devices/${detailRes.data?.deviceId}`)}>
-                             <ExternalLink className="h-3.5 w-3.5" />
-                          </Button>
+                          {detailRes.data.deviceId && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => navigate(`/dashboard/devices/${detailRes.data.deviceId}`)}
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </div>
                       )}
-                      {detailRes.data.programId && (
+                      {showProgramCard && (
                         <div className="p-4 rounded-2xl bg-muted/30 border shadow-sm flex items-center justify-between group">
                           <div className="flex items-center gap-3">
                             <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                                <Layers className="h-4 w-4" />
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Program</span>
+                              <span className="text-[9px] font-semibold text-muted-foreground tracking-wide leading-none mb-1">Program</span>
                               <span className="text-xs font-bold truncate max-w-[150px]">
-                                {detailRes.data.programName || 'Prism Program'}
+                                {detailRes.data.programName}
                               </span>
                             </div>
                           </div>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => navigate(`/dashboard/programs/${detailRes.data?.programId}`)}>
-                             <ExternalLink className="h-3.5 w-3.5" />
-                          </Button>
+                          {detailRes.data.programId && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => navigate(`/dashboard/programs/${detailRes.data.programId}`)}
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </div>
                       )}
-                      {assetId && (
+                      {showAssetCard && (
                         <div className="p-4 rounded-2xl bg-muted/30 border shadow-sm flex items-center justify-between group">
                           <div className="flex items-center gap-3">
                             <div className="h-8 w-8 rounded-lg bg-pink-500/10 flex items-center justify-center text-pink-600">
                                <Image className="h-4 w-4" />
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Media Asset</span>
+                              <span className="text-[9px] font-semibold text-muted-foreground tracking-wide leading-none mb-1">Media asset</span>
                               <span className="text-xs font-bold truncate max-w-[150px]">
                                 {assetTitle || 'Media Resource'}
                               </span>
@@ -552,9 +682,9 @@ export default function MessagesPage() {
                 })()}
 
                 {/* Payload Details (Meaningful fields only) */}
-                {detailRes.data.payload && (
+                {detailRes.data.type !== 'media.transcode' && detailRes.data.payload && (
                   <div className="space-y-3">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Detailed Information</p>
+                    <p className="text-[10px] font-semibold tracking-wide text-muted-foreground">Detailed information</p>
                     <div className="grid grid-cols-2 gap-x-8 gap-y-4 bg-muted/20 rounded-2xl p-6 border">
                       {Object.entries(detailRes.data.payload).map(([key, value]) => {
                         // Skip internal IDs and objects (unless simple)
@@ -569,7 +699,7 @@ export default function MessagesPage() {
 
                         return (
                           <div key={key} className="flex flex-col gap-1">
-                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">{label}</span>
+                            <span className="text-[9px] font-semibold text-muted-foreground tracking-wide">{label}</span>
                             <span className="text-sm font-semibold">{String(value)}</span>
                           </div>
                         );
@@ -577,7 +707,7 @@ export default function MessagesPage() {
                       {/* Special handling for media progress if not caught by loop */}
                       {detailRes.data.payload.progress?.percent !== undefined && (
                         <div className="flex flex-col gap-1">
-                          <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Progress</span>
+                          <span className="text-[9px] font-semibold text-muted-foreground tracking-wide">Progress</span>
                           <span className="text-sm font-semibold">{Math.round(detailRes.data.payload.progress.percent * 100)}%</span>
                         </div>
                       )}
@@ -586,26 +716,7 @@ export default function MessagesPage() {
                 )}
 
                 <div className="flex justify-end gap-3 pt-4">
-                  {detailRes.data.status === 'FAILED' && detailRes.data.type === 'media.transcode' && (
-                    <Button 
-                      variant="outline"
-                      className="rounded-xl font-bold uppercase tracking-widest text-xs px-6 h-10 border-rose-200 text-rose-600 hover:bg-rose-50"
-                      disabled={retryTranscodeMutation.isPending}
-                      onClick={() => {
-                        const payload = detailRes.data?.payload || {};
-                        retryTranscodeMutation.mutate({
-                          taskId: detailRes.data?.taskId || '',
-                          assetId: payload.source?.assetId || '',
-                          presetId: payload.presetId || 'mp4_720p_h264',
-                          options: payload.options
-                        });
-                      }}
-                    >
-                      {retryTranscodeMutation.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin mr-2" /> : <Zap className="h-3.5 w-3.5 mr-2 fill-rose-600" />}
-                      Retry Task
-                    </Button>
-                  )}
-                  <Button className="rounded-xl font-bold uppercase tracking-widest text-xs px-8 h-10" onClick={() => setSelectedMessageId(null)}>
+                  <Button className="rounded-xl font-semibold tracking-wide text-xs px-8 h-10" onClick={() => setSelectedMessageId(null)}>
                     Dismiss
                   </Button>
                 </div>
@@ -614,6 +725,141 @@ export default function MessagesPage() {
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function TranscodeTaskDetails({
+  message,
+  sseConnected,
+  onOpenMediaLibrary,
+  onRetry,
+  isRetrying,
+}: {
+  message: MessageDetail;
+  sseConnected: boolean;
+  onOpenMediaLibrary: () => void;
+  onRetry: (args: { taskId: string; assetId: string; presetId: string; targetFolderId?: string | null; options?: any }) => void;
+  isRetrying: boolean;
+}) {
+  const payload = message.payload || {};
+
+  const stageLabelMap: Record<string, string> = {
+    PENDING: 'Queued',
+    DOWNLOADING: 'Preparing source',
+    TRANSCODING: 'Transcoding',
+    UPLOADING: 'Uploading output',
+    FINALIZING: 'Saving to library',
+    FAILED: 'Failed',
+  };
+
+  const presetLabelMap: Record<string, string> = {
+    mp4_1080p_h264: 'Ultra HD',
+    mp4_720p_h264: 'Balanced',
+    mp4_480p_h264: 'Mobile',
+    mp4_360p_h264: 'Low',
+    mp4_h264: 'Native',
+  };
+
+  const stageLabel = stageLabelMap[String(payload.stage || '')] || (payload.stage ? String(payload.stage) : 'Working');
+
+  const sourceTitle =
+    typeof payload.source?.title === 'string' && payload.source.title.trim().length > 0 ? payload.source.title.trim() : undefined;
+
+  const presetLabel =
+    (typeof payload.preset?.label === 'string' && payload.preset.label.trim().length > 0
+      ? payload.preset.label.trim()
+      : undefined) ??
+    (payload.preset?.presetId ? presetLabelMap[String(payload.preset.presetId)] : undefined);
+
+  const percent = typeof payload.progress?.percent === 'number' ? Math.max(0, Math.min(1, payload.progress.percent)) : undefined;
+  const percentText = percent === undefined ? undefined : `${Math.round(percent * 100)}%`;
+
+  const hasOutput = !!payload.output?.assetId;
+  const errorMessage =
+    typeof payload.error?.message === 'string' && payload.error.message.trim().length > 0 ? payload.error.message.trim() : undefined;
+
+  const canRetry =
+    message.status === 'FAILED' &&
+    !!(payload.taskId || message.taskId) &&
+    typeof payload.source?.assetId === 'string' &&
+    payload.source.assetId.length > 0 &&
+    typeof payload.preset?.presetId === 'string' &&
+    payload.preset.presetId.length > 0;
+
+  return (
+    <div className="rounded-2xl border bg-muted/10 p-6 space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold tracking-tight">Transcoding task</p>
+          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+            {sourceTitle ? <span className="font-medium text-foreground/90">{sourceTitle}</span> : 'Media file'}
+            {presetLabel ? <span className="text-muted-foreground"> · {presetLabel}</span> : null}
+          </p>
+        </div>
+        <Badge
+          variant="outline"
+          className={cn(
+            'h-6 px-2 text-[10px] font-semibold',
+            message.status === 'FAILED'
+              ? 'border-rose-200 text-rose-700 bg-rose-50'
+              : message.status === 'SUCCESS'
+                ? 'border-emerald-200 text-emerald-700 bg-emerald-50'
+                : 'border-blue-200 text-blue-700 bg-blue-50'
+          )}
+        >
+          {stageLabel}
+        </Badge>
+      </div>
+
+      {percent !== undefined && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Progress</span>
+            <span className="tabular-nums">{percentText}</span>
+          </div>
+          <Progress value={percent * 100} className="h-2 bg-muted" />
+        </div>
+      )}
+
+      {!sseConnected && (message.status === 'PENDING' || message.status === 'RUNNING') && (
+        <p className="text-xs text-muted-foreground">Live updates unavailable; refreshing periodically.</p>
+      )}
+
+      {message.status === 'FAILED' && errorMessage && (
+        <div className="rounded-xl border border-rose-200/60 bg-rose-50/60 p-4 text-sm text-rose-700 leading-relaxed">
+          {errorMessage}
+        </div>
+      )}
+
+      <div className="flex items-center justify-end gap-3 pt-2">
+        {message.status === 'SUCCESS' && hasOutput && (
+          <Button variant="outline" className="rounded-xl font-semibold" onClick={onOpenMediaLibrary}>
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Open media library
+          </Button>
+        )}
+
+        {canRetry && (
+          <Button
+            variant="outline"
+            className="rounded-xl font-semibold border-rose-200 text-rose-700 hover:bg-rose-50"
+            disabled={isRetrying}
+            onClick={() => {
+              onRetry({
+                taskId: String(payload.taskId || message.taskId),
+                assetId: String(payload.source.assetId),
+                presetId: String(payload.preset.presetId),
+                targetFolderId: payload.targetFolderId ?? undefined,
+                options: payload.options,
+              });
+            }}
+          >
+            {isRetrying ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
+            Retry
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
@@ -676,14 +922,14 @@ function MessageItem({
         </p>
 
         <div className="flex items-center gap-2 pt-1">
-          {(message.deviceName || message.deviceId) && (
-            <Badge variant="outline" className="h-4 text-[8px] font-black uppercase tracking-tight bg-muted/20 border-none flex gap-1 items-center">
-              <Monitor className="h-2 w-2" /> {message.deviceName || 'Linked Device'}
+          {message.deviceName && (
+            <Badge variant="outline" className="h-4 text-[8px] font-semibold tracking-tight bg-muted/20 border-none flex gap-1 items-center">
+              <Monitor className="h-2 w-2" /> {message.deviceName}
             </Badge>
           )}
-          {(message.programName || message.programId) && (
-            <Badge variant="outline" className="h-4 text-[8px] font-black uppercase tracking-tight bg-muted/20 border-none flex gap-1 items-center">
-              <Layers className="h-2 w-2" /> {message.programName || 'Linked Program'}
+          {message.programName && (
+            <Badge variant="outline" className="h-4 text-[8px] font-semibold tracking-tight bg-muted/20 border-none flex gap-1 items-center">
+              <Layers className="h-2 w-2" /> {message.programName}
             </Badge>
           )}
         </div>

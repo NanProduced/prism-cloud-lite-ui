@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useMemo, useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Send, 
   Monitor, Info, CheckCircle2, AlertCircle,
@@ -28,6 +28,7 @@ import {
 } from '@/services/programApi';
 import { getErrorMessage } from '@/services/authApi';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
+import { useBreadcrumbStore } from '@/store/breadcrumbStore';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,6 +46,7 @@ export default function ProgramDetailsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { formatDateTime } = useTimeFormatter();
+  const { setOverride, removeOverride } = useBreadcrumbStore();
   
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishPreferredDraftId, setPublishPreferredDraftId] = useState<string | null>(null);
@@ -71,6 +73,18 @@ export default function ProgramDetailsPage() {
   const program = programData?.data;
   const deployments = program?.deployments || [];
   const auditLogs = auditLogsData?.data || [];
+  const location = useLocation();
+
+  // Update breadcrumb with program name
+  useEffect(() => {
+    const path = location.pathname.replace(/\/$/, '');
+    if (program?.name) {
+      setOverride(path, program.name);
+    }
+    return () => {
+      removeOverride(path);
+    };
+  }, [program?.name, location.pathname, setOverride, removeOverride]);
 
   // --- Mutations ---
   const deleteMutation = useMutation({

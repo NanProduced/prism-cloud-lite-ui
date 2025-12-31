@@ -43,7 +43,6 @@ import {
 } from 'lucide-react';
 import { createTranscodeTask } from '@/services/mediaApi';
 import { toast } from '@/store/notificationStore';
-import { useNavigate } from 'react-router-dom';
 import type { MediaAssetNode } from '@/types/media-library';
 import { cn } from "@/lib/utils";
 
@@ -84,7 +83,6 @@ export const TranscodeDialog: React.FC<TranscodeDialogProps> = ({
 }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const navigate = useNavigate();
 
   const form = useForm<TranscodeFormValues>({
     resolver: zodResolver(transcodeSchema),
@@ -106,7 +104,7 @@ export const TranscodeDialog: React.FC<TranscodeDialogProps> = ({
     try {
       const res = await createTranscodeTask(asset.id, values);
       if (res.success && res.data) {
-        toast.success('Transcoding task created');
+        toast.success('Transcoding started. Track progress in Messages.');
         onOpenChange(false);
         onSuccess?.(res.data.taskId, res.data.messageId);
       } else {

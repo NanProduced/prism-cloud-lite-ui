@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { formatBytes } from '@better-upload/client/helpers';
 import {
   ArrowLeft,
@@ -40,7 +41,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { MediaAssetNode, MediaNode } from '@/types/media-library';
-import { deleteNode, renameNode, moveNodes, createTranscodeTask } from '@/services/mediaApi';
+import { deleteNode, renameNode, moveNodes } from '@/services/mediaApi';
 import { getErrorMessage } from '@/services/authApi';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 
@@ -101,6 +102,7 @@ export function MediaExplorer({
   isLoadingMore?: boolean;
 }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<MediaFilter>('all');
   const [sort, setSort] = useState<MediaSort>('updatedAt');
@@ -452,6 +454,9 @@ export function MediaExplorer({
         open={!!transcodeTarget}
         onOpenChange={(open) => !open && setTranscodeTarget(null)}
         asset={transcodeTarget}
+        onSuccess={(_, messageId) => {
+          navigate('/dashboard/messages?tab=tasks', { state: { openMessageId: messageId } });
+        }}
       />
 
       <MoveNodesDialog

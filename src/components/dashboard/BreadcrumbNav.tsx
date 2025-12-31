@@ -29,8 +29,8 @@ const routeMap: Record<string, string> = {
 export function BreadcrumbNav() {
   const location = useLocation();
   const navigate = useNavigate();
-  const pathname = location.pathname;
-  const { overrides } = useBreadcrumbStore();
+  const pathname = location.pathname.replace(/\/$/, "") || "/";
+  const overrides = useBreadcrumbStore((state) => state.overrides);
 
   // Generate breadcrumb paths
   const generateBreadcrumbs = () => {
@@ -44,11 +44,15 @@ export function BreadcrumbNav() {
     let currentPath = "";
     for (let i = 0; i < paths.length; i++) {
       currentPath += `/${paths[i]}`;
+      
+      // Try exact match and normalized match
+      const override = overrides[currentPath] || overrides[currentPath + "/"];
       const mapped = routeMap[currentPath];
-      const override = overrides[currentPath];
-      let label = override || mapped || paths[i];
+      
+      let label = override || mapped;
 
-      if (!mapped && !override) {
+      if (!label) {
+        // Dynamic segments fallbacks
         const segment = paths[i];
         const prevSegment = paths[i - 1] ?? "";
         const prevPrevSegment = paths[i - 2] ?? "";
@@ -56,7 +60,13 @@ export function BreadcrumbNav() {
         if (prevPrevSegment === "programs" && segment === "edit") {
           label = "Editor";
         } else if (prevSegment === "programs") {
-          label = "Details";
+          label = "Program Details";
+        } else if (prevSegment === "schedule" || prevSegment === "schedules") {
+          label = "Schedule Details";
+        } else if (prevSegment === "devices") {
+          label = "Device Details";
+        } else {
+          label = segment;
         }
       }
       

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowLeft, Calendar, CalendarDays, Clock, Loader2, Plus, RefreshCw, Send, Trash2, Unlink2 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -52,6 +52,7 @@ import { ScheduleContentsRuleSheet } from './ScheduleContentsRuleSheet';
 import { ScheduleCommandRuleSheet } from './ScheduleCommandRuleSheet';
 import { ScheduleVisualizer } from '@/components/schedule/ScheduleVisualizer';
 import { ScheduleOnboarding } from '@/components/schedule/ScheduleOnboarding';
+import { useBreadcrumbStore } from '@/store/breadcrumbStore';
 
 function getBffDisplayError(res: { error?: { displayMessage?: string; message?: string } } | null | undefined): string {
   return res?.error?.displayMessage || res?.error?.message || 'Request failed';
@@ -214,6 +215,7 @@ export default function ScheduleDetailPage() {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { scheduleId = '' } = useParams();
+  const { setOverride, removeOverride } = useBreadcrumbStore();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'programs' | 'commands'>('overview');
 
@@ -242,6 +244,17 @@ export default function ScheduleDetailPage() {
 
   const schedule = scheduleQuery.data?.data;
   const bindings = bindingsQuery.data?.data || [];
+
+  // Update breadcrumb with schedule name
+  useEffect(() => {
+    const path = location.pathname.replace(/\/$/, '');
+    if (schedule?.name) {
+      setOverride(path, schedule.name);
+    }
+    return () => {
+      removeOverride(path);
+    };
+  }, [schedule?.name, location.pathname, setOverride, removeOverride]);
 
   const contentsUpserts = useMemo(() => (schedule?.contentsRules || []).map(toUpsertContentsRule), [schedule?.contentsRules]);
   const contentsPriorities = useMemo(() => contentsUpserts.map((r) => r.priority), [contentsUpserts]);

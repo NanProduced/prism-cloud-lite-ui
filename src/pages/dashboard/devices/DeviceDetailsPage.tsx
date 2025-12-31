@@ -257,13 +257,14 @@ export default function DeviceDetailsPage() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
+    const path = location.pathname.replace(/\/$/, '');
     if (device?.deviceName) {
-      setBreadcrumbOverride(`/dashboard/devices/${deviceId}`, device.deviceName);
+      setBreadcrumbOverride(path, device.deviceName);
     }
     return () => {
-      removeBreadcrumbOverride(`/dashboard/devices/${deviceId}`);
+      removeBreadcrumbOverride(path);
     };
-  }, [device?.deviceName, deviceId, setBreadcrumbOverride, removeBreadcrumbOverride]);
+  }, [device?.deviceName, location.pathname, setBreadcrumbOverride, removeBreadcrumbOverride]);
 
   useEffect(() => {
     const handleOperationUpdate = (event: any) => {

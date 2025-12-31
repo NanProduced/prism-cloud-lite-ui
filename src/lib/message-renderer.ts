@@ -19,7 +19,7 @@ export function renderMessage(message: MessageListItem): RenderedMessage {
         title: t('message.type.device.command.finished.title', { status: statusLabel }),
         summary: t('message.type.device.command.finished.summary', { 
           actionType: payload.actionType || 'Unknown', 
-          target: message.deviceName || payload.deviceId || 'Device' 
+          target: message.deviceName || 'Device'
         })
       };
 
