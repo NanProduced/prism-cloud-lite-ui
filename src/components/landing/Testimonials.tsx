@@ -224,7 +224,7 @@ export const Testimonials = () => {
   };
 
   return (
-    <section className="py-24 relative overflow-hidden bg-black">
+    <section className="py-32 relative overflow-hidden bg-black">
       {/* Top border line */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
@@ -243,15 +243,6 @@ export const Testimonials = () => {
 
         {/* Section Header */}
         <div className="text-center mb-16">
-          <FadeIn>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.08] mb-6">
-              <Users className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-                {t("testimonials.badge")}
-              </span>
-            </div>
-          </FadeIn>
-
           <FadeIn delay={0.1}>
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white tracking-tight mb-4">
               {t("testimonials.title")}{" "}

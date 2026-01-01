@@ -39,15 +39,6 @@ export const Integrations = () => {
           
           {/* Left: Text Content & Cards */}
           <div className="flex-1 text-left relative z-10">
-            <FadeIn>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.08] mb-8">
-                <Link2 size={12} className="text-indigo-400" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-                  {t("integrations.badge")}
-                </span>
-              </div>
-            </FadeIn>
-
             <FadeIn delay={0.1}>
               <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight">
                 {t("integrations.title")} <br />

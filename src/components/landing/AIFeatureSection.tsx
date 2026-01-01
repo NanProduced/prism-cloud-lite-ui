@@ -353,16 +353,6 @@ export const AIFeatureSection = () => {
         <div className="flex flex-col lg:flex-row items-center gap-16 lg:gap-20">
           {/* Left: Text Content */}
           <div className="flex-1 space-y-10">
-            {/* Badge */}
-            <FadeIn>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.08]">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-                  {t("ai.badge")}
-                </span>
-              </div>
-            </FadeIn>
-
             {/* Title */}
             <FadeIn delay={0.1}>
               <h2 className="text-4xl md:text-6xl font-bold text-white tracking-tight leading-[1.1]">

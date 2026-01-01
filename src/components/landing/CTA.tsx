@@ -17,7 +17,7 @@ export const CTA = () => {
   };
 
   return (
-    <section className="relative w-full py-24 overflow-hidden bg-black">
+    <section className="relative w-full py-32 overflow-hidden bg-black">
       {/* 深色背景 */}
       <div className="absolute inset-0 bg-black" />
 
