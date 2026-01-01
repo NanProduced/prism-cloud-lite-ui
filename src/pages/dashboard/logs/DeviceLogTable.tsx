@@ -126,7 +126,13 @@ export function DeviceLogTable({ filters, logTypes }: DeviceLogTableProps) {
                   </td>
                   <td className="px-6 py-3">
                     <div className="inline-flex items-center px-2 py-0.5 rounded-md bg-muted text-[10px] font-bold text-primary/70 ">
-                      {log.operationName || logTypes.find(t => t.id === log.operationId)?.operation || `Op #${log.operationId}`}
+                      {(() => {
+                        const typeInfo = logTypes.find(t => t.id === log.operationId);
+                        if (typeInfo) {
+                          return `${typeInfo.type}-${typeInfo.operation}`;
+                        }
+                        return log.operationName || `Op #${log.operationId}`;
+                      })()}
                     </div>
                   </td>
                   <td className="px-6 py-3">

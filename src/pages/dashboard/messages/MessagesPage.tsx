@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { addDays, subDays } from "date-fns";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+import { useTranslation } from "react-i18next";
 import {
   Bell,
   CheckCircle2,
@@ -26,7 +27,9 @@ import {
   Mail,
   Inbox,
   Activity,
-  Calendar
+  Calendar,
+  ChevronsUpDown,
+  Copy,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -48,6 +51,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   getMessages,
   markAsRead,
@@ -70,6 +74,7 @@ export default function MessagesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { fetchInitialData, sseConnected } = useMessageStore();
   const { formatDateTime, timeZone } = useTimeFormatter();
+  const { t } = useTranslation();
 
   // Tab mapping for sidebar compatibility
   const tabParam = searchParams.get('tab');
@@ -94,6 +99,7 @@ export default function MessagesPage() {
   const pageSize = 15;
 
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [debugOpen, setDebugOpen] = useState(false);
 
   useEffect(() => {
     const now = new Date();
@@ -166,6 +172,8 @@ export default function MessagesPage() {
     queryFn: () => getMessageDetail(selectedMessageId!),
     enabled: !!selectedMessageId,
   });
+
+  const detailMessage = detailRes?.success ? (detailRes.data ?? null) : null;
 
   // Fallback polling for task progress when SSE is disconnected (detail page only).
   useEffect(() => {
@@ -518,17 +526,17 @@ export default function MessagesPage() {
           {isDetailLoading && (
             <div className="p-10 flex items-center justify-center gap-3 text-muted-foreground">
               <RefreshCw className="h-5 w-5 animate-spin" />
-              <span className="text-sm font-medium">Loading message…</span>
+              <span className="text-sm font-medium">{t('message.ui.loading')}</span>
             </div>
           )}
 
           {detailRes && !detailRes.success && (
             <div className="p-10">
-              <p className="text-base font-semibold">Unable to load this message</p>
-              <p className="text-sm text-muted-foreground mt-2">{detailRes.error?.displayMessage || 'Please try again.'}</p>
+              <p className="text-base font-semibold">{t('message.ui.loadFailedTitle')}</p>
+              <p className="text-sm text-muted-foreground mt-2">{detailRes.error?.displayMessage || t('message.ui.loadFailedHint')}</p>
               <div className="mt-6 flex justify-end">
                 <Button className="rounded-xl font-semibold" onClick={() => setSelectedMessageId(null)}>
-                  Close
+                  {t('message.ui.close')}
                 </Button>
               </div>
             </div>
@@ -546,7 +554,7 @@ export default function MessagesPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <Badge variant="outline" className="mb-2 text-[8px] font-semibold tracking-wide bg-background/50">
-                      {detailRes.data.kind === 'TASK' ? 'Task' : 'Notification'}
+                      {t(`message.kind.${detailRes.data.kind}`)}
                     </Badge>
                     <DialogTitle className="text-xl font-bold tracking-tight">
                       {renderMessage(detailRes.data).title}
@@ -563,13 +571,7 @@ export default function MessagesPage() {
                           detailRes.data.status === 'FAILED' ? "bg-rose-500 text-white" :
                           "bg-blue-500 text-white animate-pulse"
                         )}>
-                          {detailRes.data.status === 'SUCCESS'
-                            ? 'Success'
-                            : detailRes.data.status === 'FAILED'
-                              ? 'Failed'
-                              : detailRes.data.status === 'RUNNING'
-                                ? 'Running'
-                                : 'Pending'}
+                          {t(`message.status.${detailRes.data.status}`)}
                         </Badge>
                       )}
                     </div>
@@ -579,7 +581,7 @@ export default function MessagesPage() {
 
               <div className="p-8 space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
                 <div className="space-y-3">
-                  <p className="text-[10px] font-semibold tracking-wide text-muted-foreground">Message summary</p>
+                  <p className="text-[10px] font-semibold tracking-wide text-muted-foreground">{t('message.ui.summary')}</p>
                   <p className="text-sm leading-relaxed text-foreground font-medium">
                     {renderMessage(detailRes.data).summary}
                   </p>
@@ -681,43 +683,66 @@ export default function MessagesPage() {
                   );
                 })()}
 
-                {/* Payload Details (Meaningful fields only) */}
-                {detailRes.data.type !== 'media.transcode' && detailRes.data.payload && (
-                  <div className="space-y-3">
-                    <p className="text-[10px] font-semibold tracking-wide text-muted-foreground">Detailed information</p>
+                {/* Debug: internal fields & raw payload */}
+                <Collapsible open={debugOpen} onOpenChange={setDebugOpen}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="w-full rounded-xl justify-between">
+                      <span className="text-xs font-semibold">{t('message.ui.debugTitle')}</span>
+                      <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-3 space-y-4">
                     <div className="grid grid-cols-2 gap-x-8 gap-y-4 bg-muted/20 rounded-2xl p-6 border">
-                      {Object.entries(detailRes.data.payload).map(([key, value]) => {
-                        // Skip internal IDs and objects (unless simple)
-                        if (key.toLowerCase().includes('id') || key.toLowerCase().includes('uuid')) return null;
-                        if (typeof value === 'object' && value !== null) return null;
-                        if (value === null || value === undefined || value === '') return null;
-
-                        // Format labels
-                        const label = key
-                          .replace(/([A-Z])/g, ' $1')
-                          .replace(/^./, (str) => str.toUpperCase());
-
-                        return (
-                          <div key={key} className="flex flex-col gap-1">
-                            <span className="text-[9px] font-semibold text-muted-foreground tracking-wide">{label}</span>
-                            <span className="text-sm font-semibold">{String(value)}</span>
-                          </div>
-                        );
-                      })}
-                      {/* Special handling for media progress if not caught by loop */}
-                      {detailRes.data.payload.progress?.percent !== undefined && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[9px] font-semibold text-muted-foreground tracking-wide">{t('message.ui.fields.id')}</span>
+                        <span className="text-sm font-semibold font-mono break-all">{detailRes.data.id}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[9px] font-semibold text-muted-foreground tracking-wide">{t('message.ui.fields.type')}</span>
+                        <span className="text-sm font-semibold font-mono break-all">{detailRes.data.type}</span>
+                      </div>
+                      {detailRes.data.operationId && (
                         <div className="flex flex-col gap-1">
-                          <span className="text-[9px] font-semibold text-muted-foreground tracking-wide">Progress</span>
-                          <span className="text-sm font-semibold">{Math.round(detailRes.data.payload.progress.percent * 100)}%</span>
+                          <span className="text-[9px] font-semibold text-muted-foreground tracking-wide">{t('message.ui.fields.operationId')}</span>
+                          <span className="text-sm font-semibold font-mono break-all">{detailRes.data.operationId}</span>
+                        </div>
+                      )}
+                      {detailRes.data.taskId && (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[9px] font-semibold text-muted-foreground tracking-wide">{t('message.ui.fields.taskId')}</span>
+                          <span className="text-sm font-semibold font-mono break-all">{detailRes.data.taskId}</span>
                         </div>
                       )}
                     </div>
-                  </div>
-                )}
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-semibold tracking-wide text-muted-foreground">{t('message.ui.payload')}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-[10px] font-bold gap-1.5"
+                          onClick={() => {
+                            navigator.clipboard.writeText(JSON.stringify(detailRes.data.payload ?? {}, null, 2));
+                            toast.success(t('logs.common.copied'));
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                          {t('message.ui.copyPayload')}
+                        </Button>
+                      </div>
+                      <div className="bg-slate-950 rounded-2xl p-6 overflow-hidden border border-slate-800 shadow-xl group relative">
+                        <pre className="text-xs text-emerald-400 font-mono overflow-auto max-h-[400px] custom-scrollbar leading-relaxed">
+                          {JSON.stringify(detailRes.data.payload ?? {}, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
 
                 <div className="flex justify-end gap-3 pt-4">
                   <Button className="rounded-xl font-semibold tracking-wide text-xs px-8 h-10" onClick={() => setSelectedMessageId(null)}>
-                    Dismiss
+                    {t('message.ui.dismiss')}
                   </Button>
                 </div>
               </div>

@@ -222,6 +222,23 @@
     "unknown": {
       "title": "收到新消息",
       "summary": "收到一条新的{{kind}}"
+    },
+    "ui": {
+      "loading": "正在加载消息...",
+      "loadFailedTitle": "无法加载该消息",
+      "loadFailedHint": "请稍后重试。",
+      "close": "关闭",
+      "dismiss": "知道了",
+      "summary": "消息摘要",
+      "debugTitle": "调试信息（内部字段）",
+      "payload": "原始 Payload（JSON）",
+      "copyPayload": "复制 JSON",
+      "fields": {
+        "id": "消息 ID",
+        "type": "消息类型",
+        "operationId": "Operation ID",
+        "taskId": "任务 ID"
+      }
     }
   },
   "billing": {
@@ -366,9 +383,13 @@
         "subtitle": "查看指令执行链路与原始 payload（用于排障）",
         "loading": "正在加载详情...",
         "loadFailed": "详情加载失败",
+        "debugTitle": "调试信息（内部字段）",
         "operationId": "Operation ID",
         "queuedId": "Queued ID",
         "trackingLevel": "追踪方式",
+        "sendMethod": "下发方式",
+        "ttlMinutes": "TTL（分钟）",
+        "createdAt": "创建时间（UTC）",
         "errorMessage": "错误信息",
         "payload": "Payload（JSON）",
         "copyPayload": "复制 JSON",

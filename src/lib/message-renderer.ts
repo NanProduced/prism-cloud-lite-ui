@@ -1,5 +1,6 @@
 import type { MessageListItem } from "@/types/message";
 import i18n from "@/i18n/config";
+import { getActionTypeLabelKey } from "@/features/logs/commandLogI18n";
 
 export interface RenderedMessage {
   title: string;
@@ -18,7 +19,7 @@ export function renderMessage(message: MessageListItem): RenderedMessage {
       return {
         title: t('message.type.device.command.finished.title', { status: statusLabel }),
         summary: t('message.type.device.command.finished.summary', { 
-          actionType: payload.actionType || 'Unknown', 
+          actionType: t(getActionTypeLabelKey(payload.actionType)),
           target: message.deviceName || 'Device'
         })
       };

@@ -222,6 +222,23 @@
     "unknown": {
       "title": "New Message",
       "summary": "New {{kind}} received"
+    },
+    "ui": {
+      "loading": "Loading message...",
+      "loadFailedTitle": "Unable to load this message",
+      "loadFailedHint": "Please try again.",
+      "close": "Close",
+      "dismiss": "Dismiss",
+      "summary": "Message summary",
+      "debugTitle": "Debug details (internal)",
+      "payload": "Raw payload (JSON)",
+      "copyPayload": "Copy JSON",
+      "fields": {
+        "id": "Message ID",
+        "type": "Message type",
+        "operationId": "Operation ID",
+        "taskId": "Task ID"
+      }
     }
   },
   "billing": {
@@ -366,9 +383,13 @@
         "subtitle": "Execution trail and raw payload (for troubleshooting)",
         "loading": "Loading details...",
         "loadFailed": "Failed to load details",
+        "debugTitle": "Debug details (internal)",
         "operationId": "Operation ID",
         "queuedId": "Queued ID",
         "trackingLevel": "Tracking Level",
+        "sendMethod": "Send Method",
+        "ttlMinutes": "TTL (minutes)",
+        "createdAt": "Created At (UTC)",
         "errorMessage": "Error Message",
         "payload": "Payload (JSON)",
         "copyPayload": "Copy JSON",
