@@ -146,6 +146,36 @@
     "userLabel": "You",
     "justNow": "Just now"
   },
+  "stats": {
+    "badge": "Performance",
+    "title": "Powering the",
+    "titleHighlight": "Visual Web",
+    "subtitle": "Delivering high-impact content to thousands of global endpoints every second",
+    "stat1": {
+      "value": "1.2",
+      "unit": "M",
+      "label": "Daily Syncs",
+      "description": "Content synchronizations"
+    },
+    "stat2": {
+      "value": "99.9",
+      "unit": "%",
+      "label": "Uptime",
+      "description": "Service availability"
+    },
+    "stat3": {
+      "value": "14",
+      "unit": "ms",
+      "label": "Latency",
+      "description": "Edge sync speed"
+    },
+    "stat4": {
+      "value": "50",
+      "unit": "K+",
+      "label": "Screens",
+      "description": "Active displays"
+    }
+  },
   "useCases": {
     "title": "Transforming spaces across sectors",
     "industries": "Industries",

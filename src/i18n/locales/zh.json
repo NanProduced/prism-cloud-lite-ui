@@ -146,6 +146,36 @@
     "userLabel": "你",
     "justNow": "刚刚"
   },
+  "stats": {
+    "badge": "性能指标",
+    "title": "驱动全球",
+    "titleHighlight": "可视化网络",
+    "subtitle": "每秒向全球数千个终端推送高质量内容",
+    "stat1": {
+      "value": "1.2",
+      "unit": "M",
+      "label": "日同步量",
+      "description": "内容同步次数"
+    },
+    "stat2": {
+      "value": "99.9",
+      "unit": "%",
+      "label": "在线率",
+      "description": "服务可用性"
+    },
+    "stat3": {
+      "value": "14",
+      "unit": "ms",
+      "label": "延迟",
+      "description": "边缘同步速度"
+    },
+    "stat4": {
+      "value": "50",
+      "unit": "K+",
+      "label": "屏幕数",
+      "description": "活跃显示屏"
+    }
+  },
   "useCases": {
     "title": "赋能各行各业",
     "industries": "行业",
