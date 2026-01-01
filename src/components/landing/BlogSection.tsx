@@ -1,27 +1,28 @@
 import { ArrowRight, Sparkles, Zap, Globe } from "lucide-react";
 import { FadeIn } from "@/components/ui/FadeIn";
+import { useTranslation } from "react-i18next";
+import { useMemo } from "react";
 
 export const BlogSection = () => {
-  const blogs = [
-    {
-      title: "The Future of Visual Networks",
-      desc: "How 5G and Edge Computing are transforming static displays into intelligent, interactive communication nodes.",
-      icon: <Globe size={24} className="text-blue-400" />,
-      tag: "Industry Trends"
-    },
-    {
-      title: "AI in Digital Signage",
-      desc: "Beyond automation: Using Large Language Models to manage and troubleshoot global terminal fleets via natural language.",
-      icon: <Sparkles size={24} className="text-indigo-400" />,
-      tag: "Innovation"
-    },
-    {
-      title: "Optimizing Global Distribution",
-      desc: "Deep dive into MD5 content addressing and cloud transcoding for seamless 24/7 high-fidelity playback.",
-      icon: <Zap size={24} className="text-purple-400" />,
-      tag: "Technical"
-    },
-  ];
+  const { t } = useTranslation();
+
+  const postsData = t("blog.posts", { returnObjects: true });
+  
+  const blogs = useMemo(() => {
+    const icons = [
+      <Globe size={24} className="text-blue-400" />,
+      <Sparkles size={24} className="text-indigo-400" />,
+      <Zap size={24} className="text-purple-400" />
+    ];
+
+    if (Array.isArray(postsData)) {
+      return postsData.map((post: any, i: number) => ({
+        ...post,
+        icon: icons[i % icons.length]
+      }));
+    }
+    return [];
+  }, [postsData]);
 
   return (
     <section className="py-32 relative bg-black">
@@ -29,14 +30,13 @@ export const BlogSection = () => {
         <div className="text-center mb-20">
           <FadeIn>
             <h2 className="text-4xl md:text-6xl text-white mb-6 font-bold tracking-tight">
-              Insights & <br />
+              {t("blog.title")} <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-white to-purple-500">   
-                Engineering Excellence
+                {t("blog.titleHighlight")}
               </span>
             </h2>
             <p className="text-gray-500 max-w-xl mx-auto">
-              Explore our latest thoughts on the intersection of media distribution, 
-              cloud infrastructure, and artificial intelligence.
+              {t("blog.description")}
             </p>
           </FadeIn>
         </div>
@@ -62,7 +62,7 @@ export const BlogSection = () => {
                   {blog.desc}
                 </p>
                 <div className="mt-auto flex items-center text-white/50 group-hover:text-white font-bold text-xs uppercase tracking-widest transition-colors">
-                  Read Article{" "}
+                  {t("blog.readMore")}{" "}
                   <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-2 transition-transform" />    
                 </div>
               </div>

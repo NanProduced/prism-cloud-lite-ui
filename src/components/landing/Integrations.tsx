@@ -118,19 +118,19 @@ export const Integrations = () => {
           </div>
 
           {/* Right: Code & Connection Visual */}
-          <FadeIn delay={0.4} className="flex-1 w-full relative">
+          <FadeIn delay={0.4} className="flex-[1.2] w-full relative">
             {/* Background glow */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/8 blur-[150px] rounded-full pointer-events-none" />
-            <div className="absolute top-1/3 right-1/4 w-[300px] h-[300px] bg-purple-500/5 blur-[100px] rounded-full pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-500/8 blur-[150px] rounded-full pointer-events-none" />
+            <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-purple-500/5 blur-[100px] rounded-full pointer-events-none" />
 
             {/* The "Integration Console" */}
-            <div className="relative z-10 w-full max-w-lg mx-auto">
+            <div className="relative z-10 w-full max-w-2xl mx-auto">
 
               {/* Floating Icons - Enhanced */}
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ repeat: Infinity, duration: 50, ease: "linear" }}
-                className="absolute inset-0 w-full h-full scale-[1.3] pointer-events-none"
+                className="absolute inset-0 w-full h-full scale-[1.4] pointer-events-none"
               >
                 {[Cloud, Cpu, Share2, Globe, Database].map((Icon, i) => (
                   <motion.div
@@ -170,24 +170,24 @@ export const Integrations = () => {
                 )}
               >
                 {/* Window header */}
-                <div className="h-11 border-b border-white/[0.06] bg-white/[0.02] flex items-center justify-between px-4">
+                <div className="h-12 border-b border-white/[0.06] bg-white/[0.02] flex items-center justify-between px-5">
                   <div className="flex items-center gap-3">
                     <div className="flex gap-1.5">
                       <div className="w-2.5 h-2.5 rounded-full bg-red-500/40" />
                       <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/40" />
                       <div className="w-2.5 h-2.5 rounded-full bg-green-500/40" />
                     </div>
-                    <span className="text-[10px] font-mono text-neutral-500">terminal.js</span>
+                    <span className="text-[11px] font-mono text-neutral-500">terminal.js</span>
                   </div>
-                  <div className="text-[9px] font-mono font-bold text-indigo-400 bg-indigo-400/10 px-2.5 py-1 rounded-md">
+                  <div className="text-[10px] font-mono font-bold text-indigo-400 bg-indigo-400/10 px-3 py-1 rounded-md">
                     SDK
                   </div>
                 </div>
 
                 {/* Code content */}
-                <div className="p-5 font-mono text-[11px] leading-[1.8] space-y-0.5 select-all">
+                <div className="p-8 font-mono text-[13px] leading-[1.8] space-y-1 select-all">
                   <div className="flex">
-                    <span className="text-neutral-600 w-6">1</span>
+                    <span className="text-neutral-600 w-8">1</span>
                     <span className="text-purple-400">const</span>
                     <span className="text-white ml-1">prism</span>
                     <span className="text-neutral-500 mx-1">=</span>
@@ -197,14 +197,14 @@ export const Integrations = () => {
                     <span className="text-neutral-400">);</span>
                   </div>
                   <div className="flex">
-                    <span className="text-neutral-600 w-6">2</span>
+                    <span className="text-neutral-600 w-8">2</span>
                   </div>
                   <div className="flex">
-                    <span className="text-neutral-600 w-6">3</span>
+                    <span className="text-neutral-600 w-8">3</span>
                     <span className="text-neutral-500 italic">{t("integrations.codeComment")}</span>
                   </div>
                   <div className="flex">
-                    <span className="text-neutral-600 w-6">4</span>
+                    <span className="text-neutral-600 w-8">4</span>
                     <span className="text-purple-400">await</span>
                     <span className="text-white ml-1">prism</span>
                     <span className="text-neutral-400">.</span>
@@ -212,18 +212,18 @@ export const Integrations = () => {
                     <span className="text-neutral-400">{'({'}</span>
                   </div>
                   <div className="flex">
-                    <span className="text-neutral-600 w-6">5</span>
-                    <span className="text-white ml-4">programId:</span>
+                    <span className="text-neutral-600 w-8">5</span>
+                    <span className="text-white ml-6">programId:</span>
                     <span className="text-green-400 ml-1">"SALE_2026"</span>
                     <span className="text-neutral-400">,</span>
                   </div>
                   <div className="flex">
-                    <span className="text-neutral-600 w-6">6</span>
-                    <span className="text-white ml-4">target:</span>
+                    <span className="text-neutral-600 w-8">6</span>
+                    <span className="text-white ml-6">target:</span>
                     <span className="text-green-400 ml-1">"region=NYC"</span>
                   </div>
                   <div className="flex">
-                    <span className="text-neutral-600 w-6">7</span>
+                    <span className="text-neutral-600 w-8">7</span>
                     <span className="text-neutral-400">{'})'}</span>
                     <span className="text-neutral-400">;</span>
                   </div>
@@ -244,25 +244,25 @@ export const Integrations = () => {
                 whileInView={{ opacity: 1, scale: 1, x: 0 }}
                 transition={{ delay: 0.6, type: "spring", stiffness: 200 }}
                 className={cn(
-                  "absolute -bottom-8 -right-4 md:-right-8",
+                  "absolute -bottom-10 -right-6 md:-right-12",
                   "bg-[#0f0f0f] border border-white/[0.1]",
-                  "p-4 rounded-xl shadow-2xl shadow-black/60",
-                  "max-w-[200px]"
+                  "p-6 rounded-2xl shadow-2xl shadow-black/60",
+                  "max-w-[240px]"
                 )}
               >
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-4 mb-3">
                   <motion.div
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                    className="w-9 h-9 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center"
+                    className="w-10 h-10 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center"
                   >
-                    <Code2 size={16} className="text-green-400" />
+                    <Code2 size={20} className="text-green-400" />
                   </motion.div>
-                  <div className="text-[10px] font-bold text-white uppercase tracking-wider">
+                  <div className="text-[12px] font-bold text-white uppercase tracking-wider">
                     {t("integrations.apiSuccess")}
                   </div>
                 </div>
-                <div className="text-[10px] text-neutral-500 font-medium pl-12">
+                <div className="text-[11px] text-neutral-500 font-medium pl-14">
                   {t("integrations.endpointsUpdated", { count: 482 })}
                 </div>
 
@@ -270,7 +270,7 @@ export const Integrations = () => {
                 <motion.div
                   animate={{ opacity: [0.5, 1, 0.5] }}
                   transition={{ repeat: Infinity, duration: 1.5 }}
-                  className="absolute top-3 right-3 w-2 h-2 rounded-full bg-green-500"
+                  className="absolute top-4 right-4 w-2.5 h-2.5 rounded-full bg-green-500"
                 />
               </motion.div>
             </div>

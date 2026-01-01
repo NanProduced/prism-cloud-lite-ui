@@ -269,6 +269,29 @@
     "apiSuccess": "API 调用成功",
     "endpointsUpdated": "已更新 {{count}} 个端点"
   },
+  "blog": {
+    "title": "深度洞察与",
+    "titleHighlight": "卓越工程",
+    "description": "探索我们关于媒体分发、云基础设施和人工智能交汇点的最新思考。",
+    "readMore": "阅读文章",
+    "posts": [
+      {
+        "title": "视觉网络的未来",
+        "desc": "5G 和边缘计算如何将静态显示屏转变为智能、互动的通信节点。",
+        "tag": "行业趋势"
+      },
+      {
+        "title": "数字标牌中的 AI",
+        "desc": "超越自动化：使用大语言模型通过自然语言管理全球终端集群并排查故障。",
+        "tag": "技术创新"
+      },
+      {
+        "title": "优化全球分发",
+        "desc": "深入探讨 MD5 内容寻址和云转码，实现无缝的 24/7 高保真播放。",
+        "tag": "技术深挖"
+      }
+    ]
+  },
   "useCases": {
     "title": "赋能各行各业",
     "industries": "行业",
@@ -310,7 +333,13 @@
     "privacyPolicy": "隐私政策",
     "termsOfService": "服务条款",
     "cookiePolicy": "Cookie 政策",
-    "copyright": "保留所有权利。"
+    "copyright": "保留所有权利。",
+    "newsletter": {
+      "title": "订阅新闻邮件",
+      "description": "获取来自云专家的每月见解。我们承诺绝无垃圾邮件。",
+      "placeholder": "输入您的电子邮箱",
+      "button": "订阅"
+    }
   },
   "auth": {
     "common": {
