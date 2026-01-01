@@ -21,47 +21,60 @@ const LogoWall = () => {
 
   const LogoItem = ({ logo, index }: { logo: BrandLogo; index: number }) => (
     <div
-      className="flex flex-col items-center justify-center shrink-0 px-8 md:px-12 group"
-      style={{ minWidth: "200px" }}
+      className="flex flex-col items-center justify-center shrink-0 px-12 md:px-20 group py-12"
+      style={{ minWidth: "280px" }}
     >
-      <div className="h-16 w-44 flex items-center justify-center">
+      <div className="h-20 w-60 flex items-center justify-center">
         <img
           src={logo.src}
           alt={isZh ? logo.nameZh : logo.name}
-          className="h-full w-auto max-w-full object-contain opacity-70 group-hover:opacity-100 transition-opacity duration-300"
+          className={cn(
+            "h-full w-auto max-w-[200px] object-contain transition-all duration-500",
+            "opacity-40 group-hover:opacity-100",
+          )}
+          style={{
+            // Transform scale from the config or default 1
+            transform: `scale(${logo.scale || 1})`,
+            // Use a combination of filters to ensure monochrome silver/white look
+            filter: "brightness(0) invert(0.7)"
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.filter = "brightness(0) invert(1)";
+            e.currentTarget.style.transform = `scale(${(logo.scale || 1) * 1.05})`;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.filter = "brightness(0) invert(0.7)";
+            e.currentTarget.style.transform = `scale(${logo.scale || 1})`;
+          }}
         />
       </div>
     </div>
   );
 
-  // Calculate animation distance based on logo count
-  const row1Width = row1Logos.length * 224;
-  const row2Width = row2Logos.length * 224;
-
   return (
     <div className="relative py-16 overflow-hidden">
       {/* Title */}
       <FadeIn>
-        <p className="text-center text-neutral-500 text-base mb-14 tracking-wide uppercase font-medium">
+        <p className="text-center text-neutral-500 text-base mb-16 tracking-wide uppercase font-medium">
           {t("logoWall.title")}
         </p>
       </FadeIn>
 
       {/* Row 1 - Scroll Left */}
-      <div className="relative mb-8">
-        <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-black to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-black to-transparent z-10 pointer-events-none" />
+      <div className="relative mb-16 flex overflow-hidden">
+        <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-black to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-black to-transparent z-10 pointer-events-none" />
 
         <motion.div
-          className="flex items-center"
-          animate={{ x: [0, -row1Width] }}
+          className="flex items-center flex-nowrap"
+          animate={{ x: ["0%", "-50%"] }}
           transition={{
             repeat: Infinity,
-            duration: 35,
+            duration: 50,
             ease: "linear",
           }}
         >
-          {/* Only duplicate once for seamless loop */}
+          {/* Double the items and use % for seamless loop */}
           {[...row1Logos, ...row1Logos].map((logo, i) => (
             <LogoItem key={`row1-${i}`} logo={logo} index={i} />
           ))}
@@ -69,16 +82,16 @@ const LogoWall = () => {
       </div>
 
       {/* Row 2 - Scroll Right */}
-      <div className="relative">
-        <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-black to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-black to-transparent z-10 pointer-events-none" />
+      <div className="relative flex overflow-hidden">
+        <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-black to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-black to-transparent z-10 pointer-events-none" />
 
         <motion.div
-          className="flex items-center"
-          animate={{ x: [-row2Width, 0] }}
+          className="flex items-center flex-nowrap"
+          animate={{ x: ["-50%", "0%"] }}
           transition={{
             repeat: Infinity,
-            duration: 35,
+            duration: 50,
             ease: "linear",
           }}
         >
