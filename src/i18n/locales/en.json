@@ -243,6 +243,32 @@
       }
     ]
   },
+  "integrations": {
+    "badge": "Connectivity Hub",
+    "title": "Easy to Integrate",
+    "titleHighlight": "with your Workflow",
+    "subtitle": "Prism Cloud Lite isn't just a player. It's an open ecosystem designed to slide perfectly into your existing enterprise infrastructure.",
+    "categories": [
+      {
+        "title": "Enterprise Storage",
+        "desc": "Native support for AWS S3, Alibaba OSS, and MinIO for reliable content hosting.",
+        "tags": ["S3", "OSS", "IPFS"]
+      },
+      {
+        "title": "Contextual Maps",
+        "desc": "Full integration with MapTiler and Google Maps for precise terminal tracking.",
+        "tags": ["MapTiler", "GIS"]
+      },
+      {
+        "title": "Powerful API",
+        "desc": "Robust REST API and Webhooks to integrate with your ERP, CRM, or custom scripts.",
+        "tags": ["REST", "Webhooks"]
+      }
+    ],
+    "codeComment": "// Deploy content to global terminals",
+    "apiSuccess": "API Call Success",
+    "endpointsUpdated": "{{count}} Endpoints Updated"
+  },
   "useCases": {
     "title": "Transforming spaces across sectors",
     "industries": "Industries",

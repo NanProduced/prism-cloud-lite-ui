@@ -243,6 +243,32 @@
       }
     ]
   },
+  "integrations": {
+    "badge": "连接中心",
+    "title": "轻松集成",
+    "titleHighlight": "您的工作流程",
+    "subtitle": "Prism Cloud Lite 不只是一个播放器，而是一个开放的生态系统，可以完美融入您现有的企业基础设施。",
+    "categories": [
+      {
+        "title": "企业存储",
+        "desc": "原生支持 AWS S3、阿里云 OSS 和 MinIO，确保内容可靠托管。",
+        "tags": ["S3", "OSS", "IPFS"]
+      },
+      {
+        "title": "位置地图",
+        "desc": "完整集成 MapTiler 和 Google 地图，实现终端精确定位追踪。",
+        "tags": ["MapTiler", "GIS"]
+      },
+      {
+        "title": "强大 API",
+        "desc": "完善的 REST API 和 Webhooks，轻松对接您的 ERP、CRM 或自定义脚本。",
+        "tags": ["REST", "Webhooks"]
+      }
+    ],
+    "codeComment": "// 部署内容到全球终端",
+    "apiSuccess": "API 调用成功",
+    "endpointsUpdated": "已更新 {{count}} 个端点"
+  },
   "useCases": {
     "title": "赋能各行各业",
     "industries": "行业",
