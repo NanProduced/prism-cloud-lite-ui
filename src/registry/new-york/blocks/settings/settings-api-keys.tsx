@@ -269,10 +269,14 @@ export default function SettingsAPIKeys({
                   </FieldContent>
                 </Field>
 
-                <Field>
+                <Field className="opacity-50 pointer-events-none relative">
+                  <div className="absolute right-0 top-0">
+                    <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 border-none shadow-none">Coming Soon</Badge>
+                  </div>
                   <FieldLabel htmlFor="expires">Expires In</FieldLabel>
                   <FieldContent>
                     <Select
+                      disabled
                       onValueChange={(value: "never" | "30" | "90" | "365") =>
                         setNewKeyData((prev) => ({
                           ...prev,
@@ -294,7 +298,10 @@ export default function SettingsAPIKeys({
                   </FieldContent>
                 </Field>
 
-                <Field>
+                <Field className="opacity-50 pointer-events-none relative">
+                   <div className="absolute right-0 top-0">
+                    <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 border-none shadow-none">Coming Soon</Badge>
+                  </div>
                   <FieldLabel>
                     Permissions <span className="text-destructive">*</span>
                   </FieldLabel>
@@ -306,7 +313,8 @@ export default function SettingsAPIKeys({
                           key={scope.id}
                         >
                           <Checkbox
-                            checked={newKeyData.scopes.includes(scope.id)}
+                            disabled
+                            checked={newKeyData.scopes.includes(scope.id) || scope.id === 'read' || scope.id === 'write'}
                             id={`scope-${scope.id}`}
                             onCheckedChange={() => toggleScope(scope.id)}
                           />

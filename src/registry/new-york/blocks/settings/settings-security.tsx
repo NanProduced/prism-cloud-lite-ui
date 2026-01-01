@@ -414,8 +414,11 @@ export default function SettingsSecurity({
             </div>
 
             {/* Two-Factor Authentication */}
-            <div className="flex flex-col gap-4 rounded-lg border p-4">
-              <div className="flex items-center gap-2">
+            <div className="group relative flex flex-col gap-4 rounded-lg border p-4 bg-muted/20">
+              <div className="absolute right-4 top-4">
+                <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 border-none shadow-none">Coming Soon</Badge>
+              </div>
+              <div className="flex items-center gap-2 opacity-50">
                 <div className="flex size-8 items-center justify-center rounded-lg bg-muted">
                   <Shield className="size-4" />
                 </div>
@@ -423,7 +426,7 @@ export default function SettingsSecurity({
                   Two-Factor Authentication
                 </FieldLabel>
               </div>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 opacity-50">
                 {twoFactorEnabled ? (
                   <>
                     <div className="flex items-center gap-2">
@@ -438,45 +441,27 @@ export default function SettingsSecurity({
                     <div className="flex flex-col gap-2">
                       <Button
                         className="w-full"
+                        disabled
                         onClick={handleGenerateBackupCodes}
                         type="button"
                         variant="outline"
                       >
                         View Backup Codes
                       </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            className="w-full"
-                            type="button"
-                            variant="destructive"
-                          >
-                            Disable 2FA
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Disable Two-Factor Authentication?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will reduce the security of your account. You
-                              can re-enable it anytime.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={onDisable2FA}>
-                              Disable 2FA
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <Button
+                        className="w-full"
+                        disabled
+                        type="button"
+                        variant="destructive"
+                      >
+                        Disable 2FA
+                      </Button>
                     </div>
                   </>
                 ) : (
                   <Button
                     className="w-full"
+                    disabled
                     onClick={onEnable2FA}
                     type="button"
                   >
@@ -487,6 +472,7 @@ export default function SettingsSecurity({
                   </Button>
                 )}
               </div>
+              <div className="absolute inset-0 bg-background/5 rounded-lg cursor-not-allowed z-10" title="2FA is currently under development" />
             </div>
           </div>
 

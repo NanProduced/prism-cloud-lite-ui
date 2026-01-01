@@ -404,7 +404,7 @@ export default function SettingsPage() {
                     scopes: ['read', 'write'],
                  } as APIKey;
               }
-              throw new Error("Failed to create key");
+              throw new Error(res.error?.displayMessage || "Failed to create key");
             }}
             onRegenerate={async (keyId) => {
               const res = await regenerateApiKeyMutation.mutateAsync(keyId);
@@ -418,7 +418,7 @@ export default function SettingsPage() {
                     key: res.data.clientSecret || '', // Show new secret
                  } as APIKey;
               }
-              throw new Error("Failed to regenerate key");
+              throw new Error(res.error?.displayMessage || "Failed to regenerate key");
             }}
             onRevoke={async (keyId) => {
               await revokeApiKeyMutation.mutateAsync(keyId);
