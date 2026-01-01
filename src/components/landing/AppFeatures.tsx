@@ -1,157 +1,136 @@
 import { FadeIn } from "@/components/ui/FadeIn";
-
-// Import images
-import imgGroup1261159637 from "@/assets/figma/6527cf12577e86d6f6e34cddff67cf9d52ce8063.png";
-import imgGroup12611596431 from "@/assets/figma/5ffbfcdee3ee54cd9d536fe4ac67058bd55e4d45.png";
-import imgGroup1261159636 from "@/assets/figma/3e144d872a3a8c71b676c7eb837359c82863d643.png";
-import imgVisitorInsights1 from "@/assets/figma/1d91018dc964e02f93234c18154e6d67617940a3.png";
-import imgGroup1261159645 from "@/assets/figma/afb861da2acee83cdbb5ae231689e58884537c45.png";
+import { useTranslation } from "react-i18next";
+import { Monitor, Smartphone, Globe, Cloud, Shield, Zap, Terminal, Search } from "lucide-react";
 
 export const AppFeatures = () => {
+  const { t } = useTranslation();
+
   return (
-    <section className="py-24">
+    <section className="py-32 bg-black">
       <div className="container mx-auto px-6">
-        <div className="text-center mb-16">
+        <div className="text-center mb-24">
           <FadeIn>
-            <h2 className="text-4xl md:text-5xl text-white mb-4 font-medium">
-              Cloud Observability for <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#5653ff] to-[#d252ff]">
-                Modern Infrastructure
+            <h2 className="text-4xl md:text-6xl text-white mb-6 font-bold tracking-tight">
+              More than just <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-white to-purple-500"> 
+                Digital Signage
               </span>
             </h2>
-            <p className="text-[#aaaaaa] max-w-2xl mx-auto mt-6">
-              Collect, Organize and Analyze your metrics with our
-              advanced learning algorithms to find patterns in
-              your infrastructure.
+            <p className="text-gray-500 max-w-2xl mx-auto text-lg">
+              Prism Cloud Lite provides an enterprise-grade infrastructure 
+              to manage your global visual communication network with ease.
             </p>
           </FadeIn>
         </div>
 
-        {/* Bento Grid Layout - 3 Columns */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-[1200px] mx-auto">
-          {/* Column 1 */}
-          <div className="flex flex-col gap-6">
-            {/* Real Time Insights */}
-            <FadeIn
-              delay={0}
-              className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-6 flex flex-col h-[320px] group hover:border-white/20 transition-colors overflow-hidden relative"
-            >
-              <div className="relative z-10">
-                <h4 className="text-2xl text-[#cacaca] mb-2 font-medium">
-                  Real Time Deep Insights
-                </h4>
-                <p className="text-sm text-[#666666]">
-                  Real-time analytics with predictive
-                  capabilities for your infrastructure.
-                </p>
+        {/* Bento Grid Layout - High Fidelity */}
+        <div className="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-12 gap-6 max-w-7xl mx-auto">
+          
+          {/* Real-time Telemetry (Large) */}
+          <FadeIn
+            className="md:col-span-6 lg:col-span-8 bg-white/[0.02] border border-white/[0.08] rounded-[2.5rem] p-10 group hover:border-white/20 transition-all overflow-hidden relative min-h-[400px]"
+          >
+            <div className="relative z-10 max-w-md">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 mb-6 group-hover:scale-110 transition-transform">
+                 <Monitor size={24} />
               </div>
-              <div className="absolute bottom-0 left-6 right-6 h-[200px] rounded-t-xl overflow-hidden border-t-4 border-x-4 border-[#1a1a1a] bg-[#1a1a1a]">
-                <img
-                  src={imgGroup1261159636}
-                  alt="Realtime"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-              </div>
-            </FadeIn>
+              <h4 className="text-3xl text-white mb-4 font-bold tracking-tight">
+                Real-time Device Telemetry
+              </h4>
+              <p className="text-gray-500 leading-relaxed">
+                Track every heartbeat. Monitor CPU load, memory usage, and storage 
+                health across your entire fleet in milliseconds.
+              </p>
+            </div>
+            {/* Visual element: Waveform/Grid */}
+            <div className="absolute bottom-0 right-0 w-1/2 h-full bg-gradient-to-l from-indigo-500/5 to-transparent flex items-end justify-end p-8 opacity-40 group-hover:opacity-100 transition-opacity">
+               <div className="flex items-end gap-2 h-32 w-full max-w-xs">
+                  {[40, 70, 45, 90, 65, 80, 50, 95, 60, 75, 40].map((h, i) => (
+                    <div key={i} style={{ height: `${h}%` }} className="flex-1 bg-indigo-500/20 rounded-t-sm" />
+                  ))}
+               </div>
+            </div>
+          </FadeIn>
 
-            {/* Optimise Revise Repeat */}
-            <FadeIn
-              delay={0.2}
-              className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-6 flex flex-col justify-center h-[190px] group hover:border-white/20 transition-colors relative overflow-hidden"
-            >
-              <div className="absolute right-0 top-4 h-[160px] w-[250px] opacity-80">
-                <img
-                  src={imgVisitorInsights1}
-                  alt="Visitor"
-                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-                />
+          {/* Secure by Design (Square) */}
+          <FadeIn
+            delay={0.1}
+            className="md:col-span-6 lg:col-span-4 bg-[#0a0a0a] border border-white/[0.08] rounded-[2.5rem] p-10 group hover:border-white/20 transition-all relative overflow-hidden"
+          >
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 mb-6">
+                 <Shield size={24} />
               </div>
-              <div className="relative z-10">
-                <p className="text-[#3a3a3a] text-2xl font-medium leading-tight">
-                  Optimize. Revise.
-                </p>
-                <p className="text-white text-2xl font-medium leading-tight">
-                  Repeat.
-                </p>
-              </div>
-            </FadeIn>
-          </div>
+              <h4 className="text-2xl text-white mb-4 font-bold tracking-tight">
+                End-to-End Security
+              </h4>
+              <p className="text-gray-500 text-sm leading-relaxed">
+                Enterprise-grade encryption for content delivery and device communication. 
+                Built-in SSO and role-based access.
+              </p>
+            </div>
+            <div className="absolute -right-10 -bottom-10 opacity-10 group-hover:opacity-20 transition-opacity">
+               <Shield size={200} />
+            </div>
+          </FadeIn>
 
-          {/* Column 2 */}
-          <div className="flex flex-col gap-6">
-            {/* Journey */}
-            <FadeIn
-              delay={0.1}
-              className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-0 flex flex-col h-[534px] group hover:border-white/20 transition-colors overflow-hidden relative"
-            >
-              <div className="flex-1 p-6 pb-0 w-full relative">
-                <div className="w-full h-full rounded-t-xl border-t-4 border-x-4 border-[#1a1a1a] overflow-hidden bg-[#1a1a1a]">
-                  <img
-                    src={imgGroup12611596431}
-                    alt="Journey"
-                    className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
-                  />
-                </div>
+          {/* Global Mesh (Medium) */}
+          <FadeIn
+            delay={0.2}
+            className="md:col-span-3 lg:col-span-4 bg-white/[0.02] border border-white/[0.08] rounded-[2.5rem] p-10 group hover:border-white/20 transition-all relative overflow-hidden"
+          >
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-2xl bg-green-500/10 flex items-center justify-center text-green-400 mb-6">
+                 <Globe size={24} />
               </div>
-              <div className="p-8 text-center relative z-10 bg-[#0d0d0d]">
-                <h4 className="text-2xl text-[#cacaca] mb-2 font-medium">
-                  Journey, not destination
-                </h4>
-                <p className="text-[#666] text-sm mb-6">
-                  Monitor and analyze retention to optimize
-                  system reliability.
-                </p>
-                <div className="inline-block text-xs text-[#333] border-l-2 border-[#333] pl-3 text-left">
-                  On average, our users have seen <br />{" "}
-                  <span className="text-white font-bold">
-                    +20%
-                  </span>{" "}
-                  improvement in uptime.
-                </div>
-              </div>
-            </FadeIn>
-          </div>
+              <h4 className="text-2xl text-white mb-4 font-bold tracking-tight">
+                Global Edge Mesh
+              </h4>
+              <p className="text-gray-500 text-sm leading-relaxed">
+                Optimized content distribution via our global mesh network, 
+                minimizing latency for multi-region deployments.
+              </p>
+            </div>
+          </FadeIn>
 
-          {/* Column 3 */}
-          <div className="flex flex-col gap-6">
-            {/* A/B Test */}
-            <FadeIn
-              delay={0.2}
-              className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-6 flex flex-col h-[250px] group hover:border-white/20 transition-colors relative overflow-hidden"
-            >
-              <div className="relative z-10 mb-4 text-center">
-                <h4 className="text-2xl text-[#cacaca] font-medium">
-                  A/B Test Feature Variants
-                </h4>
+          {/* AI-Powered Search (Medium) */}
+          <FadeIn
+            delay={0.3}
+            className="md:col-span-3 lg:col-span-4 bg-white/[0.02] border border-white/[0.08] rounded-[2.5rem] p-10 group hover:border-white/20 transition-all relative overflow-hidden"
+          >
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-400 mb-6">
+                 <Search size={24} />
               </div>
-              <div className="absolute bottom-0 left-0 right-0 h-[180px] rounded-t-xl mx-6 border-t-4 border-x-4 border-[#1a1a1a] overflow-hidden bg-[#1a1a1a]">
-                <img
-                  src={imgGroup1261159637}
-                  alt="AB Testing"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-              </div>
-            </FadeIn>
+              <h4 className="text-2xl text-white mb-4 font-bold tracking-tight">
+                Semantic Search
+              </h4>
+              <p className="text-gray-500 text-sm leading-relaxed">
+                Find assets and devices using natural language. 
+                Our AI understands context, not just keywords.
+              </p>
+            </div>
+          </FadeIn>
 
-            {/* Metrics */}
-            <FadeIn
-              delay={0.3}
-              className="bg-[#0d0d0d] border border-[#1a1a1a] rounded-2xl p-6 flex flex-col h-[260px] group hover:border-white/20 transition-colors relative overflow-hidden"
-            >
-              <div className="relative z-10 mb-4 text-center">
-                <h4 className="text-2xl text-[#cacaca] font-medium">
-                  Supercharged Metrics
-                </h4>
+          {/* API First (Medium) */}
+          <FadeIn
+            delay={0.4}
+            className="md:col-span-6 lg:col-span-4 bg-[#0a0a0a] border border-white/[0.08] rounded-[2.5rem] p-10 group hover:border-white/20 transition-all relative overflow-hidden"
+          >
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 mb-6">
+                 <Terminal size={24} />
               </div>
-              <div className="absolute bottom-0 left-6 right-6 h-[190px] rounded-t-xl border-t-4 border-x-4 border-[#1a1a1a] overflow-hidden bg-[#1a1a1a]">
-                <img
-                  src={imgGroup1261159645}
-                  alt="Metrics"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-              </div>
-            </FadeIn>
-          </div>
+              <h4 className="text-2xl text-white mb-4 font-bold tracking-tight">
+                API-First Ecosystem
+              </h4>
+              <p className="text-gray-500 text-sm leading-relaxed">
+                Fully programmable. Integrate with your CRM, ERP, or custom 
+                workflows using our robust REST API and Webhooks.
+              </p>
+            </div>
+          </FadeIn>
+
         </div>
       </div>
     </section>

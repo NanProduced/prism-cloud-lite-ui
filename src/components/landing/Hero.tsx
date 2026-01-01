@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Container } from "./Container";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { ChevronRight, Terminal } from "lucide-react";
+import { ChevronRight, Terminal, Layout, ShieldCheck, Video, Layers, Calendar, Settings } from "lucide-react";
 import Prism from "@/components/Prism";
 import { useAuthStore } from "@/store/authStore";
 import { useNavigate } from "react-router-dom";
@@ -95,110 +95,175 @@ export const Hero: React.FC = () => {
 
         {/* Hero Visual - "Floating Interface" */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, rotateX: 20 }}
-          animate={{ opacity: 1, scale: 1, rotateX: 0 }}
-          transition={{ duration: 1.2, ease: "easeOut" }}
-          className="relative w-full max-w-5xl"
+          initial={{ opacity: 0, scale: 0.95, y: 40 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+          className="relative w-full max-w-6xl mt-20 px-4"
           style={{ perspective: "2000px" }}
         >
-          {/* Glow behind the app */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-indigo-500/15 blur-[100px] rounded-full" />
+          {/* Ambient Glows */}
+          <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-[100%] h-[100%] bg-indigo-600/10 blur-[140px] rounded-full pointer-events-none" />
+          <div className="absolute top-1/4 -right-10 w-[30%] h-[30%] bg-purple-600/10 blur-[100px] rounded-full mix-blend-screen pointer-events-none" />
 
-          {/* The "App Window" */}
-          <div className="relative bg-[#0A0A0A] rounded-xl border border-white/[0.08] shadow-2xl overflow-hidden ring-1 ring-white/5 group">
-
-            {/* Window Controls */}
-            <div className="h-10 border-b border-white/[0.06] bg-white/[0.02] flex items-center justify-between px-4">
-              <div className="flex gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#2D2D2D] border border-white/5" />
-                <div className="w-3 h-3 rounded-full bg-[#2D2D2D] border border-white/5" />
-                <div className="w-3 h-3 rounded-full bg-[#2D2D2D] border border-white/5" />
+          {/* The "App Window" - Ultra High Fidelity */}
+          <div className="relative bg-[#030303]/60 backdrop-blur-3xl rounded-3xl border border-white/[0.08] shadow-[0_0_100px_rgba(0,0,0,0.8),inset_0_0_1px_rgba(255,255,255,0.3)] overflow-hidden group">
+            
+            {/* Window Chrome */}
+            <div className="h-12 border-b border-white/[0.05] bg-white/[0.02] flex items-center justify-between px-6">
+              <div className="flex gap-2.5">
+                <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/10" />
+                <div className="w-3 h-3 rounded-full bg-amber-500/20 border border-amber-500/10" />
+                <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/10" />
               </div>
-              <div className="flex items-center gap-2 text-[10px] font-mono text-gray-600 uppercase tracking-widest">
-                <div className="w-2 h-2 rounded-full bg-green-500/50 animate-pulse" />
-                Connected
+              <div className="flex items-center gap-6">
+                <div className="hidden sm:flex items-center gap-3">
+                   <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20">
+                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                      <span className="text-[9px] font-bold text-indigo-300 uppercase tracking-[0.2em]">Edge Node: HK-01</span>
+                   </div>
+                </div>
+                <div className="h-4 w-[1px] bg-white/10" />
+                <span className="text-[10px] text-gray-500 font-mono tracking-tighter">PRISM-LITE-V2</span>
               </div>
             </div>
 
-            {/* Interface Layout */}
-            <div className="grid grid-cols-12 h-[500px] md:h-[600px]">
+            <div className="grid grid-cols-12 h-[600px] md:h-[700px]">
               {/* Sidebar */}
-              <div className="col-span-3 border-r border-white/[0.06] bg-[#050505] p-4 hidden md:block">
-                <div className="flex items-center gap-3 mb-8 px-2">
-                  <div className="w-6 h-6 rounded bg-indigo-600 flex items-center justify-center">
-                    <Terminal size={14} className="text-white" />
-                  </div>
-                  <span className="text-sm font-semibold text-white">Prism</span>
+              <div className="col-span-3 border-r border-white/[0.05] bg-black/20 p-6 hidden lg:block">
+                <div className="flex items-center gap-3 mb-12">
+                   <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.3)]">
+                      <Terminal size={18} className="text-white" />
+                   </div>
+                   <div className="flex flex-col">
+                      <span className="text-sm font-bold text-white tracking-tight leading-none mb-1">Prism Center</span>
+                      <span className="text-[9px] text-gray-500 font-medium uppercase tracking-widest">Enterprise</span>
+                   </div>
                 </div>
+                
                 <div className="space-y-1">
-                  {["Dashboard", "Deployments", "Analytics", "Settings"].map((item, i) => (
-                    <div key={i} className={`px-3 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${i === 0 ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"}`}>
-                      {item}
+                  {[
+                    { name: "Overview", icon: <Layout size={16} />, active: true },
+                    { name: "Global Terminals", icon: <ShieldCheck size={16} /> },
+                    { name: "Asset Library", icon: <Video size={16} /> },
+                    { name: "Creative Editor", icon: <Layers size={16} /> },
+                    { name: "Smart Scheduler", icon: <Calendar size={16} /> },
+                    { name: "Global Config", icon: <Settings size={16} /> }
+                  ].map((item, i) => (
+                    <div key={i} className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-[13px] font-medium transition-all duration-300 cursor-pointer ${item.active ? "bg-white/5 text-white shadow-[inset_0_0_1px_rgba(255,255,255,0.2)]" : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.02]"}`}>
+                      <span className={item.active ? "text-indigo-400" : "text-gray-600"}>{item.icon}</span>
+                      {item.name}
                     </div>
                   ))}
                 </div>
+
+                <div className="mt-auto pt-10">
+                   <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/5 border border-white/5">
+                      <div className="text-[10px] text-gray-500 font-bold uppercase mb-3 tracking-widest">Quota Usage</div>
+                      <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden mb-2">
+                         <div className="h-full w-3/4 bg-indigo-500 rounded-full" />
+                      </div>
+                      <div className="flex justify-between text-[9px] font-mono text-gray-600">
+                         <span>75% Used</span>
+                         <span>24.2 / 32 GB</span>
+                      </div>
+                   </div>
+                </div>
               </div>
 
-              {/* Main Area */}
-              <div className="col-span-12 md:col-span-9 bg-[#0A0A0A] p-8 relative overflow-hidden">
-                {/* Spotlight within the app */}
-                <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-indigo-500/5 blur-[80px] pointer-events-none" />
-
-                <div className="flex justify-between items-end mb-8">
-                  <div>
-                    <h3 className="text-2xl font-semibold text-white mb-1">Overview</h3>
-                    <p className="text-gray-500 text-sm">Last synced 2 minutes ago</p>
-                  </div>
-                  <Button size="sm" className="bg-indigo-600 hover:bg-indigo-500 text-white border-none shadow-lg shadow-indigo-500/20">
-                    + New Deploy
-                  </Button>
+              {/* Main Canvas */}
+              <div className="col-span-12 lg:col-span-9 bg-black/40 p-8 relative overflow-hidden flex flex-col">
+                {/* World Map Overlay - Faint Connectivity */}
+                <div className="absolute inset-0 opacity-[0.03] pointer-events-none scale-110">
+                   <svg viewBox="0 0 1000 500" className="w-full h-full fill-white">
+                      <path d="M150,200 L850,200 M200,300 L800,300 M500,50 L500,450" stroke="white" strokeWidth="0.5" />
+                      {[200, 400, 600, 800].map(x => [100, 250, 400].map(y => (
+                        <circle key={`${x}-${y}`} cx={x + Math.random()*50} cy={y + Math.random()*50} r="2" />
+                      )))}
+                   </svg>
                 </div>
 
-                {/* Bento Grid inside App */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2 md:col-span-1 p-6 rounded-xl bg-[#111] border border-white/[0.06] relative group/card hover:border-white/[0.15] transition-colors">
-                    <div className="absolute top-4 right-4 text-green-500">
-                      <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
-                    </div>
-                    <div className="text-gray-500 text-sm mb-2 font-mono">Active Terminals</div>
-                    <div className="text-4xl font-bold text-white mb-4">1,248</div>
-                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                      <div className="h-full w-[85%] bg-indigo-500 rounded-full" />
-                    </div>
-                  </div>
+                <div className="relative z-10 flex justify-between items-start mb-12">
+                   <div>
+                      <h3 className="text-3xl font-bold text-white tracking-tight mb-2">Network Health</h3>
+                      <div className="flex items-center gap-4">
+                         <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
+                            <span className="text-xs text-gray-400">1,204 Online</span>
+                         </div>
+                         <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-amber-500" />
+                            <span className="text-xs text-gray-400">42 Syncing</span>
+                         </div>
+                      </div>
+                   </div>
+                   <div className="flex gap-4">
+                      <div className="hidden md:flex flex-col items-end">
+                         <div className="text-[10px] font-mono text-gray-600 uppercase mb-1">Response Time</div>
+                         <div className="text-sm font-bold text-indigo-400 tracking-tighter">18ms Avg.</div>
+                      </div>
+                      <Button className="rounded-full bg-white text-black font-bold h-10 px-6 hover:scale-105 transition-transform shadow-xl">
+                         Launch Dashboard
+                      </Button>
+                   </div>
+                </div>
 
-                  <div className="col-span-2 md:col-span-1 p-6 rounded-xl bg-[#111] border border-white/[0.06] hover:border-white/[0.15] transition-colors">
-                    <div className="text-gray-500 text-sm mb-2 font-mono">Bandwidth Usage</div>
-                    <div className="text-4xl font-bold text-white mb-4">4.2 <span className="text-xl text-gray-600">TB</span></div>
-                    <div className="flex items-end gap-1 h-8">
-                      {[20, 40, 30, 60, 50, 80, 40, 90, 30, 50].map((h, i) => (
-                        <div key={i} style={{ height: `${h}%` }} className="flex-1 bg-white/10 hover:bg-indigo-500 transition-colors rounded-sm" />
-                      ))}
-                    </div>
-                  </div>
+                {/* Bento Grid */}
+                <div className="grid grid-cols-12 gap-6 flex-1 min-h-0">
+                   {/* Main Analytics Card */}
+                   <div className="col-span-12 md:col-span-7 rounded-[2rem] bg-white/[0.03] border border-white/[0.08] p-8 relative overflow-hidden group/card transition-all hover:bg-white/[0.05]">
+                      <div className="absolute top-0 right-0 p-8 opacity-20 group-hover/card:opacity-40 transition-opacity">
+                         <Zap size={120} className="text-indigo-500" />
+                      </div>
+                      <div className="relative z-10">
+                         <div className="text-xs font-bold text-indigo-400 uppercase tracking-[0.3em] mb-6">Real-time Performance</div>
+                         <div className="text-6xl font-black text-white mb-2 tabular-nums tracking-tighter">99.99<span className="text-3xl text-gray-600">%</span></div>
+                         <div className="text-sm text-gray-500 font-medium mb-10">System uptime across 12 global regions</div>
+                         
+                         <div className="flex items-end gap-1.5 h-32">
+                           {[40, 60, 45, 90, 70, 85, 50, 95, 60, 75, 40, 80, 55, 90, 65, 85, 70].map((h, i) => (
+                             <motion.div 
+                               key={i}
+                               initial={{ height: 0 }}
+                               animate={{ height: `${h}%` }}
+                               transition={{ delay: i * 0.03, duration: 1, ease: "circOut" }}
+                               className="flex-1 bg-gradient-to-t from-indigo-500/20 to-indigo-500 rounded-full"
+                             />
+                           ))}
+                         </div>
+                      </div>
+                   </div>
 
-                  <div className="col-span-2 p-6 rounded-xl bg-[#111] border border-white/[0.06] hover:border-white/[0.15] transition-colors">
-                    <div className="flex justify-between mb-4">
-                      <div className="text-gray-500 text-sm font-mono">Recent Activities</div>
-                      <div className="text-xs text-indigo-400 cursor-pointer hover:underline">View all</div>
-                    </div>
-                    <div className="space-y-3">
-                      {[1,2,3].map((_, i) => (
-                        <div key={i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded bg-white/5 flex items-center justify-center text-xs font-mono text-gray-400">
-                              LOG
+                   {/* Right Side Cards */}
+                   <div className="col-span-12 md:col-span-5 flex flex-col gap-6">
+                      <div className="flex-1 rounded-[2rem] bg-white/[0.03] border border-white/[0.08] p-8 hover:bg-white/[0.05] transition-all">
+                         <div className="flex justify-between items-start mb-6">
+                            <div className="text-xs font-bold text-purple-400 uppercase tracking-widest">Active Task</div>
+                            <Clock size={16} className="text-gray-600" />
+                         </div>
+                         <div className="text-xl font-bold text-white mb-2">Winter Campaign</div>
+                         <p className="text-xs text-gray-500 mb-6">Synchronizing 4K assets to 482 terminals</p>
+                         <div className="flex items-center gap-3">
+                            <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                               <motion.div 
+                                 animate={{ x: ["-100%", "100%"] }}
+                                 transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                                 className="w-1/2 h-full bg-gradient-to-r from-transparent via-purple-500 to-transparent" 
+                               />
                             </div>
-                            <div>
-                              <div className="text-sm text-gray-200">Campaign updated</div>
-                              <div className="text-xs text-gray-600">US-East Region • 2m ago</div>
-                            </div>
-                          </div>
-                          <div className="text-xs text-gray-600 font-mono">v2.4.0</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                            <span className="text-[10px] font-mono text-purple-400 font-bold">LIVESTREAM</span>
+                         </div>
+                      </div>
+                      
+                      <div className="h-32 rounded-[2rem] bg-gradient-to-br from-indigo-600 to-purple-700 p-6 flex items-center justify-between shadow-2xl shadow-indigo-500/20 group/cta cursor-pointer hover:scale-[1.02] transition-transform">
+                         <div>
+                            <div className="text-xs font-bold text-white/60 uppercase tracking-widest mb-1">New Terminal</div>
+                            <div className="text-lg font-black text-white">Add Device</div>
+                         </div>
+                         <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white group-hover/cta:bg-white group-hover/cta:text-indigo-600 transition-all">
+                            <ArrowRight size={24} />
+                         </div>
+                      </div>
+                   </div>
                 </div>
               </div>
             </div>
