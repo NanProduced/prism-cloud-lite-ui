@@ -66,6 +66,35 @@
     "aiAssistant": "AI Assistant",
     "aiAssistantDesc": "Natural language ops for monitoring and publishing. Let AI be your expert."
   },
+  "appFeatures": {
+    "title": "More than just",
+    "titleHighlight": "Digital Signage",
+    "subtitle": "Professional infrastructure to power your global visual communication network.",
+    "security": {
+      "title": "Enterprise Security",
+      "description": "OAuth 2.0, OIDC, Single Sign-On with Google, and complete Single Logout. Your identity, your control."
+    },
+    "transcode": {
+      "title": "Smart Transcoding",
+      "description": "Automatic cloud optimization for flawless playback on any screen. Say goodbye to black screens and stuttering."
+    },
+    "editor": {
+      "title": "Visual Editor",
+      "description": "WYSIWYG layout with multi-layer support. Create stunning content with zero design skills."
+    },
+    "analytics": {
+      "title": "Real-time Analytics",
+      "description": "Track device health, CPU, memory, and storage across your fleet. Every heartbeat, monitored."
+    },
+    "developer": {
+      "title": "Developer Friendly",
+      "description": "API Keys, custom device columns, Webhooks. Fully programmable for any workflow."
+    },
+    "audit": {
+      "title": "Full Audit Trail",
+      "description": "Every command, every change, fully logged. Enterprise compliance made simple."
+    }
+  },
   "ai": {
     "sectionTitle": "Meet your Digital Admin",
     "sectionSubtitle": "A New Era of Conversational Ops",

@@ -66,6 +66,35 @@
     "aiAssistant": "AI 助手",
     "aiAssistantDesc": "自然语言对话即可完成监控、排障与发布，让 AI 成为您的运营专家。"
   },
+  "appFeatures": {
+    "title": "不止于",
+    "titleHighlight": "数字标牌",
+    "subtitle": "专业基础设施，驱动您的全球视觉传播网络。",
+    "security": {
+      "title": "企业级安全",
+      "description": "OAuth 2.0、OIDC、Google 单点登录，以及完整的单点登出。身份安全，尽在掌控。"
+    },
+    "transcode": {
+      "title": "智能转码",
+      "description": "云端自动优化编码，确保任意屏幕流畅播放。告别黑屏卡顿。"
+    },
+    "editor": {
+      "title": "可视化编辑器",
+      "description": "所见即所得，多图层排布。零基础制作精美节目。"
+    },
+    "analytics": {
+      "title": "实时分析",
+      "description": "CPU、内存、存储健康度，全网设备实时监控。每一次心跳，尽在掌握。"
+    },
+    "developer": {
+      "title": "开发者友好",
+      "description": "API Key、自定义设备列、Webhooks。完全可编程，适配任意工作流。"
+    },
+    "audit": {
+      "title": "完整审计",
+      "description": "每条指令、每次变更，完整记录。企业合规轻松达成。"
+    }
+  },
   "ai": {
     "sectionTitle": "遇见您的数字运维主管",
     "sectionSubtitle": "对话式运营新篇章",
