@@ -176,6 +176,73 @@
       "description": "Active displays"
     }
   },
+  "logoWall": {
+    "title": "Trusted by industry leaders worldwide"
+  },
+  "testimonials": {
+    "badge": "Customer Stories",
+    "title": "Loved by teams",
+    "titleHighlight": "everywhere",
+    "subtitle": "See how leading brands transform their visual communication with Prism Cloud",
+    "clients": [
+      {
+        "name": "Galeries Lafayette",
+        "industry": "Retail",
+        "quote": "Prism Cloud revolutionized our visual merchandising. Scheduling content across 50+ digital displays is now effortless, and the real-time sync ensures every store reflects our brand perfectly.",
+        "author": "Marie Dubois",
+        "role": "Visual Merchandising Director"
+      },
+      {
+        "name": "Lane Crawford",
+        "industry": "Retail",
+        "quote": "Multi-store synchronization used to be a nightmare. Now our brand messaging is perfectly aligned across all locations in Hong Kong and mainland China. The AI assistant even predicts peak traffic hours.",
+        "author": "Kevin Wong",
+        "role": "Digital Marketing Manager"
+      },
+      {
+        "name": "Hyatt",
+        "industry": "Hospitality",
+        "quote": "24/7 uptime is critical for our guest experience. Prism Cloud's reliability has exceeded our expectations—zero downtime in 18 months across our Asia-Pacific properties.",
+        "author": "James Liu",
+        "role": "IT Operations Director"
+      },
+      {
+        "name": "China Southern Airlines",
+        "industry": "Transportation",
+        "quote": "Real-time flight information updates across 200+ airport displays. Passengers always have the latest status, and our ground staff can push emergency announcements instantly.",
+        "author": "Chen Wei",
+        "role": "Airport Operations Manager"
+      },
+      {
+        "name": "Samsung",
+        "industry": "Electronics",
+        "quote": "The AI-powered content optimization has increased customer engagement by 40% in our retail displays. Prism Cloud understands our display hardware better than anyone.",
+        "author": "Park Min-jun",
+        "role": "Retail Display Manager"
+      },
+      {
+        "name": "Citibank",
+        "industry": "Banking",
+        "quote": "Security and compliance were our top concerns. Prism Cloud's enterprise-grade infrastructure and full audit trail give us complete peace of mind for our branch network.",
+        "author": "Sarah Thompson",
+        "role": "Branch Operations VP"
+      },
+      {
+        "name": "Airbnb",
+        "industry": "Hospitality",
+        "quote": "Our hosts love the easy-to-use interface. Creating welcoming digital experiences for guests has never been simpler—from check-in instructions to local recommendations.",
+        "author": "Lisa Chen",
+        "role": "Host Experience Lead"
+      },
+      {
+        "name": "China Resources",
+        "industry": "Conglomerate",
+        "quote": "Managing 500+ screens across retail, residential, and commercial properties from a single dashboard. Centralized control at its finest, with granular permissions for each business unit.",
+        "author": "Zhang Hui",
+        "role": "Facility Management Director"
+      }
+    ]
+  },
   "useCases": {
     "title": "Transforming spaces across sectors",
     "industries": "Industries",

@@ -176,6 +176,73 @@
       "description": "活跃显示屏"
     }
   },
+  "logoWall": {
+    "title": "全球行业领袖的共同选择"
+  },
+  "testimonials": {
+    "badge": "客户故事",
+    "title": "深受各行业",
+    "titleHighlight": "用户信赖",
+    "subtitle": "看看领先品牌如何使用 Prism Cloud 革新他们的视觉传播",
+    "clients": [
+      {
+        "name": "老佛爷百货",
+        "industry": "零售",
+        "quote": "Prism Cloud 彻底改变了我们的视觉陈列方式。50+ 块数字屏幕的内容排期变得轻而易举，实时同步确保每家门店都能完美呈现品牌形象。",
+        "author": "Marie Dubois",
+        "role": "视觉陈列总监"
+      },
+      {
+        "name": "连卡佛",
+        "industry": "零售",
+        "quote": "多门店内容同步曾经是噩梦。现在，我们在香港和内地的所有门店都能完美统一品牌信息。AI 助手甚至能预测客流高峰时段。",
+        "author": "Kevin Wong",
+        "role": "数字营销经理"
+      },
+      {
+        "name": "凯悦酒店",
+        "industry": "酒店",
+        "quote": "7×24 小时稳定运行对宾客体验至关重要。Prism Cloud 的可靠性超出预期——亚太区物业 18 个月零宕机。",
+        "author": "James Liu",
+        "role": "IT 运营总监"
+      },
+      {
+        "name": "南方航空",
+        "industry": "交通",
+        "quote": "200+ 块机场显示屏的航班信息实时更新，旅客随时掌握最新动态，地勤人员能在第一时间推送紧急通知。",
+        "author": "陈伟",
+        "role": "机场运营经理"
+      },
+      {
+        "name": "三星",
+        "industry": "电子",
+        "quote": "AI 驱动的内容优化让我们零售展示屏的顾客互动率提升了 40%。Prism Cloud 比任何人都更了解我们的显示硬件。",
+        "author": "Park Min-jun",
+        "role": "零售展示经理"
+      },
+      {
+        "name": "花旗银行",
+        "industry": "金融",
+        "quote": "安全与合规是我们的首要考量。Prism Cloud 的企业级基础设施和完整审计日志让我们对网点网络的管理完全放心。",
+        "author": "Sarah Thompson",
+        "role": "网点运营副总裁"
+      },
+      {
+        "name": "爱彼迎",
+        "industry": "民宿",
+        "quote": "房东们非常喜欢这个易用的界面。为房客打造温馨的数字体验从未如此简单——从入住指南到本地推荐，一应俱全。",
+        "author": "Lisa Chen",
+        "role": "房东体验负责人"
+      },
+      {
+        "name": "华润集团",
+        "industry": "综合",
+        "quote": "通过单一控制台管理零售、住宅、商业物业的 500+ 块屏幕。真正的集中管控，每个业务单元都有细粒度的权限设置。",
+        "author": "张慧",
+        "role": "设施管理总监"
+      }
+    ]
+  },
   "useCases": {
     "title": "赋能各行各业",
     "industries": "行业",
