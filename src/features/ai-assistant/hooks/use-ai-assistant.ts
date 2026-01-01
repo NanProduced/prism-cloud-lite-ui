@@ -15,7 +15,7 @@ export function useAIAssistant() {
     async onToolCall({ toolCall }) {
       const tc = toolCall as any;
       if (tc?.toolName === 'navigateToPage') {
-        const args = tc.args ?? tc.arguments ?? {};
+        const args = tc.input ?? tc.args ?? tc.arguments ?? {};
         const { path, label } = args as { path: string; label: string };
         if (path) navigate(path);
         toast.success(`已为你跳转到 ${label || path}`);

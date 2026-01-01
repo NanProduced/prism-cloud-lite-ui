@@ -95,15 +95,56 @@
       "description": "每条指令、每次变更，完整记录。企业合规轻松达成。"
     }
   },
+  "workflow": {
+    "title": "从创意到屏幕",
+    "titleHighlight": "只需4步",
+    "subtitle": "通过简化的工作流程，将内容推送至全球任意屏幕",
+    "step1": {
+      "number": "01",
+      "title": "上传素材",
+      "description": "拖拽上传视频、图片和资源，云端自动转码优化。"
+    },
+    "step2": {
+      "number": "02",
+      "title": "创建节目",
+      "description": "可视化编辑器设计精美布局，多图层支持，实时预览。"
+    },
+    "step3": {
+      "number": "03",
+      "title": "下发设备",
+      "description": "选择目标屏幕，一键发布。智能同步自动处理网络问题。"
+    },
+    "step4": {
+      "number": "04",
+      "title": "查看状态",
+      "description": "实时追踪每台设备。健康指标、播放状态，一目了然。"
+    }
+  },
   "ai": {
-    "sectionTitle": "遇见您的数字运维主管",
-    "sectionSubtitle": "对话式运营新篇章",
-    "chatPlaceholder": "帮我查一下北京分店的设备状态...",
-    "exampleQuery": "查询上海所有离线设备",
-    "exampleResponse": "为您找到 3 台离线设备，已为您标记在地图上，是否需要联系当地服务商？",
-    "feature1": "即时诊断",
-    "feature2": "批量控制",
-    "feature3": "智能建议"
+    "badge": "AI 驱动",
+    "title": "遇见你的",
+    "titleHighlight": "AI 助手",
+    "description": "Prism AI 不只是聊天机器人，它是一个智能层，能够理解你的可视化基础设施、自动排查问题，并优化整个网络的内容分发。",
+    "feature1": "实时诊断",
+    "feature1Desc": "毫秒级识别万级节点中的瓶颈，智能根因分析。",
+    "feature2": "自然语言",
+    "feature2Desc": "用语音或文字指令全球部署内容，无需技术背景。",
+    "feature3": "自动优化",
+    "feature3Desc": "基于流量和网络负载的预测性扩容，智能调度资源。",
+    "feature4": "命令自动化",
+    "feature4Desc": "无需编写代码即可编排复杂工作流，批量操作轻松搞定。",
+    "consoleTitle": "Prism AI 助手",
+    "consoleStatus": "在线",
+    "chatPlaceholder": "问我任何问题...",
+    "exampleQuery": "华南区域有没有离线的屏幕？",
+    "exampleResponse": "发现香港门店 (HK-Store-03) 有 1 台设备离线，原因：网络超时。是否尝试远程重启？",
+    "analyzing": "正在分析您的网络...",
+    "assistantLabel": "AI 分析",
+    "deviceOffline": "离线",
+    "errorType": "连接超时",
+    "restartButton": "重启",
+    "userLabel": "你",
+    "justNow": "刚刚"
   },
   "useCases": {
     "title": "赋能各行各业",

@@ -95,15 +95,56 @@
       "description": "Every command, every change, fully logged. Enterprise compliance made simple."
     }
   },
+  "workflow": {
+    "title": "From Idea to Screen",
+    "titleHighlight": "in 4 Steps",
+    "subtitle": "Deploy content to any screen worldwide with our streamlined workflow",
+    "step1": {
+      "number": "01",
+      "title": "Upload Media",
+      "description": "Drag and drop your videos, images, and assets. Auto-transcoding handles the rest."
+    },
+    "step2": {
+      "number": "02",
+      "title": "Create Program",
+      "description": "Design stunning layouts with our visual editor. Multi-layer support, real-time preview."
+    },
+    "step3": {
+      "number": "03",
+      "title": "Deploy to Devices",
+      "description": "Select target screens and publish with one click. Smart sync handles connectivity."
+    },
+    "step4": {
+      "number": "04",
+      "title": "Monitor Status",
+      "description": "Track every device in real-time. Health metrics, playback status, all at a glance."
+    }
+  },
   "ai": {
-    "sectionTitle": "Meet your Digital Admin",
-    "sectionSubtitle": "A New Era of Conversational Ops",
-    "chatPlaceholder": "Check device status in New York...",
-    "exampleQuery": "Find all offline screens",
-    "exampleResponse": "Found 3 offline devices. I've marked them on the map. Should I notify the maintenance team?",
-    "feature1": "Instant Diagnostics",
-    "feature2": "Batch Control",
-    "feature3": "Smart Insights"
+    "badge": "AI-Powered",
+    "title": "Meet your",
+    "titleHighlight": "AI Co-pilot",
+    "description": "Prism AI is more than a chatbot. It's an intelligent layer that understands your visual infrastructure, automates troubleshooting, and optimizes content delivery across your entire network.",
+    "feature1": "Real-time Diagnosis",
+    "feature1Desc": "Identify bottlenecks across 10,000+ nodes in milliseconds with intelligent root cause analysis.",
+    "feature2": "Natural Language",
+    "feature2Desc": "Deploy campaigns globally with simple voice or text commands. No technical expertise needed.",
+    "feature3": "Auto-optimization",
+    "feature3Desc": "Predictive scaling based on audience traffic patterns and network load conditions.",
+    "feature4": "Command Automation",
+    "feature4Desc": "Script complex workflows without writing code. Batch operations made simple.",
+    "consoleTitle": "Prism AI Assistant",
+    "consoleStatus": "Online",
+    "chatPlaceholder": "Ask Prism anything...",
+    "exampleQuery": "Are there any offline screens in the Southeast region?",
+    "exampleResponse": "Found 1 offline device in Hong Kong (HK-Store-03). Root cause: network timeout. Should I attempt a remote restart?",
+    "analyzing": "Analyzing your network...",
+    "assistantLabel": "AI Analysis",
+    "deviceOffline": "Offline",
+    "errorType": "Connection Timeout",
+    "restartButton": "Restart",
+    "userLabel": "You",
+    "justNow": "Just now"
   },
   "useCases": {
     "title": "Transforming spaces across sectors",

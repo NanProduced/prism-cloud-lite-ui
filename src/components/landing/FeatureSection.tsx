@@ -1,311 +1,388 @@
-import React, { useRef } from "react";
-import { motion, useScroll, useTransform, useSpring } from "framer-motion";
-import { 
-  ArrowRight, 
-  Cpu, 
-  CheckCircle, 
-  Zap, 
-  Layout, 
-  Play, 
-  Clock, 
-  ShieldCheck,
+import React from "react";
+import { motion } from "framer-motion";
+import {
+  Upload,
+  Layout,
+  Send,
+  Activity,
+  ChevronRight,
+  File,
+  Image,
   Video,
+  Check,
+  Layers,
+  Play,
   Monitor,
-  Layers
+  Wifi,
+  WifiOff
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { FadeIn } from "@/components/ui/FadeIn";
 
-const features = [
-  {
-    id: "transcode",
-    title: "Smart Transcoding",
-    highlight: "Zero-config playback",
-    description: "Our cloud-native encoding engine automatically optimizes every asset for your target hardware. No more manual conversions or codec errors.",
-    tags: ["4K Support", "Auto-bitrate", "H.265/HEVC"],
-    color: "indigo",
-    icon: Cpu,
-  },
-  {
-    id: "editor",
-    title: "Visual Editor",
-    highlight: "Drag. Drop. Publish.",
-    description: "Design stunning digital signage programs in minutes with our intuitive multi-layer editor. Built-in templates and real-time canvas preview.",
-    tags: ["Multi-layer", "Keyframes", "Asset Library"],
-    color: "purple",
-    icon: Layout,
-  },
-  {
-    id: "sync",
-    title: "Resilient Sync",
-    highlight: "Offline-first reliability",
-    description: "Content is synchronized to edge nodes globally. Your screens keep playing even if the internet goes down, with smart bandwidth management.",
-    tags: ["Edge Caching", "Bandwidth Control", "Delta Sync"],
-    color: "emerald",
-    icon: Zap,
-  }
-];
+// ========== Step UI Mockups ==========
+
+// Step 1: Upload Media Interface
+const UploadMockup = () => (
+  <div className="w-full">
+    <div className="bg-neutral-900/80 rounded-xl border border-white/[0.06] p-4 space-y-3">
+      {/* Drag & Drop Zone */}
+      <div className="border-2 border-dashed border-cyan-500/30 bg-cyan-500/5 rounded-lg p-4 text-center">
+        <Upload className="w-6 h-6 text-cyan-400 mx-auto mb-2" />
+        <div className="text-[10px] text-cyan-400/80">Drop files here</div>
+      </div>
+
+      {/* File List */}
+      <div className="space-y-2">
+        {[
+          { name: "promo_4k.mp4", icon: Video, size: "128MB", status: "done" },
+          { name: "banner.png", icon: Image, size: "2.4MB", status: "done" },
+          { name: "slides.pdf", icon: File, size: "8.1MB", status: "uploading" },
+        ].map((file, i) => (
+          <div key={i} className="flex items-center gap-2 bg-neutral-800/50 rounded-lg px-3 py-2">
+            <file.icon className="w-3.5 h-3.5 text-neutral-500" />
+            <span className="text-[10px] text-neutral-300 flex-1 truncate">{file.name}</span>
+            <span className="text-[9px] text-neutral-600">{file.size}</span>
+            {file.status === "done" ? (
+              <Check className="w-3 h-3 text-emerald-500" />
+            ) : (
+              <div className="w-3 h-3 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin" />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+// Step 2: Create Program Interface
+const EditorMockup = () => (
+  <div className="w-full">
+    <div className="bg-neutral-900/80 rounded-xl border border-white/[0.06] overflow-hidden">
+      {/* Toolbar */}
+      <div className="flex items-center gap-1 px-3 py-2 border-b border-white/[0.06] bg-white/[0.02]">
+        <div className="flex gap-1">
+          {["T", "□", "○", "▷"].map((icon, i) => (
+            <div key={i} className={cn(
+              "w-5 h-5 rounded flex items-center justify-center text-[9px]",
+              i === 3 ? "bg-purple-500/20 text-purple-400" : "text-neutral-500"
+            )}>
+              {icon}
+            </div>
+          ))}
+        </div>
+        <div className="flex-1" />
+        <div className="flex gap-1">
+          <Layers className="w-3.5 h-3.5 text-neutral-500" />
+          <span className="text-[9px] text-neutral-500">3 layers</span>
+        </div>
+      </div>
+
+      {/* Canvas Preview */}
+      <div className="p-3">
+        <div className="aspect-video bg-neutral-950 rounded-lg border border-white/[0.04] relative overflow-hidden">
+          {/* Grid dots */}
+          <div className="absolute inset-0 opacity-20" style={{
+            backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
+            backgroundSize: '16px 16px'
+          }} />
+
+          {/* Video layer */}
+          <div className="absolute inset-2 border border-purple-500/30 bg-purple-500/10 rounded flex items-center justify-center">
+            <Play className="w-6 h-6 text-purple-400/50" />
+          </div>
+
+          {/* Text overlay */}
+          <div className="absolute bottom-3 left-3 right-3">
+            <div className="bg-black/60 backdrop-blur-sm rounded px-2 py-1">
+              <div className="h-1.5 w-16 bg-white/40 rounded mb-1" />
+              <div className="h-1 w-24 bg-white/20 rounded" />
+            </div>
+          </div>
+        </div>
+
+        {/* Timeline */}
+        <div className="mt-2 h-4 bg-neutral-800 rounded-full overflow-hidden flex items-center px-1">
+          <div className="h-2 w-1/3 bg-purple-500/60 rounded-full" />
+          <div className="w-0.5 h-3 bg-white ml-1" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// Step 3: Deploy to Devices Interface
+const DeployMockup = () => (
+  <div className="w-full">
+    <div className="bg-neutral-900/80 rounded-xl border border-white/[0.06] p-4 space-y-3">
+      {/* Device Selection */}
+      <div className="space-y-2">
+        {[
+          { name: "Lobby-Screen-01", online: true, selected: true },
+          { name: "Entrance-Display", online: true, selected: true },
+          { name: "Meeting-Room-A", online: false, selected: false },
+        ].map((device, i) => (
+          <div key={i} className={cn(
+            "flex items-center gap-3 rounded-lg px-3 py-2 transition-colors",
+            device.selected ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-neutral-800/50"
+          )}>
+            <div className={cn(
+              "w-4 h-4 rounded border-2 flex items-center justify-center",
+              device.selected ? "border-emerald-500 bg-emerald-500" : "border-neutral-600"
+            )}>
+              {device.selected && <Check className="w-2.5 h-2.5 text-white" />}
+            </div>
+            <Monitor className="w-3.5 h-3.5 text-neutral-500" />
+            <span className="text-[10px] text-neutral-300 flex-1">{device.name}</span>
+            {device.online ? (
+              <Wifi className="w-3 h-3 text-emerald-500" />
+            ) : (
+              <WifiOff className="w-3 h-3 text-neutral-600" />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Publish Button */}
+      <button className="w-full py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2">
+        <Send className="w-3.5 h-3.5 text-white" />
+        <span className="text-xs font-medium text-white">Publish</span>
+      </button>
+    </div>
+  </div>
+);
+
+// Step 4: Monitor Status Interface
+const MonitorMockup = () => (
+  <div className="w-full">
+    <div className="bg-neutral-900/80 rounded-xl border border-white/[0.06] p-4 space-y-3">
+      {/* Status Overview */}
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { label: "Online", value: "12", color: "text-emerald-400", bg: "bg-emerald-500/10" },
+          { label: "Offline", value: "1", color: "text-neutral-500", bg: "bg-neutral-800" },
+          { label: "Playing", value: "11", color: "text-amber-400", bg: "bg-amber-500/10" },
+        ].map((stat, i) => (
+          <div key={i} className={cn("rounded-lg p-2 text-center", stat.bg)}>
+            <div className={cn("text-lg font-semibold", stat.color)}>{stat.value}</div>
+            <div className="text-[9px] text-neutral-500">{stat.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Live Activity */}
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2">
+          <Activity className="w-3 h-3 text-amber-400" />
+          <span className="text-[10px] text-neutral-400">Live Activity</span>
+        </div>
+        <div className="flex items-end gap-0.5 h-8">
+          {[30, 45, 35, 60, 50, 70, 45, 55, 65, 40, 75, 50].map((h, i) => (
+            <div
+              key={i}
+              className="flex-1 bg-gradient-to-t from-amber-500/60 to-amber-500/20 rounded-t"
+              style={{ height: `${h}%` }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// ========== Step Card Component ==========
+
+interface WorkflowStepProps {
+  number: string;
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  color: string;
+  mockup: React.ReactNode;
+  delay: number;
+  isLast?: boolean;
+}
+
+const WorkflowStep = ({
+  number,
+  title,
+  description,
+  icon: Icon,
+  color,
+  mockup,
+  delay,
+  isLast
+}: WorkflowStepProps) => {
+  const colorClasses = {
+    cyan: {
+      number: "text-cyan-400",
+      icon: "bg-cyan-500/10 border-cyan-500/20 text-cyan-400",
+      glow: "bg-cyan-500",
+    },
+    purple: {
+      number: "text-purple-400",
+      icon: "bg-purple-500/10 border-purple-500/20 text-purple-400",
+      glow: "bg-purple-500",
+    },
+    emerald: {
+      number: "text-emerald-400",
+      icon: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
+      glow: "bg-emerald-500",
+    },
+    amber: {
+      number: "text-amber-400",
+      icon: "bg-amber-500/10 border-amber-500/20 text-amber-400",
+      glow: "bg-amber-500",
+    },
+  }[color] || colorClasses.cyan;
+
+  return (
+    <FadeIn delay={delay} className="relative group">
+      {/* Connection Arrow (hidden on last item and mobile) */}
+      {!isLast && (
+        <div className="hidden lg:flex absolute -right-4 top-16 z-10 items-center">
+          <div className="w-8 h-px bg-gradient-to-r from-white/20 to-transparent" />
+          <ChevronRight className="w-4 h-4 text-white/20 -ml-1" />
+        </div>
+      )}
+
+      <div className={cn(
+        "relative h-full flex flex-col overflow-hidden rounded-2xl",
+        "bg-[#0a0a0a] border border-white/[0.06]",
+        "transition-all duration-300",
+        "hover:border-white/[0.12] hover:-translate-y-1"
+      )}>
+        {/* Step Number & Icon Header */}
+        <div className="p-6 pb-4">
+          <div className="flex items-start justify-between mb-4">
+            <span className={cn("text-4xl font-bold tracking-tighter opacity-50", colorClasses.number)}>
+              {number}
+            </span>
+            <div className={cn(
+              "w-10 h-10 rounded-xl flex items-center justify-center border",
+              colorClasses.icon
+            )}>
+              <Icon className="w-5 h-5" />
+            </div>
+          </div>
+
+          <h3 className="text-lg font-semibold text-white mb-2 tracking-tight">
+            {title}
+          </h3>
+          <p className="text-neutral-400 text-sm leading-relaxed">
+            {description}
+          </p>
+        </div>
+
+        {/* Mockup - Bottom */}
+        <div className="mt-auto px-4 pb-4">
+          {mockup}
+        </div>
+
+        {/* Subtle glow effect on hover */}
+        <div className={cn(
+          "absolute -bottom-20 left-1/2 -translate-x-1/2 w-40 h-40 rounded-full blur-[80px] opacity-0 group-hover:opacity-20 transition-opacity duration-500",
+          colorClasses.glow
+        )} />
+      </div>
+    </FadeIn>
+  );
+};
+
+// ========== Main Component ==========
 
 export const FeatureSection = () => {
   const { t } = useTranslation();
 
+  const steps = [
+    {
+      number: t("workflow.step1.number"),
+      title: t("workflow.step1.title"),
+      description: t("workflow.step1.description"),
+      icon: Upload,
+      color: "cyan",
+      mockup: <UploadMockup />,
+    },
+    {
+      number: t("workflow.step2.number"),
+      title: t("workflow.step2.title"),
+      description: t("workflow.step2.description"),
+      icon: Layout,
+      color: "purple",
+      mockup: <EditorMockup />,
+    },
+    {
+      number: t("workflow.step3.number"),
+      title: t("workflow.step3.title"),
+      description: t("workflow.step3.description"),
+      icon: Send,
+      color: "emerald",
+      mockup: <DeployMockup />,
+    },
+    {
+      number: t("workflow.step4.number"),
+      title: t("workflow.step4.title"),
+      description: t("workflow.step4.description"),
+      icon: Activity,
+      color: "amber",
+      mockup: <MonitorMockup />,
+    },
+  ];
+
   return (
-    <section id="features" className="py-24 md:py-48 relative bg-black overflow-hidden">
-      {/* Background decoration */}
+    <section id="workflow" className="py-32 relative bg-black overflow-hidden">
+      {/* Top border line */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-      
+
       <div className="container mx-auto px-6">
-        <div className="max-w-4xl mx-auto text-center mb-32">
+        {/* Section Header */}
+        <div className="max-w-3xl mx-auto text-center mb-20">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest mb-8"
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/[0.08] text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-6"
           >
-            <Zap size={12} />
-            <span>Enterprise Infrastructure</span>
+            <Activity size={12} className="text-amber-400" />
+            <span>Workflow</span>
           </motion.div>
-          
-          <motion.h2 
+
+          <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
-            className="text-5xl md:text-7xl font-bold text-white tracking-tight mb-8"
+            className="text-4xl md:text-6xl font-bold text-white tracking-tight mb-6"
           >
-            Built for <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-white to-purple-400">Scale</span>. <br className="hidden md:block" />
-            Designed for <span className="text-white/40">Simplicity</span>.
+            {t("workflow.title")} <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-amber-400">
+              {t("workflow.titleHighlight")}
+            </span>
           </motion.h2>
-          
+
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.2 }}
-            className="text-xl text-gray-500 max-w-2xl mx-auto font-medium"
+            className="text-lg text-gray-500 max-w-2xl mx-auto"
           >
-            Prism Cloud Lite eliminates the complexity of global content distribution, 
-            letting you focus on the message, not the middleware.
+            {t("workflow.subtitle")}
           </motion.p>
         </div>
 
-        <div className="space-y-40 md:space-y-64">
-          {features.map((feature, index) => (
-            <FeatureBlock key={feature.id} feature={feature} index={index} />
+        {/* Workflow Steps Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+          {steps.map((step, index) => (
+            <WorkflowStep
+              key={step.number}
+              {...step}
+              delay={index * 0.1}
+              isLast={index === steps.length - 1}
+            />
           ))}
         </div>
       </div>
     </section>
   );
 };
-
-const FeatureBlock = ({ feature, index }: { feature: any, index: number }) => {
-  const isEven = index % 2 === 0;
-
-  return (
-    <div className={cn(
-      "flex flex-col lg:flex-row items-center gap-16 lg:gap-32",
-      !isEven && "lg:flex-row-reverse"
-    )}>
-      {/* Text Content */}
-      <div className="flex-1 space-y-8">
-        <motion.div
-          initial={{ opacity: 0, x: isEven ? -20 : 20 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          className="space-y-6"
-        >
-          <div className={cn(
-            "w-12 h-12 rounded-2xl flex items-center justify-center border shadow-lg",
-            feature.color === 'indigo' && "bg-indigo-500/10 border-indigo-500/20 text-indigo-400",
-            feature.color === 'purple' && "bg-purple-500/10 border-purple-500/20 text-purple-400",
-            feature.color === 'emerald' && "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-          )}>
-            <feature.icon size={24} />
-          </div>
-          
-          <h3 className="text-4xl md:text-5xl font-bold text-white tracking-tight">
-            {feature.title} <br />
-            <span className="text-white/30">{feature.highlight}</span>
-          </h3>
-          
-          <p className="text-lg text-gray-500 leading-relaxed font-medium">
-            {feature.description}
-          </p>
-          
-          <div className="flex flex-wrap gap-2">
-            {feature.tags.map((tag: string) => (
-              <span key={tag} className="px-3 py-1 rounded-full bg-white/[0.03] border border-white/[0.08] text-white/50 text-[10px] font-bold uppercase tracking-wider">
-                {tag}
-              </span>
-            ))}
-          </div>
-
-          <div className="pt-4">
-            <button className="flex items-center gap-2 text-white font-bold group">
-               Documentation <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Visual Mockup */}
-      <div className="flex-1 w-full perspective-1000">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, rotateY: isEven ? 5 : -5 }}
-          whileInView={{ opacity: 1, scale: 1, rotateY: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          className="relative group"
-        >
-          {/* Background Glow */}
-          <div className={cn(
-            "absolute -inset-4 blur-3xl opacity-20 group-hover:opacity-30 transition-opacity rounded-[3rem]",
-            feature.color === 'indigo' && "bg-indigo-500",
-            feature.color === 'purple' && "bg-purple-500",
-            feature.color === 'emerald' && "bg-emerald-500"
-          )} />
-          
-          <div className="relative bg-[#080808] rounded-[2rem] border border-white/[0.08] shadow-2xl overflow-hidden aspect-[4/3] flex flex-col">
-            {/* Window Chrome */}
-            <div className="h-10 border-b border-white/[0.05] bg-white/[0.02] flex items-center px-6 justify-between">
-              <div className="flex gap-2">
-                <div className="w-2 h-2 rounded-full bg-white/10" />
-                <div className="w-2 h-2 rounded-full bg-white/10" />
-                <div className="w-2 h-2 rounded-full bg-white/10" />
-              </div>
-              <span className="text-[9px] font-mono text-gray-600 uppercase tracking-widest">{feature.id}.prism.service</span>
-            </div>
-
-            <div className="flex-1 p-6 flex flex-col">
-              {feature.id === 'transcode' && <TranscodeVisual />}
-              {feature.id === 'editor' && <EditorVisual />}
-              {feature.id === 'sync' && <SyncVisual />}
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    </div>
-  );
-};
-
-const TranscodeVisual = () => (
-  <div className="space-y-6 flex-1 flex flex-col justify-center">
-    {[
-      { name: "Global_Keynote.mkv", progress: 92, status: "Transcoding", size: "1.2GB" },
-      { name: "Product_Showcase_4K.mov", progress: 100, status: "Optimized", size: "850MB" },
-      { name: "Winter_Campaign.mp4", progress: 100, status: "Ready", size: "420MB" }
-    ].map((item, i) => (
-      <div key={i} className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.05] flex items-center gap-4 relative overflow-hidden group/item">
-        {item.progress < 100 && (
-          <motion.div 
-            initial={{ left: "-100%" }}
-            animate={{ left: "0%" }}
-            className="absolute top-0 bottom-0 left-0 w-1 bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" 
-          />
-        )}
-        <div className="w-10 h-10 rounded bg-black border border-white/10 flex items-center justify-center text-[10px] font-bold text-gray-500">
-          {item.name.split('.').pop()?.toUpperCase()}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex justify-between items-end mb-2">
-            <span className="text-xs font-bold text-white truncate">{item.name}</span>
-            <span className="text-[10px] font-mono text-indigo-400">{item.progress}%</span>
-          </div>
-          <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-             <div style={{ width: `${item.progress}%` }} className={cn("h-full rounded-full transition-all duration-1000", item.progress === 100 ? "bg-emerald-500/50" : "bg-indigo-500")} />
-          </div>
-        </div>
-        {item.progress === 100 && <CheckCircle size={14} className="text-emerald-500 ml-2" />}
-      </div>
-    ))}
-  </div>
-);
-
-const EditorVisual = () => (
-  <div className="flex-1 bg-black/40 rounded-xl border border-white/5 overflow-hidden flex flex-col">
-    <div className="h-8 bg-white/5 border-b border-white/5 px-4 flex items-center gap-4">
-       <Layout size={12} className="text-purple-400" />
-       <div className="flex gap-1">
-         {[1,2,3].map(i => <div key={i} className="w-12 h-1 bg-white/10 rounded-full" />)}
-       </div>
-    </div>
-    <div className="flex-1 flex p-4 gap-4">
-      <div className="w-12 flex flex-col gap-3 pt-2">
-        {[ImageIcon, Video, Layers, Monitor].map((Icon, i) => (
-          <div key={i} className={cn("w-8 h-8 rounded-lg flex items-center justify-center", i === 0 ? "bg-purple-500 text-white shadow-lg shadow-purple-500/20" : "text-gray-600")}>
-            <Icon size={14} />
-          </div>
-        ))}
-      </div>
-      <div className="flex-1 bg-[#050505] rounded-lg border border-white/5 relative overflow-hidden group/canvas shadow-inner">
-         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-         <motion.div 
-           initial={{ scale: 0.8, opacity: 0 }}
-           whileInView={{ scale: 1, opacity: 1 }}
-           className="absolute inset-8 border border-purple-500 bg-purple-500/10 flex items-center justify-center"
-         >
-            <Play size={32} className="text-purple-400 opacity-50" />
-            <div className="absolute -top-1 -left-1 w-2 h-2 bg-purple-500" />
-            <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-500" />
-            <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-purple-500" />
-            <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-purple-500" />
-            <div className="absolute top-full mt-2 left-0 right-0 flex justify-center">
-              <span className="px-2 py-0.5 rounded bg-purple-500 text-[8px] font-bold text-white uppercase tracking-widest">Video Layer</span>
-            </div>
-         </motion.div>
-      </div>
-    </div>
-  </div>
-);
-
-const SyncVisual = () => (
-  <div className="flex-1 flex flex-col justify-center items-center p-4">
-    <div className="relative w-full max-w-sm aspect-video">
-       {/* Central Hub */}
-       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center z-10">
-          <Zap size={32} className="text-emerald-400" />
-          <div className="absolute inset-0 bg-emerald-400 blur-xl opacity-20 animate-pulse" />
-       </div>
-
-       {/* Orbiting Nodes */}
-       {[0, 72, 144, 216, 288].map((deg, i) => (
-         <motion.div
-           key={i}
-           animate={{ rotate: 360 }}
-           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-           className="absolute inset-0 pointer-events-none"
-         >
-            <div 
-              style={{ transform: `rotate(${deg}deg) translateX(100px) rotate(-${deg}deg)` }}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-            >
-               <div className="w-8 h-8 rounded-lg bg-white/[0.03] border border-white/10 flex items-center justify-center">
-                  <Monitor size={14} className="text-gray-500" />
-               </div>
-               {/* Pulse line to hub */}
-               <div className="absolute left-1/2 top-1/2 w-[100px] h-px bg-gradient-to-r from-emerald-500/40 to-transparent -translate-x-full origin-right" />
-            </div>
-         </motion.div>
-       ))}
-    </div>
-    <div className="mt-8 grid grid-cols-2 gap-4 w-full">
-       <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-          <div className="text-[8px] font-bold text-gray-600 uppercase mb-1">Success Rate</div>
-          <div className="text-sm font-bold text-white">99.98%</div>
-       </div>
-       <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-          <div className="text-[8px] font-bold text-gray-600 uppercase mb-1">Global Latency</div>
-          <div className="text-sm font-bold text-emerald-400">14ms</div>
-       </div>
-    </div>
-  </div>
-);
-
-const ImageIcon = ({ size, className }: { size: number, className: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-    <circle cx="9" cy="9" r="2" />
-    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-  </svg>
-);
