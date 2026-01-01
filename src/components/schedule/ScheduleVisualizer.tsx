@@ -13,6 +13,8 @@ import { COMMAND_TYPE_CONFIG, DEFAULT_COMMAND_TYPE_INFO } from "@/lib/schedule/c
 interface ScheduleVisualizerProps {
   rules: any[] // ScheduleContentsRuleResp
   commandRules?: any[] // ScheduleCommandRuleResp
+  programsMap?: Record<string, any>
+  onTabChange?: (tab: 'programs' | 'commands') => void
   className?: string
 }
 
@@ -25,6 +27,7 @@ interface TimelineBlock {
   color: string
   rule: any
   icon?: React.ReactNode
+  timeLabel?: string
 }
 
 interface ActiveRule {
@@ -247,7 +250,8 @@ function computeTimeline(date: Date, rules: any[], commandRules: any[] = []): Ti
         type: rule.type,
         priority: rule.priority,
         color: rule.type === 'spot' ? 'bg-rose-500' : 'bg-blue-500',
-        rule: rule
+        rule: rule,
+        timeLabel: `${slot.start.slice(0, 5)} - ${slot.end.slice(0, 5)}`
       })
     }
   }
@@ -291,7 +295,8 @@ function computeTimeline(date: Date, rules: any[], commandRules: any[] = []): Ti
         priority: 999,
         color: 'bg-yellow-500',
         rule: rule,
-        icon: <div className="h-2 w-2 rounded-full bg-yellow-400 ring-1 ring-white" />
+        icon: <div className="h-2 w-2 rounded-full bg-yellow-400 ring-1 ring-white" />,
+        timeLabel: t.slice(0, 5)
       })
     }
   }
@@ -312,7 +317,7 @@ function normalizeTimeSlot(slot: Record<string, unknown>): { start: string; end:
   return { start, end }
 }
 
-export function ScheduleVisualizer({ rules, commandRules = [], className }: ScheduleVisualizerProps) {
+export function ScheduleVisualizer({ rules, commandRules = [], programsMap = {}, onTabChange, className }: ScheduleVisualizerProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list')
@@ -421,59 +426,63 @@ export function ScheduleVisualizer({ rules, commandRules = [], className }: Sche
               {/* Program Rules Section */}
               {activeRules.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Programs</h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground tracking-wide">Programs</h4>
                   <div className="space-y-2">
-                    {activeRules.map((r) => (
-                      <div
-                        key={r.id}
-                        className={cn(
-                          "p-3 rounded-lg border transition-colors",
-                          r.isActiveToday
-                            ? "bg-card border-border"
-                            : "bg-muted/30 border-transparent opacity-50"
-                        )}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className={cn(
-                                "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium",
-                                r.type === 'spot'
-                                  ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300"
-                                  : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                              )}>
-                                {r.type === 'spot' ? 'Spot' : 'Rotation'}
-                              </span>
-                              <span className="text-xs text-muted-foreground">Priority {r.priority}</span>
-                              {r.version != null && (
-                                <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">v{r.version}</span>
-                              )}
-                              {!r.isActiveToday && (
-                                <span className="text-xs text-amber-600 dark:text-amber-400">Not active today</span>
-                              )}
-                            </div>
-                            <p className="text-sm font-medium mt-1 truncate">{r.programName}</p>
-                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                              {r.timeSlots.map((slot, i) => (
-                                <span key={i} className="inline-flex items-center gap-1 rounded-md bg-violet-50 dark:bg-violet-900/20 px-2 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
-                                  <Clock className="h-3 w-3 opacity-60" /> {slot}
+                    {activeRules.map((r) => {
+                      const programInfo = r.rule.programId ? programsMap[r.rule.programId] : null;
+                      const displayName = programInfo?.name || r.programName;
+                      return (
+                        <div
+                          key={r.id}
+                          className={cn(
+                            "p-3 rounded-lg border transition-colors",
+                            r.isActiveToday
+                              ? "bg-card border-border"
+                              : "bg-muted/30 border-transparent opacity-50"
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={cn(
+                                  "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium",
+                                  r.type === 'spot'
+                                    ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300"
+                                    : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                                )}>
+                                  {r.type === 'spot' ? 'Spot' : 'Rotation'}
                                 </span>
-                              ))}
-                              {r.rule.ifLimitWeekday && r.rule.limitWeekday && (
-                                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                                  <Calendar className="h-3 w-3 opacity-60" /> {formatWeekdaySelection(weekdayBooleanToIndices(r.rule.limitWeekday))}
-                                </span>
-                              )}
-                              {r.rule.ifLimitDate && r.rule.limitDate && (
-                                <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
-                                  <CalendarDays className="h-3 w-3 opacity-60" /> {formatDateRange(r.rule.limitDate.start, r.rule.limitDate.end)}
-                                </span>
-                              )}
+                                <span className="text-xs text-muted-foreground">Priority {r.priority}</span>
+                                {r.version != null && (
+                                  <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">v{r.version}</span>
+                                )}
+                                {!r.isActiveToday && (
+                                  <span className="text-xs text-amber-600 dark:text-amber-400">Not active today</span>
+                                )}
+                              </div>
+                              <p className="text-sm font-medium mt-1 truncate">{displayName}</p>
+                              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                {r.timeSlots.map((slot, i) => (
+                                  <span key={i} className="inline-flex items-center gap-1 rounded-md bg-violet-50 dark:bg-violet-900/20 px-2 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
+                                    <Clock className="h-3 w-3 opacity-60" /> {slot}
+                                  </span>
+                                ))}
+                                {r.rule.ifLimitWeekday && r.rule.limitWeekday && (
+                                  <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                                    <Calendar className="h-3 w-3 opacity-60" /> {formatWeekdaySelection(weekdayBooleanToIndices(r.rule.limitWeekday))}
+                                  </span>
+                                )}
+                                {r.rule.ifLimitDate && r.rule.limitDate && (
+                                  <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                    <CalendarDays className="h-3 w-3 opacity-60" /> {formatDateRange(r.rule.limitDate.start, r.rule.limitDate.end)}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -481,7 +490,7 @@ export function ScheduleVisualizer({ rules, commandRules = [], className }: Sche
               {/* Command Rules Section */}
               {activeCommands.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Commands</h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground tracking-wide">Commands</h4>
                   <div className="space-y-2">
                     {activeCommands.map((c) => {
                       const typeInfo = COMMAND_TYPE_CONFIG[c.actionType] || DEFAULT_COMMAND_TYPE_INFO
@@ -549,13 +558,15 @@ export function ScheduleVisualizer({ rules, commandRules = [], className }: Sche
                     </div>
                   ) : (
                     timelineBlocks.map(block => {
-                      const programName = block.rule?.deviceTitleSnapshot || block.rule?.programName || ''
+                      const programInfo = block.rule?.programId ? programsMap[block.rule.programId] : null;
+                      const programName = programInfo?.name || block.rule?.deviceTitleSnapshot || block.rule?.programName || '';
                       const isWideEnough = block.widthPercent > 8
                       return (
                         <Tooltip key={block.id}>
                           <TooltipTrigger asChild>
                             <div
                               style={{ left: `${block.startPercent}%`, width: `${Math.max(block.widthPercent, 0.5)}%` }}
+                              onClick={() => onTabChange?.(block.type === 'command' ? 'commands' : 'programs')}
                               className={cn(
                                 "absolute top-2 bottom-2 rounded-md transition-all hover:brightness-110 cursor-pointer border border-white/20 z-10 overflow-hidden",
                                 block.color,
@@ -576,12 +587,18 @@ export function ScheduleVisualizer({ rules, commandRules = [], className }: Sche
                           <TooltipContent className="max-w-xs">
                             {block.type === 'command' ? (
                               <div className="text-xs space-y-1">
-                                <p className="font-semibold">Command Rule</p>
+                                <div className="flex items-center justify-between gap-4">
+                                  <p className="font-semibold">Command Rule</p>
+                                  <span className="font-mono text-[10px] bg-primary/10 text-primary px-1 rounded">{block.timeLabel}</span>
+                                </div>
                                 <p className="text-muted-foreground">Click to view in Commands tab</p>
                               </div>
                             ) : (
                               <div className="text-xs space-y-1">
-                                <p className="font-semibold">{programName || 'Untitled Program'}</p>
+                                <div className="flex items-center justify-between gap-4">
+                                  <p className="font-semibold truncate max-w-[140px]">{programName || 'Untitled Program'}</p>
+                                  <span className="font-mono text-[10px] bg-primary/10 text-primary px-1 rounded whitespace-nowrap">{block.timeLabel}</span>
+                                </div>
                                 <div className="flex items-center gap-2">
                                   <span className={cn(
                                     "px-1.5 py-0.5 rounded text-[10px] font-medium",

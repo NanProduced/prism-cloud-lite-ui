@@ -26,12 +26,17 @@ import { cn } from '@/lib/utils';
 
 import {
   deleteSchedule,
-  getScheduleBindings,
   getScheduleDetails,
   pushScheduleToDevices,
   unbindDeviceFromSchedule,
   updateSchedule,
 } from '@/services/scheduleApi';
+import { getDevicesByIds } from '@/services/deviceApi';
+import {
+  getPrograms,
+  getProgramDetails,
+  getProgramsByIds,
+} from '@/services/programApi';
 import {
   formatWeekdaySelection,
   formatTimeRange,
@@ -53,8 +58,9 @@ import { ScheduleCommandRuleSheet } from './ScheduleCommandRuleSheet';
 import { ScheduleVisualizer } from '@/components/schedule/ScheduleVisualizer';
 import { ScheduleOnboarding } from '@/components/schedule/ScheduleOnboarding';
 import { useBreadcrumbStore } from '@/store/breadcrumbStore';
+import type { BffResponse } from '@/types/auth';
 
-function getBffDisplayError(res: { error?: { displayMessage?: string; message?: string } } | null | undefined): string {
+function getBffDisplayError(res: BffResponse<any> | null | undefined): string {
   return res?.error?.displayMessage || res?.error?.message || 'Request failed';
 }
 
@@ -70,7 +76,7 @@ function summarizeLimits(rule: ScheduleContentsRuleResp): RuleSummaryParts {
   // Time formatting
   if (rule.ifLimitTime && rule.limitTime) {
     const timeSlots = Array.isArray(rule.limitTime) ? rule.limitTime : [rule.limitTime];
-    const formatted = timeSlots
+    const formatted = (timeSlots as any[])
       .map((slot: { start?: string; end?: string }) => formatTimeRange(slot.start, slot.end))
       .filter((s: string) => s !== '—');
     if (formatted.length > 0) {
@@ -236,14 +242,43 @@ export default function ScheduleDetailPage() {
     enabled: Boolean(scheduleId),
   });
 
+  const schedule = scheduleQuery.data?.data;
+
   const bindingsQuery = useQuery({
-    queryKey: ['schedule-bindings', scheduleId],
-    queryFn: () => getScheduleBindings(scheduleId),
-    enabled: Boolean(scheduleId),
+    queryKey: ['schedule-bindings', scheduleId, schedule?.boundDeviceIds],
+    queryFn: async () => {
+      if (!schedule?.boundDeviceIds || schedule.boundDeviceIds.length === 0) return [];
+      const res = await getDevicesByIds(schedule.boundDeviceIds);
+      return res.data || [];
+    },
+    enabled: Boolean(scheduleId) && Boolean(schedule?.boundDeviceIds),
   });
 
-  const schedule = scheduleQuery.data?.data;
-  const bindings = bindingsQuery.data?.data || [];
+  const bindings = bindingsQuery.data || [];
+
+  const programIdsUsed = useMemo(() => {
+    const ids = new Set<string>();
+    (schedule?.contentsRules || []).forEach(r => {
+      if (r.programId) ids.add(r.programId);
+    });
+    return Array.from(ids);
+  }, [schedule?.contentsRules]);
+
+  const programsMapQuery = useQuery({
+    queryKey: ['schedule-programs', programIdsUsed],
+    queryFn: async () => {
+      if (programIdsUsed.length === 0) return {};
+      const res = await getProgramsByIds(programIdsUsed);
+      const map: Record<string, any> = {};
+      (res.data || []).forEach(p => {
+        map[p.id] = p;
+      });
+      return map;
+    },
+    enabled: programIdsUsed.length > 0,
+  });
+
+  const programsMap = programsMapQuery.data || {};
 
   // Update breadcrumb with schedule name
   useEffect(() => {
@@ -465,7 +500,12 @@ export default function ScheduleDetailPage() {
           {(schedule?.contentsRules?.length || 0) === 0 && (schedule?.commandRules?.length || 0) === 0 ? (
             <ScheduleOnboarding variant="empty-schedule" />
           ) : (
-            <ScheduleVisualizer rules={schedule?.contentsRules || []} commandRules={schedule?.commandRules || []} />
+            <ScheduleVisualizer 
+              rules={schedule?.contentsRules || []} 
+              commandRules={schedule?.commandRules || []} 
+              programsMap={programsMap}
+              onTabChange={setActiveTab}
+            />
           )}
 
           <Card className="border-0 ring-1 ring-foreground/5 shadow-sm overflow-hidden">
@@ -490,22 +530,37 @@ export default function ScheduleDetailPage() {
                 </div>
               ) : (
                 <div className="divide-y">
-                  {bindings.map((b: ScheduleBindingDeviceResp) => (
-                    <div key={b.deviceId} className="flex items-center justify-between px-6 py-4">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold truncate">{b.deviceName || `Device ${b.deviceId}`}</p>
-                        <p className="text-xs text-muted-foreground">
-                          #{b.deviceId} · bound {new Date(b.boundAt).toLocaleString()}
-                        </p>
+                  {bindings.map((d: any) => (
+                    <div key={d.deviceId} className="flex items-center justify-between px-6 py-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className={cn(
+                            "inline-flex h-2 w-2 rounded-full flex-shrink-0",
+                            d.onlineStatus === 1 ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/30"
+                          )} />
+                          <p className="text-sm font-semibold truncate">{d.deviceName || `Device ${d.deviceId}`}</p>
+                        </div>
+                        <div className="mt-1 flex items-center gap-3">
+                           <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                             {d.networkType || 'Unknown'}
+                           </span>
+                           <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                             <RefreshCw className="h-3 w-3 opacity-70" /> {d.brightness}%
+                           </span>
+                           <span className="text-[11px] text-muted-foreground">
+                             {d.model || '—'}
+                           </span>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" onClick={() => navigate(`/dashboard/devices/${b.deviceId}`, { state: { returnTo: location.pathname } })}>
-                          Open device
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/dashboard/devices/${d.deviceId}`, { state: { returnTo: location.pathname } })}>
+                          Open
                         </Button>
                         <Button
                           variant="ghost"
+                          size="sm"
                           className="text-destructive hover:text-destructive gap-2"
-                          onClick={() => unbindMutation.mutate(b.deviceId)}
+                          onClick={() => unbindMutation.mutate(d.deviceId)}
                         >
                           <Unlink2 className="h-4 w-4" /> Unbind
                         </Button>
@@ -548,44 +603,77 @@ export default function ScheduleDetailPage() {
                   {(schedule?.contentsRules || [])
                     .slice()
                     .sort((a, b) => a.priority - b.priority)
-                    .map((r) => (
-                      <div key={r.id} className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-3">
-                            <span className={cn(
-                              "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium",
-                              r.type === 'spot' ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                            )}>
-                              {r.type === 'spot' ? 'Spot' : 'Rotation'}
-                            </span>
-                            <span className="text-xs text-muted-foreground">Priority {r.priority}</span>
-                            {r.releaseVersion != null && (
-                              <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">v{r.releaseVersion}</span>
+                    .map((r) => {
+                      const programInfo = r.programId ? programsMap[r.programId] : null;
+                      const displayName = programInfo?.name || r.deviceTitleSnapshot || 'Untitled Program';
+                      
+                      return (
+                        <div key={r.id} className="flex flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center">
+                          <div className="flex-shrink-0">
+                            {programInfo?.coverUrl ? (
+                              <img 
+                                src={programInfo.coverUrl} 
+                                alt={displayName} 
+                                className="h-16 w-24 object-cover rounded-md border bg-muted"
+                                onError={(e) => (e.currentTarget.src = 'https://placehold.co/96x64?text=No+Cover')}
+                              />
+                            ) : (
+                              <div className="h-16 w-24 rounded-md border bg-muted flex items-center justify-center text-[10px] text-muted-foreground uppercase font-bold">
+                                No Cover
+                              </div>
                             )}
                           </div>
-                          <p className="text-sm font-medium mt-1 truncate">
-                            {r.deviceTitleSnapshot || 'Untitled Program'}
-                          </p>
-                          <div className="mt-1.5">
-                            {renderConstraintBadges(summarizeLimits(r))}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-3">
+                              <span className={cn(
+                                "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium",
+                                r.type === 'spot' ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                              )}>
+                                {r.type === 'spot' ? 'Spot' : 'Rotation'}
+                              </span>
+                              <span className="text-xs text-muted-foreground">Priority {r.priority}</span>
+                              {r.releaseVersion != null && (
+                                <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">v{r.releaseVersion}</span>
+                              )}
+                              {programInfo && (
+                                <span className="text-xs text-muted-foreground">
+                                  {programInfo.width}x{programInfo.height}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p 
+                                className={cn(
+                                  "text-sm font-semibold truncate",
+                                  r.programId && "hover:text-primary cursor-pointer transition-colors"
+                                )}
+                                onClick={() => r.programId && navigate(`/dashboard/programs/${r.programId}`)}
+                              >
+                                {displayName}
+                              </p>
+                            </div>
+                            <div className="mt-1.5">
+                              {renderConstraintBadges(summarizeLimits(r))}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingContentsRule(r);
+                                setContentsDialogOpen(true);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => deleteContentsRule(r.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setEditingContentsRule(r);
-                              setContentsDialogOpen(true);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={() => deleteContentsRule(r.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                 </div>
               )}
             </CardContent>

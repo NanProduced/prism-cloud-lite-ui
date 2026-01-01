@@ -1,6 +1,6 @@
 import apiClient, { handleRequest } from './apiClient';
 import type { BffResponse } from '@/types/auth';
-import type { Device } from '@/types/device';
+import type { Device, Tag } from '@/types/device';
 import type { 
   DeviceCustomFieldDef, 
   DeviceCustomFieldValue 
@@ -19,8 +19,9 @@ export async function getDevices(): Promise<BffResponse<Device[]>> {
  * Filter devices by name or other criteria
  */
 export async function filterDevices(params: { keyword?: string }): Promise<BffResponse<Device[]>> {
+  const keyword = params?.keyword?.trim();
   return handleRequest<Device[]>(
-    apiClient.get('/devices/filter', { params })
+    apiClient.post('/devices/filter', keyword ? { keyword } : {})
   );
 }
 
@@ -30,6 +31,15 @@ export async function filterDevices(params: { keyword?: string }): Promise<BffRe
 export async function getDevice(deviceId: number): Promise<BffResponse<Device>> {
   return handleRequest<Device>(
     apiClient.get(`/devices/${deviceId}`)
+  );
+}
+
+/**
+ * Get multiple device details by IDs
+ */
+export async function getDevicesByIds(deviceIds: number[]): Promise<BffResponse<Device[]>> {
+  return handleRequest<Device[]>(
+    apiClient.post('/devices/by-ids', { deviceIds })
   );
 }
 

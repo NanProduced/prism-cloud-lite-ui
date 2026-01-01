@@ -12,8 +12,9 @@ import { cn } from '@/lib/utils';
 import { getDevices } from '@/services/deviceApi';
 import { bindDevicesToSchedule } from '@/services/scheduleApi';
 import type { ScheduleBindDevicesResp } from '@/types/schedule';
+import type { BffResponse } from '@/types/auth';
 
-function getBffDisplayError(res: { error?: { displayMessage?: string; message?: string } } | null | undefined): string {
+function getBffDisplayError(res: BffResponse<any> | null | undefined): string {
   return res?.error?.displayMessage || res?.error?.message || 'Request failed';
 }
 

@@ -14,6 +14,7 @@ import { getPrograms, getProgramDetails } from '@/services/programApi';
 import type { ProgramListResp, ProgramVersionResp } from '@/types/program';
 import type { ScheduleContentsRuleResp, UpsertScheduleContentsRuleReq } from '@/types/schedule';
 import { WeekdaySelector } from '@/components/schedule/WeekdaySelector';
+import { DatePicker, TimePicker } from '@/components/schedule/SchedulePickers';
 
 // Note: Weekday index follows backend convention: 0=Mon, 1=Tue, ..., 6=Sun
 // See docs/integration/program-and-schedule.md for details
@@ -318,11 +319,11 @@ export function ScheduleContentsRuleSheet(props: {
                      <div className="grid grid-cols-2 gap-3 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
                         <div className="space-y-1.5">
                             <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">Start date</span>
-                            <Input type="date" value={dateRange.start} onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))} className="rounded-lg h-10" />
+                            <DatePicker value={dateRange.start} onChange={(val) => setDateRange(prev => ({ ...prev, start: val }))} />
                         </div>
                         <div className="space-y-1.5">
                             <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">End date</span>
-                            <Input type="date" value={dateRange.end} onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))} className="rounded-lg h-10" />
+                            <DatePicker value={dateRange.end} onChange={(val) => setDateRange(prev => ({ ...prev, end: val }))} />
                         </div>
                      </div>
                  )}
@@ -357,11 +358,11 @@ export function ScheduleContentsRuleSheet(props: {
                      <div className="grid grid-cols-2 gap-3 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
                         <div className="space-y-1.5">
                             <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">Start time</span>
-                            <Input type="time" step="1" value={limitTime.start} onChange={(e) => setLimitTime(prev => ({ ...prev, start: e.target.value }))} className="rounded-lg h-10" />
+                            <TimePicker value={limitTime.start} onChange={(val) => setLimitTime(prev => ({ ...prev, start: val }))} />
                         </div>
                         <div className="space-y-1.5">
                             <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">End time</span>
-                            <Input type="time" step="1" value={limitTime.end} onChange={(e) => setLimitTime(prev => ({ ...prev, end: e.target.value }))} className="rounded-lg h-10" />
+                            <TimePicker value={limitTime.end} onChange={(val) => setLimitTime(prev => ({ ...prev, end: val }))} />
                         </div>
                      </div>
                  )}

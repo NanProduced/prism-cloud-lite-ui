@@ -26,6 +26,12 @@ export const getProgramDetails = (programId: string) =>
   handleRequest(apiClient.get<BffResponse<ProgramDetailResp>>(`/programs/${programId}`));
 
 /**
+ * Get multiple programs by IDs
+ */
+export const getProgramsByIds = (programIds: string[]) =>
+  handleRequest(apiClient.post<BffResponse<ProgramListResp[]>>('/programs/by-ids', { programIds }));
+
+/**
  * Create a new program
  */
 export const createProgram = (data: CreateProgramReq) =>

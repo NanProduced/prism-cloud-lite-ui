@@ -12,6 +12,7 @@ import { toast } from '@/store/notificationStore';
 
 import type { UpsertScheduleCommandRuleReq, ScheduleCommandActionType } from '@/types/schedule';
 import { WeekdaySelector } from '@/components/schedule/WeekdaySelector';
+import { DatePicker, TimePicker } from '@/components/schedule/SchedulePickers';
 import { cn } from '@/lib/utils';
 
 // Note: Weekday index follows backend convention: 0=Mon, 1=Tue, ..., 6=Sun
@@ -264,13 +265,9 @@ export function ScheduleCommandRuleSheet(props: {
                     {opTimes.map((t, idx) => (
                         <div key={idx} className="flex items-center gap-3 group">
                             <div className="relative flex-1">
-                                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input 
-                                    type="time" 
-                                    step="1" 
-                                    value={t.slice(0, 5)} 
-                                    onChange={(e) => updateOpTime(idx, e.target.value)} 
-                                    className="pl-10 h-11 rounded-xl bg-muted/20 border-transparent focus:bg-background"
+                                <TimePicker 
+                                    value={t} 
+                                    onChange={(val) => updateOpTime(idx, val)} 
                                 />
                             </div>
                             <Button variant="ghost" size="icon" onClick={() => removeOpTime(idx)} className="text-muted-foreground hover:text-destructive transition-colors">
@@ -303,11 +300,11 @@ export function ScheduleCommandRuleSheet(props: {
                          <div className="grid grid-cols-2 gap-3 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
                             <div className="space-y-1.5">
                                 <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">Start date</span>
-                                <Input type="date" value={dateRange.start} onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))} className="rounded-lg h-10" />
+                                <DatePicker value={dateRange.start} onChange={(val) => setDateRange(prev => ({ ...prev, start: val }))} />
                             </div>
                             <div className="space-y-1.5">
                                 <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">End date</span>
-                                <Input type="date" value={dateRange.end} onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))} className="rounded-lg h-10" />
+                                <DatePicker value={dateRange.end} onChange={(val) => setDateRange(prev => ({ ...prev, end: val }))} />
                             </div>
                          </div>
                      )}
