@@ -40,7 +40,7 @@ export const Navbar: React.FC = () => {
     { name: t("nav.features"), href: "#features" },
     { name: t("nav.solutions"), href: "#solutions" },
     { name: t("nav.pricing"), href: "#pricing" },
-    { name: t("nav.docs"), href: "#docs" },
+    { name: t("nav.docs"), href: "/help", isExternal: true },
   ];
 
   const toggleLanguage = () => {
@@ -73,13 +73,23 @@ export const Navbar: React.FC = () => {
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
-              <a
-                key={link.name}
-                href={link.href}
-                className="text-[13px] font-medium text-gray-400 transition-colors hover:text-white"
-              >
-                {link.name}
-              </a>
+              link.isExternal ? (
+                <Link
+                  key={link.name}
+                  to={link.href}
+                  className="text-[13px] font-medium text-gray-400 transition-colors hover:text-white"
+                >
+                  {link.name}
+                </Link>
+              ) : (
+                <a
+                  key={link.name}
+                  href={link.href}
+                  className="text-[13px] font-medium text-gray-400 transition-colors hover:text-white"
+                >
+                  {link.name}
+                </a>
+              )
             ))}
           </nav>
 

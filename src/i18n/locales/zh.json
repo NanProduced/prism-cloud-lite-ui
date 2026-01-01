@@ -18,17 +18,27 @@
     "keyboardHint": "搜索"
   },
   "features": {
-    "title": "为速度而生",
-    "titleHighlight": "为规模而设",
-    "subtitle": "体验下一代内容管理系统",
-    "instantSync": "即时同步",
-    "instantSyncDesc": "变更在全球节点间以 <100ms 的速度同步。",
-    "edgeSecurity": "边缘安全",
-    "edgeSecurityDesc": "内置零信任架构。",
-    "globalMesh": "全球网格",
-    "globalMeshDesc": "智能路由自动优化内容传输路径。",
-    "apiFirst": "API 优先",
-    "apiFirstDesc": "通过强大的 SDK 完全可编程。"
+    "title": "专业级内容分发",
+    "titleHighlight": "为可靠性而生",
+    "subtitle": "超越传统的数字告示系统，构建下一代视觉传播网络",
+    "smartTranscode": "智能转码",
+    "smartTranscodeDesc": "云端自动优化视频编码，确保在所有屏幕上流畅播放，告别黑屏与卡顿。",
+    "visualEditor": "可视化编辑",
+    "visualEditorDesc": "所见即所得的编辑器，支持多图层排布，零基础即可制作精美节目。",
+    "resilientSchedule": "弹性排程",
+    "resilientScheduleDesc": "复杂规则组合，指令预载技术确保断网环境下依然精准执行。",
+    "aiAssistant": "AI 助手",
+    "aiAssistantDesc": "自然语言对话即可完成监控、排障与发布，让 AI 成为您的运营专家。"
+  },
+  "ai": {
+    "sectionTitle": "遇见您的数字运维主管",
+    "sectionSubtitle": "对话式运营新篇章",
+    "chatPlaceholder": "帮我查一下北京分店的设备状态...",
+    "exampleQuery": "查询上海所有离线设备",
+    "exampleResponse": "为您找到 3 台离线设备，已为您标记在地图上，是否需要联系当地服务商？",
+    "feature1": "即时诊断",
+    "feature2": "批量控制",
+    "feature3": "智能建议"
   },
   "useCases": {
     "title": "赋能各行各业",

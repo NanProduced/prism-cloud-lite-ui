@@ -20,9 +20,7 @@ import MessagesPage from "@/pages/dashboard/messages/MessagesPage";
 import MonitoringPage from "@/pages/dashboard/MonitoringPage";
 import AnalyticsPage from "@/pages/dashboard/AnalyticsPage";
 import LogsPage from "@/pages/dashboard/logs/LogsPage";
-import {
-  MediaPage,
-} from "@/pages/dashboard/PlaceholderPages";
+import HelpCenterPage from "@/pages/help/HelpCenterPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,6 +41,7 @@ const router = createBrowserRouter([
       { path: "login", element: <AuthPage page="login" /> },
       { path: "register", element: <AuthPage page="register" /> },
       { path: "forgot-password", element: <AuthPage page="forgot-password" /> },
+      { path: "help/*", element: <HelpCenterPage /> },
       { path: "logo", element: <LogoShowcase /> },
     ],
   },

@@ -18,17 +18,27 @@
     "keyboardHint": "to search"
   },
   "features": {
-    "title": "Built for speed.",
-    "titleHighlight": "Designed for scale.",
-    "subtitle": "Experience the next generation of content management.",
-    "instantSync": "Instant Sync",
-    "instantSyncDesc": "Changes reflect in sub-100ms across global nodes.",
-    "edgeSecurity": "Edge Security",
-    "edgeSecurityDesc": "Zero-trust architecture built-in.",
-    "globalMesh": "Global Mesh",
-    "globalMeshDesc": "Smart routing optimizes content delivery paths automatically.",
-    "apiFirst": "API First",
-    "apiFirstDesc": "Fully programmable via our robust SDK."
+    "title": "Enterprise Distribution",
+    "titleHighlight": "Built for Reliability",
+    "subtitle": "Beyond traditional digital signage. Build the next-gen visual network.",
+    "smartTranscode": "Smart Transcode",
+    "smartTranscodeDesc": "Automatic cloud optimization ensures smooth playback on any screen, anytime.",
+    "visualEditor": "Visual Editor",
+    "visualEditorDesc": "WYSIWYG layout editor with multi-layer support. No design skills needed.",
+    "resilientSchedule": "Resilient Schedule",
+    "resilientScheduleDesc": "Complex rules and pre-loading tech ensure precision even under network outage.",
+    "aiAssistant": "AI Assistant",
+    "aiAssistantDesc": "Natural language ops for monitoring and publishing. Let AI be your expert."
+  },
+  "ai": {
+    "sectionTitle": "Meet your Digital Admin",
+    "sectionSubtitle": "A New Era of Conversational Ops",
+    "chatPlaceholder": "Check device status in New York...",
+    "exampleQuery": "Find all offline screens",
+    "exampleResponse": "Found 3 offline devices. I've marked them on the map. Should I notify the maintenance team?",
+    "feature1": "Instant Diagnostics",
+    "feature2": "Batch Control",
+    "feature3": "Smart Insights"
   },
   "useCases": {
     "title": "Transforming spaces across sectors",

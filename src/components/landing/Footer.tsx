@@ -1,4 +1,6 @@
 
+import { Link } from "react-router-dom";
+
 export const Footer = () => {
   return (
     <footer className="border-t border-[#1a1a1a] bg-[#050505] pt-20 pb-10">
@@ -40,14 +42,14 @@ export const Footer = () => {
               <li><a href="#" className="hover:text-white transition-colors">Features</a></li>
               <li><a href="#" className="hover:text-white transition-colors">API</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Documentation</a></li>
+              <li><Link to="/help" className="hover:text-white transition-colors">Documentation</Link></li>
             </ul>
           </div>
 
           <div>
             <h5 className="text-white font-medium mb-6">Resources</h5>
             <ul className="space-y-3 text-[#8a8a8a] text-sm">
-              <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
+              <li><Link to="/help" className="hover:text-white transition-colors">Help Center</Link></li>
               <li><a href="#" className="hover:text-white transition-colors">Community</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
             </ul>
