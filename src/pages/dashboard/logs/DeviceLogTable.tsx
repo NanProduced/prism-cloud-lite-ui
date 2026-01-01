@@ -9,7 +9,8 @@ import {
   ChevronRight,
   Search,
   Cpu,
-  Clock
+  Clock,
+  Monitor
 } from 'lucide-react';
 import { getDeviceLogs } from '@/services/logApi';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';

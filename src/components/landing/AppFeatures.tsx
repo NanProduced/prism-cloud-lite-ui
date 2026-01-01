@@ -6,7 +6,7 @@ export const AppFeatures = () => {
   const { t } = useTranslation();
 
   return (
-    <section className="py-32 bg-black">
+    <section id="features" className="py-32 bg-black transition-all duration-500">
       <div className="container mx-auto px-6">
         <div className="text-center mb-24">
           <FadeIn>

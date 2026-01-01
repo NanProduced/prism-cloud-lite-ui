@@ -44,10 +44,10 @@ export default function LandingPage() {
           <Navbar />
           <main>
             <Hero />
+            <AppFeatures />
             <FeatureSection />
             <AIFeatureSection />
             <StatsSection />
-            <AppFeatures />
             <Testimonials />
             <Integrations />
             <BlogSection />

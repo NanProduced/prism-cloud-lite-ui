@@ -12,10 +12,46 @@
     "badgeText": "Prism Cloud 2.0 已发布",
     "title": "内容之光",
     "titleHighlight": "转瞬即达",
-    "subtitle": "您的数字内容指挥中心。以终端般的速度向数千个屏幕推送更新。",
+    "subtitle": "轻量级数字标牌云平台 — 三分钟上手，让每块屏幕动起来",
     "primaryBtn": "立即开始",
     "secondaryBtn": "演示",
-    "keyboardHint": "搜索"
+    "keyboardHint": "搜索",
+    "trustSignals": {
+      "free": "免费开始",
+      "noCard": "无需信用卡",
+      "quickDeploy": "5分钟完成部署"
+    },
+    "miniDashboard": {
+      "tabs": {
+        "overview": "概览",
+        "devices": "设备",
+        "programs": "节目"
+      },
+      "overview": {
+        "welcome": "欢迎回来",
+        "welcomeSubtitle": "这是您网络的实时状态",
+        "totalDevices": "设备总数",
+        "online": "在线",
+        "offline": "离线",
+        "attention": "待处理事项",
+        "unpublished": "未发布变更",
+        "failedCommands": "失败指令"
+      },
+      "devices": {
+        "title": "设备列表",
+        "name": "设备",
+        "status": "状态",
+        "program": "节目",
+        "lastSeen": "最后活跃"
+      },
+      "programs": {
+        "title": "节目管理",
+        "published": "已发布",
+        "draft": "草稿",
+        "resolution": "分辨率",
+        "devices": "台设备"
+      }
+    }
   },
   "features": {
     "title": "专业级内容分发",

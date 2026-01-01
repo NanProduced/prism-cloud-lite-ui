@@ -12,10 +12,46 @@
     "badgeText": "Prism Cloud 2.0 is live",
     "title": "Your content.",
     "titleHighlight": "Everywhere.",
-    "subtitle": "The command center for your digital presence. Push updates to thousands of screens with the speed of a terminal command.",
+    "subtitle": "Lightweight digital signage cloud — Get started in 3 minutes, bring every screen to life",
     "primaryBtn": "Get Started",
     "secondaryBtn": "Demo",
-    "keyboardHint": "to search"
+    "keyboardHint": "to search",
+    "trustSignals": {
+      "free": "Free to start",
+      "noCard": "No credit card",
+      "quickDeploy": "5-minute setup"
+    },
+    "miniDashboard": {
+      "tabs": {
+        "overview": "Overview",
+        "devices": "Devices",
+        "programs": "Programs"
+      },
+      "overview": {
+        "welcome": "Welcome back",
+        "welcomeSubtitle": "Here's your network status at a glance",
+        "totalDevices": "Total Devices",
+        "online": "Online",
+        "offline": "Offline",
+        "attention": "Needs Attention",
+        "unpublished": "Unpublished changes",
+        "failedCommands": "Failed commands"
+      },
+      "devices": {
+        "title": "Device Fleet",
+        "name": "Device",
+        "status": "Status",
+        "program": "Program",
+        "lastSeen": "Last Active"
+      },
+      "programs": {
+        "title": "Programs",
+        "published": "Published",
+        "draft": "Draft",
+        "resolution": "Resolution",
+        "devices": "devices"
+      }
+    }
   },
   "features": {
     "title": "Enterprise Distribution",

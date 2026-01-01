@@ -127,11 +127,12 @@ export function createItemFromMedia(asset: MediaAssetNode, input: { materialId: 
   }
 
   // Unsupported assets fall back to a text placeholder so the editor remains usable.
+  const fallbackDurationMs = 3_000;
   return {
     Type: '4',
     backcolor: '0x00000000',
-    Duration: String(durationMs),
-    PlayLength: String(durationMs),
+    Duration: String(fallbackDurationMs),
+    PlayLength: String(fallbackDurationMs),
     PlayTimes: DEFAULT_PLAY_TIMES,
     Text: asset.name,
     TextColor: DEFAULT_TEXT_COLOR,
