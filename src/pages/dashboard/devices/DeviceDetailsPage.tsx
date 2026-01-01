@@ -492,7 +492,7 @@ export default function DeviceDetailsPage() {
           deviceIds: [Number(deviceId)],
         });
         if (!resp.success) {
-          throw new Error(resp.error?.displayMessage || resp.error?.message || 'Unpublish failed');
+          throw resp;
         }
         toast.success('Unpublished from this device');
       } else {
@@ -501,14 +501,15 @@ export default function DeviceDetailsPage() {
           source: assetDeleteTarget.source,
         });
         if (!resp.success) {
-          throw new Error(resp.error?.displayMessage || resp.error?.message || 'Delete command failed');
+          throw resp;
         }
         toast.success('Delete command sent');
       }
       setAssetDeleteTarget(null);
       refreshAfterProgramOps();
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to delete program');
+      const displayMsg = err.error?.displayMessage || err.message || 'Failed to delete program';
+      toast.error('Deletion failed', { description: displayMsg });
     } finally {
       setAssetActionLoading(false);
     }
@@ -520,13 +521,14 @@ export default function DeviceDetailsPage() {
     try {
       const resp = await clearDevicePrograms(deviceId);
       if (!resp.success) {
-        throw new Error(resp.error?.displayMessage || resp.error?.message || 'Clear command failed');
+        throw resp;
       }
       toast.success('Clear-all command sent');
       setAssetClearAllOpen(false);
       refreshAfterProgramOps();
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to clear programs');
+      const displayMsg = err.error?.displayMessage || err.message || 'Failed to clear programs';
+      toast.error('Clear failed', { description: displayMsg });
     } finally {
       setAssetActionLoading(false);
     }

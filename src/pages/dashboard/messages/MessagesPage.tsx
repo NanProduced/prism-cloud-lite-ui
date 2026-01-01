@@ -24,6 +24,8 @@ import {
   ChevronsUpDown,
   Copy,
   Zap,
+  AlertCircle,
+  Mail,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -195,11 +197,11 @@ export default function MessagesPage() {
 
   // --- Handlers ---
 
-  const handleTabChange = (tab: string) => {
+  const handleTabChange = (nextTab: string) => {
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
-      if (tab === 'all') next.delete('tab');
-      else next.set('tab', tab);
+      if (nextTab === 'all') next.delete('tab');
+      else next.set('tab', nextTab);
       return next;
     });
     setPage(0);
@@ -352,7 +354,7 @@ export default function MessagesPage() {
         <div className="flex items-center gap-4 bg-muted/40 px-5 py-2 rounded-2xl border-2 border-transparent hover:border-primary/20 hover:bg-muted/60 transition-all min-w-[150px]">
           <Filter className="h-5 w-5 text-primary/60 shrink-0" />
           <div className="flex flex-col flex-1 min-w-0">
-            <span className="text-[10px] font-black tracking-widest text-primary/40 leading-none mb-1.5">Read status</span>
+            <span className="text-[10px] font-black tracking-widest text-primary/40 uppercase leading-none mb-1.5">Read status</span>
             <Select value={readFilter} onValueChange={(v) => { setReadFilter(v as any); setPage(0); }}>
               <SelectTrigger className="h-5 border-none bg-transparent font-bold text-[13px] p-0 focus:ring-0 shadow-none">
                 <SelectValue placeholder="All" />
@@ -371,7 +373,7 @@ export default function MessagesPage() {
         <div className="flex items-center gap-4 bg-muted/40 px-5 py-2 rounded-2xl border-2 border-transparent hover:border-primary/20 hover:bg-muted/60 transition-all min-w-[150px]">
           <Activity className="h-5 w-5 text-primary/60 shrink-0" />
           <div className="flex flex-col flex-1 min-w-0">
-            <span className="text-[10px] font-black tracking-widest text-primary/40 leading-none mb-1.5">Status</span>
+            <span className="text-[10px] font-black tracking-widest text-primary/40 uppercase leading-none mb-1.5">Status</span>
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(0); }}>
               <SelectTrigger className="h-5 border-none bg-transparent font-bold text-[13px] p-0 focus:ring-0 shadow-none">
                 <SelectValue placeholder="All" />

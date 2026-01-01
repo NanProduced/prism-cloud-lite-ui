@@ -447,7 +447,7 @@ export const MediaUploadPanel = forwardRef<
         md5ControllersRef.current.delete(task.groupId);
         clearThroughput(task.groupId);
 
-        const message = error.response?.data?.error?.displayMessage || error.message || 'Upload failed.';
+        const message = error.error?.displayMessage || error.response?.data?.error?.displayMessage || error.message || 'Upload failed.';
         const canceled = message.toLowerCase().includes('cancel') || axios.isCancel(error);
 
         setUploadTasks((prev) =>
@@ -523,7 +523,7 @@ export const MediaUploadPanel = forwardRef<
       // Refresh list and usage
       queryClient.invalidateQueries({ queryKey: ['media'] });
     } catch (error: any) {
-      const message = error.response?.data?.error?.displayMessage || error.message || 'Finalize failed.';
+      const message = error.error?.displayMessage || error.response?.data?.error?.displayMessage || error.message || 'Finalize failed.';
       setUploadTasks((prev) =>
         prev.map((t) => (t.groupId === task.groupId ? { ...t, status: 'error', error: message } : t))
       );

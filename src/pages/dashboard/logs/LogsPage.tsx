@@ -7,6 +7,7 @@ import {
   Search, 
   Download,
   RefreshCw,
+  Calendar,
   Monitor,
   Tag,
   CheckCircle2,
@@ -117,10 +118,11 @@ export default function LogsPage() {
     return logTypes.filter(item => item.type === selectedType);
   }, [logTypes, selectedType]);
 
-  const handleTabChange = (value: string) => {
+  const handleTabChange = (nextTab: string) => {
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
-      next.set('tab', value);
+      if (nextTab === 'all') next.delete('tab');
+      else next.set('tab', nextTab);
       return next;
     });
   };
@@ -241,7 +243,7 @@ export default function LogsPage() {
 
         <Separator orientation="vertical" className="h-10 mx-2" />
 
-        {/* Device Picker Component */}
+        {/* Device Picker */}
         <div className="flex items-center gap-4 bg-muted/40 px-5 py-2 rounded-2xl border-2 border-transparent hover:border-primary/20 hover:bg-muted/60 transition-all min-w-[180px]">
           <Monitor className="h-5 w-5 text-primary/60 shrink-0" />
           <div className="flex flex-col flex-1 min-w-0">
@@ -264,7 +266,7 @@ export default function LogsPage() {
                        }} 
                      />
                    ) : (
-                     <ChevronsUpDown className="h-4 w-4 text-muted-foreground/20 group-hover:text-muted-foreground/40 transition-colors shrink-0" />
+                     <ChevronsUpDown className="h-3 w-3 text-muted-foreground/20 group-hover:text-muted-foreground/40 transition-colors shrink-0" />
                    )}
                 </div>
               </PopoverTrigger>
@@ -311,14 +313,14 @@ export default function LogsPage() {
 
         {activeTab === 'device' ? (
           <>
-            {/* Step 1: Select Type */}
+            {/* Step 1: Category */}
             <div className="flex items-center gap-4 bg-muted/40 px-5 py-2 rounded-2xl border-2 border-transparent hover:border-primary/20 transition-all min-w-[150px]">
               <Tag className="h-5 w-5 text-primary/60 shrink-0" />
               <div className="flex flex-col flex-1 min-w-0">
                 <span className="text-[10px] font-black tracking-widest text-primary/40 leading-none mb-1.5">{t('logs.device.operationType')}</span>
                 <Select value={selectedType} onValueChange={(val) => { setSelectedType(val); setSelectedOperationId('all'); }}>
                   <SelectTrigger className="h-5 border-none bg-transparent font-bold text-[13px] p-0 focus:ring-0 shadow-none">
-                    <SelectValue placeholder="Select Category" />
+                    <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl border-none shadow-2xl">
                     <SelectItem value="all" className="font-bold">{t('logs.common.all')}</SelectItem>
@@ -330,15 +332,15 @@ export default function LogsPage() {
               </div>
             </div>
 
-            {/* Step 2: Select Operation (Conditional) */}
+            {/* Step 2: Operation */}
             {selectedType !== 'all' && (
               <div className="flex items-center gap-4 bg-muted/40 px-5 py-2 rounded-2xl border-2 border-primary/20 bg-primary/[0.02] transition-all min-w-[180px] animate-in slide-in-from-left-2 duration-300">
                 <Layers className="h-5 w-5 text-primary/60 shrink-0" />
                 <div className="flex flex-col flex-1 min-w-0">
-                  <span className="text-[10px] font-black tracking-widest text-primary/40 uppercase leading-none mb-1.5">Operation</span>
+                  <span className="text-[10px] font-black tracking-widest text-primary/40 leading-none mb-1.5">Operation</span>
                   <Select value={selectedOperationId} onValueChange={setSelectedOperationId}>
                     <SelectTrigger className="h-5 border-none bg-transparent font-bold text-[13px] p-0 focus:ring-0 shadow-none">
-                      <SelectValue placeholder="Select Operation" />
+                      <SelectValue placeholder="Operation" />
                     </SelectTrigger>
                     <SelectContent className="rounded-2xl border-none shadow-2xl max-h-[400px]">
                       <SelectItem value="all" className="font-bold">{t('logs.common.all')}</SelectItem>
@@ -359,7 +361,7 @@ export default function LogsPage() {
                 <span className="text-[10px] font-black tracking-widest text-primary/40 leading-none mb-1.5">{t('logs.command.statusLabel')}</span>
                 <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                   <SelectTrigger className="h-5 border-none bg-transparent font-bold text-[13px] p-0 focus:ring-0 shadow-none">
-                    <SelectValue placeholder="All Status" />
+                    <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl border-none shadow-2xl">
                     <SelectItem value="all" className="font-bold">{t('logs.common.all')}</SelectItem>
@@ -377,6 +379,10 @@ export default function LogsPage() {
               <Search className="h-5 w-5 text-primary/30 shrink-0" />
               <Input
                 placeholder={t('logs.command.searchPlaceholder')}
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                className="h-6 border-none bg-transparent font-bold text-[13px] p-0 focus-visible:ring-0 placeholder:text-muted-foreground/30"       
+              />
             </div>
           </>
         )}
@@ -411,7 +417,7 @@ export default function LogsPage() {
                operationId: (() => {
                  const v = keyword.trim();
                  if (!v) return undefined;
-                 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
                  return uuid.test(v) ? v : undefined;
                })(),
                statuses:

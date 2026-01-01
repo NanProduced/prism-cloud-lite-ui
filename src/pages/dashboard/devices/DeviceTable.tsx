@@ -1019,9 +1019,10 @@ export function DeviceTable({
     const removeEditError = grid.api.eventAddListener('editError', ({ column, validation, error }) => {
       const meta = getCustomFieldMeta(column);
       if (!meta) return;
-      toast('Edit failed', {
-        description:
-          error instanceof Error ? error.message : validation ? 'Validation failed.' : 'Unknown error.',
+      const bffErr = error as any;
+      const displayMsg = bffErr?.error?.displayMessage || bffErr?.message || (validation ? 'Validation failed.' : 'Unknown error.');
+      toast.error('Edit failed', {
+        description: displayMsg,
       });
     });
 

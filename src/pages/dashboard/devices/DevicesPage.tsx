@@ -73,23 +73,32 @@ export default function DevicesPage() {
       queryClient.invalidateQueries({ queryKey: ['devices'] });
     },
     onError: (error: any) => {
-      toast('Update failed', { description: error.message || 'Failed to update custom field' });
+      const displayMsg = error.error?.displayMessage || error.message || 'Failed to update custom field';
+      toast.error('Update failed', { description: displayMsg });
     }
   });
 
   const createFieldMutation = useMutation({
     mutationFn: (def: Partial<DeviceCustomFieldDef>) => createCustomFieldDef(def),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      if (!res.success) {
+        toast.error('Creation failed', { description: res.error?.displayMessage });
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ['device-custom-fields'] });
-      toast('Success', { description: 'Custom field created' });
+      toast.success('Success', { description: 'Custom field created' });
     }
   });
 
   const deleteFieldMutation = useMutation({
     mutationFn: (fieldId: number) => deleteCustomFieldDef(fieldId),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      if (!res.success) {
+        toast.error('Deletion failed', { description: res.error?.displayMessage });
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ['device-custom-fields'] });
-      toast('Success', { description: 'Custom field deleted' });
+      toast.success('Success', { description: 'Custom field deleted' });
     }
   });
 
@@ -115,7 +124,8 @@ export default function DevicesPage() {
       queryClient.invalidateQueries({ queryKey: ['devices'] });
     },
     onError: (error: any) => {
-      toast('Update failed', { description: error.message || 'Failed to update tags' });
+      const displayMsg = error.error?.displayMessage || error.message || 'Failed to update tags';
+      toast.error('Update failed', { description: displayMsg });
     }
   });
 
