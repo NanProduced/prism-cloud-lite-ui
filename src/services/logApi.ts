@@ -6,6 +6,7 @@ import type {
   DeviceLogListItem,
   DeviceCommandLogPageResp,
   DeviceCommandLogListItem,
+  DeviceCommandLogDetail,
   DeviceLogFilterParams,
   CommandLogFilterParams
 } from '@/types/log';
@@ -49,8 +50,8 @@ export async function getDeviceCommandLogs(params: CommandLogFilterParams): Prom
 /**
  * Get device command log details
  */
-export async function getDeviceCommandLog(logId: string): Promise<BffResponse<DeviceCommandLogListItem>> {
-  return handleRequest<DeviceCommandLogListItem>(
+export async function getDeviceCommandLog(logId: number): Promise<BffResponse<DeviceCommandLogDetail>> {
+  return handleRequest<DeviceCommandLogDetail>(
     apiClient.get(`/device-command-logs/${logId}`)
   );
 }

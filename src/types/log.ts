@@ -28,8 +28,7 @@ export interface DeviceLogPageResp {
 }
 
 export interface DeviceCommandLogListItem {
-  id: string;
-  logId: string;
+  id: number;
   deviceId: number;
   deviceName: string;
   operationId: string; // commandId
@@ -38,11 +37,30 @@ export interface DeviceCommandLogListItem {
   status: string;
   accepted: boolean;
   covered: boolean;
-  sendMethod: string;
-  queuedId: number;
-  errorMessage?: string;
-  payload?: any;
+  sendMethod: string | null;
+  queuedId: number | null;
+  errorMessage?: string | null;
   createdAt: string; // Server time (UTC)
+  updatedAt: string; // Server time (UTC)
+}
+
+export interface DeviceCommandLogDetail {
+  id: number;
+  deviceId: number;
+  deviceName: string;
+  operationId: string;
+  actionType: string;
+  trackingLevel: string;
+  status: string;
+  payload: string | null; // JSON string
+  ttlMinutes: number | null;
+  sendMethod: string | null;
+  queuedId: number | null;
+  accepted: boolean;
+  covered: boolean;
+  errorMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DeviceCommandLogPageResp {
@@ -72,5 +90,4 @@ export interface CommandLogFilterParams extends LogFilterParams {
   covered?: boolean;
   queuedId?: number;
   sendMethod?: string;
-  keyword?: string;
 }

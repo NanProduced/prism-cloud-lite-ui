@@ -6,9 +6,12 @@ import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { Terminal, Bell, CheckCircle2, XCircle, Clock, Info } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
+import { deriveUserStatus, getActionTypeLabelKey, getUserStatusTone } from '@/features/logs/commandLogI18n';
 
 export const RecentActivityWidget = () => {
   const { formatRelative } = useTimeFormatter();
+  const { t } = useTranslation();
   const { recentMessages } = useMessageStore();
 
   const { data: logsRes } = useQuery({
@@ -20,9 +23,11 @@ export const RecentActivityWidget = () => {
     const logs = (logsRes?.data?.items || []).map(log => ({
       id: `log-${log.operationId}`,
       type: 'COMMAND',
-      title: log.actionType,
+      title: t(getActionTypeLabelKey(log.actionType)),
       subtitle: log.deviceName,
       status: log.status,
+      accepted: log.accepted,
+      trackingLevel: log.trackingLevel,
       time: log.createdAt,
       icon: Terminal,
     }));
@@ -42,23 +47,19 @@ export const RecentActivityWidget = () => {
     ).slice(0, 10);
   }, [logsRes, recentMessages]);
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'SUCCESS':
-      case 'SUCCEEDED':
-      case 'COMPLETED':
-        return <CheckCircle2 className="h-3 w-3 text-emerald-500" />;
-      case 'FAILED':
-      case 'EXPIRED':
-      case 'REJECTED':
-        return <XCircle className="h-3 w-3 text-red-500" />;
-      case 'WAITING':
-      case 'PUBLISHED':
-      case 'DISPATCHED':
-        return <Clock className="h-3 w-3 text-amber-500" />;
-      default:
-        return <Info className="h-3 w-3 text-slate-400" />;
-    }
+  const getStatusIcon = (item: { status: string; accepted?: boolean; trackingLevel?: string }) => {
+    const userStatus = deriveUserStatus({
+      status: item.status,
+      trackingLevel: item.trackingLevel,
+      accepted: item.accepted,
+    });
+    if (userStatus === 'PUBLISHED') return <Clock className="h-3 w-3 text-amber-500" />;
+
+    const tone = getUserStatusTone(userStatus);
+    if (tone === 'success') return <CheckCircle2 className="h-3 w-3 text-emerald-500" />;
+    if (tone === 'error') return <XCircle className="h-3 w-3 text-red-500" />;
+    if (tone === 'warning') return <Clock className="h-3 w-3 text-amber-500" />;
+    return <Info className="h-3 w-3 text-slate-400" />;
   };
 
   return (
@@ -78,7 +79,7 @@ export const RecentActivityWidget = () => {
               </div>
               <div className="flex items-center justify-between mt-0.5">
                 <span className="text-[10px] text-muted-foreground truncate">{item.subtitle}</span>
-                {getStatusIcon(item.status as string)}
+                {item.type === 'COMMAND' ? getStatusIcon(item as any) : getStatusIcon({ status: String(item.status) })}
               </div>
             </div>
           </div>

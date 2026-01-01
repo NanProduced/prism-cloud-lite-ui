@@ -21,6 +21,7 @@ interface DateRangePickerProps {
   presets?: { label: string; getValue: () => DateRange }[];
   className?: string;
   align?: 'start' | 'center' | 'end';
+  label?: string;
 }
 
 export function DateRangePicker({
@@ -30,6 +31,7 @@ export function DateRangePicker({
   presets,
   className,
   align = 'start',
+  label = 'Analysis Period',
 }: DateRangePickerProps) {
   const { formatDateTime, timeZone, locale, preferences } = useTimeFormatter();
 
@@ -207,8 +209,8 @@ export function DateRangePicker({
             <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
               <CalendarIcon className="h-3.5 w-3.5" />
             </div>
-            <div className="flex flex-col gap-0.5 min-w-0">
-              <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-[0.15em] leading-none opacity-70">Analysis Period</span>
+            <div className="flex flex-col gap-0.5 min-w-0 text-left">
+              <span className="text-[9px] text-muted-foreground font-bold tracking-wider leading-none opacity-70">{label}</span>
               <span className="leading-none truncate">{formattedRange}</span>
             </div>
             <ChevronDown className="h-3 w-3 ml-auto opacity-30 group-data-[state=open]:rotate-180 transition-transform" />

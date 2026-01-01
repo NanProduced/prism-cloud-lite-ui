@@ -739,7 +739,7 @@ export default function MapPage() {
                              <TagChip 
                                key={tag.id} 
                                tag={tag} 
-                               className="h-5 px-2 text-[10px] border-none shadow-sm bg-muted/60 font-bold" 
+                               className="h-5 px-1.5 text-[10px]" 
                                textClassName="max-w-[80px]"
                              />
                            ))
@@ -747,7 +747,7 @@ export default function MapPage() {
                           <span className="text-[10px] text-muted-foreground/40 italic pl-1">No tags</span>
                         )}
                         {device.tags && device.tags.length > 3 && (
-                          <Badge variant="ghost" className="h-5 px-1.5 text-[10px] text-muted-foreground/60 font-bold">+{device.tags.length - 3}</Badge>
+                          <Badge variant="outline" className="h-5 px-1.5 text-[10px] text-muted-foreground/60">+{device.tags.length - 3}</Badge>
                         )}
                       </div>
 
@@ -918,7 +918,7 @@ export default function MapPage() {
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {selectedDevice?.tags?.slice(0, 3).map(tag => (
-                          <TagChip key={tag.id} tag={tag} className="h-5 px-2 text-[10px] font-bold border-none shadow-sm bg-muted/60" />
+                          <TagChip key={tag.id} tag={tag} className="h-5 px-1.5 text-[10px]" />
                         ))}
                       </div>
                     </div>

@@ -13,6 +13,23 @@ const apiClient = axios.create({
     'X-Requested-With': 'XMLHttpRequest',
   },
   withCredentials: true,
+  // Important: backend expects repeated query params for arrays (e.g. `statuses=FAILED&statuses=EXPIRED`),
+  // not `statuses[]=...` (axios default). This serializer keeps array keys un-suffixed.
+  paramsSerializer: (params) => {
+    const searchParams = new URLSearchParams();
+    for (const [key, raw] of Object.entries(params ?? {})) {
+      if (raw === undefined || raw === null) continue;
+      if (Array.isArray(raw)) {
+        for (const item of raw) {
+          if (item === undefined || item === null) continue;
+          searchParams.append(key, String(item));
+        }
+        continue;
+      }
+      searchParams.append(key, String(raw));
+    }
+    return searchParams.toString();
+  },
 });
 
 // Response interceptor to handle BffResponse format and Auth errors

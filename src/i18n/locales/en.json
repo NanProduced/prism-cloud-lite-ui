@@ -282,5 +282,98 @@
       "success": "Activation successful! Your plan is now Pro.",
       "error": "Invalid or expired code"
     }
+  },
+  "logs": {
+    "tabs": {
+      "deviceLogs": "Device Logs",
+      "commandLogs": "Command Logs"
+    },
+    "common": {
+      "all": "All",
+      "allDevices": "All Devices",
+      "filterDevice": "Filter Device",
+      "searchDevicePlaceholder": "Search device name...",
+      "noDeviceFound": "No device found.",
+      "export": "Export",
+      "copied": "Copied",
+      "close": "Close",
+      "done": "Done"
+    },
+    "device": {
+      "operationType": "Operation Type"
+    },
+    "command": {
+      "status": "Status",
+      "searchPlaceholder": "Search (device/action/status/ID)",
+      "loading": "Loading command logs...",
+      "loadFailed": "Failed to load command logs",
+      "empty": "No command logs found for the current filter.",
+      "accepted": {
+        "true": "Accepted",
+        "false": "Not accepted"
+      },
+      "covered": {
+        "true": "Covered",
+        "false": "Not covered"
+      },
+      "actionType": {
+        "UNKNOWN": "Unknown action",
+        "BRIGHTNESS": "Brightness",
+        "POWER": "Power (sleep/wake/reboot)",
+        "COLOR_TEMP": "Color temperature",
+        "VOLUME": "Volume",
+        "CLEAR_CACHE": "Clear cache",
+        "INPUT_MODE": "Input mode",
+        "TIMEZONE": "Timezone/time",
+        "LOCALE": "Locale/language",
+        "CONTENT_REPORT_SWITCH": "Content report switch",
+        "SCREENSHOT": "Screenshot",
+        "SET_SENSOR_REPORT_TIME": "Sensor report interval",
+        "DELETE_DEVICE_VSN": "Delete program on device",
+        "CLEAR_DEVICE_PROGRAM": "Clear device programs"
+      },
+      "trackingLevel": {
+        "UNKNOWN": "Unknown tracking",
+        "UPDATE_ONLY": "Update-only",
+        "ACK_ONLY": "Ack-only",
+        "PROPERTY_MATCH": "Property match",
+        "EXPLICIT_RESULT": "Explicit result"
+      },
+      "statusUi": {
+        "DONE": "Delivered",
+        "UNKNOWN": "Unknown",
+        "PROBLEMS": "Failed/Expired"
+      },
+      "status": {
+        "PUBLISHED": "Published",
+        "CONFIRMED": "Confirmed",
+        "COMPLETED": "Completed",
+        "EXPIRED": "Expired",
+        "FAILED": "Failed"
+      },
+      "table": {
+        "issuedAt": "Issued At",
+        "device": "Device",
+        "actionType": "Action",
+        "status": "Status",
+        "audit": "Accepted/Covered",
+        "sendMethod": "Send Method",
+        "details": "Details",
+        "total": "{{total}} total"
+      },
+      "detail": {
+        "title": "Command Log Details",
+        "subtitle": "Execution trail and raw payload (for troubleshooting)",
+        "loading": "Loading details...",
+        "loadFailed": "Failed to load details",
+        "operationId": "Operation ID",
+        "queuedId": "Queued ID",
+        "trackingLevel": "Tracking Level",
+        "errorMessage": "Error Message",
+        "payload": "Payload (JSON)",
+        "copyPayload": "Copy JSON",
+        "noPayload": "No payload recorded"
+      }
+    }
   }
 }

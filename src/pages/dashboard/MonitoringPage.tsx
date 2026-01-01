@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Activity,
   Wifi,
+  RadioTower,
+  EthernetPort,
   RefreshCw,
   AlertTriangle,
   Search,
@@ -13,13 +15,15 @@ import {
   Gauge,
 } from 'lucide-react';
 import { getDevices } from '@/services/deviceApi';
-import { type Device, resolveDeviceStatus } from '@/types/device';
+import { type Device, resolveDeviceStatus, type Tag } from '@/types/device';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { TagChip } from '@/components/devices/TagChip';
 import { cn } from '@/lib/utils';
 
 import type { RealtimeMetric, SSEState } from './monitoring/types';
@@ -29,9 +33,10 @@ import { useMonitoringSSE } from '@/hooks/use-monitoring-sse';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
 
-function toLocalInputValue(date: Date) {
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60 * 1000);
-  return local.toISOString().slice(0, 16);
+import { format } from 'date-fns';
+
+function toLocalDateString(date: Date) {
+  return format(date, 'yyyy-MM-dd');
 }
 
 export default function MonitoringPage() {
@@ -48,8 +53,8 @@ export default function MonitoringPage() {
     const now = new Date();
     const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     return {
-      from: toLocalInputValue(from),
-      to: toLocalInputValue(now),
+      from: toLocalDateString(from),
+      to: toLocalDateString(now),
     };
   });
   const [historyApplied, setHistoryApplied] = useState(historyDraft);
@@ -62,9 +67,6 @@ export default function MonitoringPage() {
     return { from: fromDate.toISOString(), to: toDate.toISOString() };
   }, [historyApplied.from, historyApplied.to]);
 
-  // SSE & Real-time State - 单设备订阅
-  const sseState = useMonitoringSSE(selectedDeviceId, historyRange ?? undefined);
-
   // --- Queries ---
 
   const { data: devicesRes, isLoading: isDevicesLoading } = useQuery({
@@ -74,19 +76,35 @@ export default function MonitoringPage() {
 
   const devices = useMemo(() => {
     const list = devicesRes?.data || [];
+    const q = searchQuery.toLowerCase().trim();
     return list.filter(
       (d) =>
-        d.deviceName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        String(d.deviceId).includes(searchQuery.toLowerCase()) ||
-        d.id.toLowerCase().includes(searchQuery.toLowerCase())
+        d.deviceName.toLowerCase().includes(q) ||
+        d.networkType?.toLowerCase().includes(q) ||
+        d.tags?.some(t => t.tagName.toLowerCase().includes(q))
     );
   }, [devicesRes, searchQuery]);
+
+  // SSE & Real-time State - 单设备订阅
+  const sseState = useMonitoringSSE(selectedDeviceId, historyRange ?? undefined);
+
+  // Default Selection: Prefer online devices, then the first one
+  useEffect(() => {
+    if (!isDevicesLoading && devices.length > 0 && selectedDeviceId === null) {
+      const onlineDevice = devices.find(d => resolveDeviceStatus(d as Device) === 'online');
+      if (onlineDevice) {
+        setSelectedDeviceId(onlineDevice.deviceId);
+      } else {
+        setSelectedDeviceId(devices[0].deviceId);
+      }
+    }
+  }, [isDevicesLoading, devices, selectedDeviceId]);
 
   // --- Helpers ---
 
   // 单选设备：点击切换选中状态
   const selectDevice = (deviceId: number) => {
-    setSelectedDeviceId((prev) => (prev === deviceId ? null : deviceId));
+    setSelectedDeviceId(deviceId);
   };
 
   // Filter metrics by active tab (3个独立数据源)
@@ -136,48 +154,29 @@ export default function MonitoringPage() {
     <div className="flex flex-col gap-4 p-6 h-full overflow-hidden">
       {/* Unified Toolbar */}
       <div className="flex items-center gap-3 flex-wrap bg-card border rounded-lg p-2 px-4 shadow-sm">
-        <div className="flex items-center gap-2">
-          <Activity className="h-4 w-4 text-primary" />
-          <h1 className="text-sm font-bold tracking-tight">Live Monitoring</h1>
-          <Separator orientation="vertical" className="h-4 mx-2" />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 rounded-md font-medium text-xs gap-2 px-3"
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['devices'] })}
-          >
-            <RefreshCw className="h-3 w-3" />
-            Refresh Device
-          </Button>
-        </div>
-
         {/* History Filter */}
-        <Separator orientation="vertical" className="h-8 mx-1" />
         <div className="flex items-center gap-2 flex-wrap">
           <DateRangePicker
             value={historyDraft}
+            label="Analysis period"
             onChange={(val) => {
               setHistoryDraft(val);
               // For monitoring, we apply immediately when a preset is chosen or range changes
               setHistoryApplied(val);
             }}
-            showTime={true}
+            showTime={false}
           />
-        </div>
-
-        <div className="flex items-center gap-2 ml-auto">
-          <SSEStatus status={sseState.status} />
         </div>
       </div>
 
       <div className="flex flex-1 min-h-[calc(100vh-11rem)] gap-4 overflow-hidden">
         {/* Device: Device NAVIGATOR */}
-        <Card className="flex w-[280px] flex-col overflow-hidden border bg-card shadow-sm shrink-0">
+        <Card className="flex w-[320px] flex-col overflow-hidden border bg-card shadow-sm shrink-0">
           <div className="p-3 space-y-3 border-b bg-muted/30">
             <div className="relative group">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50 transition-colors group-focus-within:text-primary" />
               <Input
-                placeholder="Search by name or ID..."
+                placeholder="Search by name, network or tags..."
                 className="pl-8 h-8 bg-background text-xs"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -185,19 +184,20 @@ export default function MonitoringPage() {
             </div>
             <div className="flex items-center justify-between px-1">
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Device ({devices.length})
+                Devices ({devices.length})
               </span>
-              {/* 单选模式：显示当前选中状态 */}
-              {selectedDeviceId !== null && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-5 px-1.5 text-[9px] font-bold text-muted-foreground"
-                  onClick={() => setSelectedDeviceId(null)}
-                >
-                  Clear
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-[10px] font-bold text-primary gap-1.5 hover:bg-primary/5 transition-colors"
+                onClick={() => {
+                   queryClient.invalidateQueries({ queryKey: ['devices'] });
+                   setSelectedDeviceId(null); // Optional: reset selection on refresh to trigger default logic again
+                }}
+              >
+                <RefreshCw className={cn("h-3 w-3", sseState.status === 'reconnecting' && "animate-spin")} />
+                Refresh
+              </Button>
             </div>
           </div>
           <ScrollArea className="flex-1">
@@ -205,12 +205,17 @@ export default function MonitoringPage() {
               {devices.map((d) => {
                 // 单选模式：使用 deviceId (number) 比较
                 const isSelected = selectedDeviceId === d.deviceId;
+                const status = resolveDeviceStatus(d as Device);
+                const NetworkIcon =
+                  d.networkType === 'WIFI' || d.networkType === 'WiFi' ? Wifi : 
+                  (d.networkType === 'FOUR_G' || d.networkType === '4G') ? RadioTower : EthernetPort;
+
                 return (
                   <button
                     key={d.id}
                     onClick={() => selectDevice(d.deviceId)}
                     className={cn(
-                      'w-full flex items-center gap-2.5 p-2 rounded-md transition-all text-left border border-transparent',
+                      'w-full flex items-start gap-2.5 p-3 rounded-md transition-all text-left border border-transparent',
                       isSelected
                         ? 'bg-primary/5 border-primary/10 shadow-sm'
                         : 'hover:bg-muted/50 text-muted-foreground'
@@ -218,8 +223,8 @@ export default function MonitoringPage() {
                   >
                     <div
                       className={cn(
-                        'h-2 w-2 rounded-full shrink-0',
-                        resolveDeviceStatus(d as Device) === 'online'
+                        'h-2 w-2 rounded-full shrink-0 mt-1',
+                        status === 'online'
                           ? 'bg-emerald-500'
                           : 'bg-slate-300'
                       )}
@@ -233,10 +238,24 @@ export default function MonitoringPage() {
                       >
                         {d.deviceName}
                       </p>
-                      {/* 显示 deviceId (number) 而非 id (string) */}
-                      <p className="text-[9px] opacity-40 font-mono truncate">{d.deviceId}</p>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                         <div className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground/70 bg-muted/50 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                           <NetworkIcon className="h-2.5 w-2.5" />
+                           {d.networkType || 'Offline'}
+                         </div>
+                         {d.tags?.slice(0, 2).map((t: Tag) => (
+                            <TagChip 
+                              key={t.tagSlug} 
+                              tag={t} 
+                              className="h-4 text-[8px] max-w-[80px]" 
+                            />
+                         ))}
+                         {d.tags && d.tags.length > 2 && (
+                            <span className="text-[8px] text-muted-foreground/60 font-bold">+{d.tags.length - 2}</span>
+                         )}
+                      </div>
                     </div>
-                    {isSelected && <CheckCircle2 className="h-3 w-3 text-primary" />}
+                    {isSelected && <CheckCircle2 className="h-3 w-3 text-primary mt-1" />}
                   </button>
                 );
               })}
@@ -305,10 +324,7 @@ export default function MonitoringPage() {
 
                 <div className="text-[10px] font-bold text-muted-foreground flex items-center gap-2">
                   <span className="flex items-center gap-1.5">
-                    <Clock className="h-3 w-3" /> Last updated:{' '}
-                    {sseState.lastUpdate > 0
-                      ? formatDateTime(sseState.lastUpdate)
-                      : '—'}
+                    <Clock className="h-3 w-3" /> Real-time feed active
                   </span>
                 </div>
               </div>

@@ -101,12 +101,16 @@ import { cn } from "@/lib/utils";
 import { buildProgramNameVersionKey, formatVsnDisplayName, parseVsnFilename } from "@/lib/vsn";
 import { useTimeFormatter } from "@/hooks/use-time-formatter";
 import { formatInTimeZone } from 'date-fns-tz';
+import { useTranslation } from "react-i18next";
+import { deriveUserStatus, getActionTypeLabelKey, getStatusLabelKey, getUserStatusTone } from "@/features/logs/commandLogI18n";
+import { CommandLogDetailDialog } from "@/features/logs/CommandLogDetailDialog";
 
 export default function DeviceDetailsPage() {
   const { deviceId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   // Get return path from navigation state (e.g., from schedule detail page)
   const returnTo = (location.state as { returnTo?: string })?.returnTo || '/dashboard/devices';
@@ -137,7 +141,7 @@ export default function DeviceDetailsPage() {
 
   const { data: commandLogsResponse, refetch: refetchCommandLogs } = useQuery({
     queryKey: ['device-command-logs', deviceId],
-    queryFn: () => getDeviceCommandLogs({ deviceId: Number(deviceId), size: 5 }),
+    queryFn: () => getDeviceCommandLogs({ deviceId: Number(deviceId), page: 0, size: 5 }),
     enabled: !!deviceId,
   });
 
@@ -255,6 +259,7 @@ export default function DeviceDetailsPage() {
   const [showBatchCommand, setShowBatchCommand] = useState(false);
   const [showScreenshotManager, setShowScreenshotManager] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [selectedCommandLogId, setSelectedCommandLogId] = useState<number | null>(null);
 
   useEffect(() => {
     const path = location.pathname.replace(/\/$/, '');
@@ -1021,121 +1026,114 @@ export default function DeviceDetailsPage() {
                      <CardTitle className="text-lg font-semibold">Recent activity</CardTitle>
                      <CardDescription className="text-sm text-muted-foreground">Actions sent to this device</CardDescription>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-xl text-sm gap-2"
-                    onClick={() => navigate('/dashboard/logs', { state: { deviceId: device?.deviceId } })}
-                  >
-                    <HistoryIcon className="h-4 w-4" /> View all
-                  </Button>
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     className="rounded-xl text-sm gap-2"
+                     onClick={() => navigate(`/dashboard/logs?tab=terminal&deviceId=${device?.deviceId ?? ''}`)}
+                   >
+                     <HistoryIcon className="h-4 w-4" /> View all
+                   </Button>
                </CardHeader>
                <CardContent className="p-6">
                   <div className="space-y-3">
-                      {recentOperations.length > 0 ? (
-                         recentOperations.map((op) => (
-                            <div key={op.id} className="p-4 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-colors flex items-center justify-between">
-                               <div className="flex items-center gap-4">
-                                 {(() => {
-                                   const status = (op.status || '').toUpperCase();
-                                   const isAckOnly = (op.trackingLevel || '').toUpperCase() === 'ACK_ONLY';
-                                   const rejected = op.accepted === false;
+                          {recentOperations.length > 0 ? (
+                             recentOperations.map((op) => (
+                             <div
+                               key={op.id}
+                               role="button"
+                               tabIndex={0}
+                               className="p-4 rounded-xl bg-muted/20 border border-muted/40 hover:bg-muted/30 transition-colors flex items-center justify-between cursor-pointer"
+                               onClick={() => setSelectedCommandLogId(op.id)}
+                               onKeyDown={(e) => {
+                                 if (e.key === 'Enter' || e.key === ' ') {
+                                   e.preventDefault();
+                                   setSelectedCommandLogId(op.id);
+                                 }
+                               }}
+                             >
+                                <div className="flex items-center gap-4">
+                                  {(() => {
+                                    const userStatus = deriveUserStatus({
+                                      status: op.status,
+                                      trackingLevel: op.trackingLevel,
+                                      accepted: op.accepted,
+                                    });
+                                    const tone = getUserStatusTone(userStatus);
 
-                                   const isSending = status === 'PUBLISHED' || status === 'DISPATCHED' || status === 'WAITING';
-                                   const isReceived = status === 'CONFIRMED' || status === 'ACKED';
-                                   const isSucceeded = status === 'COMPLETED' || status === 'SUCCEEDED' || (isAckOnly && isReceived);
-                                   const isFailed = rejected || status === 'FAILED' || status === 'EXPIRED';
+                                    const isSending = userStatus === 'PUBLISHED';
+                                    const icon = isSending ? (
+                                      <Loader2 className="h-5 w-5 animate-spin" />
+                                    ) : tone === 'success' ? (
+                                      <CheckCircle2 className="h-5 w-5" />
+                                    ) : tone === 'error' ? (
+                                      <XCircle className="h-5 w-5" />
+                                    ) : (
+                                      <Activity className="h-5 w-5" />
+                                    );
 
-                                   const icon = isSending ? <Loader2 className="h-5 w-5 animate-spin" /> :
-                                     isSucceeded ? <CheckCircle2 className="h-5 w-5" /> :
-                                       isFailed ? <XCircle className="h-5 w-5" /> :
-                                         <Activity className="h-5 w-5" />;
+                                    const toneClass =
+                                      tone === 'success'
+                                        ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                        : tone === 'error'
+                                          ? "bg-rose-500/10 text-rose-600 border-rose-500/20"
+                                          : "bg-amber-500/10 text-amber-600 border-amber-500/20";
 
-                                   const toneClass = isSucceeded
-                                     ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                                     : isFailed
-                                       ? "bg-rose-500/10 text-rose-600 border-rose-500/20"
-                                       : "bg-amber-500/10 text-amber-600 border-amber-500/20";
+                                    return (
+                                      <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center border", toneClass)}>
+                                        {icon}
+                                      </div>
+                                    );
+                                  })()}
+                                   <div>
+                                      <div className="flex items-center gap-2">
+                                        {(() => {
+                                          const userStatus = deriveUserStatus({
+                                            status: op.status,
+                                            trackingLevel: op.trackingLevel,
+                                            accepted: op.accepted,
+                                          });
+                                          const tone = getUserStatusTone(userStatus);
+                                          const badgeClass =
+                                            tone === 'success'
+                                              ? "bg-emerald-500/10 text-emerald-600"
+                                              : tone === 'error'
+                                                ? "bg-rose-500/10 text-rose-600"
+                                                : "bg-amber-500/10 text-amber-600";
 
-                                   return (
-                                     <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center border", toneClass)}>
-                                       {icon}
-                                     </div>
-                                   );
-                                 })()}
-                                  <div>
-                                     <div className="flex items-center gap-2">
-                                       {(() => {
-                                         const type = (op.actionType || '').toUpperCase();
-                                         const status = (op.status || '').toUpperCase();
-                                         const isAckOnly = (op.trackingLevel || '').toUpperCase() === 'ACK_ONLY';
-                                         const rejected = op.accepted === false;
-
-                                         const label = (() => {
-                                           if (type === 'CONTENT_REPORT_SWITCH') return 'Statistics';
-                                           if (type === 'INPUT_MODE') return 'Input Mode';
-                                           if (type === 'CLEAR_DEVICE_PROGRAM') return 'Clear Programs';
-                                           if (type === 'DELETE_DEVICE_VSN') return 'Delete Program';
-                                           if (!type) return 'Unknown';
-                                           return type.charAt(0) + type.slice(1).toLowerCase().replace(/_/g, ' ');
-                                         })();
-
-                                         const isSending = status === 'PUBLISHED' || status === 'DISPATCHED' || status === 'WAITING';
-                                         const isReceived = status === 'CONFIRMED' || status === 'ACKED';
-                                         const isSucceeded = status === 'COMPLETED' || status === 'SUCCEEDED' || (isAckOnly && isReceived);
-                                         const isFailed = rejected || status === 'FAILED' || status === 'EXPIRED';
-
-                                         const statusText = rejected
-                                           ? 'Rejected'
-                                           : isSucceeded
-                                             ? 'Success'
-                                             : status === 'EXPIRED'
-                                               ? 'Expired'
-                                               : status === 'FAILED'
-                                                 ? 'Failed'
-                                                 : isReceived
-                                                   ? 'Received'
-                                                   : isSending
-                                                     ? 'Sending'
-                                                     : status || 'Pending';
-
-                                         const badgeClass = isSucceeded
-                                           ? "bg-emerald-500/10 text-emerald-600"
-                                           : isFailed
-                                             ? "bg-rose-500/10 text-rose-600"
-                                             : "bg-amber-500/10 text-amber-600";
-
-                                         return (
-                                           <>
-                                             <span className="font-medium text-sm">{label}</span>
-                                             <Badge variant="outline" className={cn("text-xs h-5 border-none", badgeClass)}>
-                                               {statusText}
-                                             </Badge>
-                                           </>
-                                         );
-                                       })()}
-                                     </div>
-                                     {op.errorMessage && (
-                                       <p className="text-xs text-rose-500 mt-1 max-w-[320px] break-words">{op.errorMessage}</p>
-                                     )}
-                                  </div>
-                               </div>
+                                          return (
+                                            <>
+                                              <span className="font-medium text-sm">{t(getActionTypeLabelKey(op.actionType))}</span>
+                                              <Badge variant="outline" className={cn("text-xs h-5 border-none", badgeClass)}>
+                                                {t(getStatusLabelKey(userStatus))}
+                                              </Badge>
+                                            </>
+                                          );
+                                        })()}
+                                      </div>
+                                      {op.errorMessage && (
+                                        <p className="text-xs text-rose-500 mt-1 max-w-[320px] break-words">{op.errorMessage}</p>
+                                      )}
+                                   </div>
+                                </div>
  
                                <div className="text-right">
                                  <p className="text-xs text-muted-foreground">{op.createdAt ? formatRelative(op.createdAt) : ''}</p>
                               </div>
-                           </div>
-                        ))
-                     ) : (
+                            </div>
+                         ))
+                      ) : (
                         <div className="py-16 flex flex-col items-center justify-center gap-4 text-muted-foreground">
                            <Activity className="h-10 w-10 opacity-30" />
                            <p className="text-sm">No recent activity</p>
                         </div>
                      )}
                   </div>
-               </CardContent>
-            </Card>
-         </TabsContent>
+                </CardContent>
+             </Card>
+
+             <CommandLogDetailDialog logId={selectedCommandLogId} onClose={() => setSelectedCommandLogId(null)} />
+          </TabsContent>
 
          <TabsContent value="assets" className="mt-0">
             <Card className="rounded-3xl border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">

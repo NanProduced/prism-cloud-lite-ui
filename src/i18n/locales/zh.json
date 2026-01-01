@@ -282,5 +282,98 @@
       "success": "核销成功！您的计划已升级为专业版。",
       "error": "兑换码无效或已过期"
     }
+  },
+  "logs": {
+    "tabs": {
+      "deviceLogs": "设备日志",
+      "commandLogs": "指令日志"
+    },
+    "common": {
+      "all": "全部",
+      "allDevices": "全部设备",
+      "filterDevice": "筛选设备",
+      "searchDevicePlaceholder": "搜索设备名称...",
+      "noDeviceFound": "未找到设备",
+      "export": "导出",
+      "copied": "已复制",
+      "close": "关闭",
+      "done": "完成"
+    },
+    "device": {
+      "operationType": "操作类型"
+    },
+    "command": {
+      "status": "状态",
+      "searchPlaceholder": "搜索（设备/动作/状态/ID）",
+      "loading": "正在加载指令日志...",
+      "loadFailed": "指令日志加载失败",
+      "empty": "当前筛选条件下没有指令日志",
+      "accepted": {
+        "true": "已受理",
+        "false": "未受理"
+      },
+      "covered": {
+        "true": "覆盖旧指令",
+        "false": "未覆盖"
+      },
+      "actionType": {
+        "UNKNOWN": "未知动作",
+        "BRIGHTNESS": "调节亮度",
+        "POWER": "电源控制（休眠/唤醒/重启）",
+        "COLOR_TEMP": "调节色温",
+        "VOLUME": "调节音量",
+        "CLEAR_CACHE": "清除缓存",
+        "INPUT_MODE": "切换信号源",
+        "TIMEZONE": "设置时区/时间",
+        "LOCALE": "设置地区/语言",
+        "CONTENT_REPORT_SWITCH": "内容统计上报开关",
+        "SCREENSHOT": "截图",
+        "SET_SENSOR_REPORT_TIME": "设置传感器上报周期",
+        "DELETE_DEVICE_VSN": "删除设备节目",
+        "CLEAR_DEVICE_PROGRAM": "清空设备节目"
+      },
+      "trackingLevel": {
+        "UNKNOWN": "未知追踪方式",
+        "UPDATE_ONLY": "更新类操作",
+        "ACK_ONLY": "仅确认接收",
+        "PROPERTY_MATCH": "属性匹配完成",
+        "EXPLICIT_RESULT": "设备显式结果"
+      },
+      "statusUi": {
+        "DONE": "已送达",
+        "UNKNOWN": "未知",
+        "PROBLEMS": "失败/过期"
+      },
+      "status": {
+        "PUBLISHED": "已下发",
+        "CONFIRMED": "设备已接收",
+        "COMPLETED": "已完成",
+        "EXPIRED": "已过期",
+        "FAILED": "下发失败"
+      },
+      "table": {
+        "issuedAt": "时间",
+        "device": "设备",
+        "actionType": "动作",
+        "status": "进度/结果",
+        "audit": "受理/覆盖",
+        "sendMethod": "下发方式",
+        "details": "详情",
+        "total": "共 {{total}} 条"
+      },
+      "detail": {
+        "title": "指令日志详情",
+        "subtitle": "查看指令执行链路与原始 payload（用于排障）",
+        "loading": "正在加载详情...",
+        "loadFailed": "详情加载失败",
+        "operationId": "Operation ID",
+        "queuedId": "Queued ID",
+        "trackingLevel": "追踪方式",
+        "errorMessage": "错误信息",
+        "payload": "Payload（JSON）",
+        "copyPayload": "复制 JSON",
+        "noPayload": "无 payload 记录"
+      }
+    }
   }
 }
