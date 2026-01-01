@@ -320,7 +320,7 @@
       "operationType": "Operation Type"
     },
     "command": {
-      "status": "Status",
+      "statusLabel": "Status",
       "searchPlaceholder": "Search (device/action/status/ID)",
       "loading": "Loading command logs...",
       "loadFailed": "Failed to load command logs",

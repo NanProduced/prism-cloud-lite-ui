@@ -13,27 +13,21 @@ import {
   CheckCheck,
   ChevronLeft,
   ChevronRight,
-  Info,
-  AlertCircle,
-  Zap,
   RefreshCw,
   Monitor,
   Layers,
   Image,
-  Terminal,
   ExternalLink,
   Eye,
-  Check,
-  Mail,
   Inbox,
   Activity,
-  Calendar,
   ChevronsUpDown,
   Copy,
+  Zap,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -66,6 +60,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/store/notificationStore";
 import { useTimeFormatter } from "@/hooks/use-time-formatter";
 import { renderMessage } from "@/lib/message-renderer";
+import { DateRangePicker } from "@/components/shared/DateRangePicker";
 
 export default function MessagesPage() {
   const navigate = useNavigate();
@@ -88,8 +83,8 @@ export default function MessagesPage() {
   const [dateRange, setDateRange] = useState(() => {
     const now = new Date();
     return {
-      from: formatInTimeZone(subDays(now, 7), timeZone, 'yyyy-MM-dd'),
-      to: formatInTimeZone(now, timeZone, 'yyyy-MM-dd'),
+      from: subDays(now, 7).toISOString(),
+      to: now.toISOString(),
     };
   });
   const [readFilter, setReadFilter] = useState<'all' | 'unread' | 'read'>('all');
@@ -102,11 +97,6 @@ export default function MessagesPage() {
   const [debugOpen, setDebugOpen] = useState(false);
 
   useEffect(() => {
-    const now = new Date();
-    setDateRange({
-      from: formatInTimeZone(subDays(now, 7), timeZone, 'yyyy-MM-dd'),
-      to: formatInTimeZone(now, timeZone, 'yyyy-MM-dd'),
-    });
     setPage(0);
   }, [timeZone]);
 
@@ -131,23 +121,6 @@ export default function MessagesPage() {
 
   // --- Queries ---
 
-  const fromIso = useMemo(() => {
-    try {
-      return fromZonedTime(`${dateRange.from} 00:00:00`, timeZone).toISOString();
-    } catch {
-      return new Date().toISOString();
-    }
-  }, [dateRange.from, timeZone]);
-
-  const toIso = useMemo(() => {
-    try {
-      const start = fromZonedTime(`${dateRange.to} 00:00:00`, timeZone);
-      return addDays(start, 1).toISOString();
-    } catch {
-      return new Date().toISOString();
-    }
-  }, [dateRange.to, timeZone]);
-
   const { data: messagesData, isLoading, isFetching } = useQuery({
     queryKey: ['messages', activeTab, readFilter, statusFilter, searchKeyword, dateRange, page],
     queryFn: () => getMessages({
@@ -155,8 +128,8 @@ export default function MessagesPage() {
       read: readFilter,
       status: statusFilter === 'all' ? undefined : statusFilter,
       keyword: searchKeyword,
-      from: fromIso,
-      to: toIso,
+      from: dateRange.from,
+      to: dateRange.to.includes('T') ? dateRange.to : dateRange.to + 'T23:59:59',
       page,
       size: pageSize
     }),
@@ -172,22 +145,6 @@ export default function MessagesPage() {
     queryFn: () => getMessageDetail(selectedMessageId!),
     enabled: !!selectedMessageId,
   });
-
-  const detailMessage = detailRes?.success ? (detailRes.data ?? null) : null;
-
-  // Fallback polling for task progress when SSE is disconnected (detail page only).
-  useEffect(() => {
-    if (!selectedMessageId) return;
-    if (sseConnected) return;
-    const status = detailRes?.data?.status;
-    if (status !== 'PENDING' && status !== 'RUNNING') return;
-
-    const intervalId = window.setInterval(() => {
-      queryClient.invalidateQueries({ queryKey: ['messages', 'detail', selectedMessageId] });
-    }, 3000);
-
-    return () => window.clearInterval(intervalId);
-  }, [selectedMessageId, sseConnected, detailRes?.data?.status, queryClient]);
 
   // --- SSE Integration ---
   useEffect(() => {
@@ -262,10 +219,18 @@ export default function MessagesPage() {
   const setQuickRange = (days: number) => {
     const now = new Date();
     setDateRange({
-      from: formatInTimeZone(subDays(now, days), timeZone, 'yyyy-MM-dd'),
-      to: formatInTimeZone(now, timeZone, 'yyyy-MM-dd'),
+      from: subDays(now, days).toISOString(),
+      to: now.toISOString(),
     });
     setPage(0);
+  };
+
+  // Helper to determine if a range is active (approximate due to time drift)
+  const isQuickRangeActive = (days: number) => {
+    const fromTime = new Date(dateRange.from).getTime();
+    const toTime = new Date(dateRange.to).getTime();
+    const diffDays = (toTime - fromTime) / (24 * 3600 * 1000);
+    return diffDays > days - 0.1 && diffDays < days + 0.1;
   };
 
   const handleMessageClick = (message: MessageListItem) => {
@@ -292,54 +257,54 @@ export default function MessagesPage() {
   const totalPages = Math.ceil(total / pageSize);
 
   return (
-    <div className="flex flex-col gap-4 p-0 h-full animate-in fade-in duration-500">
+    <div className="flex flex-col gap-6 p-6 h-full animate-in fade-in duration-500 overflow-hidden">
       {/* TOPBAR */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center bg-muted/40 p-1 rounded-xl border shadow-inner w-fit">
+        <div className="flex items-center bg-muted/30 p-1 rounded-2xl border shadow-sm w-fit">
           <button
             type="button"
             className={cn(
-              'rounded-lg px-6 py-1.5 text-[10px] font-bold tracking-wide transition-all flex items-center gap-1.5',
-              activeTab === 'all' ? 'bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.03]' : 'text-muted-foreground/60 hover:text-muted-foreground',
+              'rounded-xl px-8 py-2 text-[11px] font-bold tracking-widest transition-all flex items-center gap-2',
+              activeTab === 'all' ? 'bg-background text-primary shadow-sm ring-1 ring-black/5' : 'text-muted-foreground/60 hover:text-muted-foreground',
             )}
             onClick={() => handleTabChange('all')}
           >
-            <Inbox className="h-3.5 w-3.5" />
+            <Inbox className="h-4 w-4" />
             Inbox
           </button>
           <button
             type="button"
             className={cn(
-              'rounded-lg px-6 py-1.5 text-[10px] font-bold tracking-wide transition-all flex items-center gap-1.5',
-              activeTab === 'NOTIFICATION' ? 'bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.03]' : 'text-muted-foreground/60 hover:text-muted-foreground',
+              'rounded-xl px-8 py-2 text-[11px] font-bold tracking-widest transition-all flex items-center gap-2',
+              activeTab === 'NOTIFICATION' ? 'bg-background text-primary shadow-sm ring-1 ring-black/5' : 'text-muted-foreground/60 hover:text-muted-foreground',
             )}
             onClick={() => handleTabChange('notifications')}
           >
-            <Bell className="h-3.5 w-3.5" />
+            <Bell className="h-4 w-4" />
             Notifications
           </button>
           <button
             type="button"
             className={cn(
-              'rounded-lg px-6 py-1.5 text-[10px] font-bold tracking-wide transition-all flex items-center gap-1.5',
-              activeTab === 'TASK' ? 'bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.03]' : 'text-muted-foreground/60 hover:text-muted-foreground',
+              'rounded-xl px-8 py-2 text-[11px] font-bold tracking-widest transition-all flex items-center gap-2',
+              activeTab === 'TASK' ? 'bg-background text-primary shadow-sm ring-1 ring-black/5' : 'text-muted-foreground/60 hover:text-muted-foreground',
             )}
             onClick={() => handleTabChange('tasks')}
           >
-            <Zap className="h-3.5 w-3.5" />
+            <Zap className="h-4 w-4" />
             Tasks
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-muted/50 rounded-xl p-1 border mr-2">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center bg-muted/30 rounded-2xl p-1 border shadow-sm">
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => setQuickRange(1)}
               className={cn(
-                "h-7 px-3 text-[10px] font-bold rounded-lg",
-                dateRange.from === formatInTimeZone(subDays(new Date(), 1), timeZone, 'yyyy-MM-dd') && "bg-background shadow-sm"
+                "h-8 px-4 text-[10px] font-black rounded-xl transition-all",
+                isQuickRangeActive(1) && "bg-background text-primary shadow-sm"
               )}
             >24H</Button>
             <Button 
@@ -347,8 +312,8 @@ export default function MessagesPage() {
               size="sm" 
               onClick={() => setQuickRange(7)}
               className={cn(
-                "h-7 px-3 text-[10px] font-bold rounded-lg",
-                dateRange.from === formatInTimeZone(subDays(new Date(), 7), timeZone, 'yyyy-MM-dd') && "bg-background shadow-sm"
+                "h-8 px-4 text-[10px] font-black rounded-xl transition-all",
+                isQuickRangeActive(7) && "bg-background text-primary shadow-sm"
               )}
             >7D</Button>
             <Button 
@@ -356,89 +321,79 @@ export default function MessagesPage() {
               size="sm" 
               onClick={() => setQuickRange(30)}
               className={cn(
-                "h-7 px-3 text-[10px] font-bold rounded-lg",
-                dateRange.from === formatInTimeZone(subDays(new Date(), 30), timeZone, 'yyyy-MM-dd') && "bg-background shadow-sm"
+                "h-8 px-4 text-[10px] font-black rounded-xl transition-all",
+                isQuickRangeActive(30) && "bg-background text-primary shadow-sm"
               )}
             >30D</Button>
           </div>
-          <Button variant="outline" size="sm" className="h-9 rounded-xl font-bold text-[10px] tracking-wide px-4" onClick={handleMarkAllRead} disabled={unreadRes?.data?.count === 0}>
-            <CheckCheck className="mr-2 h-3.5 w-3.5" />
+          <Button variant="outline" size="sm" className="h-10 rounded-2xl font-bold text-[11px] tracking-widest px-6 border-2 hover:bg-emerald-50 hover:text-emerald-600 transition-all" onClick={handleMarkAllRead} disabled={unreadRes?.data?.count === 0}>
+            <CheckCheck className="mr-2 h-4 w-4" />
             Mark read
           </Button>
-          <Button variant="outline" size="icon" className="rounded-xl h-9 w-9" onClick={() => queryClient.invalidateQueries({ queryKey: ['messages'] })}>
+          <Button variant="outline" size="icon" className="rounded-2xl h-10 w-10 border-2 hover:bg-primary hover:text-white transition-all shadow-sm" onClick={() => queryClient.invalidateQueries({ queryKey: ['messages'] })}>
             <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} />
           </Button>
         </div>
       </div>
 
       {/* FILTER BAR */}
-      <Card className="flex items-center gap-4 flex-wrap p-3 px-6 shadow-sm border rounded-2xl bg-card/50">
+      <div className="flex items-center gap-4 flex-wrap bg-card/50 backdrop-blur-md p-4 px-6 shadow-xl shadow-black/5 border-2 rounded-[2rem]">
         <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-primary" />
-          <div className="flex items-center gap-1">
-            <Input
-              type="date"
-              value={dateRange.from}
-              onChange={(e) => { setDateRange(prev => ({ ...prev, from: e.target.value })); setPage(0); }}
-              className="h-8 w-32 border-none bg-transparent font-bold text-xs p-0 focus-visible:ring-0 cursor-pointer"    
-            />
-            <span className="text-[10px] font-bold opacity-30">to</span>
-            <Input
-              type="date"
-              value={dateRange.to}
-              onChange={(e) => { setDateRange(prev => ({ ...prev, to: e.target.value })); setPage(0); }}
-              className="h-8 w-32 border-none bg-transparent font-bold text-xs p-0 focus-visible:ring-0 cursor-pointer"    
-            />
-          </div>
+          <DateRangePicker 
+            value={dateRange}
+            onChange={(val) => { setDateRange(val); setPage(0); }}
+            label="Message period"
+            className="!h-11"
+          />
         </div>
 
-        <Separator orientation="vertical" className="h-6" />
+        <Separator orientation="vertical" className="h-10 mx-2" />
 
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground/60" />
-          <div className="flex flex-col">
-            <span className="text-[8px] font-semibold tracking-wide text-muted-foreground/60 leading-none mb-0.5">Read status</span>
-            <Select value={readFilter} onValueChange={(v) => setReadFilter(v as any)}>
-              <SelectTrigger className="h-6 border-none bg-transparent font-bold text-xs p-0 focus:ring-0 shadow-none w-24">
+        <div className="flex items-center gap-4 bg-muted/40 px-5 py-2 rounded-2xl border-2 border-transparent hover:border-primary/20 hover:bg-muted/60 transition-all min-w-[150px]">
+          <Filter className="h-5 w-5 text-primary/60 shrink-0" />
+          <div className="flex flex-col flex-1 min-w-0">
+            <span className="text-[10px] font-black tracking-widest text-primary/40 leading-none mb-1.5">Read status</span>
+            <Select value={readFilter} onValueChange={(v) => { setReadFilter(v as any); setPage(0); }}>
+              <SelectTrigger className="h-5 border-none bg-transparent font-bold text-[13px] p-0 focus:ring-0 shadow-none">
                 <SelectValue placeholder="All" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="unread">Unread Only</SelectItem>
-                <SelectItem value="read">Read Only</SelectItem>
+              <SelectContent className="rounded-2xl border-none shadow-2xl">
+                <SelectItem value="all" className="font-bold">All Messages</SelectItem>
+                <SelectItem value="unread" className="font-medium text-rose-600">Unread Only</SelectItem>
+                <SelectItem value="read" className="font-medium">Read Only</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        <Separator orientation="vertical" className="h-6" />
+        <Separator orientation="vertical" className="h-10 mx-2" />
 
-        <div className="flex items-center gap-2">
-          <Activity className="h-4 w-4 text-muted-foreground/60" />
-          <div className="flex flex-col">
-            <span className="text-[8px] font-semibold tracking-wide text-muted-foreground/60 leading-none mb-0.5">Status</span>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-6 border-none bg-transparent font-bold text-xs p-0 focus:ring-0 shadow-none w-24">
+        <div className="flex items-center gap-4 bg-muted/40 px-5 py-2 rounded-2xl border-2 border-transparent hover:border-primary/20 hover:bg-muted/60 transition-all min-w-[150px]">
+          <Activity className="h-5 w-5 text-primary/60 shrink-0" />
+          <div className="flex flex-col flex-1 min-w-0">
+            <span className="text-[10px] font-black tracking-widest text-primary/40 leading-none mb-1.5">Status</span>
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(0); }}>
+              <SelectTrigger className="h-5 border-none bg-transparent font-bold text-[13px] p-0 focus:ring-0 shadow-none">
                 <SelectValue placeholder="All" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="PENDING">Pending</SelectItem>
-                <SelectItem value="RUNNING">Running</SelectItem>
-                <SelectItem value="SUCCESS">Success</SelectItem>
-                <SelectItem value="FAILED">Failed</SelectItem>
+              <SelectContent className="rounded-2xl border-none shadow-2xl">
+                <SelectItem value="all" className="font-bold">All Status</SelectItem>
+                <SelectItem value="PENDING" className="font-medium">Pending</SelectItem>
+                <SelectItem value="RUNNING" className="font-medium text-blue-600">Running</SelectItem>
+                <SelectItem value="SUCCESS" className="font-medium text-emerald-600">Success</SelectItem>
+                <SelectItem value="FAILED" className="font-medium text-rose-600">Failed</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        <Separator orientation="vertical" className="h-6" />
+        <Separator orientation="vertical" className="h-10 mx-2" />
 
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
+        <div className="flex items-center gap-4 bg-muted/30 px-5 py-2 rounded-2xl border-2 border-muted/20 flex-1 max-w-md focus-within:bg-background focus-within:border-primary/40 focus-within:shadow-lg focus-within:shadow-primary/5 transition-all">
+          <Search className="h-5 w-5 text-primary/30 shrink-0" />
           <Input
             placeholder="Search messages..."
-            className="pl-9 h-9 border-none bg-transparent font-bold text-xs p-0 focus-visible:ring-0"
+            className="h-6 border-none bg-transparent font-bold text-[13px] p-0 focus-visible:ring-0 placeholder:text-muted-foreground/30"
             value={searchKeyword}
             onChange={(e) => { setSearchKeyword(e.target.value); setPage(0); }}
           />
@@ -446,15 +401,15 @@ export default function MessagesPage() {
 
         <div className="flex items-center gap-2 ml-auto">
             {unreadRes?.data && unreadRes.data.count > 0 && (
-              <Badge className="bg-rose-500 hover:bg-rose-600 text-white border-none rounded-full h-5 px-2 text-[10px] font-black tabular-nums shadow-lg shadow-rose-500/20">
+              <Badge className="bg-rose-500 hover:bg-rose-600 text-white border-none rounded-xl h-6 px-3 text-[11px] font-black tabular-nums shadow-lg shadow-rose-500/20 animate-in zoom-in duration-300">
                 {unreadRes.data.count} unread
               </Badge>
             )}
         </div>
-      </Card>
+      </div>
 
       {/* CONTENT */}
-      <Card className="flex-1 flex flex-col min-h-0 border rounded-2xl bg-card shadow-sm overflow-hidden">
+      <Card className="flex-1 flex flex-col min-h-0 border rounded-[2rem] bg-card shadow-sm overflow-hidden">
         <div className="flex-1 overflow-auto custom-scrollbar">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center h-full p-24 space-y-4">

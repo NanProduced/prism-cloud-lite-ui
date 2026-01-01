@@ -320,7 +320,7 @@
       "operationType": "操作类型"
     },
     "command": {
-      "status": "状态",
+      "statusLabel": "状态",
       "searchPlaceholder": "搜索（设备/动作/状态/ID）",
       "loading": "正在加载指令日志...",
       "loadFailed": "指令日志加载失败",

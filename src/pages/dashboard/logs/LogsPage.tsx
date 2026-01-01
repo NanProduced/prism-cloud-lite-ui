@@ -12,7 +12,8 @@ import {
   CheckCircle2,
   Check,
   ChevronsUpDown,
-  X
+  X,
+  Layers
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,8 +24,6 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  SelectGroup,
-  SelectLabel
 } from '@/components/ui/select';
 import {
   Popover,
@@ -72,6 +71,7 @@ export default function LogsPage() {
   const [openDevicePicker, setOpenDevicePicker] = useState(false);
 
   // Device Log Specific Filters
+  const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedOperationId, setSelectedOperationId] = useState<string>('all');
 
   // Command Log Specific Filters
@@ -102,16 +102,20 @@ export default function LogsPage() {
   const logTypes = logTypesRes?.data || [];
   const searchedDevices = devicesRes?.data || [];
 
-  // Group log types by 'type' field
-  const groupedLogTypes = useMemo(() => {
-    const groups: Record<string, typeof logTypes> = {};
+  // Get unique types
+  const logTypeCategories = useMemo(() => {
+    const types = new Set<string>();
     logTypes.forEach(item => {
-      const typeName = item.type || 'Other';
-      if (!groups[typeName]) groups[typeName] = [];
-      groups[typeName].push(item);
+      if (item.type) types.add(item.type);
     });
-    return groups;
+    return Array.from(types).sort();
   }, [logTypes]);
+
+  // Operations filtered by selected type
+  const filteredOperations = useMemo(() => {
+    if (selectedType === 'all') return [];
+    return logTypes.filter(item => item.type === selectedType);
+  }, [logTypes, selectedType]);
 
   const handleTabChange = (value: string) => {
     setSearchParams(prev => {
@@ -169,108 +173,111 @@ export default function LogsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-4 p-0 h-full animate-in fade-in duration-500">
+    <div className="flex flex-col gap-6 p-6 h-full animate-in fade-in duration-500 overflow-hidden">
       {/* TOPBAR: TABS & QUICK ACTIONS */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center bg-muted/40 p-1 rounded-xl border shadow-inner w-fit">
+        <div className="flex items-center bg-muted/30 p-1 rounded-2xl border shadow-sm w-fit">
           <button
             type="button"
             className={cn(
-              'rounded-lg px-6 py-1.5 text-[10px] font-bold  tracking-widest transition-all flex items-center gap-1.5',
-              activeTab === 'device' ? 'bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.03]' : 'text-muted-foreground/60 hover:text-muted-foreground',
+              'rounded-xl px-8 py-2 text-[11px] font-bold tracking-widest transition-all flex items-center gap-2',
+              activeTab === 'device' ? 'bg-background text-primary shadow-sm ring-1 ring-black/5' : 'text-muted-foreground/60 hover:text-muted-foreground',
             )}
             onClick={() => handleTabChange('device')}
           >
-            <History className="h-3.5 w-3.5" />
+            <History className="h-4 w-4" />
             {t('logs.tabs.deviceLogs')}
           </button>
           <button
             type="button"
             className={cn(
-              'rounded-lg px-6 py-1.5 text-[10px] font-bold  tracking-widest transition-all flex items-center gap-1.5',
-              activeTab === 'terminal' ? 'bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.03]' : 'text-muted-foreground/60 hover:text-muted-foreground',
+              'rounded-xl px-8 py-2 text-[11px] font-bold tracking-widest transition-all flex items-center gap-2',
+              activeTab === 'terminal' ? 'bg-background text-primary shadow-sm ring-1 ring-black/5' : 'text-muted-foreground/60 hover:text-muted-foreground',
             )}
             onClick={() => handleTabChange('terminal')}
           >
-            <Terminal className="h-3.5 w-3.5" />
+            <Terminal className="h-4 w-4" />
             {t('logs.tabs.commandLogs')}
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-muted/50 rounded-xl p-1 border">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center bg-muted/30 rounded-2xl p-1 border shadow-sm">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setQuickRange(1)}
-              className={cn("h-7 px-3 text-[10px] font-bold  rounded-lg", isQuickRangeActive(1) && "bg-background shadow-sm")}
+              className={cn("h-8 px-4 text-[10px] font-black rounded-xl transition-all", isQuickRangeActive(1) && "bg-background text-primary shadow-sm")}
             >24H</Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setQuickRange(7)}
-              className={cn("h-7 px-3 text-[10px] font-bold  rounded-lg", isQuickRangeActive(7) && "bg-background shadow-sm")}
+              className={cn("h-8 px-4 text-[10px] font-black rounded-xl transition-all", isQuickRangeActive(7) && "bg-background text-primary shadow-sm")}
             >7D</Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setQuickRange(30)}
-              className={cn("h-7 px-3 text-[10px] font-bold  rounded-lg", isQuickRangeActive(30) && "bg-background shadow-sm")}        
+              className={cn("h-8 px-4 text-[10px] font-black rounded-xl transition-all", isQuickRangeActive(30) && "bg-background text-primary shadow-sm")}        
             >30D</Button>
           </div>
-          <Button variant="outline" size="icon" className="rounded-xl h-9 w-9" onClick={handleRefresh}>     
+          <Button variant="outline" size="icon" className="rounded-2xl h-10 w-10 border-2 hover:bg-primary hover:text-white transition-all shadow-sm" onClick={handleRefresh}>     
             <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
       {/* FILTER TOOLBAR */}
-      <div className="flex items-center gap-3 flex-wrap p-3 px-4 shadow-sm border rounded-2xl bg-card"> 
+      <div className="flex items-center gap-4 flex-wrap bg-card/50 backdrop-blur-md p-4 px-6 shadow-xl shadow-black/5 border-2 rounded-[2rem]"> 
         <div className="flex items-center gap-2">
           <DateRangePicker 
             value={dateRange}
             onChange={setDateRange}
             label="Log period"
+            className="!h-11"
           />
         </div>
 
-        <Separator orientation="vertical" className="h-8 mx-1" />
+        <Separator orientation="vertical" className="h-10 mx-2" />
 
-        <div className="flex items-center gap-3 bg-muted/30 px-3 py-1.5 rounded-xl border border-transparent hover:border-muted-foreground/10 transition-all">
-          <Monitor className="h-4 w-4 text-muted-foreground/60" />
-          <div className="flex flex-col min-w-[100px]">
-            <span className="text-[9px] font-bold tracking-wider text-muted-foreground opacity-60 leading-none mb-1">{t('logs.common.filterDevice')}</span>
+        {/* Device Picker Component */}
+        <div className="flex items-center gap-4 bg-muted/40 px-5 py-2 rounded-2xl border-2 border-transparent hover:border-primary/20 hover:bg-muted/60 transition-all min-w-[180px]">
+          <Monitor className="h-5 w-5 text-primary/60 shrink-0" />
+          <div className="flex flex-col flex-1 min-w-0">
+            <span className="text-[10px] font-black tracking-widest text-primary/40 leading-none mb-1.5">{t('logs.common.filterDevice')}</span>
             <Popover open={openDevicePicker} onOpenChange={setOpenDevicePicker}>
               <PopoverTrigger asChild>
-                <div className="flex items-center justify-between gap-2 group cursor-pointer">
+                <div className="flex items-center justify-between gap-3 group cursor-pointer">
                    <span className={cn(
-                     "text-xs font-bold transition-colors truncate max-w-[120px]",
-                      selectedDevice ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"
+                     "text-[13px] font-bold transition-colors truncate",
+                      selectedDevice ? "text-foreground" : "text-muted-foreground/50 group-hover:text-muted-foreground"
                     )}>
                      {selectedDevice ? selectedDevice.name : t('logs.common.allDevices')}
                     </span>
                    {selectedDevice ? (
                      <X 
-                       className="h-3 w-3 text-muted-foreground/40 hover:text-destructive transition-colors shrink-0" 
+                       className="h-4 w-4 text-muted-foreground/40 hover:text-destructive transition-colors shrink-0" 
                        onClick={(e) => {
                          e.stopPropagation();
                          setSelectedDevice(null);
                        }} 
                      />
                    ) : (
-                     <ChevronsUpDown className="h-3 w-3 text-muted-foreground/20 group-hover:text-muted-foreground/40 transition-colors shrink-0" />
+                     <ChevronsUpDown className="h-4 w-4 text-muted-foreground/20 group-hover:text-muted-foreground/40 transition-colors shrink-0" />
                    )}
                 </div>
               </PopoverTrigger>
-              <PopoverContent className="w-64 p-0" align="start">
+              <PopoverContent className="w-72 p-0 border-none shadow-2xl rounded-2xl overflow-hidden" align="start">
                 <Command shouldFilter={false}>
                   <CommandInput 
                     placeholder={t('logs.common.searchDevicePlaceholder')}
                     value={deviceSearch}
                     onValueChange={setDeviceSearch}
+                    className="h-12 border-none focus:ring-0"
                   />
-                  <CommandList>
-                    <CommandEmpty>{t('logs.common.noDeviceFound')}</CommandEmpty>
+                  <CommandList className="max-h-[300px]">
+                    <CommandEmpty className="py-6 text-center text-xs text-muted-foreground">{t('logs.common.noDeviceFound')}</CommandEmpty>
                     <CommandGroup>
                       {searchedDevices.map((device) => (
                         <CommandItem
@@ -280,17 +287,18 @@ export default function LogsPage() {
                             setSelectedDevice({ id: device.deviceId, name: device.deviceName });
                             setOpenDevicePicker(false);
                           }}
+                          className="flex items-center gap-3 p-3 cursor-pointer hover:bg-primary/5 transition-colors"
                         >
-                          <div className="flex flex-col">
-                            <span className="font-bold">{device.deviceName}</span>
-                            <span className="text-[10px] text-muted-foreground opacity-60 ">{device.model}</span>
+                          <div className="h-8 w-8 rounded-lg bg-primary/5 flex items-center justify-center shrink-0">
+                             <Monitor className="h-4 w-4 text-primary/40" />
                           </div>
-                          <Check
-                            className={cn(
-                              "ml-auto h-4 w-4",
-                              selectedDevice?.id === device.deviceId ? "opacity-100" : "opacity-0"
-                            )}
-                          />
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <span className="font-bold text-sm truncate">{device.deviceName}</span>
+                            <span className="text-[10px] text-muted-foreground/60 font-mono ">{device.model}</span>
+                          </div>
+                          {selectedDevice?.id === device.deviceId && (
+                            <Check className="h-4 w-4 text-primary" />
+                          )}
                         </CommandItem>
                       ))}
                     </CommandGroup>
@@ -302,73 +310,85 @@ export default function LogsPage() {
         </div>
 
         {activeTab === 'device' ? (
-          <div className="flex items-center gap-3 bg-muted/30 px-3 py-1.5 rounded-xl border border-transparent hover:border-muted-foreground/10 transition-all">
-            <Tag className="h-4 w-4 text-muted-foreground/60" />
-            <div className="flex flex-col min-w-[120px]">
-              <span className="text-[9px] font-bold tracking-wider text-muted-foreground opacity-60 leading-none mb-1">{t('logs.device.operationType')}</span>
-              <Select value={selectedOperationId} onValueChange={setSelectedOperationId}>
-                <SelectTrigger className="h-4 border-none bg-transparent font-bold text-xs p-0 focus:ring-0 shadow-none">
-                  <SelectValue placeholder="All Operations" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[400px]">
-                  <SelectItem value="all">{t('logs.common.all')}</SelectItem>
-                  {Object.entries(groupedLogTypes).map(([type, items]) => (
-                    <SelectGroup key={type}>
-                      <SelectLabel className="text-[10px] text-muted-foreground px-2 py-1 bg-muted/20 uppercase tracking-widest">{type}</SelectLabel>
-                      {items.map(item => (
-                        <SelectItem key={item.id} value={item.id.toString()} className="pl-4">
-                           <span className="text-muted-foreground/40 font-normal mr-1">{type}-</span>
-                           {item.operation}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        ) : (
           <>
-            <div className="flex items-center gap-3 bg-muted/30 px-3 py-1.5 rounded-xl border border-transparent hover:border-muted-foreground/10 transition-all">
-              <CheckCircle2 className="h-4 w-4 text-muted-foreground/60" />
-              <div className="flex flex-col min-w-[100px]">
-                <span className="text-[9px] font-bold tracking-wider text-muted-foreground opacity-60 leading-none mb-1">{t('logs.command.status')}</span>
-                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                  <SelectTrigger className="h-4 border-none bg-transparent font-bold text-xs p-0 focus:ring-0 shadow-none">
-                    <SelectValue placeholder="All Status" />
+            {/* Step 1: Select Type */}
+            <div className="flex items-center gap-4 bg-muted/40 px-5 py-2 rounded-2xl border-2 border-transparent hover:border-primary/20 transition-all min-w-[150px]">
+              <Tag className="h-5 w-5 text-primary/60 shrink-0" />
+              <div className="flex flex-col flex-1 min-w-0">
+                <span className="text-[10px] font-black tracking-widest text-primary/40 leading-none mb-1.5">{t('logs.device.operationType')}</span>
+                <Select value={selectedType} onValueChange={(val) => { setSelectedType(val); setSelectedOperationId('all'); }}>
+                  <SelectTrigger className="h-5 border-none bg-transparent font-bold text-[13px] p-0 focus:ring-0 shadow-none">
+                    <SelectValue placeholder="Select Category" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('logs.common.all')}</SelectItem>
-                    <SelectItem value="PUBLISHED">{t('logs.command.status.PUBLISHED')}</SelectItem>
-                    <SelectItem value="CONFIRMED">{t('logs.command.status.CONFIRMED')}</SelectItem>
-                    <SelectItem value="COMPLETED">{t('logs.command.status.COMPLETED')}</SelectItem>
-                    <SelectItem value="FAILED">{t('logs.command.status.FAILED')}</SelectItem>
-                    <SelectItem value="EXPIRED">{t('logs.command.status.EXPIRED')}</SelectItem>
-                    <SelectItem value="FAILED,EXPIRED">{t('logs.command.statusUi.PROBLEMS')}</SelectItem>
+                  <SelectContent className="rounded-2xl border-none shadow-2xl">
+                    <SelectItem value="all" className="font-bold">{t('logs.common.all')}</SelectItem>
+                    {logTypeCategories.map(cat => (
+                      <SelectItem key={cat} value={cat} className="font-medium">{cat}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <div className="flex items-center gap-3 bg-muted/20 px-3 py-1.5 rounded-xl border border-muted/10 flex-1 max-w-[240px] focus-within:bg-muted/30 focus-within:border-primary/20 transition-all">
-              <Search className="h-4 w-4 text-muted-foreground/40" />
+
+            {/* Step 2: Select Operation (Conditional) */}
+            {selectedType !== 'all' && (
+              <div className="flex items-center gap-4 bg-muted/40 px-5 py-2 rounded-2xl border-2 border-primary/20 bg-primary/[0.02] transition-all min-w-[180px] animate-in slide-in-from-left-2 duration-300">
+                <Layers className="h-5 w-5 text-primary/60 shrink-0" />
+                <div className="flex flex-col flex-1 min-w-0">
+                  <span className="text-[10px] font-black tracking-widest text-primary/40 uppercase leading-none mb-1.5">Operation</span>
+                  <Select value={selectedOperationId} onValueChange={setSelectedOperationId}>
+                    <SelectTrigger className="h-5 border-none bg-transparent font-bold text-[13px] p-0 focus:ring-0 shadow-none">
+                      <SelectValue placeholder="Select Operation" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-none shadow-2xl max-h-[400px]">
+                      <SelectItem value="all" className="font-bold">{t('logs.common.all')}</SelectItem>
+                      {filteredOperations.map(op => (
+                        <SelectItem key={op.id} value={op.id.toString()} className="font-medium">{op.operation}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-4 bg-muted/40 px-5 py-2 rounded-2xl border-2 border-transparent hover:border-primary/20 transition-all min-w-[140px]">
+              <CheckCircle2 className="h-5 w-5 text-primary/60 shrink-0" />
+              <div className="flex flex-col flex-1 min-w-0">
+                <span className="text-[10px] font-black tracking-widest text-primary/40 leading-none mb-1.5">{t('logs.command.statusLabel')}</span>
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger className="h-5 border-none bg-transparent font-bold text-[13px] p-0 focus:ring-0 shadow-none">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl border-none shadow-2xl">
+                    <SelectItem value="all" className="font-bold">{t('logs.common.all')}</SelectItem>
+                    <SelectItem value="PUBLISHED" className="font-medium">{t('logs.command.status.PUBLISHED')}</SelectItem>
+                    <SelectItem value="CONFIRMED" className="font-medium">{t('logs.command.status.CONFIRMED')}</SelectItem>
+                    <SelectItem value="COMPLETED" className="font-medium">{t('logs.command.status.COMPLETED')}</SelectItem>
+                    <SelectItem value="FAILED" className="font-medium text-rose-600">{t('logs.command.status.FAILED')}</SelectItem>
+                    <SelectItem value="EXPIRED" className="font-medium text-amber-600">{t('logs.command.status.EXPIRED')}</SelectItem>
+                    <SelectItem value="FAILED,EXPIRED" className="font-bold text-rose-700">{t('logs.command.statusUi.PROBLEMS')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 bg-muted/30 px-5 py-2 rounded-2xl border-2 border-muted/20 flex-1 max-w-[420px] focus-within:bg-background focus-within:border-primary/40 focus-within:shadow-lg focus-within:shadow-primary/5 transition-all">
+              <Search className="h-5 w-5 text-primary/30 shrink-0" />
               <Input
                 placeholder={t('logs.command.searchPlaceholder')}
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                className="h-5 border-none bg-transparent font-bold text-xs p-0 focus-visible:ring-0 placeholder:text-muted-foreground/30"       
-              />
             </div>
           </>
         )}
 
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-3 ml-auto">
           <Button 
-            variant="outline" 
+            variant="default" 
             size="sm" 
-            className="h-9 rounded-xl text-[11px] font-bold tracking-wider px-5 shadow-sm hover:bg-primary hover:text-white transition-all border-muted-foreground/10"
+            className="h-11 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] px-8 shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
             onClick={() => toast.info("Export feature is coming soon")}
           >
-            <Download className="mr-2 h-4 w-4 opacity-70" />
+            <Download className="mr-3 h-4 w-4" />
             {t('logs.common.export')}
           </Button>
         </div>
@@ -391,7 +411,7 @@ export default function LogsPage() {
                operationId: (() => {
                  const v = keyword.trim();
                  if (!v) return undefined;
-                 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
                  return uuid.test(v) ? v : undefined;
                })(),
                statuses:
