@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Wifi, Activity, Clock, TrendingUp, MonitorSmartphone } from 'lucide-react';
+import { Wifi, Clock, TrendingUp, MonitorSmartphone } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -25,6 +25,7 @@ import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { DeviceOnlineTable } from './DeviceOnlineTable';
 import { DeviceSessionsTable } from './DeviceSessionsTable';
 import type { DeviceSession } from '../types';
+import type { Device } from '@/types/device';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
@@ -33,13 +34,23 @@ interface DeviceUptimeTabProps {
   to: string;
   tz: string;
   bucket: PlaybackBucket;
-  deviceMap?: Record<string, string>;
+  deviceMap?: Record<string, Device>;
+  selectedDeviceId: string | null;
+  onSelectDeviceId: (id: string | null) => void;
   className?: string;
 }
 
-export function DeviceUptimeTab({ from, to, tz, bucket, deviceMap, className }: DeviceUptimeTabProps) {
+export function DeviceUptimeTab({ 
+  from, 
+  to, 
+  tz, 
+  bucket, 
+  deviceMap, 
+  selectedDeviceId,
+  onSelectDeviceId,
+  className 
+}: DeviceUptimeTabProps) {
   const { formatDateTime } = useTimeFormatter();
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const navigate = useNavigate();
   const summaryTableHeight = 'h-[340px] sm:h-[420px] lg:h-[520px]';
   const sessionsTableHeight = 'h-[340px] sm:h-[420px]';
@@ -86,18 +97,18 @@ export function DeviceUptimeTab({ from, to, tz, bucket, deviceMap, className }: 
     return sessionsRes.data.items.map((s) => ({
       sessionId: String(s.sessionId),
       deviceId: selectedDeviceId!,
-      startedAt: s.onlineAt, // Mapping to correct field from telemetryApi response
-      endedAt: s.offlineAt || null,
-      durationSeconds: s.onlineSecondsInRange,
+      startedAt: s.startTime,
+      endedAt: s.endTime || null,
+      durationSeconds: s.durationSeconds,
     }));
   }, [sessionsRes, selectedDeviceId]);
 
   // Auto-select first device
   useEffect(() => {
     if (!selectedDeviceId && summaryData.length > 0) {
-      setSelectedDeviceId(summaryData[0].deviceId);
+      onSelectDeviceId(summaryData[0].deviceId);
     }
-  }, [summaryData, selectedDeviceId]);
+  }, [summaryData, selectedDeviceId, onSelectDeviceId]);
 
   // KPI calculations
   const kpis = useMemo(() => {
@@ -132,7 +143,6 @@ export function DeviceUptimeTab({ from, to, tz, bucket, deviceMap, className }: 
     <div className={cn('flex flex-col gap-6', className)}>
       {/* Top Section: Global KPIs and Trends */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        {/* KPI Summary - Compact Vertical Stack */}
         <div className="xl:col-span-3 grid grid-cols-1 gap-4">
           <Card className="rounded-3xl border-none ring-1 ring-muted/60 shadow-sm bg-background/40 backdrop-blur-md overflow-hidden transition-all hover:ring-primary/20">
             <CardContent className="p-5">
@@ -165,7 +175,6 @@ export function DeviceUptimeTab({ from, to, tz, bucket, deviceMap, className }: 
           </Card>
         </div>
 
-        {/* Global Trends - More prominent */}
         <Card className="xl:col-span-9 rounded-3xl border-none ring-1 ring-muted/60 shadow-sm bg-background/40 backdrop-blur-md overflow-hidden">
           <CardHeader className="p-6 pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-[11px] font-bold tracking-tight text-muted-foreground/80 flex items-center gap-2.5">
@@ -222,9 +231,7 @@ export function DeviceUptimeTab({ from, to, tz, bucket, deviceMap, className }: 
         </Card>
       </div>
 
-      {/* Main Analysis Section: Master-Detail Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] gap-6 items-start">
-        {/* LEFT: Master Table */}
         <div className="min-w-0">
           <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
             <CardHeader className="p-4 pb-2 bg-muted/5 border-b flex flex-row items-center justify-between">
@@ -250,7 +257,7 @@ export function DeviceUptimeTab({ from, to, tz, bucket, deviceMap, className }: 
                   data={summaryData}
                   deviceMap={deviceMap}
                   selectedDeviceId={selectedDeviceId || undefined}
-                  onSelectDevice={setSelectedDeviceId}
+                  onSelectDevice={onSelectDeviceId}
                   className={cn(summaryTableHeight, 'border-0 rounded-none')}
                 />
               )}
@@ -258,11 +265,9 @@ export function DeviceUptimeTab({ from, to, tz, bucket, deviceMap, className }: 
           </Card>
         </div>
 
-        {/* RIGHT: Detail Panel */}
         <div className="min-w-0 flex flex-col gap-4">
           {selectedDevice ? (
             <>
-              {/* Selected Device Context Card */}
               <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm bg-muted/5">
                 <CardContent className="p-4">
                   <div className="flex flex-col gap-3">
@@ -325,7 +330,6 @@ export function DeviceUptimeTab({ from, to, tz, bucket, deviceMap, className }: 
                 </CardContent>
               </Card>
 
-              {/* Session History Table */}
               <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
                 <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
                   <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-2 text-foreground/80">

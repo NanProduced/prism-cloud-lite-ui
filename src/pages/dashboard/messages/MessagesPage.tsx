@@ -26,6 +26,8 @@ import {
   Zap,
   AlertCircle,
   Mail,
+  Loader2,
+  Download,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -56,6 +58,7 @@ import {
   getMessageDetail
 } from "@/services/messageApi";
 import { retryTranscodeTask } from "@/services/mediaApi";
+import { getExportDownloadUrl, deleteExport } from "@/services/exportApi";
 import { useMessageStore } from "@/store/messageStore";
 import type { MessageDetail, MessageListItem, MessageKind, MessageStatus } from "@/types/message";
 import { cn } from "@/lib/utils";
@@ -554,6 +557,12 @@ export default function MessagesPage() {
                   />
                 )}
 
+                {detailRes.data.type?.startsWith('export.') && (
+                  <ExportTaskDetails
+                    message={detailRes.data}
+                  />
+                )}
+
                 {/* Related Resources Grid */}
                 {(() => {
                   const payload = detailRes.data.payload || {};
@@ -707,6 +716,130 @@ export default function MessagesPage() {
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function ExportTaskDetails({ message }: { message: MessageDetail }) {
+  const { t } = useTranslation();
+  const payload = message.payload || {};
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDownload = async () => {
+    const exportId = message.payload?.exportId;
+    if (!exportId) return;
+    setIsDownloading(true);
+    try {
+      const res = await getExportDownloadUrl(exportId);
+      if (res.success && res.data?.url) {
+        window.open(res.data.url, '_blank');
+      } else {
+        toast.error(res.error?.displayMessage || 'Failed to get download URL');
+      }
+    } catch (e) {
+      toast.error('Failed to download');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    const exportId = message.payload?.exportId;
+    if (!exportId) return;
+    setIsDeleting(true);
+    try {
+      const res = await deleteExport(exportId);
+      if (res.success) {
+        toast.success('File deleted and quota released');
+        // The message status will be updated via SSE (payload.stage=DELETED)
+      } else {
+        toast.error(res.error?.displayMessage || 'Failed to delete file');
+      }
+    } catch (e) {
+      toast.error('Failed to delete');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const stageLabelMap: Record<string, string> = {
+    PENDING: 'Queued',
+    QUERYING: 'Querying data',
+    UPLOADING: 'Uploading result',
+    SUCCESS: 'Available',
+    FAILED: 'Failed',
+    DELETED: 'Deleted'
+  };
+
+  const stage = String(payload.stage || '');
+  const stageLabel = stageLabelMap[stage] || stage || 'Working';
+
+  return (
+    <div className="rounded-2xl border bg-muted/10 p-6 space-y-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-bold tracking-tight">Export Task Details</p>
+          <div className="flex items-center gap-2 mt-1.5">
+            <Badge variant="secondary" className="h-5 text-[9px] font-black tracking-widest px-2 bg-background border shadow-sm">
+              {payload.format || 'CSV'}
+            </Badge>
+            {payload.rowCount !== undefined && (
+              <span className="text-[10px] text-muted-foreground font-bold tabular-nums">
+                {payload.rowCount.toLocaleString()} rows
+              </span>
+            )}
+          </div>
+        </div>
+        <Badge
+          variant="outline"
+          className={cn(
+            'h-6 px-3 text-[10px] font-bold tracking-wide rounded-full',
+            stage === 'FAILED'
+              ? 'border-rose-200 text-rose-700 bg-rose-50'
+              : stage === 'SUCCESS'
+                ? 'border-emerald-200 text-emerald-700 bg-emerald-50'
+                : stage === 'DELETED'
+                  ? 'border-muted text-muted-foreground bg-muted/20'
+                  : 'border-blue-200 text-blue-700 bg-blue-50 animate-pulse'
+          )}
+        >
+          {stageLabel}
+        </Badge>
+      </div>
+
+      {stage === 'FAILED' && payload.error?.displayMessage && (
+        <div className="rounded-xl border border-rose-200/60 bg-rose-50/60 p-4 text-xs text-rose-700 font-medium leading-relaxed">
+          {payload.error.displayMessage}
+        </div>
+      )}
+
+      {stage === 'SUCCESS' && (
+        <div className="flex items-center gap-3 pt-2">
+          <Button 
+            className="flex-1 rounded-xl h-12 bg-zinc-900 text-white hover:bg-zinc-800 font-bold shadow-xl flex items-center justify-center gap-2"
+            onClick={handleDownload}
+            disabled={isDownloading}
+          >
+            {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            Download File
+          </Button>
+          <Button 
+            variant="ghost"
+            className="rounded-xl h-12 px-6 font-bold text-rose-600 hover:bg-rose-50"
+            onClick={handleDelete}
+            disabled={isDeleting}
+          >
+            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete'}
+          </Button>
+        </div>
+      )}
+
+      {stage === 'DELETED' && (
+        <p className="text-[11px] text-muted-foreground/60 italic text-center py-2">
+          File has been removed to free up storage space.
+        </p>
+      )}
     </div>
   );
 }

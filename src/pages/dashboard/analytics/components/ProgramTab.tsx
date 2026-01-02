@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Layers, MonitorPlay, Clock, Monitor, TrendingUp, AlertCircle } from 'lucide-react';
+import { Layers, Monitor, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -27,19 +27,30 @@ import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { PlaybackTopTable } from './PlaybackTopTable';
 import { AnalyticsDeviceTable } from '@/components/analytics/AnalyticsDeviceTable';
 import { useNavigate } from 'react-router-dom';
+import type { Device } from '@/types/device';
 
 interface ProgramTabProps {
   from: string;
   to: string;
   tz: string;
   bucket: PlaybackBucket;
-  deviceMap?: Record<string, string>;
+  deviceMap?: Record<string, Device>;
+  selectedProgram: ProgramPlaySummaryItem | null;
+  onSelectProgram: (p: ProgramPlaySummaryItem | null) => void;
   className?: string;
 }
 
-export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: ProgramTabProps) {
+export function ProgramTab({ 
+  from, 
+  to, 
+  tz, 
+  bucket, 
+  deviceMap, 
+  selectedProgram,
+  onSelectProgram,
+  className 
+}: ProgramTabProps) {
   const { formatDateTime } = useTimeFormatter();
-  const [selectedProgram, setSelectedProgram] = useState<ProgramPlaySummaryItem | null>(null);
   const navigate = useNavigate();
   const masterTableHeight = 'h-[340px] sm:h-[420px] lg:h-[520px]';
   const deviceTableHeight = 'h-[260px] sm:h-[300px]';
@@ -131,14 +142,13 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
   // Auto-select first program
   useEffect(() => {
     if (!selectedProgram && programs.length > 0) {
-      setSelectedProgram(programs[0]);
+      onSelectProgram(programs[0]);
     }
-  }, [programs, selectedProgram]);
+  }, [programs, selectedProgram, onSelectProgram]);
 
   return (
     <div className={cn('flex flex-col gap-6', className)}>
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] gap-6 items-start">
-        {/* LEFT: Master Table */}
         <div className="min-w-0">
           <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
             <CardHeader className="p-4 pb-2 bg-muted/5 border-b flex flex-row items-center justify-between">
@@ -172,7 +182,7 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
                   selectedId={selectedProgram?.lan ? selectedProgram?.lanProgramId : selectedProgram?.programId}
                   onSelect={(item) => {
                     const p = programs.find(p => (p.lan ? p.lanProgramId : p.programId) === item.id);
-                    if (p) setSelectedProgram(p);
+                    if (p) onSelectProgram(p);
                   }}
                   className={cn(masterTableHeight, 'border-0 rounded-none')}
                 />
@@ -181,11 +191,9 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
           </Card>
         </div>
 
-        {/* RIGHT: Detail Panel */}
         <div className="min-w-0 flex flex-col gap-4">
           {selectedProgram ? (
             <>
-              {/* Context Header */}
               <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm bg-muted/5">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
@@ -208,7 +216,6 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
                 </CardContent>
               </Card>
 
-              {/* Trend Chart */}
               <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
                 <CardHeader className="p-4 pb-0">
                   <CardTitle className="text-[10px] font-bold tracking-widest text-muted-foreground flex items-center gap-2">
@@ -258,7 +265,6 @@ export function ProgramTab({ from, to, tz, bucket, deviceMap, className }: Progr
                 </CardContent>
               </Card>
 
-              {/* Device Distribution */}
               <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
                 <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
                   <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-2 text-foreground/80">

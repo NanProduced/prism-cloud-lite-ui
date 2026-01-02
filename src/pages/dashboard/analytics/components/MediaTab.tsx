@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Film, MonitorPlay, Clock, Monitor, TrendingUp } from 'lucide-react';
+import { Film, Monitor, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
@@ -25,19 +25,30 @@ import {
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { PlaybackTopTable } from './PlaybackTopTable';
 import { AnalyticsDeviceTable } from '@/components/analytics/AnalyticsDeviceTable';
+import type { Device } from '@/types/device';
 
 interface MediaTabProps {
   from: string;
   to: string;
   tz: string;
   bucket: PlaybackBucket;
-  deviceMap?: Record<string, string>;
+  deviceMap?: Record<string, Device>;
+  selectedMedia: MediaPlaySummaryItem | null;
+  onSelectMedia: (m: MediaPlaySummaryItem | null) => void;
   className?: string;
 }
 
-export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTabProps) {
+export function MediaTab({ 
+  from, 
+  to, 
+  tz, 
+  bucket, 
+  deviceMap, 
+  selectedMedia,
+  onSelectMedia,
+  className 
+}: MediaTabProps) {
   const { formatDateTime } = useTimeFormatter();
-  const [selectedMedia, setSelectedMedia] = useState<MediaPlaySummaryItem | null>(null);
   const navigate = useNavigate();
   const masterTableHeight = 'h-[340px] sm:h-[420px] lg:h-[520px]';
   const deviceTableHeight = 'h-[260px] sm:h-[300px]';
@@ -89,14 +100,13 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
   // Auto-select first media
   useEffect(() => {
     if (!selectedMedia && mediaList.length > 0) {
-      setSelectedMedia(mediaList[0]);
+      onSelectMedia(mediaList[0]);
     }
-  }, [mediaList, selectedMedia]);
+  }, [mediaList, selectedMedia, onSelectMedia]);
 
   return (
     <div className={cn('flex flex-col gap-6', className)}>
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] gap-6 items-start">
-        {/* LEFT: Master Table */}
         <div className="min-w-0">
           <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
             <CardHeader className="p-4 pb-2 bg-muted/5 border-b flex flex-row items-center justify-between">
@@ -129,7 +139,7 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
                   selectedId={selectedMedia?.mediaId}
                   onSelect={(item) => {
                     const m = mediaList.find(m => m.mediaId === item.id);
-                    if (m) setSelectedMedia(m);
+                    if (m) onSelectMedia(m);
                   }}
                   className={cn(masterTableHeight, 'border-0 rounded-none')}
                 />
@@ -138,11 +148,9 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
           </Card>
         </div>
 
-        {/* RIGHT: Detail Panel */}
         <div className="min-w-0 flex flex-col gap-4">
           {selectedMedia ? (
             <>
-              {/* Context Header */}
               <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm bg-muted/5">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
@@ -167,7 +175,6 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
                 </CardContent>
               </Card>
 
-              {/* Trend Chart */}
               <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
                 <CardHeader className="p-4 pb-0">
                   <CardTitle className="text-[10px] font-bold tracking-widest text-muted-foreground flex items-center gap-2">
@@ -217,7 +224,6 @@ export function MediaTab({ from, to, tz, bucket, deviceMap, className }: MediaTa
                 </CardContent>
               </Card>
 
-              {/* Device Distribution */}
               <Card className="rounded-2xl border-none ring-1 ring-muted shadow-sm overflow-hidden flex flex-col">
                 <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
                   <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-2 text-foreground/80">

@@ -52,7 +52,7 @@ export function DeviceOnlineTable({
           {data.map((item) => {
             const isSelected = item.deviceId === selectedDeviceId;
             const deviceObj = deviceMap ? deviceMap[item.deviceId] : undefined;
-            const name = deviceObj?.deviceName || item.deviceName || 'Deleted Device';
+            const name = deviceObj?.deviceName || 'Deleted Device';
             const status = deviceObj ? resolveDeviceStatus(deviceObj) : 'offline';
             const networkType = deviceObj?.networkType || 'Unknown';
 

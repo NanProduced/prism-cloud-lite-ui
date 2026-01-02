@@ -47,12 +47,18 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { toast } from '@/store/notificationStore';
+import { ExportDialog } from '@/components/shared/ExportDialog';
+import { ExportType } from '@/types/export';
 
 export default function LogsPage() {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get('tab') || 'device') as 'device' | 'terminal';
+  
+  // Export Dialog State
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+
   const urlDeviceId = (() => {
     const raw = (searchParams.get('deviceId') || '').trim();
     if (!raw) return undefined;
@@ -391,8 +397,8 @@ export default function LogsPage() {
           <Button 
             variant="default" 
             size="sm" 
-            className="h-11 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] px-8 shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
-            onClick={() => toast.info("Export feature is coming soon")}
+            className="h-11 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] px-8 shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+            onClick={() => setIsExportDialogOpen(true)}
           >
             <Download className="mr-3 h-4 w-4" />
             {t('logs.common.export')}
@@ -428,6 +434,13 @@ export default function LogsPage() {
            />
          )}
       </div>
+
+      <ExportDialog 
+        open={isExportDialogOpen}
+        onOpenChange={setIsExportDialogOpen}
+        type={activeTab === 'device' ? ExportType.DEVICE_LOGS : ExportType.COMMAND_LOGS}
+        filters={getFilters()}
+      />
     </div>
   );
 }

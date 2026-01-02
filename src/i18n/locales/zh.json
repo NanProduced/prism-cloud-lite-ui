@@ -252,17 +252,27 @@
       {
         "title": "企业存储",
         "desc": "原生支持 AWS S3、阿里云 OSS 和 MinIO，确保内容可靠托管。",
-        "tags": ["S3", "OSS", "IPFS"]
+        "tags": [
+          "S3",
+          "OSS",
+          "IPFS"
+        ]
       },
       {
         "title": "位置地图",
         "desc": "完整集成 MapTiler 和 Google 地图，实现终端精确定位追踪。",
-        "tags": ["MapTiler", "GIS"]
+        "tags": [
+          "MapTiler",
+          "GIS"
+        ]
       },
       {
         "title": "强大 API",
         "desc": "完善的 REST API 和 Webhooks，轻松对接您的 ERP、CRM 或自定义脚本。",
-        "tags": ["REST", "Webhooks"]
+        "tags": [
+          "REST",
+          "Webhooks"
+        ]
       }
     ],
     "codeComment": "// 部署内容到全球终端",
@@ -476,6 +486,12 @@
           "title": "素材转码{{status}}",
           "summary": "{{sourceTitle}}: {{stage}}{{progress}}"
         }
+      },
+      "export": {
+        "finished": {
+          "title": "{{type}}{{status}}",
+          "summary": "格式: {{format}}，共 {{rowCount}} 行"
+        }
       }
     },
     "kind": {
@@ -560,13 +576,41 @@
       "button": "联系销售"
     },
     "redeem": {
-      "title": "兑换码核销",
-      "description": "输入 12 位 PRDEMO 兑换码升级权益",
+      "title": "兑换码",
+      "description": "输入您的 12 位 PRDEMO 兑换码以升级",
       "placeholder": "PRDEMO-XXXX-XXXX",
-      "button": "立即核销并激活",
+      "button": "验证并激活",
       "submitting": "正在激活...",
-      "success": "核销成功！您的计划已升级为专业版。",
-      "error": "兑换码无效或已过期"
+      "success": "激活成功！您的方案已升级为 Pro。",
+      "error": "无效或已过期的兑换码"
+    }
+  },
+  "export": {
+    "title": "导出数据",
+    "subtitle": "配置导出任务的字段和格式",
+    "type": {
+      "DEVICE_LOGS": "设备日志",
+      "COMMAND_LOGS": "指令日志",
+      "DEVICE_ONLINE_SESSIONS": "设备在线会话",
+      "PROGRAM_PLAY_SESSIONS": "节目播放明细",
+      "MEDIA_PLAY_SESSIONS": "素材播放明细"
+    },
+    "format": "文件格式",
+    "fields": "选择字段",
+    "fieldsHint": "选择您希望包含在文件中的数据点。",
+    "submit": "创建导出任务",
+    "submitting": "正在创建任务...",
+    "success": "导出任务已创建！请在任务中心查看进度。",
+    "error": "创建导出任务失败",
+    "viewTasks": "查看任务",
+    "noFields": "Schema 中未找到字段。",
+    "loadingSchema": "正在加载导出选项...",
+    "loadSchemaFailed": "加载导出选项失败。"
+  },
+  "analytics": {
+    "common": {
+      "exportAll": "导出所有数据",
+      "exportSummary": "导出列表摘要"
     }
   },
   "logs": {

@@ -252,17 +252,27 @@
       {
         "title": "Enterprise Storage",
         "desc": "Native support for AWS S3, Alibaba OSS, and MinIO for reliable content hosting.",
-        "tags": ["S3", "OSS", "IPFS"]
+        "tags": [
+          "S3",
+          "OSS",
+          "IPFS"
+        ]
       },
       {
         "title": "Contextual Maps",
         "desc": "Full integration with MapTiler and Google Maps for precise terminal tracking.",
-        "tags": ["MapTiler", "GIS"]
+        "tags": [
+          "MapTiler",
+          "GIS"
+        ]
       },
       {
         "title": "Powerful API",
         "desc": "Robust REST API and Webhooks to integrate with your ERP, CRM, or custom scripts.",
-        "tags": ["REST", "Webhooks"]
+        "tags": [
+          "REST",
+          "Webhooks"
+        ]
       }
     ],
     "codeComment": "// Deploy content to global terminals",
@@ -476,6 +486,12 @@
           "title": "Media Transcoding {{status}}",
           "summary": "{{sourceTitle}}: {{stage}}{{progress}}"
         }
+      },
+      "export": {
+        "finished": {
+          "title": "{{type}} {{status}}",
+          "summary": "Format: {{format}}, {{rowCount}} rows"
+        }
       }
     },
     "kind": {
@@ -567,6 +583,34 @@
       "submitting": "Activating...",
       "success": "Activation successful! Your plan is now Pro.",
       "error": "Invalid or expired code"
+    }
+  },
+  "export": {
+    "title": "Export Data",
+    "subtitle": "Configure fields and format for your export task",
+    "type": {
+      "DEVICE_LOGS": "Device Logs",
+      "COMMAND_LOGS": "Command Logs",
+      "DEVICE_ONLINE_SESSIONS": "Device Online Sessions",
+      "PROGRAM_PLAY_SESSIONS": "Program Play Sessions",
+      "MEDIA_PLAY_SESSIONS": "Media Play Sessions"
+    },
+    "format": "File Format",
+    "fields": "Select Fields",
+    "fieldsHint": "Select the data points you want to include in the file.",
+    "submit": "Create Export Task",
+    "submitting": "Creating Task...",
+    "success": "Export task created! Check progress in Task Center.",
+    "error": "Failed to create export task",
+    "viewTasks": "View Tasks",
+    "noFields": "No fields found in schema.",
+    "loadingSchema": "Loading export options...",
+    "loadSchemaFailed": "Failed to load export options."
+  },
+  "analytics": {
+    "common": {
+      "exportAll": "Export All Data",
+      "exportSummary": "Export Summary"
     }
   },
   "logs": {
