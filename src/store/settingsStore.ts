@@ -45,9 +45,19 @@ const getBrowserTimezone = () => {
   }
 };
 
+const getBrowserLanguage = (): "en" | "zh" => {
+  try {
+    const lang = navigator.language || (navigator as any).userLanguage;
+    if (lang.startsWith("zh")) return "zh";
+  } catch {
+    // fallback
+  }
+  return "en";
+};
+
 const defaultPreferences: UserPreferences = {
   theme: "system",
-  language: "en",
+  language: getBrowserLanguage(),
   timezone: getBrowserTimezone(),
   dateFormat: "YYYY-MM-DD",
   timeFormat: "24h",

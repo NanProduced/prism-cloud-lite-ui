@@ -3,8 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { getActiveDeviceCountBuckets } from '@/services/telemetryApi';
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { TrendingUp } from 'lucide-react';
+import { useSettingsStore } from '@/store/settingsStore';
 
 export const OnlineTrendWidget = () => {
+  const { preferences } = useSettingsStore();
+  const isDark = preferences.theme === 'dark' || (preferences.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   const { data: trendRes, isLoading } = useQuery({
     queryKey: ['telemetry', 'active-device-count'],
     queryFn: () => getActiveDeviceCountBuckets({
@@ -38,7 +41,13 @@ export const OnlineTrendWidget = () => {
             <XAxis dataKey="name" hide />
             <YAxis hide domain={['dataMin - 1', 'dataMax + 1']} />
             <Tooltip 
-              contentStyle={{ fontSize: '10px', borderRadius: '8px' }}
+              contentStyle={{ 
+                fontSize: '10px', 
+                borderRadius: '8px',
+                backgroundColor: isDark ? '#1f2937' : '#ffffff',
+                border: isDark ? '1px solid #374151' : '1px solid #e5e7eb',
+                color: isDark ? '#f9fafb' : '#111827'
+              }}
               itemStyle={{ color: '#10b981' }}
             />
             <Line 

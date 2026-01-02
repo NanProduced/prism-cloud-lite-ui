@@ -554,16 +554,142 @@
       "loadFailedTitle": "Unable to load this message",
       "loadFailedHint": "Please try again.",
       "close": "Close",
-      "dismiss": "Dismiss",
       "summary": "Message summary",
       "debugTitle": "Debug details (internal)",
       "payload": "Raw payload (JSON)",
       "copyPayload": "Copy JSON",
+      "dismiss": "Dismiss",
+      "inbox": "Inbox",
+      "notifications": "Notifications",
+      "tasks": "Tasks",
+      "markRead": "Mark read",
+      "empty": {
+        "title": "Your inbox is clear",
+        "desc": "Stay tuned! We'll notify you here about system updates, device events, and task completions."
+      },
       "fields": {
         "id": "Message ID",
         "type": "Message type",
         "operationId": "Operation ID",
         "taskId": "Task ID"
+      },
+      "task": {
+        "export": {
+          "title": "Export Task Details",
+          "rows": "rows",
+          "download": "Download File"
+        },
+        "transcode": {
+          "title": "Transcoding task",
+          "progress": "Progress",
+          "liveUpdates": "Live updates unavailable; refreshing periodically.",
+          "openMedia": "Open media library",
+          "retry": "Retry"
+        }
+      }
+    }
+  },
+  "programEditor": {
+    "header": {
+      "blank": "Blank",
+      "saveStatus": {
+        "saving": "Saving...",
+        "unsaved": "Unsaved",
+        "autosavePending": "Autosave pending",
+        "saved": "Saved",
+        "savedAt": "Saved {{time}}"
+      }
+    },
+    "toolbar": {
+      "undo": "Undo",
+      "redo": "Redo",
+      "save": "Save",
+      "preview": "Preview",
+      "publish": "Publish"
+    },
+    "panels": {
+      "left": {
+        "pages": "Pages",
+        "regions": "Regions",
+        "materials": "Media",
+        "searchMaterials": "Search media...",
+        "addPage": "Add Page",
+        "addRegion": "Add Region",
+        "addText": "Add Text"
+      },
+      "timeline": {
+        "title": "Timeline",
+        "speed": "Speed"
+      },
+      "inspector": {
+        "title": "Inspector",
+        "program": "Program Settings",
+        "page": "Page Settings",
+        "region": "Region Settings",
+        "item": "Item Settings",
+        "rename": "Rename Program",
+        "resolution": "Resolution",
+        "targetDevice": "Preview Device",
+        "noDoc": "No document loaded.",
+        "labels": {
+          "programName": "Program name",
+          "targetDevice": "Target device (resolution)",
+          "canvasResolution": "Canvas resolution",
+          "width": "Width",
+          "height": "Height",
+          "apply": "Apply",
+          "loopType": "Loop type",
+          "autoDuration": "Auto duration",
+          "fixedDuration": "Fixed duration",
+          "appointDuration": "AppointDuration (ms)",
+          "background": "Background",
+          "title": "Title",
+          "windowType": "Window type",
+          "normal": "Normal",
+          "sync": "Sync playback",
+          "ticker": "Single-line ticker",
+          "isSchedule": "Is schedule region",
+          "layer": "Layer",
+          "rect": "Rect",
+          "borderWidth": "BorderWidth",
+          "borderColor": "BorderColor",
+          "backColor": "BackColor (optional)",
+          "duration": "Duration (ms)",
+          "repeat": "Repeat",
+          "opacity": "Opacity",
+          "fit": "Fit",
+          "contain": "Contain",
+          "transition": "Transition",
+          "transitionTime": "Time (ms)",
+          "volume": "Volume (0..1)",
+          "textMode": "Text mode",
+          "text": "Text",
+          "textColor": "TextColor",
+          "font": "Font",
+          "italic": "Italic",
+          "underline": "Underline",
+          "yes": "Yes",
+          "no": "No"
+        }
+      },
+      "problems": {
+        "title": "Problems",
+        "empty": "No issues found"
+      },
+      "items": {
+        "image": "Image",
+        "video": "Video",
+        "text": "Text",
+        "gif": "GIF",
+        "unsupported": "Unsupported item"
+      }
+    },
+    "dialogs": {
+      "unsaved": {
+        "title": "Unsaved Changes",
+        "desc": "You have modified the workspace. How would you like to proceed?",
+        "discard": "Discard",
+        "saveAndContinue": "Save & Continue"
       }
     }
   },
@@ -665,7 +791,8 @@
       "filterDevice": "Filter Device",
       "searchDevicePlaceholder": "Search device name...",
       "noDeviceFound": "No device found.",
-      "export": "Export",
+      "export": "Export Data",
+      "period": "Log Period",
       "copied": "Copied",
       "close": "Close",
       "done": "Done"
@@ -748,6 +875,324 @@
         "payload": "Payload (JSON)",
         "copyPayload": "Copy JSON",
         "noPayload": "No payload recorded"
+      }
+    }
+  },
+  "common": {
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "view": "View",
+    "all": "All",
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "create": "Create",
+      "upload": "Upload",
+      "refresh": "Refresh",
+      "back": "Back",
+      "open": "Open",
+      "close": "Close",
+      "rename": "Rename",
+      "move": "Move",
+      "preview": "Preview"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "profile": "Profile",
+      "preferences": "Preferences",
+      "aiAssistant": "AI Assistant",
+      "notifications": "Notifications",
+      "security": "Security",
+      "apiKeys": "API Keys",
+      "billing": "Billing"
+    },
+    "preferences": {
+      "theme": {
+        "label": "Theme",
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+      },
+      "language": {
+        "label": "Language",
+        "en": "English",
+        "zh": "Chinese"
+      },
+      "timezone": "Timezone",
+      "dateFormat": "Date Format",
+      "timeFormat": "Time Format",
+      "showSeconds": "Show Seconds",
+      "save": "Save Preferences"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Welcome back. Here is what's happening across your devices today.",
+    "toolbar": {
+      "addWidget": "Add Widget",
+      "templates": "Templates",
+      "chooseLayout": "Choose a Layout",
+      "finishEditing": "Finish Editing",
+      "customize": "Customize"
+    },
+    "widgets": {
+      "attention": {
+        "title": "Needs Attention",
+        "unpublished": "Unpublished Changes",
+        "pendingPrograms": "{{count}} programs pending",
+        "failedCommands": "Failed Commands",
+        "last24h": "Last 24 hours",
+        "systemStatus": "System Status",
+        "realtime": "Real-time"
+      },
+      "deviceHealth": {
+        "title": "Device Health",
+        "online": "Online",
+        "offline": "Offline",
+        "onlineRate": "Online Rate",
+        "manageDevices": "Manage {{count}} Devices"
+      },
+      "recentActivity": {
+        "title": "Recent Activity",
+        "newTask": "New Task",
+        "notification": "Notification",
+        "empty": "No recent activity"
+      },
+      "storage": {
+        "title": "Cloud Storage",
+        "mismatch": "Mismatch: {{size}} between ledger and quota service.",
+        "items": "items"
+      }
+    },
+    "footer": {
+      "lastSynced": "Last synced: {{time}}"
+    }
+  },
+  "devices": {
+    "title": "Devices",
+    "toolbar": {
+      "addDevice": "Add Device",
+      "batchCommand": "Command",
+      "export": "Export",
+      "searchPlaceholder": "Search by name, description, or model..."
+    },
+    "stats": {
+      "total": "Total",
+      "online": "Online",
+      "offline": "Offline",
+      "pending": "Pending",
+      "filtered": "Filtered"
+    },
+    "grid": {
+      "loading": "Loading all devices for analysis...",
+      "confirmTitle": "Switch to Grid (Analyze)",
+      "confirmDesc": "Grid view loads all devices for advanced analysis, grouping, and aggregations. This may take a few seconds.",
+      "dontShowAgain": "Don't show this again"
+    },
+    "table": {
+      "columns": {
+        "deviceName": "Device Name",
+        "screenshot": "Screenshot",
+        "status": "Status",
+        "model": "Model",
+        "version": "Version",
+        "network": "Network",
+        "signal": "Signal",
+        "lastReport": "Last Report",
+        "resolution": "Resolution",
+        "brightness": "Brightness",
+        "storage": "Storage",
+        "program": "Program",
+        "tags": "Tags"
+      },
+      "empty": "No devices found",
+      "groupCount": "{{count}} devices",
+      "waitingReport": "Waiting for first report..."
+    }
+  },
+  "deviceDetails": {
+    "header": {
+      "lastSeen": "Last seen",
+      "never": "Never",
+      "liveUpdates": {
+        "active": "Live updates active",
+        "paused": "Live updates paused"
+      },
+      "advanced": "Advanced",
+      "refresh": "Refresh"
+    },
+    "cockpit": {
+      "screenshot": {
+        "title": "Screenshot",
+        "empty": "No screenshot available",
+        "noPreview": "No Preview",
+        "history": "Screenshot History",
+        "fullScreen": "Full Screen View",
+        "refresh": "Refresh Screenshot",
+        "captureQueued": "Screenshot command dispatched"
+      },
+      "nowPlaying": {
+        "label": "Now playing",
+        "none": "No program playing"
+      }
+    },
+    "actions": {
+      "title": "Quick Actions",
+      "power": {
+        "label": "System power",
+        "wakeup": "Wake Up",
+        "sleep": "Sleep",
+        "restart": "Restart"
+      },
+      "inputSource": {
+        "label": "Input source",
+        "internal": "Internal player",
+        "hdmi": "HDMI",
+        "dvi": "DVI",
+        "vga": "VGA"
+      },
+      "display": {
+        "label": "Display adjustments",
+        "unlock": "Unlock to adjust",
+        "adjusting": "Adjusting...",
+        "brightness": "Brightness",
+        "volume": "Volume",
+        "colorTemp": "Color temperature"
+      }
+    },
+    "info": {
+      "system": {
+        "title": "System",
+        "uptime": "Uptime",
+        "firmware": "Firmware",
+        "orientation": {
+          "label": "Orientation",
+          "landscape": "Landscape",
+          "portrait": "Portrait"
+        }
+      },
+      "network": {
+        "title": "Network",
+        "connected": "Connected",
+        "disconnected": "Disconnected",
+        "carrier": "Carrier",
+        "ipAddress": "IP address",
+        "gateway": "Gateway",
+        "mac": "MAC",
+        "speed": "Speed",
+        "signal": "Signal",
+        "notConnected": "Not connected"
+      },
+      "resources": {
+        "title": "Resources",
+        "storage": "Storage",
+        "memory": "Memory",
+        "used": "used",
+        "total": "total"
+      }
+    },
+    "tabs": {
+      "assets": "Local Assets",
+      "activity": "Activity",
+      "schedule": "Schedule",
+      "settings": "Settings"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "subtitle": "Actions sent to this device",
+      "viewAll": "View all",
+      "empty": "No recent activity"
+    },
+    "assets": {
+      "title": "Local assets",
+      "subtitle": "Content cached on this device",
+      "clearAll": "Clear all",
+      "table": {
+        "name": "Name",
+        "source": "Source",
+        "size": "Size",
+        "actions": "Actions",
+        "cloud": "Cloud",
+        "lan": "LAN"
+      },
+      "empty": "No cached assets",
+      "noMatch": "No matching assets"
+    },
+    "schedule": {
+      "title": "Schedule",
+      "subtitle": "Programs assigned to this device",
+      "assigned": "Assigned schedule",
+      "none": "No schedule assigned",
+      "summary": {
+        "title": "Summary",
+        "programs": "Programs",
+        "actions": "Actions"
+      },
+      "published": "Published programs",
+      "status": {
+        "ready": "Ready",
+        "downloading": "Downloading",
+        "pending": "Pending"
+      }
+    },
+    "policy": {
+      "time": {
+        "title": "Time",
+        "localTime": "Device local time",
+        "timezoneId": "Timezone ID",
+        "lastSync": "Last Sync"
+      },
+      "security": {
+        "title": "Security",
+        "firewall": {
+          "label": "Firewall",
+          "desc": "Block unauthorized connections"
+        },
+        "autoUpdate": {
+          "label": "Auto update",
+          "desc": "Apply updates automatically"
+        },
+        "usbAccess": {
+          "label": "USB access",
+          "desc": "Allow content from USB"
+        },
+        "sync": {
+          "label": "Multi-screen sync",
+          "desc": "Synchronize with other devices"
+        }
+      }
+    },
+    "dialogs": {
+      "removeAsset": {
+        "title": "Remove program from device?",
+        "descCloud": "This will unpublish the program from this device and request the device to delete the cached VSN.",
+        "descLocal": "This will request the device to delete the cached VSN. Cloud publishing state will not be changed."
+      },
+      "clearAll": {
+        "title": "Clear all cached programs?",
+        "desc": "This sends a device command to clear all downloaded programs. It does not change cloud assignments or schedules."
+      },
+      "power": {
+        "sleep": {
+          "title": "Put device to sleep?",
+          "desc": "The device will enter sleep mode. Content playback will stop until the device is woken up.",
+          "label": "Slide to confirm sleep"
+        },
+        "wakeup": {
+          "title": "Wake up device?",
+          "desc": "The device will be woken up and resume normal operation.",
+          "label": "Slide to confirm wake up"
+        },
+        "restart": {
+          "title": "Restart device?",
+          "desc": "The device will restart. It may be unavailable for about 90 seconds.",
+          "label": "Slide to confirm restart"
+        }
       }
     }
   }

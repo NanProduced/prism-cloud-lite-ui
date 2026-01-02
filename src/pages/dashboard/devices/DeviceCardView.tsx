@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom';
-import { type Device, resolveDeviceStatus } from '@/types/device';
+import { useMemo } from 'react';
+import { type Device, resolveDeviceStatus, type Tag } from '@/types/device';
 import { DeviceScreenshot } from '@/components/devices/DeviceScreenshot';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import type { Tag } from '@/types/device';
 import { TagChip } from '@/components/devices/TagChip';
 import { TagPicker } from '@/components/devices/TagPicker';
 import { DeviceStatusBadge } from '@/components/devices/DeviceStatusBadge';
@@ -20,6 +20,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface DeviceCardViewProps {
   devices: Device[];
@@ -40,6 +41,7 @@ export function DeviceCardView({
   onToggleDeviceTag,
   onCreateTag,
 }: DeviceCardViewProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { formatRelative } = useTimeFormatter();
 
@@ -53,7 +55,7 @@ export function DeviceCardView({
   if (devices.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 border rounded-lg bg-muted/20">
-        <p className="text-muted-foreground">No devices found</p>
+        <p className="text-muted-foreground">{t('devices.table.empty')}</p>
       </div>
     );
   }
@@ -99,89 +101,84 @@ function DeviceCard({
   onNavigate: () => void;
   formatRelative: (d: string) => string;
 }) {
-  const lastReportValue = device.lastReportTime ? new Date(device.lastReportTime) : null;
-  const now = new Date();
-  const diffMinutes = lastReportValue ? (now.getTime() - lastReportValue.getTime()) / (1000 * 60) : 0;
-  const isOutdated = lastReportValue ? diffMinutes > 60 : false;
+  const { t } = useTranslation();
+  const status = resolveDeviceStatus(device);
+  
+  const lastReportLabel = device.lastReportTime ? formatRelative(device.lastReportTime) : t('deviceDetails.header.never');
 
-  const NetworkIcon =
-    device.networkType === 'WIFI' || device.networkType === 'WiFi' ? Wifi : 
+  const showOutdatedWarn = useMemo(() => {
+    if (status !== 'online' || !device.lastReportTime) return false;
+    const lastReportValue = new Date(device.lastReportTime);
+    return (Date.now() - lastReportValue.getTime() > 1000 * 60 * 10);
+  }, [status, device.lastReportTime]);
+
+  const NetworkIcon = useMemo(() => {
+    return device.networkType === 'WIFI' || device.networkType === 'WiFi' ? Wifi : 
     (device.networkType === 'FOUR_G' || device.networkType === '4G') ? RadioTower : EthernetPort;
+  }, [device.networkType]);
 
-  const lastReportLabel = formatRelative(device.lastReportTime);
-  const showOutdatedWarn = device.onlineStatus === 1 && isOutdated;
-
-  const displayedTags = (device.tags || []).slice(0, 2);
-  const remainingTagCount = Math.max(0, (device.tags?.length || 0) - displayedTags.length);
+  const displayedTags = useMemo(() => (device.tags || []).slice(0, 2), [device.tags]);
+  const remainingTagCount = (device.tags || []).length - displayedTags.length;
 
   return (
-    <Card className={cn('group overflow-hidden transition-all', isSelected && 'ring-2 ring-primary')}>
-      <div className="relative">
-        <div className="cursor-pointer" onClick={onNavigate}>
-          <DeviceScreenshot
-            src={device.lastScreenshotUrl}
-            timestamp={device.lastReportTime}
-            deviceName={device.deviceName}
-            className="h-24 w-full rounded-none transition-transform duration-300 group-hover:scale-105"
-          />
-        </div>
-        <div className="absolute top-2 left-2">
-          <DeviceStatusBadge
-            status={resolveDeviceStatus(device)}
-            powerStatus={device.powerStatus}
-            pulse={isPulsing}
-            className="shadow-lg backdrop-blur-sm"
-          />
-        </div>
-        <div className="absolute top-2 right-2">
-          <Checkbox
+    <Card 
+      className={cn(
+        'group relative overflow-hidden transition-all hover:shadow-md',
+        isSelected ? 'ring-2 ring-primary border-primary/20 bg-primary/5' : 'hover:border-primary/30',
+        isPulsing && 'animate-pulse'
+      )}
+    >
+      <div className="relative aspect-video w-full overflow-hidden bg-muted/20">
+        <DeviceScreenshot 
+          deviceId={String(device.deviceId)} 
+          className="h-full w-full object-cover transition-transform group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+        
+        <div className="absolute left-2 top-2 z-10">
+          <Checkbox 
             checked={isSelected}
             onCheckedChange={onToggleSelection}
-            className="h-5 w-5 rounded-md border-white/50 bg-black/20 shadow-lg backdrop-blur-sm data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+            onClick={(e) => e.stopPropagation()}
+            className="bg-background/80 backdrop-blur-sm data-[state=checked]:bg-primary"
           />
+        </div>
+
+        <div className="absolute right-2 top-2 z-10">
+          <DeviceStatusBadge status={status} />
         </div>
       </div>
 
-      <CardContent className="p-3 space-y-2">
-        <div className="min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <h3 
-              className="font-semibold text-sm truncate cursor-pointer hover:text-primary transition-colors"
-              onClick={onNavigate}
-            >
+      <CardContent className="p-3 space-y-3" onClick={onNavigate}>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h3 className="font-bold text-sm truncate leading-none mb-1 group-hover:text-primary transition-colors">
               {device.deviceName}
             </h3>
-            <Badge variant="secondary" className="text-xs font-medium">
-              {device.model}
-            </Badge>
+            <p className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-medium">
+              {device.model || 'Unknown Model'}
+            </p>
           </div>
-          {device.description && (
-            <p className="text-xs text-muted-foreground truncate">{device.description}</p>
-          )}
         </div>
-        <div className="flex items-center gap-2 text-sm min-w-0">
-          <Play className="h-4 w-4 text-muted-foreground shrink-0" />
+
+        <div className="flex items-center gap-2 text-sm min-w-0 bg-muted/30 p-1.5 rounded-md">
+          <Play className="h-3.5 w-3.5 text-primary shrink-0" />
           {device.playingProgram ? (
-            <div className="min-w-0 flex items-center gap-2">
-              <span className="truncate">{device.playingProgram}</span>
-            </div>
+            <span className="truncate text-xs font-medium">{device.playingProgram}</span>
           ) : (
-            <span className="text-muted-foreground">No program</span>
+            <span className="text-[10px] text-muted-foreground">{t('deviceDetails.cockpit.nowPlaying.none')}</span>
           )}
         </div>
 
-        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+        <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
           <div className="flex items-center gap-1">
-            <NetworkIcon className="h-3.5 w-3.5" />
-            <span className="font-medium text-foreground/80">{device.networkType}</span>
-            {device.networkStrength !== undefined && (
-              <span className="text-muted-foreground">{device.networkStrength}%</span>
-            )}
+            <NetworkIcon className="h-3 w-3" />
+            <span className="font-bold text-foreground/70 uppercase">{device.networkType || 'OFFLINE'}</span>
           </div>
 
           <div className={cn('flex items-center gap-1', showOutdatedWarn && 'text-amber-600')}>
-            <Clock className="h-3.5 w-3.5" />
-            <span className={cn(showOutdatedWarn && 'font-semibold')}>
+            <Clock className="h-3 w-3" />
+            <span className={cn(showOutdatedWarn && 'font-black')}>
               {lastReportLabel}
             </span>
             {showOutdatedWarn && <AlertTriangle className="h-3.5 w-3.5" />}
@@ -189,53 +186,48 @@ function DeviceCard({
 
           <div className="flex items-center gap-1">
             <Sun className="h-3.5 w-3.5" />
-            <span>{device.brightness}%</span>
+            <span className="font-bold">{device.brightness}%</span>
           </div>
         </div>
 
-        <TagPicker
-          allTags={tags}
-          selectedTagIds={(device.tags || []).map((t) => t.tagSlug)}
-          onToggleTag={(tag) => onToggleDeviceTag(String(device.deviceId), tag)}
-          onCreateTag={onCreateTag}
-        >
-          <button
-            type="button"
-            className={cn(
-              'w-full flex items-center gap-1.5 rounded-md border bg-muted/10 px-2 py-1.5 text-left transition-colors hover:bg-muted/20',
-              (!device.tags || device.tags.length === 0) && 'text-muted-foreground',
-            )}
-            aria-label="Edit tags"
+        <div className="pt-1">
+          <TagPicker
+            allTags={tags}
+            selectedTagIds={(device.tags || []).map((t) => t.tagSlug)}
+            onToggleTag={(tag) => onToggleDeviceTag(String(device.deviceId), tag)}
+            onCreateTag={onCreateTag}
           >
-            <div className="flex flex-wrap gap-1 min-w-0 flex-1">
-              {displayedTags.length > 0 ? (
-                <>
-                  {displayedTags.map((tag) => (
-                    <TagChip key={tag.tagSlug} tag={tag} className="max-w-[120px]" />
-                  ))}
-                  {remainingTagCount > 0 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{remainingTagCount}
-                    </Badge>
-                  )}
-                </>
-              ) : (
-                <span className="text-xs">Add tags</span>
+            <button
+              type="button"
+              className={cn(
+                'w-full flex items-center gap-1.5 rounded-md border border-dashed bg-muted/5 px-2 py-1 text-left transition-colors hover:bg-muted/20 hover:border-muted-foreground/30',
+                (!device.tags || device.tags.length === 0) && 'text-muted-foreground',
               )}
-            </div>
-            <Plus className="h-4 w-4 text-muted-foreground shrink-0" />
-          </button>
-        </TagPicker>
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex flex-wrap gap-1 min-w-0 flex-1 py-0.5">
+                {displayedTags.length > 0 ? (
+                  <>
+                    {displayedTags.map((tag) => (
+                      <TagChip key={tag.tagSlug} tag={tag} className="h-4 text-[9px] max-w-[80px]" />
+                    ))}
+                    {remainingTagCount > 0 && (
+                      <Badge variant="secondary" className="h-4 px-1 text-[8px] font-black">
+                        +{remainingTagCount}
+                      </Badge>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-[9px] font-bold uppercase tracking-tight opacity-60">
+                    {t('common.actions.create')} {t('devices.table.columns.tags')}
+                  </span>
+                )}
+              </div>
+              <Plus className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            </button>
+          </TagPicker>
+        </div>
       </CardContent>
     </Card>
   );
-}
-
-function formatDuration(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  return `${days}d`;
 }

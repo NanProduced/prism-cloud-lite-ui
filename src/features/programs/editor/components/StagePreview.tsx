@@ -7,7 +7,8 @@ import type { VsnDocument, VsnItem, VsnRect, VsnRegion } from '@/features/progra
 
 import type { EditorMaterial, EditorSelection } from '../types';
 import { getRegionDisplayName, vsnBgColorToCss } from '../utils';
-import { getPages, getRegions } from '../vsnOps';
+import { getItems, getPages, getRegions } from '../vsnOps';
+import { useTranslation } from 'react-i18next';
 
 type MaterialIndex = Record<string, EditorMaterial>;
 
@@ -69,6 +70,7 @@ export function StagePreview({
   onCreateRegionRect?: (pageIndex: number, rect: { x: number; y: number; width: number; height: number }) => void;
   toolbar?: ReactNode;
 }) {
+  const { t } = useTranslation();
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [wrapperSize, setWrapperSize] = useState({ width: 0, height: 0 });
@@ -706,7 +708,7 @@ function RegionBox({
         background: backColor ?? undefined,
       }}
       onPointerDown={onMoveStart}
-      title={getRegionDisplayName(region, regionIndex)}
+      title={getRegionDisplayName(region, regionIndex, t)}
     >
       <div className="relative flex h-full w-full items-center justify-center">
         {activeItem ? (
@@ -721,12 +723,12 @@ function RegionBox({
         ) : (
           <div className="flex flex-col items-center gap-1 opacity-20 group-hover:opacity-40 transition-opacity">
             <ImageIcon className="h-5 w-5" />
-            <span className="text-[10px] font-bold tracking-tighter">Empty</span>
+            <span className="text-[10px] font-bold tracking-tighter">{t('programEditor.problems.empty')}</span>
           </div>
         )}
 
         <div className="pointer-events-none absolute left-1 top-1 flex max-w-[80%] items-center gap-1 rounded bg-background/75 px-1.5 py-0.5 text-[11px] text-foreground shadow-sm">
-          <span className="truncate">{getRegionDisplayName(region, regionIndex)}</span>
+          <span className="truncate">{getRegionDisplayName(region, regionIndex, t)}</span>
         </div>
 
         {selected && (
@@ -888,11 +890,9 @@ const RegionContent = React.memo(function RegionContent({
       <div
         className="h-full w-full overflow-hidden px-2 py-1"
         style={{
-                  whiteSpace: 'pre-wrap',
-                  color: vsnBgColorToCss(item.TextColor ?? '0xFFFFFFFF'),
-                  fontFamily: item.LogFont?.lfFaceName ?? 'SimHei',
+          color: vsnBgColorToCss(item.TextColor ?? '0xFFFFFFFF'),
           fontSize: `${Math.max(10, Math.min(96, Math.round(fontSize)))}px`,
-          fontFamily,
+          fontFamily: fontFamily ?? 'SimHei',
           fontWeight,
           fontStyle: italic,
           textDecoration: underline,

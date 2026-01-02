@@ -68,15 +68,15 @@ export function getRegionMode(region: VsnRegion | null | undefined): RegionMode 
   return 'normal';
 }
 
-export function getRegionDisplayName(region: VsnRegion, regionIndex?: number): string {
+export function getRegionDisplayName(region: VsnRegion, regionIndex?: number, t?: any): string {
   const editorName = getEditorRegionName(region);
   const mode = getRegionMode(region);
-  if (mode === 'sync') return editorName ?? 'Sync window';
-  if (mode === 'ticker') return editorName ?? 'Ticker';
+  if (mode === 'sync') return editorName ?? (t ? t('programEditor.panels.inspector.labels.sync') : 'Sync window');
+  if (mode === 'ticker') return editorName ?? (t ? t('programEditor.panels.inspector.labels.ticker') : 'Ticker');
   const raw = (region.Name ?? '').trim();
   if (raw) return raw;
-  if (typeof regionIndex === 'number') return `Region ${regionIndex + 1}`;
-  return 'Region';
+  if (typeof regionIndex === 'number') return `${t ? t('programEditor.panels.left.regions') : 'Region'} ${regionIndex + 1}`;
+  return t ? t('programEditor.panels.left.regions') : 'Region';
 }
 
 export function getEditorRegionName(region: VsnRegion): string | null {

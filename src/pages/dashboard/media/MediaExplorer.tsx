@@ -44,6 +44,8 @@ import type { MediaAssetNode, MediaNode } from '@/types/media-library';
 import { deleteNode, renameNode, moveNodes } from '@/services/mediaApi';
 import { getErrorMessage } from '@/services/authApi';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 import {
   AlertDialog,
@@ -101,6 +103,7 @@ export function MediaExplorer({
   onLoadMore?: () => void;
   isLoadingMore?: boolean;
 }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
@@ -299,7 +302,7 @@ export function MediaExplorer({
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 className="pl-9"
-                placeholder="Search this folder..."
+                placeholder={t('common.search') + "..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -308,16 +311,16 @@ export function MediaExplorer({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="justify-between gap-2">
-                  Filter: {formatFilterLabel(filter)}
+                  {t('common.filter')}: {formatFilterLabel(filter, t)}
                   <ChevronRight className="h-4 w-4 rotate-90 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Show</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('common.view')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {(
                   [
-                    ['all', 'All items'],
+                    ['all', t('common.all')],
                     ['folders', 'Folders'],
                     ['image', 'Images'],
                     ['video', 'Videos'],
@@ -339,16 +342,16 @@ export function MediaExplorer({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="justify-between gap-2">
-                  Sort: {formatSortLabel(sort)}
+                  {t('common.sort')}: {formatSortLabel(sort, t)}
                   <ChevronRight className="h-4 w-4 rotate-90 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Order</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('common.sort')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {(
                   [
-                    ['updatedAt', 'Recently updated'],
+                    ['updatedAt', t('common.sort')],
                     ['name', 'Name (A → Z)'],
                     ['size', 'Size (largest)'],
                   ] as const
@@ -367,7 +370,7 @@ export function MediaExplorer({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="justify-between gap-2">
-                  View: {formatViewModeLabel(viewMode)}
+                  {t('common.view')}: {formatViewModeLabel(viewMode, t)}
                   <ChevronRight className="h-4 w-4 rotate-90 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
@@ -868,7 +871,7 @@ function sortNodes(nodes: MediaNode[], sort: MediaSort): MediaNode[] {
   return [...folders, ...assets];
 }
 
-function formatFilterLabel(filter: MediaFilter): string {
+function formatFilterLabel(filter: MediaFilter, t: TFunction): string {
   switch (filter) {
     case 'folders':
       return 'Folders';
@@ -882,11 +885,11 @@ function formatFilterLabel(filter: MediaFilter): string {
       return 'Other';
     case 'all':
     default:
-      return 'All';
+      return t('common.all');
   }
 }
 
-function formatSortLabel(sort: MediaSort): string {
+function formatSortLabel(sort: MediaSort, t: TFunction): string {
   switch (sort) {
     case 'name':
       return 'Name';
@@ -894,11 +897,11 @@ function formatSortLabel(sort: MediaSort): string {
       return 'Size';
     case 'updatedAt':
     default:
-      return 'Updated';
+      return t('common.sort');
   }
 }
 
-function formatViewModeLabel(mode: MediaViewMode): string {
+function formatViewModeLabel(mode: MediaViewMode, t: TFunction): string {
   switch (mode) {
     case 'list':
       return 'List';

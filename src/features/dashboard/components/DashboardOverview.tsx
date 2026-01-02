@@ -19,8 +19,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DEFAULT_LAYOUT, OPS_FOCUS_LAYOUT } from '../constants';
+import { useTranslation } from 'react-i18next';
 
 export const DashboardOverview: React.FC = () => {
+  const { t } = useTranslation();
   const {
     layout,
     isEditMode,
@@ -39,9 +41,9 @@ export const DashboardOverview: React.FC = () => {
       {/* Dashboard Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sticky top-0 z-10 bg-background/80 backdrop-blur-md py-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('dashboard.title')}</h1>
           <p className="text-muted-foreground text-sm">
-            Welcome back. Here is what's happening across your devices today.
+            {t('dashboard.subtitle')}
           </p>
         </div>
 
@@ -55,17 +57,17 @@ export const DashboardOverview: React.FC = () => {
                 className="gap-2"
               >
                 <Plus className="h-4 w-4" />
-                Add Widget
+                {t('dashboard.toolbar.addWidget')}
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2">
                     <LayoutGrid className="h-4 w-4" />
-                    Templates
+                    {t('dashboard.toolbar.templates')}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Choose a Layout</DropdownMenuLabel>
+                  <DropdownMenuLabel>{t('dashboard.toolbar.chooseLayout')}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => resetLayout(DEFAULT_LAYOUT)}>
                     Default (Balanced)
@@ -82,7 +84,7 @@ export const DashboardOverview: React.FC = () => {
                 className="gap-2 bg-emerald-600 hover:bg-emerald-700"
               >
                 <Save className="h-4 w-4" />
-                Finish Editing
+                {t('dashboard.toolbar.finishEditing')}
               </Button>
             </>
           ) : (
@@ -93,7 +95,7 @@ export const DashboardOverview: React.FC = () => {
               className="gap-2"
             >
               <Settings2 className="h-4 w-4" />
-              Customize
+              {t('dashboard.toolbar.customize')}
             </Button>
           )}
         </div>
@@ -127,7 +129,7 @@ export const DashboardOverview: React.FC = () => {
           <span className="opacity-40">System Online</span>
         </div>
         <div className="flex items-center gap-4 opacity-40">
-          <span>Last synced: {layout.updatedAt ? new Date(layout.updatedAt).toLocaleTimeString() : 'Just now'}</span>
+          <span>{t('dashboard.footer.lastSynced', { time: layout.updatedAt ? new Date(layout.updatedAt).toLocaleTimeString() : t('deviceDetails.cockpit.screenshot.captureQueued') })}</span>
         </div>
       </div>
     </div>

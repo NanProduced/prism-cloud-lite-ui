@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import type { VsnItem, VsnRegion } from '@/features/programs/vsn/types';
 import type { EditorMaterial, EditorSelection } from '../types';
 import { getRegionDisplayName } from '../utils';
+import { useTranslation } from 'react-i18next';
 
 type MaterialIndex = Record<string, EditorMaterial>;
 
@@ -41,6 +42,7 @@ export function AdvancedTimeline({
   onDeleteItem,
   onMoveItem,
 }: AdvancedTimelineProps & { isPlaying: boolean }) {
+  const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [pxPerSec, setPxPerSec] = useState(60);
   const [draggingItem, setDraggingItem] = useState<{ rIdx: number; iIdx: number } | null>(null);
@@ -169,7 +171,7 @@ export function AdvancedTimeline({
         {/* 左侧：轨道表头 */}
         <div className="z-30 w-36 flex-none border-r bg-card/50 backdrop-blur-sm">
           <div style={{ height: HEADER_HEIGHT }} className="border-b bg-muted/10 flex items-center px-3 justify-between">
-            <span className="text-[10px] font-bold text-muted-foreground tracking-tight">Tracks</span>
+            <span className="text-[10px] font-bold text-muted-foreground tracking-tight">{t('programEditor.panels.left.regions')}</span>
           </div>
           <div className="flex flex-col">
             {regions.map((region, idx) => (
@@ -182,13 +184,7 @@ export function AdvancedTimeline({
                 )}
                 onClick={() => onSelectRegion(idx)}
               >
-                <div className="flex flex-col min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-muted-foreground/40 w-3 leading-none">{region.Layer || idx + 1}</span>
-                    <span className="truncate text-[11px] font-semibold tracking-tight">{getRegionDisplayName(region, idx)}</span>
-                  </div>
-                  <span className="text-[9px] text-muted-foreground/60 ml-4.5 mt-0.5">{region.Items.Item.length} items</span>
-                </div>
+                <span className="truncate text-[11px] font-semibold tracking-tight">{getRegionDisplayName(region, idx, t)}</span>
               </div>
             ))}
           </div>
@@ -260,6 +256,7 @@ export function AdvancedTimeline({
                             }
                           }
                         }}
+                        t={t}
                       />
                     ))}
                   </div>
@@ -306,6 +303,7 @@ function TimelineItemBlock({
   onDelete,
   onDragStart,
   onDragOver,
+  t, // Add t here
 }: {
   item: VsnItem;
   pxPerSec: number;
@@ -316,10 +314,11 @@ function TimelineItemBlock({
   onDelete: () => void;
   onDragStart: () => void;
   onDragOver: (e: React.DragEvent) => void;
+  t: any; // Add t here
 }) {
   const duration = Number(item.Duration) || 3000;
   const width = (duration / 1000) * pxPerSec;
-  const label = material?.name || (item.Type === '4' || item.Type === '5' ? item.Text : 'Item');
+  const label = material?.name || (item.Type === '4' || item.Type === '5' ? item.Text : t('programEditor.panels.inspector.item'));
   const hasEffect = !!item.inEffect;
 
   const handleMouseDown = (e: React.MouseEvent) => {

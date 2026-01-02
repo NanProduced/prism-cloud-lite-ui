@@ -67,10 +67,10 @@ export default function LogsPage() {
   })();
 
   // Common Filters
-  const [dateRange, setDateRange] = useState({
+  const [dateRange, setDateRange] = useState(() => ({
     from: new Date(Date.now() - (activeTab === 'device' ? 1 : 7) * 24 * 60 * 60 * 1000).toISOString(),
     to: new Date().toISOString(),
-  });
+  }));
   
   // Device Selection
   const [selectedDevice, setSelectedDevice] = useState<{ id: number; name: string } | null>(null);
@@ -242,7 +242,7 @@ export default function LogsPage() {
           <DateRangePicker 
             value={dateRange}
             onChange={setDateRange}
-            label="Log period"
+            label={t('logs.common.period') || 'Log period'}
             className="!h-11"
           />
         </div>

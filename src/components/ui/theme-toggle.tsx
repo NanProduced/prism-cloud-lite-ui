@@ -7,42 +7,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-type Theme = "light" | "dark" | "system";
+import { useSettingsStore } from "@/store/settingsStore";
+import { useTranslation } from "react-i18next";
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("system");
+  const { preferences, updatePreferences } = useSettingsStore();
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    // 从 localStorage 读取主题设置
-    const storedTheme = localStorage.getItem("theme") as Theme | null;
-    if (storedTheme) {
-      setTheme(storedTheme);
-      applyTheme(storedTheme);
-    } else {
-      // 默认检查系统偏好
-      applyTheme("system");
-    }
   }, []);
-
-  const applyTheme = (newTheme: Theme) => {
-    const root = document.documentElement;
-
-    if (newTheme === "system") {
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      root.classList.toggle("dark", prefersDark);
-    } else {
-      root.classList.toggle("dark", newTheme === "dark");
-    }
-  };
-
-  const handleThemeChange = (newTheme: Theme) => {
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    applyTheme(newTheme);
-  };
 
   if (!mounted) {
     return (
@@ -57,6 +32,7 @@ export function ThemeToggle() {
     );
   }
 
+  const theme = preferences.theme;
   const isDark = theme === "dark" ||
     (theme === "system" &&
      typeof window !== "undefined" &&
@@ -69,7 +45,7 @@ export function ThemeToggle() {
           variant="ghost"
           size="icon"
           className="h-9 w-9 rounded-lg"
-          title="Toggle theme"
+          title={t('hero.miniDashboard.overview.attention')} // Just using a placeholder for now, ideally 'settings.theme.toggle'
         >
           {isDark ? (
             <Moon className="h-[1.2rem] w-[1.2rem]" />
@@ -80,15 +56,15 @@ export function ThemeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => handleThemeChange("light")}>
+        <DropdownMenuItem onClick={() => updatePreferences({ theme: "light" })}>
           <Sun className="mr-2 h-4 w-4" />
-          <span>Light</span>
+          <span>{t('auth.common.continue')} Light</span> 
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleThemeChange("dark")}>
+        <DropdownMenuItem onClick={() => updatePreferences({ theme: "dark" })}>
           <Moon className="mr-2 h-4 w-4" />
           <span>Dark</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleThemeChange("system")}>
+        <DropdownMenuItem onClick={() => updatePreferences({ theme: "system" })}>
           <Monitor className="mr-2 h-4 w-4" />
           <span>System</span>
         </DropdownMenuItem>

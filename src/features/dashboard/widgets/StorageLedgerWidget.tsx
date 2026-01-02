@@ -5,8 +5,10 @@ import { formatBytes, cn } from '@/lib/utils';
 import { HardDrive, PieChart, Info, AlertTriangle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useTranslation } from 'react-i18next';
 
 export const StorageLedgerWidget = () => {
+  const { t } = useTranslation();
   const { data: ledgerRes, isLoading } = useQuery({
     queryKey: ['user', 'quota', 'storage', 'ledger'],
     queryFn: () => apiClient.get('/user/quota/storage/ledger').then(res => res.data),
@@ -34,7 +36,7 @@ export const StorageLedgerWidget = () => {
           <div className="flex items-center gap-2">
             <HardDrive className="h-4 w-4 text-blue-500" />
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none">Cloud Storage</span>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none">{t('dashboard.widgets.storage.title')}</span>
               <span className="text-sm font-bold tracking-tight text-foreground/80">
                 {formatBytes(totalUsed)} / {isUnlimited ? '∞' : formatBytes(quotaBytes)}
               </span>
@@ -48,7 +50,7 @@ export const StorageLedgerWidget = () => {
                     <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
                   </TooltipTrigger>
                   <TooltipContent className="text-[10px] max-w-[200px]">
-                    Mismatch: {formatBytes(mismatch)} between ledger and quota service.
+                    {t('dashboard.widgets.storage.mismatch', { size: formatBytes(mismatch) })}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -82,7 +84,7 @@ export const StorageLedgerWidget = () => {
                   {source.sourceType?.replace('_', ' ')}
                 </span>
                 <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded font-bold">
-                  {source.totalCount} items • {formatBytes(source.totalBytes)}
+                  {source.totalCount} {t('dashboard.widgets.storage.items')} • {formatBytes(source.totalBytes)}
                 </span>
               </div>
               <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden flex">

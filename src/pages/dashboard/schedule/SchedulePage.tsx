@@ -26,6 +26,7 @@ import type { ScheduleListResp } from '@/types/schedule';
 import { createSchedule, deleteSchedule, getSchedules, pushScheduleToDevices, updateSchedule } from '@/services/scheduleApi';
 import { ScheduleOnboarding } from '@/components/schedule/ScheduleOnboarding';
 import type { BffResponse } from '@/types/auth';
+import { useTimeFormatter } from '@/hooks/use-time-formatter';
 
 function getBffDisplayError(res: BffResponse<any> | null | undefined): string {
   return res?.error?.displayMessage || res?.error?.message || 'Request failed';
@@ -34,6 +35,7 @@ function getBffDisplayError(res: BffResponse<any> | null | undefined): string {
 export default function SchedulePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { formatDateTime } = useTimeFormatter();
 
   const [query, setQuery] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -195,7 +197,7 @@ export default function SchedulePage() {
                       <span>Bound devices: {s.boundDevices}</span>
                       <span>Programs: {s.programRules}</span>
                       <span>Commands: {s.commandRules}</span>
-                      <span>Updated: {new Date(s.updatedAt).toLocaleString()}</span>
+                      <span>Updated: {formatDateTime(s.updatedAt)}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

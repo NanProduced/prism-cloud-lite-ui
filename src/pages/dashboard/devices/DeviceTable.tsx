@@ -31,6 +31,7 @@ import { CountryFlag } from '@/components/ui/country-flag';
 import { UrlGlimpseLink } from './UrlGlimpseLink';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface DeviceTableProps {
   devices: Device[];
@@ -107,6 +108,7 @@ export function DeviceTable({
   onToggleDeviceTag,
   onCreateTag,
 }: DeviceTableProps) {
+  const { t } = useTranslation();
   const gridId = useId();
   const navigate = useNavigate();
   const { formatDateTime } = useTimeFormatter();
@@ -331,7 +333,7 @@ export function DeviceTable({
   const columns = useMemo<Column<Device>[]>(() => [
     {
       id: 'deviceName',
-      name: 'Device Name',
+      name: t('devices.table.columns.deviceName'),
       type: 'string',
       width: 320,
       pin: 'start',
@@ -359,7 +361,7 @@ export function DeviceTable({
           if (typeof value !== 'number') return null;
           return (
             <span className="text-sm font-medium">
-              {value} {value === 1 ? 'device' : 'devices'}
+              {t('devices.table.groupCount', { count: value })}
             </span>
           );
         }
@@ -382,7 +384,7 @@ export function DeviceTable({
       },
     },    {
       id: 'lastScreenshotUrl',
-      name: 'Screenshot',
+      name: t('devices.table.columns.screenshot'),
       type: 'string',
       width: 120,
       pin: 'start',
@@ -412,7 +414,7 @@ export function DeviceTable({
     },
     {
       id: 'onlineStatus',
-      name: 'Status',
+      name: t('devices.table.columns.status'),
       type: 'string',
       width: 160,
       field: (data) => {
@@ -441,7 +443,7 @@ export function DeviceTable({
     },
     {
       id: 'model',
-      name: 'Model',
+      name: t('devices.table.columns.model'),
       type: 'string',
       width: 140,
       field: 'model',
@@ -456,7 +458,7 @@ export function DeviceTable({
     },
     {
       id: 'version',
-      name: 'Version',
+      name: t('devices.table.columns.version'),
       type: 'string',
       width: 140,
       field: 'version',
@@ -471,7 +473,7 @@ export function DeviceTable({
     },
     {
       id: 'networkType',
-      name: 'Network',
+      name: t('devices.table.columns.network'),
       type: 'string',
       width: 140,
       field: 'networkType',
@@ -486,7 +488,7 @@ export function DeviceTable({
     },
     {
       id: 'networkStrength',
-      name: 'Signal',
+      name: t('devices.table.columns.signal'),
       type: 'number',
       width: 120,
       field: 'networkStrength',
@@ -522,7 +524,7 @@ export function DeviceTable({
     },
     {
       id: 'lastReportTime',
-      name: 'Last Report',
+      name: t('devices.table.columns.lastReport'),
       type: 'datetime',
       width: 190,
       field: 'lastReportTime',
@@ -542,7 +544,7 @@ export function DeviceTable({
           return (
             <div className="flex items-center gap-1.5 text-muted-foreground italic">
               <div className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-              <span className="text-xs">Waiting for first report...</span>
+              <span className="text-xs">{t('devices.table.waitingReport')}</span>
             </div>
           );
         }
@@ -564,7 +566,7 @@ export function DeviceTable({
     },
     {
       id: 'resolution',
-      name: 'Resolution',
+      name: t('devices.table.columns.resolution'),
       type: 'string',
       width: 140,
       field: 'resolution',
@@ -579,7 +581,7 @@ export function DeviceTable({
     },
     {
       id: 'brightness',
-      name: 'Brightness',
+      name: t('devices.table.columns.brightness'),
       type: 'number',
       width: 170,
       field: 'brightness',
@@ -626,7 +628,7 @@ export function DeviceTable({
     },
     {
       id: 'storagePct',
-      name: 'Storage',
+      name: t('devices.table.columns.storage'),
       type: 'number',
       width: 220,
       field: ({ data }) => {
@@ -694,7 +696,7 @@ export function DeviceTable({
     },
     {
       id: 'playingProgram',
-      name: 'Program',
+      name: t('devices.table.columns.program'),
       type: 'string',
       width: 160,
       field: 'playingProgram',
@@ -725,7 +727,7 @@ export function DeviceTable({
     },
     {
       id: 'tags',
-      name: 'Tags',
+      name: t('devices.table.columns.tags'),
       type: 'string',
       width: 220,
       field: ({ data }) => {
@@ -858,7 +860,7 @@ export function DeviceTable({
     rowGroupDisplayMode: 'single-column',
     rowGroupDefaultExpansion: 1,
     rowGroupColumn: {
-      name: 'Group',
+      name: t('common.view'),
       width: 220,
       pin: 'start',
       headerRenderer: ({ column }) => (

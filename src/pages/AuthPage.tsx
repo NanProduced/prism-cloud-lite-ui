@@ -26,7 +26,7 @@ export default function AuthPage({ page }: AuthPageProps) {
   };
 
   return (
-    <div className="w-full h-screen bg-[#131619] flex items-center justify-center p-4">
+    <div className="w-full h-screen bg-background flex items-center justify-center p-4">
       {renderPage()}
     </div>
   );

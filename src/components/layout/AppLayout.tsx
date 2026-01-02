@@ -9,12 +9,13 @@ import { NotificationCenter } from "@/components/uitripled/notification-center";
 import { sseManager } from "@/lib/sse-manager";
 import { useMessageStore } from "@/store/messageStore";
 import { useSettingsStore } from "@/store/settingsStore";
+import i18n from "i18next";
 
 import { PrismIcon } from "@/components/shared/logo";
 
 // Loading Screen Component
 const FullPageLoader = () => (
-  <div className="min-h-screen bg-[#131619] flex items-center justify-center overflow-hidden">
+  <div className="min-h-screen bg-background flex items-center justify-center overflow-hidden">
     <div className="relative">
       {/* Background Glow */}
       <motion.div 
@@ -63,6 +64,7 @@ export const PublicLayout = () => {
   const location = useLocation();
   const outlet = useOutlet();
   const { checkAuth, isInitializing } = useAuthStore();
+  const { preferences } = useSettingsStore();
   const initialized = React.useRef(false);
 
   useEffect(() => {
@@ -71,6 +73,23 @@ export const PublicLayout = () => {
       checkAuth();
     }
   }, [checkAuth]);
+
+  // Apply theme and language in PublicLayout
+  useEffect(() => {
+    const root = document.documentElement;
+    const theme = preferences.theme;
+    
+    if (theme === "system") {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      root.classList.toggle("dark", prefersDark);
+    } else {
+      root.classList.toggle("dark", theme === "dark");
+    }
+
+    if (i18n.language !== preferences.language) {
+      i18n.changeLanguage(preferences.language);
+    }
+  }, [preferences.theme, preferences.language]);
 
   if (isInitializing) return <FullPageLoader />;
 
@@ -99,7 +118,7 @@ export const PublicLayout = () => {
 export const ProtectedLayout = () => {
     const { isAuthenticated, isInitializing, checkAuth, user } = useAuthStore();
     const { fetchInitialData } = useMessageStore();
-    const { fetchSettings } = useSettingsStore();
+    const { fetchSettings, preferences } = useSettingsStore();
     const [showWelcome, setShowWelcome] = useState(false);
     const initialized = React.useRef(false);
     
@@ -110,6 +129,23 @@ export const ProtectedLayout = () => {
         checkAuth().catch(err => console.error("[ProtectedLayout] checkAuth failed:", err));
       }
     }, [checkAuth, isAuthenticated, isInitializing]);
+
+    // Apply theme and language in ProtectedLayout
+    useEffect(() => {
+      const root = document.documentElement;
+      const theme = preferences.theme;
+      
+      if (theme === "system") {
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        root.classList.toggle("dark", prefersDark);
+      } else {
+        root.classList.toggle("dark", theme === "dark");
+      }
+
+      if (i18n.language !== preferences.language) {
+        i18n.changeLanguage(preferences.language);
+      }
+    }, [preferences.theme, preferences.language]);
 
     useEffect(() => {
       if (isAuthenticated && user?.publicId) {

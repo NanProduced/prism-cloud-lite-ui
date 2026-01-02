@@ -26,10 +26,12 @@ import { BatchCommandDialog } from '@/features/devices/commands/BatchCommandDial
 import { AddDeviceDialog } from '@/components/devices/AddDeviceDialog';
 import { toast } from '@/store/notificationStore';
 import { useAuthStore } from '@/store/authStore';
+import { useTranslation } from 'react-i18next';
 
 type ViewMode = 'grid' | 'card';
 
 export default function DevicesPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   
@@ -317,14 +319,14 @@ export default function DevicesPage() {
           onClick={() => setShowAddDeviceDialog(true)}
         >
           <Plus className="h-4 w-4" />
-          Add Device
+          {t('devices.toolbar.addDevice')}
         </Button>
 
         {viewMode === 'card' && (
           <div className="relative flex-1 max-w-md min-w-[220px]">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search by name, description, or model..."
+              placeholder={t('devices.toolbar.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -366,7 +368,7 @@ export default function DevicesPage() {
                     onClick={() => setShowBatchCommandDialog(true)}
                   >
                     <Zap className="h-4 w-4" />
-                    Command {selectedDeviceIds.size > 0 && `(${selectedDeviceIds.size})`}
+                    {t('devices.toolbar.batchCommand')} {selectedDeviceIds.size > 0 && `(${selectedDeviceIds.size})`}
                   </Button>
                 </span>
               </TooltipTrigger>
@@ -378,7 +380,7 @@ export default function DevicesPage() {
           {viewMode === 'card' && (
             <Button variant="outline" size="sm" className="gap-2">
               <Download className="h-4 w-4" />
-              Export
+              {t('devices.toolbar.export')}
             </Button>
           )}
         </div>
@@ -401,30 +403,30 @@ export default function DevicesPage() {
       {/* Stats */}
       <div className="flex items-center gap-6 text-sm">
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Total:</span>
+          <span className="text-muted-foreground">{t('devices.stats.total')}:</span>
           <span className="font-medium">{devices.length}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Online:</span>
+          <span className="text-muted-foreground">{t('devices.stats.online')}:</span>
           <span className="font-medium text-emerald-600">
             {devices.filter((d) => resolveDeviceStatus(d) === 'online').length}
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Offline:</span>
+          <span className="text-muted-foreground">{t('devices.stats.offline')}:</span>
           <span className="font-medium text-gray-600">
             {devices.filter((d) => resolveDeviceStatus(d) === 'offline').length}
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Pending:</span>
+          <span className="text-muted-foreground">{t('devices.stats.pending')}:</span>
           <span className="font-medium text-amber-600">
             {devices.filter((d) => resolveDeviceStatus(d) === 'pending').length}
           </span>
         </div>
         {viewMode === 'card' && (searchQuery || hasAdvancedFilters) && (
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Filtered:</span>
+            <span className="text-muted-foreground">{t('devices.stats.filtered')}:</span>
             <span className="font-medium">{filteredDevices.length}</span>
           </div>
         )}
@@ -436,7 +438,7 @@ export default function DevicesPage() {
           <div className="flex items-center justify-center h-64 border rounded-lg bg-muted/20">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Loading all devices for analysis…
+              {t('devices.grid.loading')}
             </div>
           </div>
         ) : (
@@ -473,10 +475,9 @@ export default function DevicesPage() {
       <Dialog open={showGridDialog} onOpenChange={setShowGridDialog}>
         <DialogContent className="p-6">
           <DialogHeader>
-            <DialogTitle>Switch to Grid (Analyze)</DialogTitle>
+            <DialogTitle>{t('devices.grid.confirmTitle')}</DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              Grid view loads all devices for advanced analysis, grouping, and aggregations.
-              This may take a few seconds.
+              {t('devices.grid.confirmDesc')}
             </DialogDescription>
           </DialogHeader>
 
@@ -488,16 +489,16 @@ export default function DevicesPage() {
               onChange={(e) => setDontShowAgain(e.target.checked)}
             />
             <label htmlFor="dont-show-again" className="cursor-pointer">
-              Don’t show this again
+              {t('devices.grid.dontShowAgain')}
             </label>
           </div>
 
           <div className="flex items-center justify-end gap-2 mt-6">
             <Button variant="ghost" onClick={() => setShowGridDialog(false)}>
-              Cancel
+              {t('common.actions.cancel')}
             </Button>
             <Button onClick={confirmSwitchToGrid}>
-              Continue
+              {t('auth.common.continue')}
             </Button>
           </div>
         </DialogContent>

@@ -589,7 +589,7 @@ export default function DeviceDetailsPage() {
                </div>
             </div>
             <div className="flex items-center gap-2">
-               <Button variant="ghost" size="icon" onClick={() => navigate(returnTo)} className="rounded-xl border h-10 w-10" title={returnTo.includes('schedule') ? 'Back to schedule' : 'Back to devices'}>
+               <Button variant="ghost" size="icon" onClick={() => navigate(returnTo)} className="rounded-xl border h-10 w-10" title={t('common.actions.back')}>
                   <ArrowLeft className="h-4 w-4" />
                </Button>
                <TooltipProvider>
@@ -600,27 +600,27 @@ export default function DeviceDetailsPage() {
                           className="h-10 rounded-xl text-sm font-medium gap-2"
                           onClick={() => setShowBatchCommand(true)}
                        >
-                          <Zap className="h-4 w-4 text-amber-500" /> Advanced
+                          <Zap className="h-4 w-4 text-amber-500" /> {t('deviceDetails.header.advanced')}
                        </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                       <p>Send multiple actions at once</p>
+                       <p>{t('deviceDetails.header.advanced')}</p>
                     </TooltipContent>
                   </Tooltip>
                </TooltipProvider>
                <Button variant="outline" className="h-10 rounded-xl text-sm font-medium gap-2" onClick={handleRefresh} disabled={isRefreshing}>
-                  <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} /> Refresh
+                  <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} /> {t('deviceDetails.header.refresh')}
                </Button>
             </div>
          </Card>
 
          <Card className="rounded-2xl border-none ring-1 ring-muted/60 bg-muted/20 p-5 flex flex-col justify-center">
-            <p className="text-xs font-medium text-muted-foreground mb-1">Last seen</p>
-            <p className="text-lg font-semibold">{device.lastReportTime ? formatRelative(device.lastReportTime) : 'Never'}</p>
+            <p className="text-xs font-medium text-muted-foreground mb-1">{t('deviceDetails.header.lastSeen')}</p>
+            <p className="text-lg font-semibold">{device.lastReportTime ? formatRelative(device.lastReportTime) : t('deviceDetails.header.never')}</p>
             <div className="flex items-center gap-2 mt-2">
                <div className={cn("h-1.5 w-1.5 rounded-full", sseConnected ? "bg-emerald-500 animate-pulse" : "bg-slate-400")} />
                <span className="text-xs text-muted-foreground">
-                  {sseConnected ? "Live updates active" : "Live updates paused"}
+                  {sseConnected ? t('deviceDetails.header.liveUpdates.active') : t('deviceDetails.header.liveUpdates.paused')}
                </span>
             </div>
          </Card>
@@ -635,7 +635,7 @@ export default function DeviceDetailsPage() {
                 <div className="flex items-center gap-3">
                   <CardTitle className="text-xs font-medium text-zinc-400 flex items-center gap-2">
                     <Camera className="h-4 w-4" />
-                    Screenshot
+                    {t('deviceDetails.cockpit.screenshot.title')}
                   </CardTitle>
                 </div>
                 <div className="flex items-center gap-2">
@@ -645,7 +645,7 @@ export default function DeviceDetailsPage() {
                       </Badge>
                    ) : (
                       <Badge variant="outline" className="text-xs h-6 border-zinc-800 text-amber-500/80">
-                         No screenshot
+                         {t('deviceDetails.cockpit.screenshot.noPreview')}
                       </Badge>
                    )}
                    <Badge variant="outline" className="text-xs h-6 border-zinc-800 text-zinc-500 font-mono">
@@ -669,7 +669,7 @@ export default function DeviceDetailsPage() {
                       <div className="p-6 rounded-full bg-zinc-800/50">
                         <Monitor className="h-12 w-12 opacity-20" />
                       </div>
-                      <p className="text-sm text-zinc-500">No screenshot available</p>
+                      <p className="text-sm text-zinc-500">{t('deviceDetails.cockpit.screenshot.empty')}</p>
                     </div>
                   )}
 
@@ -696,7 +696,7 @@ export default function DeviceDetailsPage() {
                               <Play className="h-5 w-5 text-white fill-white/10" />
                            </div>
                            <div className="text-white min-w-0">
-                              <p className="text-xs text-white/50 mb-0.5">Now playing</p>
+                              <p className="text-xs text-white/50 mb-0.5">{t('deviceDetails.cockpit.nowPlaying.label')}</p>
                               <ProgramVersionDisplay name={realProps.vsns.playing.name} variant="overlay" />
                            </div>
                          </div>
@@ -718,7 +718,7 @@ export default function DeviceDetailsPage() {
                                     </Button>
                                  </TooltipTrigger>
                                  <TooltipContent side="left">
-                                    <p className="text-xs font-bold">Full Screen View</p>
+                                    <p className="text-xs font-bold">{t('deviceDetails.cockpit.screenshot.fullScreen')}</p>
                                  </TooltipContent>
                               </Tooltip>
                            </TooltipProvider>
@@ -737,7 +737,7 @@ export default function DeviceDetailsPage() {
                                  </Button>
                               </TooltipTrigger>
                               <TooltipContent side="left">
-                                 <p className="text-xs font-bold">Screenshot History</p>
+                                 <p className="text-xs font-bold">{t('deviceDetails.cockpit.screenshot.history')}</p>
                               </TooltipContent>
                            </Tooltip>
                         </TooltipProvider>
@@ -756,7 +756,7 @@ export default function DeviceDetailsPage() {
                                  </Button>
                               </TooltipTrigger>
                               <TooltipContent side="left">
-                                 <p className="text-xs font-bold">Refresh Screenshot</p>
+                                 <p className="text-xs font-bold">{t('deviceDetails.cockpit.screenshot.refresh')}</p>
                               </TooltipContent>
                            </Tooltip>
                         </TooltipProvider>
@@ -772,13 +772,13 @@ export default function DeviceDetailsPage() {
            <Card className="shadow-xl border-none ring-1 ring-muted/60 h-full flex flex-col overflow-hidden">
               <CardHeader className="pb-5 border-b bg-muted/5 px-6 shrink-0">
                  <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
-                    <Zap className="h-4 w-4 text-amber-500" /> Quick actions
+                    <Zap className="h-4 w-4 text-amber-500" /> {t('deviceDetails.actions.title')}
                  </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 overflow-y-auto space-y-8 pt-6 px-6 scrollbar-none">
                  {/* Power Control */}
                  <div className="space-y-4 bg-muted/20 p-5 rounded-2xl border border-muted/20">
-                    <p className="text-xs font-semibold text-muted-foreground">System power</p>
+                    <p className="text-xs font-semibold text-muted-foreground">{t('deviceDetails.actions.power.label')}</p>
                     <div className="flex gap-3">
                        {device.powerStatus === 0 ? (
                           <Button
@@ -787,7 +787,7 @@ export default function DeviceDetailsPage() {
                              onClick={() => setConfirmDialog({ open: true, type: 'wakeup' })}
                           >
                              <Zap className="h-4 w-4 fill-white" />
-                             Wake Up
+                             {t('deviceDetails.actions.power.wakeup')}
                           </Button>
                        ) : (
                           <Button
@@ -796,7 +796,7 @@ export default function DeviceDetailsPage() {
                              onClick={() => setConfirmDialog({ open: true, type: 'sleep' })}
                           >
                              <Moon className="h-4 w-4 text-slate-500" />
-                             Sleep
+                             {t('deviceDetails.actions.power.sleep')}
                           </Button>
                        )}
                        <Button
@@ -805,14 +805,14 @@ export default function DeviceDetailsPage() {
                           onClick={() => setConfirmDialog({ open: true, type: 'reboot' })}
                        >
                           <RotateCw className="h-4 w-4 text-rose-400" />
-                          Restart
+                          {t('deviceDetails.actions.power.restart')}
                        </Button>
                     </div>
                  </div>
 
                  {/* Input Source */}
                  <div className="space-y-4 bg-muted/20 p-5 rounded-2xl border border-muted/20 transition-colors">
-                    <p className="text-xs font-semibold text-muted-foreground">Input source</p>
+                    <p className="text-xs font-semibold text-muted-foreground">{t('deviceDetails.actions.inputSource.label')}</p>
                     <Select value={inputMode} onValueChange={handleInputModeChange}>
                        <SelectTrigger className="h-10 text-sm font-medium bg-background border shadow-sm rounded-xl">
                           <div className="flex items-center gap-2">
@@ -821,10 +821,10 @@ export default function DeviceDetailsPage() {
                           </div>
                        </SelectTrigger>
                        <SelectContent>
-                          <SelectItem value="internal" className="text-sm">Internal player</SelectItem>
-                          <SelectItem value="hdmi" className="text-sm">HDMI</SelectItem>
-                          <SelectItem value="dvi" className="text-sm">DVI</SelectItem>
-                          <SelectItem value="vga" className="text-sm">VGA</SelectItem>
+                          <SelectItem value="internal" className="text-sm">{t('deviceDetails.actions.inputSource.internal')}</SelectItem>
+                          <SelectItem value="hdmi" className="text-sm">{t('deviceDetails.actions.inputSource.hdmi')}</SelectItem>
+                          <SelectItem value="dvi" className="text-sm">{t('deviceDetails.actions.inputSource.dvi')}</SelectItem>
+                          <SelectItem value="vga" className="text-sm">{t('deviceDetails.actions.inputSource.vga')}</SelectItem>
                        </SelectContent>
                     </Select>
                  </div>
@@ -833,7 +833,7 @@ export default function DeviceDetailsPage() {
                  <div className="space-y-6">
                     {/* Section Header with Unified Lock */}
                     <div className="flex items-center justify-between">
-                       <p className="text-xs font-semibold text-muted-foreground">Display adjustments</p>
+                       <p className="text-xs font-semibold text-muted-foreground">{t('deviceDetails.actions.display.label')}</p>
                        <Button
                           variant={isControlsLocked ? "outline" : "default"}
                           size="sm"
@@ -846,12 +846,12 @@ export default function DeviceDetailsPage() {
                           {isControlsLocked ? (
                              <>
                                 <Lock className="h-3.5 w-3.5" />
-                                <span>Unlock to adjust</span>
+                                <span>{t('deviceDetails.actions.display.unlock')}</span>
                              </>
                           ) : (
                              <>
                                 <Unlock className="h-3.5 w-3.5" />
-                                <span>Adjusting...</span>
+                                <span>{t('deviceDetails.actions.display.adjusting')}</span>
                              </>
                           )}
                        </Button>
@@ -861,7 +861,7 @@ export default function DeviceDetailsPage() {
                     <div className={cn("space-y-3 transition-opacity", isControlsLocked && "opacity-50")}>
                        <div className="flex justify-between items-center">
                           <span className="flex items-center gap-2 text-sm font-medium">
-                             <Sun className="h-4 w-4 text-amber-500" /> Brightness
+                             <Sun className="h-4 w-4 text-amber-500" /> {t('deviceDetails.actions.display.brightness')}
                           </span>
                           <span className="font-mono text-sm font-semibold text-amber-600 bg-amber-500/10 px-2.5 py-1 rounded-lg">{brightnessPct}%</span>
                        </div>
@@ -878,7 +878,7 @@ export default function DeviceDetailsPage() {
                     <div className={cn("space-y-3 transition-opacity", isControlsLocked && "opacity-50")}>
                        <div className="flex justify-between items-center">
                           <span className="flex items-center gap-2 text-sm font-medium">
-                             <Volume2 className="h-4 w-4 text-blue-500" /> Volume
+                             <Volume2 className="h-4 w-4 text-blue-500" /> {t('deviceDetails.actions.display.volume')}
                           </span>
                           <span className="font-mono text-sm font-semibold text-blue-600 bg-blue-500/10 px-2.5 py-1 rounded-lg">{Math.round(volumeLevel / 15 * 100)}%</span>
                        </div>
@@ -896,7 +896,7 @@ export default function DeviceDetailsPage() {
                     <div className={cn("space-y-3 transition-opacity", isControlsLocked && "opacity-50")}>
                        <div className="flex justify-between items-center">
                           <span className="flex items-center gap-2 text-sm font-medium">
-                             <ThermometerSnowflake className="h-4 w-4 text-emerald-500" /> Color temperature
+                             <ThermometerSnowflake className="h-4 w-4 text-emerald-500" /> {t('deviceDetails.actions.display.colorTemp')}
                           </span>
                           <span className="font-mono text-sm font-semibold text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-lg">{colorTemp}K</span>
                        </div>
@@ -920,13 +920,13 @@ export default function DeviceDetailsPage() {
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
          {/* Hardware Information */}
          <div className="xl:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InfoGroup title="System" icon={Layers}>
-               <InfoItem label="Uptime" value={formatUptime(Math.floor((realProps.info?.info.up || 0) / 1000))} highlight />
-               <InfoItem label="Firmware" value={realProps.info?.info.vername} />
-               <InfoItem label="Orientation" value={realProps.screen_orientation?.orientation === 'landscape' ? 'Landscape' : 'Portrait'} />
+            <InfoGroup title={t('deviceDetails.info.system.title')} icon={Layers}>
+               <InfoItem label={t('deviceDetails.info.system.uptime')} value={formatUptime(Math.floor((realProps.info?.info.up || 0) / 1000))} highlight />
+               <InfoItem label={t('deviceDetails.info.system.firmware')} value={realProps.info?.info.vername} />
+               <InfoItem label={t('deviceDetails.info.system.orientation.label')} value={realProps.screen_orientation?.orientation === 'landscape' ? t('deviceDetails.info.system.orientation.landscape') : t('deviceDetails.info.system.orientation.portrait')} />
             </InfoGroup>
             
-            <InfoGroup title="Network" icon={Network}>
+            <InfoGroup title={t('deviceDetails.info.network.title')} icon={Network}>
                <Tabs defaultValue={activeInterface} className="w-full">
                   <TabsList className="grid grid-cols-4 h-8 bg-muted/50 p-1 rounded-xl mb-4">
                      <TabsTrigger value="eth" className="rounded-lg text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm">LAN</TabsTrigger>
@@ -954,28 +954,28 @@ export default function DeviceDetailsPage() {
                                     "text-xs h-5 border-none",
                                     iface.connected === 1 ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"
                                  )}>
-                                    {iface.connected === 1 ? 'Connected' : 'Disconnected'}
+                                    {iface.connected === 1 ? t('deviceDetails.info.network.connected') : t('deviceDetails.info.network.disconnected')}
                                  </Badge>
                               </div>
 
                               <div className="space-y-3">
-                                 {(iface.SSID || iface.currentap) && <InfoItem label="Network" value={iface.SSID || iface.currentap} fontMono highlight />}
-                                 {iface.ips?.ip && <InfoItem label="IP address" value={iface.ips.ip} fontMono highlight />}
-                                 {iface.ips?.gateway && <InfoItem label="Gateway" value={iface.ips.gateway} fontMono />}
-                                 <InfoItem label="MAC" value={iface.mac} fontMono />
-                                 {iface.speed !== undefined && iface.speed > 0 && <InfoItem label="Speed" value={`${iface.speed} Mbps`} />}
-                                 {iface.strength !== undefined && iface.strength !== null && <InfoItem label="Signal" value={`${iface.strength}%`} highlight />}
+                                 {(iface.SSID || iface.currentap) && <InfoItem label={t('deviceDetails.info.network.title')} value={iface.SSID || iface.currentap} fontMono highlight />}
+                                 {iface.ips?.ip && <InfoItem label={t('deviceDetails.info.network.ipAddress')} value={iface.ips.ip} fontMono highlight />}
+                                 {iface.ips?.gateway && <InfoItem label={t('deviceDetails.info.network.gateway')} value={iface.ips.gateway} fontMono />}
+                                 <InfoItem label={t('deviceDetails.info.network.mac')} value={iface.mac} fontMono />
+                                 {iface.speed !== undefined && iface.speed > 0 && <InfoItem label={t('deviceDetails.info.network.speed')} value={`${iface.speed} Mbps`} />}
+                                 {iface.strength !== undefined && iface.strength !== null && <InfoItem label={t('deviceDetails.info.network.signal')} value={`${iface.strength}%`} highlight />}
 
                                  {normalized === '4g' && realProps["4ginfo"] && (
                                     <>
                                        <Separator className="my-2 opacity-30" />
-                                       <InfoItem label="Carrier" value={realProps["4ginfo"]?.operator} />
-                                       <InfoItem label="Signal" value={`${realProps["4ginfo"]?.signal} dBm`} highlight />
+                                       <InfoItem label={t('deviceDetails.info.network.carrier')} value={realProps["4ginfo"]?.operator} />
+                                       <InfoItem label={t('deviceDetails.info.network.signal')} value={`${realProps["4ginfo"]?.signal} dBm`} highlight />
                                     </>
                                  )}
 
                                  {iface.connected !== 1 && (
-                                    <p className="pt-2 text-xs text-muted-foreground">Not connected</p>
+                                    <p className="pt-2 text-xs text-muted-foreground">{t('deviceDetails.info.network.notConnected')}</p>
                                  )}
                               </div>
                            </div>
@@ -990,23 +990,25 @@ export default function DeviceDetailsPage() {
          <Card className="xl:col-span-4 rounded-3xl border-none ring-1 ring-muted/60 bg-slate-50 dark:bg-slate-900/50 p-6 flex flex-col justify-between">
             <CardHeader className="p-0 pb-6">
                <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                  <Cpu className="h-4 w-4 text-primary" /> Resources
+                  <Cpu className="h-4 w-4 text-primary" /> {t('deviceDetails.info.resources.title')}
                </CardTitle>
             </CardHeader>
             <CardContent className="p-0 space-y-6 flex-1">
                <ResourceProgress
-                  label="Storage"
+                  label={t('deviceDetails.info.resources.storage')}
                   used={(realProps.info?.info?.storage?.total || 0) - (realProps.info?.info?.storage?.free || 0)}
                   total={realProps.info?.info?.storage?.total || 1}
                   unit="GB"
                   color="bg-emerald-500"
+                  t={t}
                />
                <ResourceProgress
-                  label="Memory"
+                  label={t('deviceDetails.info.resources.memory')}
                   used={(realProps.info?.info?.mem?.total || 0) - (realProps.info?.info?.mem?.free || 0)}
                   total={realProps.info?.info?.mem?.total || 1}
                   unit="MB"
                   color="bg-blue-500"
+                  t={t}
                />
             </CardContent>
          </Card>
@@ -1015,18 +1017,18 @@ export default function DeviceDetailsPage() {
       {/* Additional Details */}
       <Tabs defaultValue="assets" className="w-full">
          <TabsList className="bg-muted/40 p-1 rounded-2xl border h-11 mb-6 flex w-full md:w-auto overflow-x-auto scrollbar-none">
-            <TabsTrigger value="assets" className="rounded-xl flex-1 md:px-8 text-sm data-[state=active]:bg-card data-[state=active]:shadow-md">Local assets</TabsTrigger>
-            <TabsTrigger value="operations" className="rounded-xl flex-1 md:px-8 text-sm data-[state=active]:bg-card data-[state=active]:shadow-md">Activity</TabsTrigger>
-            <TabsTrigger value="schedule" className="rounded-xl flex-1 md:px-8 text-sm data-[state=active]:bg-card data-[state=active]:shadow-md">Schedule</TabsTrigger>
-            <TabsTrigger value="policy" className="rounded-xl flex-1 md:px-8 text-sm data-[state=active]:bg-card data-[state=active]:shadow-md">Settings</TabsTrigger>
+            <TabsTrigger value="assets" className="rounded-xl flex-1 md:px-8 text-sm data-[state=active]:bg-card data-[state=active]:shadow-md">{t('deviceDetails.tabs.assets')}</TabsTrigger>
+            <TabsTrigger value="operations" className="rounded-xl flex-1 md:px-8 text-sm data-[state=active]:bg-card data-[state=active]:shadow-md">{t('deviceDetails.tabs.activity')}</TabsTrigger>
+            <TabsTrigger value="schedule" className="rounded-xl flex-1 md:px-8 text-sm data-[state=active]:bg-card data-[state=active]:shadow-md">{t('deviceDetails.tabs.schedule')}</TabsTrigger>
+            <TabsTrigger value="policy" className="rounded-xl flex-1 md:px-8 text-sm data-[state=active]:bg-card data-[state=active]:shadow-md">{t('deviceDetails.tabs.settings')}</TabsTrigger>
          </TabsList>
 
          <TabsContent value="operations" className="mt-0">
             <Card className="rounded-3xl border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
                <CardHeader className="px-8 py-6 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
                   <div className="space-y-1">
-                     <CardTitle className="text-lg font-semibold">Recent activity</CardTitle>
-                     <CardDescription className="text-sm text-muted-foreground">Actions sent to this device</CardDescription>
+                     <CardTitle className="text-lg font-semibold">{t('deviceDetails.activity.title')}</CardTitle>
+                     <CardDescription className="text-sm text-muted-foreground">{t('deviceDetails.activity.subtitle')}</CardDescription>
                   </div>
                    <Button
                      variant="outline"
@@ -1034,7 +1036,7 @@ export default function DeviceDetailsPage() {
                      className="rounded-xl text-sm gap-2"
                      onClick={() => navigate(`/dashboard/logs?tab=terminal&deviceId=${device?.deviceId ?? ''}`)}
                    >
-                     <HistoryIcon className="h-4 w-4" /> View all
+                     <HistoryIcon className="h-4 w-4" /> {t('deviceDetails.activity.viewAll')}
                    </Button>
                </CardHeader>
                <CardContent className="p-6">
@@ -1127,7 +1129,7 @@ export default function DeviceDetailsPage() {
                       ) : (
                         <div className="py-16 flex flex-col items-center justify-center gap-4 text-muted-foreground">
                            <Activity className="h-10 w-10 opacity-30" />
-                           <p className="text-sm">No recent activity</p>
+                           <p className="text-sm">{t('deviceDetails.activity.empty')}</p>
                         </div>
                      )}
                   </div>
@@ -1141,8 +1143,8 @@ export default function DeviceDetailsPage() {
             <Card className="rounded-3xl border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
                 <CardHeader className="px-8 py-6 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
                    <div className="space-y-1">
-                      <CardTitle className="text-lg font-semibold">Local assets</CardTitle>
-                      <CardDescription className="text-sm text-muted-foreground">Content cached on this device</CardDescription>
+                      <CardTitle className="text-lg font-semibold">{t('deviceDetails.assets.title')}</CardTitle>
+                      <CardDescription className="text-sm text-muted-foreground">{t('deviceDetails.assets.subtitle')}</CardDescription>
                    </div>
                    <div className="flex items-center gap-3">
                       <Button
@@ -1151,12 +1153,12 @@ export default function DeviceDetailsPage() {
                          className="rounded-xl text-sm gap-2"
                          onClick={() => setAssetClearAllOpen(true)}
                       >
-                         <Trash2 className="h-4 w-4" /> Clear all
+                         <Trash2 className="h-4 w-4" /> {t('deviceDetails.assets.clearAll')}
                       </Button>
                       <div className="relative">
                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                          <Input
-                            placeholder="Search..."
+                            placeholder={t('common.search') + "..."}
                             value={assetSearch}
                             onChange={(e) => setAssetSearch(e.target.value)}
                             className="pl-10 h-10 w-56 bg-muted/30 border-none rounded-xl text-sm"
@@ -1166,16 +1168,16 @@ export default function DeviceDetailsPage() {
                 </CardHeader>
                 <CardContent className="p-0">
                    <div className="grid grid-cols-12 px-8 py-4 bg-muted/20 text-xs font-medium text-muted-foreground border-b">
-                      <div className="col-span-6">Name</div>
-                      <div className="col-span-2 text-center">Source</div>
-                      <div className="col-span-2 text-right">Size</div>
-                      <div className="col-span-2 text-right">Actions</div>
+                      <div className="col-span-6">{t('deviceDetails.assets.table.name')}</div>
+                      <div className="col-span-2 text-center">{t('deviceDetails.assets.table.source')}</div>
+                      <div className="col-span-2 text-right">{t('deviceDetails.assets.table.size')}</div>
+                      <div className="col-span-2 text-right">{t('deviceDetails.assets.table.actions')}</div>
                    </div>
                    <div className="divide-y divide-muted/40 max-h-[500px] overflow-y-auto">
                       {localAssets.length > 0 ? (
                         filteredAssets.length > 0 ? (
                           filteredAssets.map((asset) => {
-                            const sourceLabel = asset.source === 'internet' ? 'Cloud' : asset.source === 'lan' ? 'LAN' : asset.source;
+                            const sourceLabel = asset.source === 'internet' ? t('deviceDetails.assets.table.cloud') : asset.source === 'lan' ? t('deviceDetails.assets.table.lan') : asset.source;
                             const sourceClass =
                               asset.source === 'internet'
                                 ? 'bg-indigo-500/10 text-indigo-600'
@@ -1222,13 +1224,13 @@ export default function DeviceDetailsPage() {
                         ) : (
                           <div className="py-16 flex flex-col items-center justify-center gap-4 text-muted-foreground">
                             <Search className="h-10 w-10 opacity-30" />
-                            <p className="text-sm">No matching assets</p>
+                            <p className="text-sm">{t('deviceDetails.assets.noMatch')}</p>
                           </div>
                         )
                       ) : (
                          <div className="py-16 flex flex-col items-center justify-center gap-4 text-muted-foreground">
                             <Database className="h-10 w-10 opacity-30" />
-                            <p className="text-sm">No cached assets</p>
+                            <p className="text-sm">{t('deviceDetails.assets.empty')}</p>
                          </div>
                      )}
                   </div>
@@ -1240,8 +1242,8 @@ export default function DeviceDetailsPage() {
             <Card className="rounded-3xl border-none ring-1 ring-muted/60 overflow-hidden shadow-xl bg-card">
                <CardHeader className="px-8 py-6 border-b bg-muted/5 flex flex-row items-center justify-between gap-4">
                   <div className="space-y-1">
-                     <CardTitle className="text-lg font-semibold">Schedule</CardTitle>
-                     <CardDescription className="text-sm text-muted-foreground">Programs assigned to this device</CardDescription>
+                     <CardTitle className="text-lg font-semibold">{t('deviceDetails.schedule.title')}</CardTitle>
+                     <CardDescription className="text-sm text-muted-foreground">{t('deviceDetails.schedule.subtitle')}</CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
                      <Button
@@ -1249,18 +1251,18 @@ export default function DeviceDetailsPage() {
                         className="h-10 rounded-xl text-sm gap-2"
                         onClick={() => queryClient.invalidateQueries({ queryKey: ['device-schedule', deviceId] })}
                      >
-                        <RefreshCw className="h-4 w-4" /> Refresh
+                        <RefreshCw className="h-4 w-4" /> {t('deviceDetails.header.refresh')}
                      </Button>
                      {deviceSchedule?.scheduleId ? (
                         <Button
                            className="h-10 rounded-xl text-sm gap-2"
                            onClick={() => navigate(`/dashboard/schedule/${deviceSchedule.scheduleId}`)}
                         >
-                           Open schedule
+                           {t('common.actions.open')} {t('deviceDetails.schedule.title').toLowerCase()}
                         </Button>
                      ) : (
                         <Button className="h-10 rounded-xl text-sm gap-2" onClick={() => navigate('/dashboard/schedule')}>
-                           Manage
+                           {t('common.actions.edit')}
                         </Button>
                      )}
                   </div>
@@ -1269,7 +1271,7 @@ export default function DeviceDetailsPage() {
                   {/* Schedule Info */}
                   <div className="flex flex-col md:flex-row gap-4">
                      <div className="flex-1 p-6 rounded-2xl bg-muted/20 border border-dashed border-muted/60">
-                        <p className="text-xs font-medium text-muted-foreground mb-3">Assigned schedule</p>
+                        <p className="text-xs font-medium text-muted-foreground mb-3">{t('deviceDetails.schedule.assigned')}</p>
                         {deviceSchedule?.scheduleId ? (
                            <div className="flex items-center gap-3">
                               <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
@@ -1279,7 +1281,7 @@ export default function DeviceDetailsPage() {
                                  <h4 className="text-base font-semibold">{deviceSchedule.scheduleName || '—'}</h4>
                                  <p className="text-xs text-muted-foreground mt-0.5">
                                     <span className={cn(deviceSchedule.scheduleEnabled ? "text-emerald-600" : "text-amber-600")}>
-                                       {deviceSchedule.scheduleEnabled ? 'Active' : 'Paused'}
+                                       {deviceSchedule.scheduleEnabled ? t('deviceDetails.schedule.assigned') : t('deviceDetails.schedule.assigned')}
                                     </span>
                                  </p>
                               </div>
@@ -1289,21 +1291,21 @@ export default function DeviceDetailsPage() {
                               <div className="p-2.5 rounded-xl bg-muted text-muted-foreground border">
                                  <CalendarDays className="h-5 w-5" />
                               </div>
-                              <p className="text-sm">No schedule assigned</p>
+                              <p className="text-sm">{t('deviceDetails.schedule.none')}</p>
                            </div>
                         )}
                      </div>
                      <div className="md:w-48 p-6 rounded-2xl bg-muted/20 border border-dashed border-muted/60">
-                        <p className="text-xs font-medium text-muted-foreground mb-3">Summary</p>
+                        <p className="text-xs font-medium text-muted-foreground mb-3">{t('deviceDetails.schedule.summary.title')}</p>
                         <div className="space-y-2">
                            <div className="flex items-center justify-between">
-                              <span className="text-sm">Programs</span>
+                              <span className="text-sm">{t('deviceDetails.schedule.summary.programs')}</span>
                               <Badge variant="secondary" className="text-xs">
                                  {deviceSchedule?.contentsRules?.length || 0}
                               </Badge>
                            </div>
                            <div className="flex items-center justify-between">
-                              <span className="text-sm">Actions</span>
+                              <span className="text-sm">{t('deviceDetails.schedule.summary.actions')}</span>
                               <Badge variant="secondary" className="text-xs">
                                  {deviceSchedule?.commandRules?.length || 0}
                               </Badge>
@@ -1314,14 +1316,14 @@ export default function DeviceDetailsPage() {
 
                   {/* Programs List */}
                   <div className="space-y-4">
-                     <p className="text-xs font-medium text-muted-foreground">Published programs</p>
+                     <p className="text-xs font-medium text-muted-foreground">{t('deviceDetails.schedule.published')}</p>
                      <div className="rounded-xl border overflow-hidden">
                         <table className="w-full text-left border-collapse">
                            <thead>
                               <tr className="bg-muted/30 border-b text-xs font-medium text-muted-foreground">
-                                 <th className="px-4 py-3">Program</th>
-                                 <th className="px-4 py-3">Status</th>
-                                 <th className="px-4 py-3 text-right">Progress</th>
+                                 <th className="px-4 py-3">{t('deviceDetails.assets.table.name')}</th>
+                                 <th className="px-4 py-3">{t('deviceDetails.assets.table.source')}</th>
+                                 <th className="px-4 py-3 text-right">{t('common.view')}</th>
                               </tr>
                            </thead>
                            <tbody className="divide-y">
@@ -1334,6 +1336,7 @@ export default function DeviceDetailsPage() {
                                        source={item.source}
                                        status={item.deploymentStatus || 'unknown'}
                                        progress={item.progress || (item.deploymentStatus === 'DOWNLOADED' ? 100 : 0)}
+                                       t={t}
                                     />
                                  ))
                               ) : (
@@ -1356,12 +1359,12 @@ export default function DeviceDetailsPage() {
                         <Card className="rounded-3xl border-none ring-1 ring-muted/60 shadow-sm overflow-hidden lg:col-span-1">
                            <CardHeader className="bg-muted/5 border-b py-5 px-6">
                               <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
-                                 <Clock className="h-4 w-4 text-primary" /> Time
+                                 <Clock className="h-4 w-4 text-primary" /> {t('deviceDetails.policy.time.title')}
                               </CardTitle>
                            </CardHeader>
                            <CardContent className="p-6 space-y-6">
                               <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10 text-center">
-                                 <p className="text-xs text-primary/60 mb-2">Device local time</p>
+                                 <p className="text-xs text-primary/60 mb-2">{t('deviceDetails.policy.time.localTime')}</p>
                                  <p className="text-4xl font-bold text-primary tabular-nums">
                                    {realProps.newrtc?.timezoneId ? 
                                      formatInTimeZone(liveTime, realProps.newrtc.timezoneId, 'HH:mm:ss') : 
@@ -1374,22 +1377,22 @@ export default function DeviceDetailsPage() {
                                  </p>
                               </div>
                               <div className="space-y-3">
-                                 <PolicyData label="Timezone ID" value={realProps.newrtc?.timezoneId} />
-                                 <PolicyData label="Last Sync" value={realProps.newrtc?.time?.split(' ')[1]} />
+                                 <PolicyData label={t('deviceDetails.policy.time.timezoneId')} value={realProps.newrtc?.timezoneId} />
+                                 <PolicyData label={t('deviceDetails.policy.time.lastSync')} value={realProps.newrtc?.time ? formatDateTime(realProps.newrtc.time) : '--'} />
                               </div>
                            </CardContent>
                         </Card>
                <Card className="rounded-3xl border-none ring-1 ring-muted/60 shadow-sm overflow-hidden lg:col-span-2">
                   <CardHeader className="bg-muted/5 border-b py-5 px-6">
                      <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
-                        <ShieldCheck className="h-4 w-4 text-emerald-500" /> Security
+                        <ShieldCheck className="h-4 w-4 text-emerald-500" /> {t('deviceDetails.policy.security.title')}
                      </CardTitle>
                   </CardHeader>
                   <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                     <PolicyItem label="Firewall" desc="Block unauthorized connections" active={realProps.inboundfirewall?.status === 'on'} />
-                     <PolicyItem label="Auto update" desc="Apply updates automatically" active />
-                     <PolicyItem label="USB access" desc="Allow content from USB" active={false} />
-                     <PolicyItem label="Multi-screen sync" desc="Synchronize with other devices" active={realProps.sync_program_mode?.sync_program_ntp_enable === 1} />
+                     <PolicyItem label={t('deviceDetails.policy.security.firewall.label')} desc={t('deviceDetails.policy.security.firewall.desc')} active={realProps.inboundfirewall?.status === 'on'} />
+                     <PolicyItem label={t('deviceDetails.policy.security.autoUpdate.label')} desc={t('deviceDetails.policy.security.autoUpdate.desc')} active />
+                     <PolicyItem label={t('deviceDetails.policy.security.usbAccess.label')} desc={t('deviceDetails.policy.security.usbAccess.desc')} active={false} />
+                     <PolicyItem label={t('deviceDetails.policy.security.sync.label')} desc={t('deviceDetails.policy.security.sync.desc')} active={realProps.sync_program_mode?.sync_program_ntp_enable === 1} />
                   </CardContent>
                </Card>
             </div>
@@ -1400,11 +1403,11 @@ export default function DeviceDetailsPage() {
        <Dialog open={!!assetDeleteTarget} onOpenChange={(open) => !open && setAssetDeleteTarget(null)}>
          <DialogContent className="sm:max-w-[520px] rounded-[2rem] p-8 border-none shadow-2xl ring-1 ring-muted/50">
            <DialogHeader className="space-y-3">
-             <DialogTitle className="text-xl font-bold">Remove program from device?</DialogTitle>
+             <DialogTitle className="text-xl font-bold">{t('deviceDetails.dialogs.removeAsset.title')}</DialogTitle>
              <DialogDescription className="text-sm text-muted-foreground">
                {assetDeleteTarget?.source === 'internet' && assetDeleteTarget?.programId
-                 ? 'This will unpublish the program from this device and request the device to delete the cached VSN.'
-                 : 'This will request the device to delete the cached VSN. Cloud publishing state will not be changed.'}
+                 ? t('deviceDetails.dialogs.removeAsset.descCloud')
+                 : t('deviceDetails.dialogs.removeAsset.descLocal')}
              </DialogDescription>
            </DialogHeader>
 
@@ -1417,11 +1420,11 @@ export default function DeviceDetailsPage() {
 
            <div className="mt-6 flex justify-end gap-3">
              <Button variant="outline" className="rounded-xl" onClick={() => setAssetDeleteTarget(null)} disabled={assetActionLoading}>
-               Cancel
+               {t('common.actions.cancel')}
              </Button>
              <Button className="rounded-xl gap-2" onClick={handleConfirmDeleteLocalAsset} disabled={assetActionLoading}>
                {assetActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-               Remove
+               {t('common.actions.delete')}
              </Button>
            </div>
          </DialogContent>
@@ -1431,19 +1434,19 @@ export default function DeviceDetailsPage() {
        <Dialog open={assetClearAllOpen} onOpenChange={setAssetClearAllOpen}>
          <DialogContent className="sm:max-w-[520px] rounded-[2rem] p-8 border-none shadow-2xl ring-1 ring-muted/50">
            <DialogHeader className="space-y-3">
-             <DialogTitle className="text-xl font-bold">Clear all cached programs?</DialogTitle>
+             <DialogTitle className="text-xl font-bold">{t('deviceDetails.dialogs.clearAll.title')}</DialogTitle>
              <DialogDescription className="text-sm text-muted-foreground">
-               This sends a device command to clear all downloaded programs. It does not change cloud assignments or schedules.
+               {t('deviceDetails.dialogs.clearAll.desc')}
              </DialogDescription>
            </DialogHeader>
 
            <div className="mt-6 flex justify-end gap-3">
              <Button variant="outline" className="rounded-xl" onClick={() => setAssetClearAllOpen(false)} disabled={assetActionLoading}>
-               Cancel
+               {t('common.actions.cancel')}
              </Button>
              <Button className="rounded-xl gap-2" onClick={handleConfirmClearAllPrograms} disabled={assetActionLoading}>
                {assetActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-               Clear all
+               {t('deviceDetails.assets.clearAll')}
              </Button>
            </div>
          </DialogContent>
@@ -1465,24 +1468,24 @@ export default function DeviceDetailsPage() {
                 {confirmDialog.type === 'sleep' ? <Moon className="h-10 w-10" /> : confirmDialog.type === 'wakeup' ? <Power className="h-10 w-10" /> : <RotateCw className="h-10 w-10" />}
              </div>
             <DialogTitle className="text-2xl font-bold tracking-tight">
-               {confirmDialog.type === 'sleep' ? "Put device to sleep?" : confirmDialog.type === 'wakeup' ? "Wake up device?" : "Restart device?"}
+               {confirmDialog.type === 'sleep' ? t('deviceDetails.dialogs.power.sleep.title') : confirmDialog.type === 'wakeup' ? t('deviceDetails.dialogs.power.wakeup.title') : t('deviceDetails.dialogs.power.restart.title')}
             </DialogTitle>
             <DialogDescription className="text-sm leading-relaxed">
                {confirmDialog.type === 'sleep'
-                  ? "The device will enter sleep mode. Content playback will stop until the device is woken up."
+                  ? t('deviceDetails.dialogs.power.sleep.desc')
                   : confirmDialog.type === 'wakeup'
-                  ? "The device will be woken up and resume normal operation."
-                  : "The device will restart. It may be unavailable for about 90 seconds."}
+                  ? t('deviceDetails.dialogs.power.wakeup.desc')
+                  : t('deviceDetails.dialogs.power.restart.desc')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-10 flex flex-col items-center gap-6 relative z-10">
              <SlideToUnlock
                 onUnlock={executeDangerousAction}
-                label={confirmDialog.type === 'sleep' ? "Slide to confirm sleep" : confirmDialog.type === 'wakeup' ? "Slide to confirm wake up" : "Slide to confirm restart"}
+                label={confirmDialog.type === 'sleep' ? t('deviceDetails.dialogs.power.sleep.label') : confirmDialog.type === 'wakeup' ? t('deviceDetails.dialogs.power.wakeup.label') : t('deviceDetails.dialogs.power.restart.label')}
              />
              <Button variant="ghost" className="text-sm text-muted-foreground hover:text-foreground" onClick={() => setConfirmDialog({ open: false, type: null })}>
-                Cancel
+                {t('common.actions.cancel')}
              </Button>
           </div>
         </DialogContent>
@@ -1606,7 +1609,7 @@ function PolicyItem({ label, desc, active, last = false }: { label: string, desc
   );
 }
 
-function ResourceProgress({ label, used, total, unit, color = "bg-primary" }: { label: string, used: number, total: number, unit: string, color?: string }) {
+function ResourceProgress({ label, used, total, unit, color = "bg-primary", t }: { label: string, used: number, total: number, unit: string, color?: string, t: any }) {
   const percentage = Math.min(100, (used / total) * 100);
   const isHigh = percentage > 85;
   const formattedUsed = unit === 'GB' ? (used / (1024 ** 3)).toFixed(1) : (used / (1024 ** 2)).toFixed(0);
@@ -1622,15 +1625,15 @@ function ResourceProgress({ label, used, total, unit, color = "bg-primary" }: { 
          <div className={cn("absolute inset-y-0 left-0 rounded-full transition-all duration-500", color, isHigh && "bg-rose-500")} style={{ width: `${percentage}%` }} />
       </div>
       <div className="flex justify-between text-xs text-muted-foreground">
-        <span>{formattedUsed} {unit} used</span>
-        <span>{formattedTotal} {unit} total</span>
+        <span>{formattedUsed} {unit} {t('deviceDetails.info.resources.used')}</span>
+        <span>{formattedTotal} {unit} {t('deviceDetails.info.resources.total')}</span>
       </div>
     </div>
   );
 }
 
-function VisibilityRow({ name, id, source, status, progress }: { name: string, id: number, source: 'direct' | 'schedule', status: string, progress: number }) {
-   const statusLabel = status === 'DOWNLOADED' || status === 'downloaded' ? 'Ready' : status === 'DOWNLOADING' ? 'Downloading' : 'Pending';
+function VisibilityRow({ name, id, source, status, progress, t }: { name: string, id: number, source: 'direct' | 'schedule', status: string, progress: number, t: any }) {
+   const statusLabel = status === 'DOWNLOADED' || status === 'downloaded' ? t('deviceDetails.schedule.status.ready') : status === 'DOWNLOADING' ? t('deviceDetails.schedule.status.downloading') : t('deviceDetails.schedule.status.pending');
    return (
       <tr className="hover:bg-muted/5 transition-colors">
          <td className="px-4 py-3">

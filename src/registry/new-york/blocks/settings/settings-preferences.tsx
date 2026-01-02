@@ -2,6 +2,7 @@
 
 import { Calendar, Clock, Globe, Languages, Loader2, Moon, Save, Sun, Timer } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Button } from "@/registry/new-york/ui/button";
 import {
@@ -126,6 +127,7 @@ export default function SettingsPreferences({
   onSave,
   className,
 }: SettingsPreferencesProps) {
+  const { t } = useTranslation();
   const [isSaving, setIsSaving] = useState(false);
   const [localPreferences, setLocalPreferences] = useState<PreferencesData>({
     ...defaultPreferences,
@@ -150,10 +152,10 @@ export default function SettingsPreferences({
 
   const languages = useMemo(
     () => [
-      { value: "en" as const, label: "English" },
-      { value: "zh" as const, label: "中文" },
+      { value: "en" as const, label: t('settings.preferences.language.en') },
+      { value: "zh" as const, label: t('settings.preferences.language.zh') },
     ],
-    []
+    [t]
   );
 
   const timezones = useMemo(
@@ -189,7 +191,7 @@ export default function SettingsPreferences({
       <CardHeader>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <CardTitle className="wrap-break-word">Preferences</CardTitle>
+            <CardTitle className="wrap-break-word">{t('settings.tabs.preferences')}</CardTitle>
             <CardDescription className="wrap-break-word">
               Server timestamps are stored in UTC. Choose how they are displayed in the UI.
             </CardDescription>
@@ -211,7 +213,7 @@ export default function SettingsPreferences({
               ) : (
                 <>
                   <Save className="size-4" />
-                  <span className="whitespace-nowrap">Save</span>
+                  <span className="whitespace-nowrap">{t('settings.preferences.save')}</span>
                 </>
               )}
             </Button>
@@ -228,7 +230,7 @@ export default function SettingsPreferences({
             </div>
 
             <Field>
-              <FieldLabel>Theme</FieldLabel>
+              <FieldLabel>{t('settings.preferences.theme.label')}</FieldLabel>
               <FieldContent>
                 <div className="grid grid-cols-3 gap-2">
                   <Button
@@ -238,7 +240,7 @@ export default function SettingsPreferences({
                     variant={localPreferences.theme === "light" ? "default" : "outline"}
                   >
                     <Sun className="size-4" />
-                    Light
+                    {t('settings.preferences.theme.light')}
                   </Button>
                   <Button
                     onClick={() => setLocalPreferences((p) => ({ ...p, theme: "dark" }))}
@@ -247,7 +249,7 @@ export default function SettingsPreferences({
                     variant={localPreferences.theme === "dark" ? "default" : "outline"}
                   >
                     <Moon className="size-4" />
-                    Dark
+                    {t('settings.preferences.theme.dark')}
                   </Button>
                   <Button
                     onClick={() => setLocalPreferences((p) => ({ ...p, theme: "system" }))}
@@ -255,7 +257,7 @@ export default function SettingsPreferences({
                     type="button"
                     variant={localPreferences.theme === "system" ? "default" : "outline"}
                   >
-                    System
+                    {t('settings.preferences.theme.system')}
                   </Button>
                 </div>
               </FieldContent>
@@ -272,7 +274,7 @@ export default function SettingsPreferences({
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field>
-                <FieldLabel htmlFor="language">Language</FieldLabel>
+                <FieldLabel htmlFor="language">{t('settings.preferences.language.label')}</FieldLabel>
                 <FieldContent>
                   <Select
                     onValueChange={(next) =>
@@ -298,7 +300,7 @@ export default function SettingsPreferences({
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="timezone">Timezone</FieldLabel>
+                <FieldLabel htmlFor="timezone">{t('settings.preferences.timezone')}</FieldLabel>
                 <FieldContent>
                   <Select
                     onValueChange={(next) =>
@@ -335,7 +337,7 @@ export default function SettingsPreferences({
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field>
-                <FieldLabel htmlFor="date-format">Date format</FieldLabel>
+                <FieldLabel htmlFor="date-format">{t('settings.preferences.dateFormat')}</FieldLabel>
                 <FieldContent>
                   <Select
                     onValueChange={(next) =>
@@ -364,7 +366,7 @@ export default function SettingsPreferences({
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="time-format">Time format</FieldLabel>
+                <FieldLabel htmlFor="time-format">{t('settings.preferences.timeFormat')}</FieldLabel>
                 <FieldContent>
                   <Select
                     onValueChange={(next) =>
@@ -405,7 +407,7 @@ export default function SettingsPreferences({
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <FieldLabel className="mb-0" htmlFor="show-seconds">
-                      Show seconds
+                      {t('settings.preferences.showSeconds')}
                     </FieldLabel>
                     <FieldDescription className="text-xs">
                       Include seconds in time displays.

@@ -319,6 +319,13 @@ export default function MapPage() {
   const [showSidebar, setShowSidebar] = useState(true);
   const [basemap, setBasemap] = useState<MapStyleId>("streets");
 
+  // React to theme changes for basemap
+  useEffect(() => {
+    const theme = preferences.theme;
+    const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    setBasemap(isDark ? "dark" : "streets");
+  }, [preferences.theme]);
+
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [locationMode, setLocationMode] = useState<LocationMode>(preferences?.mapLocationMode || "auto");

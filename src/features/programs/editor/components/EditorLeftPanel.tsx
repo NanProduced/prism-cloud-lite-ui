@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import type { VsnPage, VsnRegion } from '@/features/programs/vsn/types';
+import { useTranslation } from 'react-i18next';
 
 import type { EditorMaterial, EditorSelection } from '../types';
 import { getRegionDisplayName } from '../utils';
@@ -42,6 +43,7 @@ export function EditorLeftPanel({
   onAddTextItem: () => void;
   onAddMaterialItem: (material: EditorMaterial) => void;
 }) {
+  const { t } = useTranslation();
   const [mediaFilter, setMediaFilter] = useState<'all' | 'image' | 'video'>('all');
 
   const filteredMaterials = useMemo(() => {
@@ -58,9 +60,9 @@ export function EditorLeftPanel({
       {/* Pages Section */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <p className="text-xs font-bold text-muted-foreground">Structure</p>
+          <p className="text-xs font-bold text-muted-foreground">{t('programEditor.panels.left.pages')}</p>
           <div className="flex items-center gap-1.5">
-            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={onAddPage} title="Add page">
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={onAddPage} title={t('programEditor.panels.left.addPage')}>
               <FilePlus2 className="h-3.5 w-3.5" />
             </Button>
             <Button
@@ -69,7 +71,7 @@ export function EditorLeftPanel({
               className="h-7 w-7 rounded-md"
               onClick={onDeletePage}
               disabled={pages.length <= 1}
-              title="Delete page"
+              title={t('common.actions.delete')}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -91,9 +93,9 @@ export function EditorLeftPanel({
                 onClick={() => onSelectPage(index)}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold text-xs">Page {index + 1}</span>
+                  <span className="font-semibold text-xs">{t('programEditor.panels.left.pages')} {index + 1}</span>
                   <span className="text-[10px] text-muted-foreground font-medium">
-                    {(page.Regions?.Region?.length ?? 0)} window{(page.Regions?.Region?.length ?? 0) === 1 ? '' : 's'}
+                    {(page.Regions?.Region?.length ?? 0)} {t('programEditor.panels.left.regions').toLowerCase()}
                   </span>
                 </div>
               </button>
@@ -107,9 +109,9 @@ export function EditorLeftPanel({
       {/* Regions Section */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <p className="text-xs font-bold text-muted-foreground">Windows</p>
+          <p className="text-xs font-bold text-muted-foreground">{t('programEditor.panels.left.regions')}</p>
           <div className="flex items-center gap-1.5">
-            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={onAddRegion} title="Add window">
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={onAddRegion} title={t('programEditor.panels.left.addRegion')}>
               <Plus className="h-3.5 w-3.5" />
             </Button>
             <Button
@@ -118,7 +120,7 @@ export function EditorLeftPanel({
               className="h-7 w-7 rounded-md"
               onClick={onDeleteRegion}
               disabled={selection.regionIndex == null}
-              title="Delete window"
+              title={t('common.actions.delete')}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -129,7 +131,7 @@ export function EditorLeftPanel({
           <div className="space-y-1.5 pr-3">
             {regions.length === 0 ? (
               <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-6 text-center text-[11px] text-muted-foreground">
-                No windows on this page.
+                {t('programEditor.problems.empty')}
               </div>
             ) : (
               regions.map((region, index) => (
@@ -146,12 +148,12 @@ export function EditorLeftPanel({
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Layers className={cn("h-3 w-3", selection.regionIndex === index ? "text-primary" : "text-muted-foreground")} />
-                    <span className="truncate text-xs font-semibold">{getRegionDisplayName(region, index)}</span>
+                    <span className="truncate text-xs font-semibold">{getRegionDisplayName(region, index, t)}</span>
                   </div>
                   <div className="flex items-center gap-2 text-[10px] text-muted-foreground/70 font-medium pl-5">
                     <span className="tabular-nums">{region.Rect.Width}×{region.Rect.Height}</span>
                     <span>·</span>
-                    <span>{region.Items.Item.length} item{region.Items.Item.length === 1 ? '' : 's'}</span>
+                    <span>{region.Items.Item.length} {t('message.ui.task.export.rows')}</span>
                   </div>
                 </button>
               ))
@@ -165,10 +167,10 @@ export function EditorLeftPanel({
       {/* Insert Section */}
       <div className="flex-1 flex flex-col min-h-0 gap-3">
         <div className="flex items-center justify-between px-1 shrink-0">
-          <p className="text-xs font-bold text-muted-foreground">Insert</p>
+          <p className="text-xs font-bold text-muted-foreground">{t('programEditor.panels.left.materials')}</p>
           <Button variant="outline" size="sm" className="h-7 rounded-md gap-1.5 text-[11px] font-bold" onClick={onAddTextItem}>
             <TypeIcon className="h-3 w-3 text-primary" />
-            Add text
+            {t('programEditor.panels.left.addText')}
           </Button>
         </div>
 
@@ -177,13 +179,13 @@ export function EditorLeftPanel({
             <Input 
               value={searchQuery || ''} 
               onChange={(e) => onSearchChange?.(e.target.value)} 
-              placeholder="Search library..." 
+              placeholder={t('programEditor.panels.left.searchMaterials')} 
               className="h-9 rounded-lg bg-muted/30 border-transparent focus:bg-background transition-colors pl-8 text-xs"
             />
             <ImageIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
           </div>
           <div className="flex items-center gap-1">
-            <FilterPill active={mediaFilter === 'all'} onClick={() => setMediaFilter('all')}>All</FilterPill>
+            <FilterPill active={mediaFilter === 'all'} onClick={() => setMediaFilter('all')}>{t('common.all')}</FilterPill>
             <FilterPill active={mediaFilter === 'image'} onClick={() => setMediaFilter('image')}>Images</FilterPill>
             <FilterPill active={mediaFilter === 'video'} onClick={() => setMediaFilter('video')}>Videos</FilterPill>
           </div>
@@ -193,7 +195,7 @@ export function EditorLeftPanel({
           <div className="grid grid-cols-1 gap-1.5 pr-3 pb-4">
             {filteredMaterials.length === 0 ? (
               <div className="rounded-xl border border-dashed bg-muted/10 px-4 py-10 text-center text-xs text-muted-foreground">
-                No matching media.
+                {t('deviceDetails.assets.noMatch')}
               </div>
             ) : (
               filteredMaterials.map((m) => (
@@ -205,7 +207,7 @@ export function EditorLeftPanel({
                     'hover:border-border hover:bg-card hover:shadow-sm',
                   )}
                   onClick={() => onAddMaterialItem(m)}
-                  title={hasSelectedRegion ? 'Add to selected window' : 'Create a new window'}
+                  title={hasSelectedRegion ? t('programEditor.panels.left.addRegion') : t('programEditor.panels.left.addRegion')}
                   draggable
                   onDragStart={(event) => {
                     event.dataTransfer.setData('text/plain', m.materialId);

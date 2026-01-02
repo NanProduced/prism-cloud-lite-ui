@@ -275,7 +275,7 @@ export default function MessagesPage() {
             onClick={() => handleTabChange('all')}
           >
             <Inbox className="h-4 w-4" />
-            Inbox
+            {t('message.ui.inbox')}
           </button>
           <button
             type="button"
@@ -286,7 +286,7 @@ export default function MessagesPage() {
             onClick={() => handleTabChange('notifications')}
           >
             <Bell className="h-4 w-4" />
-            Notifications
+            {t('message.ui.notifications')}
           </button>
           <button
             type="button"
@@ -297,7 +297,7 @@ export default function MessagesPage() {
             onClick={() => handleTabChange('tasks')}
           >
             <Zap className="h-4 w-4" />
-            Tasks
+            {t('message.ui.tasks')}
           </button>
         </div>
 
@@ -333,7 +333,7 @@ export default function MessagesPage() {
           </div>
           <Button variant="outline" size="sm" className="h-10 rounded-2xl font-bold text-[11px] tracking-widest px-6 border-2 hover:bg-emerald-50 hover:text-emerald-600 transition-all" onClick={handleMarkAllRead} disabled={unreadRes?.data?.count === 0}>
             <CheckCheck className="mr-2 h-4 w-4" />
-            Mark read
+            {t('message.ui.markRead')}
           </Button>
           <Button variant="outline" size="icon" className="rounded-2xl h-10 w-10 border-2 hover:bg-primary hover:text-white transition-all shadow-sm" onClick={() => queryClient.invalidateQueries({ queryKey: ['messages'] })}>
             <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} />
@@ -426,9 +426,9 @@ export default function MessagesPage() {
               <div className="h-20 w-20 bg-muted/50 rounded-3xl flex items-center justify-center mb-6 border border-dashed">
                 <Mail className="h-8 w-8 text-muted-foreground opacity-20" />
               </div>
-              <h3 className="text-lg font-bold tracking-tight">Your inbox is clear</h3>
+              <h3 className="text-lg font-bold tracking-tight">{t('message.ui.empty.title')}</h3>
               <p className="text-sm text-muted-foreground max-w-[280px] mt-2 leading-relaxed">
-                Stay tuned! We'll notify you here about system updates, device events, and task completions.
+                {t('message.ui.empty.desc')}
               </p>
             </div>
           ) : (
@@ -764,11 +764,11 @@ function ExportTaskDetails({ message }: { message: MessageDetail }) {
   };
 
   const stageLabelMap: Record<string, string> = {
-    PENDING: 'Queued',
+    PENDING: t('message.status.PENDING'),
     QUERYING: 'Querying data',
     UPLOADING: 'Uploading result',
-    SUCCESS: 'Available',
-    FAILED: 'Failed',
+    SUCCESS: t('message.status.SUCCESS'),
+    FAILED: t('message.status.FAILED'),
     DELETED: 'Deleted'
   };
 
@@ -779,14 +779,14 @@ function ExportTaskDetails({ message }: { message: MessageDetail }) {
     <div className="rounded-2xl border bg-muted/10 p-6 space-y-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-bold tracking-tight">Export Task Details</p>
+          <p className="text-sm font-bold tracking-tight">{t('message.ui.task.export.title')}</p>
           <div className="flex items-center gap-2 mt-1.5">
             <Badge variant="secondary" className="h-5 text-[9px] font-black tracking-widest px-2 bg-background border shadow-sm">
               {payload.format || 'CSV'}
             </Badge>
             {payload.rowCount !== undefined && (
               <span className="text-[10px] text-muted-foreground font-bold tabular-nums">
-                {payload.rowCount.toLocaleString()} rows
+                {payload.rowCount.toLocaleString()} {t('message.ui.task.export.rows')}
               </span>
             )}
           </div>
@@ -822,7 +822,7 @@ function ExportTaskDetails({ message }: { message: MessageDetail }) {
             disabled={isDownloading}
           >
             {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            Download File
+            {t('message.ui.task.export.download')}
           </Button>
           <Button 
             variant="ghost"
@@ -830,7 +830,7 @@ function ExportTaskDetails({ message }: { message: MessageDetail }) {
             onClick={handleDelete}
             disabled={isDeleting}
           >
-            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete'}
+            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : t('common.actions.delete')}
           </Button>
         </div>
       )}
@@ -857,6 +857,7 @@ function TranscodeTaskDetails({
   onRetry: (args: { taskId: string; assetId: string; presetId: string; targetFolderId?: string | null; options?: any }) => void;
   isRetrying: boolean;
 }) {
+  const { t } = useTranslation();
   const payload = message.payload || {};
 
   const stageLabelMap: Record<string, string> = {
@@ -906,7 +907,7 @@ function TranscodeTaskDetails({
     <div className="rounded-2xl border bg-muted/10 p-6 space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold tracking-tight">Transcoding task</p>
+          <p className="text-sm font-semibold tracking-tight">{t('message.ui.task.transcode.title')}</p>
           <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
             {sourceTitle ? <span className="font-medium text-foreground/90">{sourceTitle}</span> : 'Media file'}
             {presetLabel ? <span className="text-muted-foreground"> · {presetLabel}</span> : null}
@@ -930,7 +931,7 @@ function TranscodeTaskDetails({
       {percent !== undefined && (
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Progress</span>
+            <span>{t('message.ui.task.transcode.progress')}</span>
             <span className="tabular-nums">{percentText}</span>
           </div>
           <Progress value={percent * 100} className="h-2 bg-muted" />
@@ -938,7 +939,7 @@ function TranscodeTaskDetails({
       )}
 
       {!sseConnected && (message.status === 'PENDING' || message.status === 'RUNNING') && (
-        <p className="text-xs text-muted-foreground">Live updates unavailable; refreshing periodically.</p>
+        <p className="text-xs text-muted-foreground">{t('message.ui.task.transcode.liveUpdates')}</p>
       )}
 
       {message.status === 'FAILED' && errorMessage && (
@@ -951,7 +952,7 @@ function TranscodeTaskDetails({
         {message.status === 'SUCCESS' && hasOutput && (
           <Button variant="outline" className="rounded-xl font-semibold" onClick={onOpenMediaLibrary}>
             <ExternalLink className="h-4 w-4 mr-2" />
-            Open media library
+            {t('message.ui.task.transcode.openMedia')}
           </Button>
         )}
 
@@ -971,7 +972,7 @@ function TranscodeTaskDetails({
             }}
           >
             {isRetrying ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
-            Retry
+            {t('message.ui.task.transcode.retry')}
           </Button>
         )}
       </div>
@@ -994,7 +995,8 @@ function MessageItem({
   formatDateTime: (d: string) => string;
   navigate: (path: string) => void;
 }) {
-  const { title, summary } = renderMessage(message);
+  const { t } = useTranslation();
+  const { title, summary } = renderMessage(message, t);
 
   return (
     <div 

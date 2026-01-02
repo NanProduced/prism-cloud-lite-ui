@@ -37,6 +37,7 @@ import { getItems, getPages, getRegions } from '../vsnOps';
 import { DeviceResolutionPicker } from './DeviceResolutionPicker';
 import { PopoverColorPicker } from '@/components/ui/popover-color-picker';
 import { parseResolution } from '@/lib/resolution';
+import { useTranslation } from 'react-i18next';
 
 type MaterialIndex = Record<string, EditorMaterial>;
 
@@ -73,6 +74,7 @@ export function InspectorPanel({
   onPatchRegionRect: (pageIndex: number, regionIndex: number, patch: Partial<VsnRect>) => void;
   onPatchItem: (pageIndex: number, regionIndex: number, itemIndex: number, patch: Partial<VsnItem>) => void;
 }) {
+  const { t } = useTranslation();
   const page = useMemo(() => getPages(doc)[selection.pageIndex] ?? null, [doc, selection.pageIndex]);
   const region = useMemo(
     () => (selection.regionIndex == null ? null : getRegions(doc, selection.pageIndex)[selection.regionIndex] ?? null),
@@ -89,9 +91,9 @@ export function InspectorPanel({
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium">Inspector</p>
+        <p className="text-sm font-medium">{t('programEditor.panels.inspector.title')}</p>
         <p className="text-xs text-muted-foreground">
-          {item ? 'Item' : region ? 'Window' : 'Program'}
+          {item ? t('programEditor.panels.inspector.item') : region ? t('programEditor.panels.inspector.region') : t('programEditor.panels.inspector.program')}
         </p>
       </div>
 
@@ -101,7 +103,7 @@ export function InspectorPanel({
         <div className="space-y-6 px-4 py-4">
           {!doc || !page ? (
             <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">
-              No document loaded.
+              {t('programEditor.panels.inspector.noDoc')}
             </div>
           ) : item ? (
             <ItemInspector
@@ -162,6 +164,7 @@ function ProgramInspector({
   onRenameProgram: (name: string) => void;
   onSetProgramResolution: (input: { width: number; height: number; targetDeviceId: string | null }) => void;
 }) {
+  const { t } = useTranslation();
   const [nameDraft, setNameDraft] = useState(programName);
   const [widthDraft, setWidthDraft] = useState(String(programWidth));
   const [heightDraft, setHeightDraft] = useState(String(programHeight));
@@ -191,9 +194,9 @@ function ProgramInspector({
 
   return (
     <div className="space-y-5">
-      <p className="text-sm font-medium">Program</p>
+      <p className="text-sm font-medium">{t('programEditor.panels.inspector.program')}</p>
 
-      <Field label="Program name">
+      <Field label={t('programEditor.panels.inspector.labels.programName')}>
         <Input
           value={nameDraft}
           onChange={(e) => setNameDraft(e.target.value)}
@@ -207,7 +210,7 @@ function ProgramInspector({
         />
       </Field>
 
-          <Field label="Target device (resolution)">
+          <Field label={t('programEditor.panels.inspector.labels.targetDevice')}>
         <DeviceResolutionPicker
           devices={devices}
           value={targetDeviceId}
@@ -231,12 +234,12 @@ function ProgramInspector({
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-medium text-muted-foreground">Canvas resolution</p>
+          <p className="text-xs font-medium text-muted-foreground">{t('programEditor.panels.inspector.labels.canvasResolution')}</p>
           <p className="text-xs text-muted-foreground">max 8192×4096</p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Width">
+          <Field label={t('programEditor.panels.inspector.labels.width')}>
             <Input
               type="number"
               inputMode="numeric"
@@ -247,7 +250,7 @@ function ProgramInspector({
               onBlur={commitResolution}
             />
           </Field>
-          <Field label="Height">
+          <Field label={t('programEditor.panels.inspector.labels.height')}>
             <Input
               type="number"
               inputMode="numeric"
@@ -263,7 +266,7 @@ function ProgramInspector({
         {!selectedDevice && (
           <div className="flex justify-end">
             <Button type="button" variant="outline" size="sm" onClick={commitResolution}>
-              Apply
+              {t('programEditor.panels.inspector.labels.apply')}
             </Button>
           </div>
         )}
@@ -287,12 +290,13 @@ function PageInspector({
   showDevFields: boolean;
   onPatch: (patch: Partial<VsnPage>) => void;
 }) {
+  const { t } = useTranslation();
   const cssColor = vsnBgColorToCss(page.BgColor);
   const hexColor = cssColor.startsWith('#') ? cssColor : '#000000';
 
   return (
     <div className="space-y-5">
-      <Field label="Loop type">
+      <Field label={t('programEditor.panels.inspector.labels.loopType')}>
         <Select
           value={page.LoopType}
           onValueChange={(v) => onPatch({ LoopType: v as VsnPage['LoopType'] })}
@@ -301,13 +305,13 @@ function PageInspector({
             <SelectValue placeholder="Select loop type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="1">1 · Auto duration</SelectItem>
-            <SelectItem value="0">0 · Fixed duration</SelectItem>
+            <SelectItem value="1">1 · {t('programEditor.panels.inspector.labels.autoDuration')}</SelectItem>
+            <SelectItem value="0">0 · {t('programEditor.panels.inspector.labels.fixedDuration')}</SelectItem>
           </SelectContent>
         </Select>
       </Field>
 
-      <Field label="AppointDuration (ms)">
+      <Field label={t('programEditor.panels.inspector.labels.appointDuration')}>
         <Input
           type="number"
           inputMode="numeric"
@@ -322,7 +326,7 @@ function PageInspector({
         />
       </Field>
 
-      <Field label="Background">
+      <Field label={t('programEditor.panels.inspector.labels.background')}>
         <PopoverColorPicker
           value={hexColor}
           onChange={(v) => onPatch({ BgColor: cssHexToVsnBgColor(v) })}
@@ -349,17 +353,18 @@ function RegionInspector({
   onPatch: (patch: Partial<VsnRegion>) => void;
   onPatchRect: (patch: Partial<VsnRect>) => void;
 }) {
+  const { t } = useTranslation();
   const rect = region.Rect;
   const borderColor = rect.BorderColor ?? '#000000';
   const backColor = rect.BackColor ?? '';
   const mode = getRegionMode(region);
-  const title = getRegionDisplayName(region);
+  const title = getRegionDisplayName(region, undefined, t);
   const canSync = regionHasOnlyAllowedItemTypes(region, 'sync');
   const canTicker = regionHasOnlyAllowedItemTypes(region, 'ticker');
 
   return (
     <div className="space-y-5">
-      <Field label="Title">
+      <Field label={t('programEditor.panels.inspector.labels.title')}>
         <Input
           value={title}
           onChange={(e) => {
@@ -373,7 +378,7 @@ function RegionInspector({
         />
       </Field>
 
-      <Field label="Window type">
+      <Field label={t('programEditor.panels.inspector.labels.windowType')}>
         <Select
           value={mode}
           onValueChange={(v) => {
@@ -390,7 +395,7 @@ function RegionInspector({
             }
 
             const editorName = getEditorRegionName(region);
-            const fallbackTitle = editorName ?? ((region.Name ?? '').trim() || 'Window');
+            const fallbackTitle = editorName ?? ((region.Name ?? '').trim() || t('programEditor.panels.inspector.region'));
 
             if (nextMode === 'normal') {
               onPatch({ Name: fallbackTitle, [REGION_EDITOR_NAME_KEY]: undefined });
@@ -405,12 +410,12 @@ function RegionInspector({
             <SelectValue placeholder="Select mode" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="normal">Normal</SelectItem>
+            <SelectItem value="normal">{t('programEditor.panels.inspector.labels.normal')}</SelectItem>
             <SelectItem value="sync" disabled={!canSync && mode !== 'sync'}>
-              Sync playback
+              {t('programEditor.panels.inspector.labels.sync')}
             </SelectItem>
             <SelectItem value="ticker" disabled={!canTicker && mode !== 'ticker'}>
-              Single-line ticker
+              {t('programEditor.panels.inspector.labels.ticker')}
             </SelectItem>
           </SelectContent>
         </Select>
@@ -429,7 +434,7 @@ function RegionInspector({
         </Field>
       )}
 
-      <Field label="IsScheduleRegion">
+      <Field label={t('programEditor.panels.inspector.labels.isSchedule')}>
         <Select
           value={region.IsScheduleRegion}
           onValueChange={(v) => onPatch({ IsScheduleRegion: v as VsnRegion['IsScheduleRegion'] })}
@@ -438,13 +443,13 @@ function RegionInspector({
             <SelectValue placeholder="Is schedule region" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="0">0 · No</SelectItem>
-            <SelectItem value="1">1 · Yes</SelectItem>
+            <SelectItem value="0">0 · {t('programEditor.panels.inspector.labels.no')}</SelectItem>
+            <SelectItem value="1">1 · {t('programEditor.panels.inspector.labels.yes')}</SelectItem>
           </SelectContent>
         </Select>
       </Field>
 
-      <Field label="Layer">
+      <Field label={t('programEditor.panels.inspector.labels.layer')}>
         <Input
           type="number"
           inputMode="numeric"
@@ -465,7 +470,7 @@ function RegionInspector({
       <Collapsible defaultOpen className="space-y-2">
         <CollapsibleTrigger asChild>
           <button className="flex w-full items-center justify-between text-xs font-bold tracking-tight text-muted-foreground hover:text-foreground">
-            Rect
+            {t('programEditor.panels.inspector.labels.rect')}
             <ChevronDown className="h-3 w-3 transition-transform duration-200" />
           </button>
         </CollapsibleTrigger>
@@ -475,80 +480,51 @@ function RegionInspector({
               <Input
                 type="number"
                 inputMode="numeric"
-                min={0}
-                step={1}
                 value={rect.X}
-                onChange={(e) => {
-                  const value = parseNonNegIntInput(e.target.value);
-                  if (value == null) return;
-                  onPatchRect({ X: value });
-                }}
+                onChange={(e) => onPatchRect({ X: parseNonNegIntInput(e.target.value) ?? '0' })}
               />
             </Field>
             <Field label="Y">
               <Input
                 type="number"
                 inputMode="numeric"
-                min={0}
-                step={1}
                 value={rect.Y}
-                onChange={(e) => {
-                  const value = parseNonNegIntInput(e.target.value);
-                  if (value == null) return;
-                  onPatchRect({ Y: value });
-                }}
+                onChange={(e) => onPatchRect({ Y: parseNonNegIntInput(e.target.value) ?? '0' })}
               />
             </Field>
-            <Field label="Width">
+            <Field label={t('programEditor.panels.inspector.labels.width')}>
               <Input
                 type="number"
                 inputMode="numeric"
-                min={1}
-                step={1}
                 value={rect.Width}
-                onChange={(e) => {
-                  const value = parseStrictPosIntInput(e.target.value);
-                  if (value == null) return;
-                  onPatchRect({ Width: value });
-                }}
+                onChange={(e) => onPatchRect({ Width: parseStrictPosIntInput(e.target.value) ?? '100' })}
               />
             </Field>
-            <Field label="Height">
+            <Field label={t('programEditor.panels.inspector.labels.height')}>
               <Input
                 type="number"
                 inputMode="numeric"
-                min={1}
-                step={1}
                 value={rect.Height}
-                onChange={(e) => {
-                  const value = parseStrictPosIntInput(e.target.value);
-                  if (value == null) return;
-                  onPatchRect({ Height: value });
-                }}
+                onChange={(e) => onPatchRect({ Height: parseStrictPosIntInput(e.target.value) ?? '100' })}
               />
             </Field>
-            <Field label="BorderWidth">
+            <Field label={t('programEditor.panels.inspector.labels.borderWidth')}>
               <Input
                 type="number"
                 inputMode="numeric"
                 min={0}
-                step={1}
-                value={rect.BorderWidth}
-                onChange={(e) => {
-                  const value = parseNonNegIntInput(e.target.value);
-                  if (value == null) return;
-                  onPatchRect({ BorderWidth: value });
-                }}
+                value={rect.BorderWidth ?? '0'}
+                onChange={(e) => onPatchRect({ BorderWidth: parseNonNegIntInput(e.target.value) ?? '0' })}
               />
             </Field>
-            <Field label="BorderColor">
+            <Field label={t('programEditor.panels.inspector.labels.borderColor')}>
               <PopoverColorPicker
                 value={vsnBgColorToCss(borderColor)}
                 onChange={(v) => onPatchRect({ BorderColor: cssHexToVsnBgColor(v) })}
               />
             </Field>
             <div className="col-span-2">
-              <Field label="BackColor (optional)">
+              <Field label={t('programEditor.panels.inspector.labels.backColor')}>
                 <PopoverColorPicker
                   value={backColor ? vsnBgColorToCss(backColor) : ''}
                   onChange={(v) => onPatchRect({ BackColor: v ? cssHexToVsnBgColor(v) : null })}
@@ -573,6 +549,7 @@ function ItemInspector({
   showDevFields: boolean;
   onPatch: (patch: Partial<VsnItem>) => void;
 }) {
+  const { t } = useTranslation();
   const textInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -586,9 +563,9 @@ function ItemInspector({
   const icon = item.Type === '3' ? VideoIcon : item.Type === '2' || item.Type === '6' ? ImageIcon : TypeIcon;
   const Icon = icon;
   const durationLabel = material?.durationMs ? formatDurationMs(material.durationMs) : null;
-  const title = material?.name ?? getItemTypeLabel(item.Type, showDevFields);
+  const title = material?.name ?? getItemTypeLabel(item.Type, showDevFields, t);
   const details = [
-    material ? material.kind.toLowerCase() : getItemTypeLabel(item.Type, false).toLowerCase(),
+    material ? material.kind.toLowerCase() : getItemTypeLabel(item.Type, false, t).toLowerCase(),
     material?.width && material?.height ? `${material.width}×${material.height}` : null,
     durationLabel,
     showDevFields && item.FileSource?.Resource_ID ? `materialId: ${item.FileSource.Resource_ID}` : null,
@@ -622,7 +599,7 @@ function ItemInspector({
 
       {item.Type === '2' || item.Type === '3' || item.Type === '6' ? (
         <div className="space-y-3">
-          <Field label="Duration (ms)">
+          <Field label={t('programEditor.panels.inspector.labels.duration')}>
             <Input
               type="number"
               inputMode="numeric"
@@ -637,7 +614,7 @@ function ItemInspector({
             />
           </Field>
 
-          <Field label={showDevFields ? 'PlayTimes' : 'Repeat'}>
+          <Field label={showDevFields ? 'PlayTimes' : t('programEditor.panels.inspector.labels.repeat')}>
             <Input
               type="number"
               inputMode="numeric"
@@ -652,7 +629,7 @@ function ItemInspector({
             />
           </Field>
 
-          <Field label={showDevFields ? 'Alhpa (0..1)' : 'Opacity'}>
+          <Field label={showDevFields ? 'Alhpa (0..1)' : t('programEditor.panels.inspector.labels.opacity')}>
             <div className="flex items-center gap-3">
               <input
                 aria-label="Opacity"
@@ -668,7 +645,7 @@ function ItemInspector({
             </div>
           </Field>
 
-          <Field label={showDevFields ? 'ReserveAS' : 'Fit'}>
+          <Field label={showDevFields ? 'ReserveAS' : t('programEditor.panels.inspector.labels.fit')}>
             <Select
               value={item.ReserveAS ?? '0'}
               onValueChange={(v) => onPatch({ ReserveAS: v })}
@@ -677,8 +654,8 @@ function ItemInspector({
                 <SelectValue placeholder="Select fit" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="0">{showDevFields ? '0 · FIT_XY' : 'Fill'}</SelectItem>
-                <SelectItem value="1">{showDevFields ? '1 · CENTER_INSIDE' : 'Contain'}</SelectItem>
+                <SelectItem value="0">{showDevFields ? '0 · FIT_XY' : t('programEditor.panels.inspector.labels.fill')}</SelectItem>
+                <SelectItem value="1">{showDevFields ? '1 · CENTER_INSIDE' : t('programEditor.panels.inspector.labels.contain')}</SelectItem>
               </SelectContent>
             </Select>
           </Field>
@@ -686,7 +663,7 @@ function ItemInspector({
           <Collapsible className="space-y-2">
             <CollapsibleTrigger asChild>
               <button className="flex w-full items-center justify-between text-xs font-bold tracking-tight text-muted-foreground hover:text-foreground">
-                {showDevFields ? 'inEffect' : 'Transition'}
+                {showDevFields ? 'inEffect' : t('programEditor.panels.inspector.labels.transition')}
                 <ChevronDown className="h-3 w-3 transition-transform duration-200" />
               </button>
             </CollapsibleTrigger>
@@ -725,7 +702,7 @@ function ItemInspector({
                 </div>
 
                 <div className="space-y-1.5">
-                  <span className="text-[10px] font-bold text-muted-foreground/60">Time (ms)</span>
+                  <span className="text-[10px] font-bold text-muted-foreground/60">{t('programEditor.panels.inspector.labels.transitionTime')}</span>
                   <Input
                     type="number"
                     inputMode="numeric"
@@ -771,7 +748,7 @@ function ItemInspector({
         </div>
       ) : item.Type === '4' || item.Type === '5' ? (
         <div className="space-y-3">
-          <Field label="Duration (ms)">
+          <Field label={t('programEditor.panels.inspector.labels.duration')}>
             <Input
               type="number"
               inputMode="numeric"
@@ -786,7 +763,7 @@ function ItemInspector({
             />
           </Field>
 
-          <Field label={showDevFields ? 'PlayTimes' : 'Repeat'}>
+          <Field label={showDevFields ? 'PlayTimes' : t('programEditor.panels.inspector.labels.repeat')}>
             <Input
               type="number"
               inputMode="numeric"
@@ -801,7 +778,7 @@ function ItemInspector({
             />
           </Field>
 
-          <Field label="Text mode">
+          <Field label={t('programEditor.panels.inspector.labels.textMode')}>
             <Select
               value={item.Type === '5' ? 'scroll' : 'normal'}
               onValueChange={(v) => {
@@ -817,13 +794,13 @@ function ItemInspector({
                 <SelectValue placeholder="Select mode" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="normal">Normal</SelectItem>
-                <SelectItem value="scroll">Single-line scroll</SelectItem>
+                <SelectItem value="normal">{t('programEditor.panels.inspector.labels.normal')}</SelectItem>
+                <SelectItem value="scroll">{t('programEditor.panels.inspector.labels.ticker')}</SelectItem>
               </SelectContent>
             </Select>
           </Field>
 
-          <Field label="Text">
+          <Field label={t('programEditor.panels.inspector.labels.text')}>
             <Input
               ref={textInputRef}
               value={item.Text ?? ''}
@@ -831,14 +808,14 @@ function ItemInspector({
             />
           </Field>
 
-          <Field label="TextColor">
+          <Field label={t('programEditor.panels.inspector.labels.textColor')}>
             <PopoverColorPicker
               value={vsnBgColorToCss(item.TextColor || '0xFFFFFFFF')}
               onChange={(v) => onPatch({ TextColor: cssHexToVsnBgColor(v) })}
             />
           </Field>
 
-          <Field label="BackColor">
+          <Field label={t('programEditor.panels.inspector.labels.backColor')}>
             <PopoverColorPicker
               value={vsnBgColorToCss(item.backcolor || '0x00000000')}
               onChange={(v) => onPatch({ backcolor: cssHexToVsnBgColor(v) })}
@@ -850,7 +827,7 @@ function ItemInspector({
           <Collapsible defaultOpen className="space-y-2">
             <CollapsibleTrigger asChild>
               <button className="flex w-full items-center justify-between text-xs font-bold tracking-tight text-muted-foreground hover:text-foreground">
-                Font
+                {t('programEditor.panels.inspector.labels.font')}
                 <ChevronDown className="h-3 w-3 transition-transform duration-200" />
               </button>
             </CollapsibleTrigger>
@@ -886,21 +863,21 @@ function ItemInspector({
                     placeholder="400 / 700"
                   />
                 </Field>
-                <Field label="Italic">
+                <Field label={t('programEditor.panels.inspector.labels.italic')}>
                   <Select
                     value={item.LogFont?.lfItalic ?? '0'}
                     onValueChange={(v) => onPatch({ LogFont: { ...(item.LogFont ?? { lfHeight: '32' }), lfItalic: v } })}
                   >
                     <SelectTrigger className="h-9 w-full">
-                      <SelectValue placeholder="Italic" />
+                      <SelectValue placeholder={t('programEditor.panels.inspector.labels.italic')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="0">0 · No</SelectItem>
-                      <SelectItem value="1">1 · Yes</SelectItem>
+                      <SelectItem value="0">0 · {t('programEditor.panels.inspector.labels.no')}</SelectItem>
+                      <SelectItem value="1">1 · {t('programEditor.panels.inspector.labels.yes')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>
-                <Field label="Underline">
+                <Field label={t('programEditor.panels.inspector.labels.underline')}>
                   <Select
                     value={item.LogFont?.lfUnderLine ?? '0'}
                     onValueChange={(v) =>
@@ -908,11 +885,11 @@ function ItemInspector({
                     }
                   >
                     <SelectTrigger className="h-9 w-full">
-                      <SelectValue placeholder="Underline" />
+                      <SelectValue placeholder={t('programEditor.panels.inspector.labels.underline')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="0">0 · No</SelectItem>
-                      <SelectItem value="1">1 · Yes</SelectItem>
+                      <SelectItem value="0">0 · {t('programEditor.panels.inspector.labels.no')}</SelectItem>
+                      <SelectItem value="1">1 · {t('programEditor.panels.inspector.labels.yes')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>
@@ -1036,10 +1013,10 @@ function clampFloat(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function getItemTypeLabel(type: string, showDevFields: boolean): string {
-  if (type === '2') return 'Image';
-  if (type === '3') return 'Video';
-  if (type === '4' || type === '5') return 'Text';
-  if (type === '6') return 'GIF';
-  return showDevFields ? `Item type ${type}` : 'Unsupported item';
+function getItemTypeLabel(type: string, showDevFields: boolean, t: any): string {
+  if (type === '2') return t('programEditor.items.image');
+  if (type === '3') return t('programEditor.items.video');
+  if (type === '4' || type === '5') return t('programEditor.items.text');
+  if (type === '6') return t('programEditor.items.gif');
+  return showDevFields ? `Item type ${type}` : t('programEditor.items.unsupported');
 }

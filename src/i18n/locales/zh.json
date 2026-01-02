@@ -1,8 +1,8 @@
 {
   "nav": {
-    "home": "Homepage",
+    "home": "首页",
     "features": "功能特性",
-    "solutions": "使用场景",
+    "solutions": "解决方案",
     "pricing": "定价",
     "docs": "文档",
     "login": "登录",
@@ -30,7 +30,7 @@
       },
       "overview": {
         "welcome": "欢迎回来",
-        "welcomeSubtitle": "这是您网络的实时状态",
+        "welcomeSubtitle": "这是您实时的网络运行状况",
         "totalDevices": "设备总数",
         "online": "在线",
         "offline": "离线",
@@ -57,13 +57,13 @@
   "features": {
     "title": "专业级内容分发",
     "titleHighlight": "为可靠性而生",
-    "subtitle": "超越传统的数字告示系统，构建下一代视觉传播网络",
+    "subtitle": "超越传统的数字告示系统，构建下一代视觉传播网络。",
     "smartTranscode": "智能转码",
     "smartTranscodeDesc": "云端自动优化视频编码，确保在所有屏幕上流畅播放，告别黑屏与卡顿。",
-    "visualEditor": "可视化编辑",
+    "visualEditor": "可视化编辑器",
     "visualEditorDesc": "所见即所得的编辑器，支持多图层排布，零基础即可制作精美节目。",
     "resilientSchedule": "弹性排程",
-    "resilientScheduleDesc": "复杂规则组合，指令预载技术确保断网环境下依然精准执行。",
+    "resilientScheduleDesc": "复杂规则组合，指令预加载技术确保断网环境下依然精准执行。",
     "aiAssistant": "AI 助手",
     "aiAssistantDesc": "自然语言对话即可完成监控、排障与发布，让 AI 成为您的运营专家。"
   },
@@ -132,7 +132,7 @@
     "feature2Desc": "用语音或文字指令全球部署内容，无需技术背景。",
     "feature3": "自动优化",
     "feature3Desc": "基于流量和网络负载的预测性扩容，智能调度资源。",
-    "feature4": "命令自动化",
+    "feature4": "命令行自动化",
     "feature4Desc": "无需编写代码即可编排复杂工作流，批量操作轻松搞定。",
     "consoleTitle": "Prism AI 助手",
     "consoleStatus": "在线",
@@ -155,7 +155,7 @@
     "feature1": "跨地域控制",
     "feature1Desc": "无论是东京还是纽约，通过统一界面即可实时操控全网设备。",
     "feature2": "边缘分发",
-    "feature2Desc": "全球部署的 CDN 节点最大限度降低延迟，确保 4K 极清流畅播放。",
+    "feature2Desc": "全球部署的 CDN 节点最大程度降低延迟，确保 4K 极清流畅播放。",
     "feature3": "准实时同步",
     "feature3Desc": "自研同步协议，让指令在全球范围内实现准实时到达与执行。"
   },
@@ -215,7 +215,7 @@
       {
         "name": "凯悦酒店",
         "industry": "酒店",
-        "quote": "7×24 小时稳定运行对宾客体验至关重要。Prism Cloud 的可靠性超出预期——亚太区物业 18 个月零宕机。",
+        "quote": "7x24 小时稳定运行对嘉宾体验至关重要。Prism Cloud 的可靠性超出预期——亚太区物业 18 个月零宕机。",
         "author": "James Liu",
         "role": "IT 运营总监"
       },
@@ -229,7 +229,7 @@
       {
         "name": "三星",
         "industry": "电子",
-        "quote": "AI 驱动的内容优化让我们零售展示屏的顾客互动率提升了 40%。Prism Cloud 比任何人都更了解我们的显示硬件。",
+        "quote": "AI 驱动的内容优化让我们的零售展示屏的顾客互动率提升了 40%。Prism Cloud 比任何人 e 都了解我们的显示硬件。",
         "author": "Park Min-jun",
         "role": "零售展示经理"
       },
@@ -250,7 +250,7 @@
       {
         "name": "华润集团",
         "industry": "综合",
-        "quote": "通过单一控制台管理零售、住宅、商业物业的 500+ 块屏幕。真正的集中管控，每个业务单元都有细粒度的权限设置。",
+        "quote": "通过单一控制台管理零售、住宅、和商业物业的 500+ 块屏幕。真正的集中管控，每个业务单元都有细粒度的权限设置。",
         "author": "张慧",
         "role": "设施管理总监"
       }
@@ -318,18 +318,18 @@
   "useCases": {
     "title": "赋能各行各业",
     "industries": "行业",
-    "retail": "零售商务",
+    "retail": "零售商贸",
     "retailDesc": "为现代零售环境提供动态定价和促销展示。",
     "transportation": "交通运输",
     "transportationDesc": "机场、车站和枢纽的实时时刻表更新。",
     "corporate": "企业办公",
-    "corporateDesc": "办公室内部沟通和仪表板展示。",
+    "corporateDesc": "办公室内部分通和仪表板展示。",
     "education": "教育机构",
     "educationDesc": "校园范围内的通知和数字导航。",
     "publicServices": "公共服务",
     "publicServicesDesc": "政府和社区中心的信息传播。",
     "hospitality": "酒店餐饮",
-    "hospitalityDesc": "酒店和餐厅的数字菜单和礼宾服务。"
+    "hospitalityDesc": "数字菜单和礼宾服务。"
   },
   "cta": {
     "title": "准备好点亮您的业务了吗？",
@@ -382,7 +382,7 @@
     "login": {
       "title": "登录您的账号",
       "subtitle": "欢迎回来!请输入您的登录信息。",
-      "emailPlaceholder": "请输入邮箱或手机号",
+      "emailPlaceholder": "请输入���箱或手机号",
       "passwordPlaceholder": "请输入密码",
       "codePlaceholder": "请输入验证码",
       "loginWithPassword": "密码登录",
@@ -414,13 +414,13 @@
       "step1Title": "从您的邮箱开始",
       "step1Subtitle": "与您的团队协作，将您的创意想法变为现实",
       "step2Title": "检查您的收件箱",
-      "step2Subtitle": "我们已向 {{email}} 发送了一个6位验证码",
+      "step2Subtitle": "我们已向 {{email}} 发送了一个 6 位验证码",
       "step3Title": "保护您的账号",
       "step3Subtitle": "为您的账号创建一个强密码",
       "step4Title": "告诉我们关于您的信息",
       "step4Subtitle": "帮助我们打造适合您的 Prism Cloud 体验",
       "emailPlaceholder": "请输入邮箱",
-      "codePlaceholder": "请输入6位验证码",
+      "codePlaceholder": "请输入 6 位验证码",
       "passwordPlaceholder": "创建密码",
       "confirmPasswordPlaceholder": "确认密码",
       "companyPlaceholder": "您的公司名称",
@@ -430,10 +430,10 @@
       "verifyCode": "验证码",
       "resendCode": "重新发送",
       "resendCodeIn": "{{seconds}}秒后重发",
-      "codeExpiresIn": "验证码将在10分钟后过期",
+      "codeExpiresIn": "验证码将在 10 分钟后过期",
       "confirmPassword": "确认密码",
       "completeRegistration": "完成注册",
-      "passwordRequirements": "至少8位，包含大小写字母和数字",
+      "passwordRequirements": "至少 8 位，包含大小写字母和数字",
       "passwordsDoNotMatch": "两次密码不一致",
       "alreadyHaveAccount": "已有账号?",
       "agreeToTermsPrefix": "我同意",
@@ -481,7 +481,7 @@
       "strategy": {
         "createTitle": "创建新版本发布",
         "createDesc": "将当前草稿保存为 v{{version}} 并下发。此版本将成为新的生产基准。",
-        "existingTitle": "重新部署现有版本",
+        "existingTitle": "重新部署现有人版本",
         "existingDesc": "从版本库中选择一个已发布的历史版本进行重新部署或回滚。",
         "currentLive": "当前线上版本",
         "legacyArchive": "历史存档",
@@ -497,7 +497,7 @@
       "device": {
         "command": {
           "finished": {
-            "title": "指令执行{{status}}",
+            "title": "指令执行 {{status}}",
             "summary": "在 {{target}} 上执行了 {{actionType}} 动作"
           },
           "batch": {
@@ -512,7 +512,7 @@
         "publish": {
           "online": {
             "finished": {
-              "title": "节目在线发布{{status}}",
+              "title": "节目在线发布 {{status}}",
               "summary": "{{programName}} (v{{version}}): {{onlineTargets}}/{{totalTargets}} 台在线设备已更新完成"
             }
           },
@@ -524,13 +524,13 @@
       },
       "media": {
         "transcode": {
-          "title": "素材转码{{status}}",
+          "title": "素材转码 {{status}}",
           "summary": "{{sourceTitle}}: {{stage}}{{progress}}"
         }
       },
       "export": {
         "finished": {
-          "title": "{{type}}{{status}}",
+          "title": "{{type}} {{status}}",
           "summary": "格式: {{format}}，共 {{rowCount}} 行"
         }
       }
@@ -547,23 +547,150 @@
     },
     "unknown": {
       "title": "收到新消息",
-      "summary": "收到一条新的{{kind}}"
+      "summary": "收到一条新的 {{kind}}"
     },
     "ui": {
       "loading": "正在加载消息...",
       "loadFailedTitle": "无法加载该消息",
       "loadFailedHint": "请稍后重试。",
       "close": "关闭",
-      "dismiss": "知道了",
       "summary": "消息摘要",
       "debugTitle": "调试信息（内部字段）",
       "payload": "原始 Payload（JSON）",
       "copyPayload": "复制 JSON",
+      "dismiss": "知道了",
+      "inbox": "收件箱",
+      "notifications": "系统通知",
+      "tasks": "后台任务",
+      "markRead": "全部已读",
+      "empty": {
+        "title": "收件箱已清空",
+        "desc": "暂无新消息。当有系统更新、设备事件或后台任务完成时，我们会在此通知您。"
+      },
       "fields": {
         "id": "消息 ID",
         "type": "消息类型",
         "operationId": "Operation ID",
         "taskId": "任务 ID"
+      },
+      "task": {
+        "export": {
+          "title": "数据导出详情",
+          "rows": "行数据",
+          "download": "下载文件"
+        },
+        "transcode": {
+          "title": "素材转码任务",
+          "progress": "处理进度",
+          "liveUpdates": "实时更新不可用，将定期刷新状态。",
+          "openMedia": "打开素材库",
+          "retry": "重试任务"
+        }
+      }
+    }
+  },
+  "programEditor": {
+    "header": {
+      "blank": "空白画布",
+      "saveStatus": {
+        "saving": "正在保存...",
+        "unsaved": "未保存",
+        "autosavePending": "等待自动保存",
+        "saved": "已保存",
+        "savedAt": "保存于 {{time}}"
+      }
+    },
+    "toolbar": {
+      "undo": "撤销",
+      "redo": "重做",
+      "save": "保存草稿",
+      "preview": "预览节目",
+      "publish": "发布节目"
+    },
+    "panels": {
+      "left": {
+        "pages": "页面管理",
+        "regions": "层级/窗口",
+        "materials": "素材库",
+        "searchMaterials": "搜索素材...",
+        "addPage": "新建页面",
+        "addRegion": "新建窗口",
+        "addText": "添加文本"
+      },
+      "timeline": {
+        "title": "时间轴",
+        "speed": "播放倍速"
+      },
+      "inspector": {
+        "title": "属性检查器",
+        "program": "项目设置",
+        "page": "页面属性",
+        "region": "窗口属性",
+        "item": "内容详情",
+        "rename": "重命名节目",
+        "resolution": "画布分辨率",
+        "targetDevice": "预览参考设备",
+        "noDoc": "未加载任何文档。",
+        "labels": {
+          "programName": "节目名称",
+          "targetDevice": "参考设备（分辨率同步）",
+          "canvasResolution": "画布分辨率",
+          "width": "宽度",
+          "height": "高度",
+          "apply": "应用",
+          "loopType": "循环类型",
+          "autoDuration": "自动计算时长",
+          "fixedDuration": "固定页面时长",
+          "appointDuration": "指定时长 (ms)",
+          "background": "页面背景",
+          "title": "显示名称",
+          "windowType": "窗口模式",
+          "normal": "标准窗口",
+          "sync": "多屏同步窗口",
+          "ticker": "滚动跑马灯",
+          "isSchedule": "设为排程窗口",
+          "layer": "显示层级",
+          "rect": "坐标与尺寸",
+          "borderWidth": "边框宽度",
+          "borderColor": "边框颜色",
+          "backColor": "背景颜色 (可选)",
+          "duration": "播放时长 (ms)",
+          "repeat": "循环次数",
+          "opacity": "不透明度",
+          "fit": "缩放模式",
+          "fill": "拉伸填充",
+          "contain": "等比居中",
+          "transition": "入场动画",
+          "transitionTime": "动画时间 (ms)",
+          "volume": "视频音量 (0..1)",
+          "textMode": "文本模式",
+          "text": "文字内容",
+          "textColor": "文字颜色",
+          "font": "字体设置",
+          "italic": "斜体",
+          "underline": "下划线",
+          "yes": "是",
+          "no": "否"
+        }
+      },
+      "problems": {
+        "title": "问题诊断",
+        "empty": "未发现异常"
+      },
+      "items": {
+        "image": "图片",
+        "video": "视频",
+        "text": "文本",
+        "gif": "GIF 动图",
+        "unsupported": "不支持的内容"
+      }
+    },
+    "dialogs": {
+      "unsaved": {
+        "title": "未保存的变更",
+        "desc": "工作区已被修改。在离开前您想如何处理？",
+        "discard": "放弃修改",
+        "saveAndContinue": "保存并继续"
       }
     }
   },
@@ -656,8 +783,8 @@
   },
   "logs": {
     "tabs": {
-      "deviceLogs": "设备日志",
-      "commandLogs": "指令日志"
+      "deviceLogs": "审计日志",
+      "commandLogs": "指令记录"
     },
     "common": {
       "all": "全部",
@@ -665,7 +792,8 @@
       "filterDevice": "筛选设备",
       "searchDevicePlaceholder": "搜索设备名称...",
       "noDeviceFound": "未找到设备",
-      "export": "导出",
+      "export": "导出数据",
+      "period": "查询周期",
       "copied": "已复制",
       "close": "关闭",
       "done": "完成"
@@ -676,9 +804,9 @@
     "command": {
       "statusLabel": "状态",
       "searchPlaceholder": "搜索（设备/动作/状态/ID）",
-      "loading": "正在加载指令日志...",
-      "loadFailed": "指令日志加载失败",
-      "empty": "当前筛选条件下没有指令日志",
+      "loading": "正在加载指令记录...",
+      "loadFailed": "指令记录加载失败",
+      "empty": "当前筛选条件下没有指令记录",
       "accepted": {
         "true": "已受理",
         "false": "未受理"
@@ -689,8 +817,8 @@
       },
       "actionType": {
         "UNKNOWN": "未知动作",
-        "BRIGHTNESS": "调节亮度",
-        "POWER": "电源控制（休眠/唤醒/重启）",
+        "BRIGHTNESS": "调节亮���",
+        "POWER": "电源控制",
         "COLOR_TEMP": "调节色温",
         "VOLUME": "调节音量",
         "CLEAR_CACHE": "清除缓存",
@@ -698,7 +826,7 @@
         "TIMEZONE": "设置时区/时间",
         "LOCALE": "设置地区/语言",
         "CONTENT_REPORT_SWITCH": "内容统计上报开关",
-        "SCREENSHOT": "截图",
+        "SCREENSHOT": "截屏",
         "SET_SENSOR_REPORT_TIME": "设置传感器上报周期",
         "DELETE_DEVICE_VSN": "删除设备节目",
         "CLEAR_DEVICE_PROGRAM": "清空设备节目"
@@ -733,7 +861,7 @@
         "total": "共 {{total}} 条"
       },
       "detail": {
-        "title": "指令日志详情",
+        "title": "指令记录详情",
         "subtitle": "查看指令执行链路与原始 payload（用于排障）",
         "loading": "正在加载详情...",
         "loadFailed": "详情加载失败",
@@ -748,6 +876,324 @@
         "payload": "Payload（JSON）",
         "copyPayload": "复制 JSON",
         "noPayload": "无 payload 记录"
+      }
+    }
+  },
+  "common": {
+    "search": "搜索",
+    "filter": "筛选",
+    "sort": "排序",
+    "view": "视图",
+    "all": "全部",
+    "actions": {
+      "save": "保存",
+      "cancel": "取消",
+      "delete": "删除",
+      "edit": "编辑",
+      "create": "创建",
+      "upload": "上传",
+      "refresh": "刷新",
+      "back": "返回",
+      "open": "打开",
+      "close": "关闭",
+      "rename": "重命名",
+      "move": "移动",
+      "preview": "预览"
+    }
+  },
+  "settings": {
+    "title": "设置",
+    "tabs": {
+      "profile": "个人中心",
+      "preferences": "偏好设置",
+      "aiAssistant": "AI 助手",
+      "notifications": "通知设置",
+      "security": "账号安全",
+      "apiKeys": "API 密钥",
+      "billing": "套餐账单"
+    },
+    "preferences": {
+      "theme": {
+        "label": "外观主题",
+        "light": "浅色模式",
+        "dark": "深色模式",
+        "system": "跟随系统"
+      },
+      "language": {
+        "label": "界面语言",
+        "en": "English",
+        "zh": "简体中文"
+      },
+      "timezone": "时区",
+      "dateFormat": "日期格式",
+      "timeFormat": "时间格式",
+      "showSeconds": "显示秒数",
+      "save": "保存偏好设置"
+    }
+  },
+  "dashboard": {
+    "title": "仪表盘",
+    "subtitle": "欢迎回来。以下是您所有设备今天的运行概况。",
+    "toolbar": {
+      "addWidget": "添加挂件",
+      "templates": "布局模板",
+      "chooseLayout": "选择一个布局",
+      "finishEditing": "完成编辑",
+      "customize": "自定义布局"
+    },
+    "widgets": {
+      "attention": {
+        "title": "待处理事项",
+        "unpublished": "未发布的变更",
+        "pendingPrograms": "{{count}} 个节目待发布",
+        "failedCommands": "失败的指令",
+        "last24h": "最近 24 小时",
+        "systemStatus": "系统状态",
+        "realtime": "实时监控"
+      },
+      "deviceHealth": {
+        "title": "设备健康度",
+        "online": "在线",
+        "offline": "离线",
+        "onlineRate": "在线率",
+        "manageDevices": "管理 {{count}} 台设备"
+      },
+      "recentActivity": {
+        "title": "最近活动",
+        "newTask": "新任务",
+        "notification": "通知",
+        "empty": "暂无最近活动"
+      },
+      "storage": {
+        "title": "云端存储占用",
+        "mismatch": "数据差异: 账单与配额服务之间存在 {{size}} 的偏差。",
+        "items": "个项"
+      }
+    },
+    "footer": {
+      "lastSynced": "最后同步: {{time}}"
+    }
+  },
+  "devices": {
+    "title": "设备管理",
+    "toolbar": {
+      "addDevice": "添加设备",
+      "batchCommand": "批量指令",
+      "export": "导出列表",
+      "searchPlaceholder": "搜索设备名称、描述或型号..."
+    },
+    "stats": {
+      "total": "总计",
+      "online": "在线",
+      "offline": "离线",
+      "pending": "待机/激活中",
+      "filtered": "已筛选"
+    },
+    "grid": {
+      "loading": "正在加载全量设备数据以供分析...",
+      "confirmTitle": "切换至增强表格模式",
+      "confirmDesc": "增强表格将加载所有设备数据，以支持高级分析、分组及聚合计算。这可能需要几秒钟时间。",
+      "dontShowAgain": "不再提示"
+    },
+    "table": {
+      "columns": {
+        "deviceName": "设备名称",
+        "screenshot": "实时截图",
+        "status": "在线状态",
+        "model": "设备型号",
+        "version": "版本号",
+        "network": "网络类型",
+        "signal": "信号强度",
+        "lastReport": "最后上报时间",
+        "resolution": "屏幕分辨率",
+        "brightness": "当前亮度",
+        "storage": "存储占用",
+        "program": "播放中节目",
+        "tags": "标签"
+      },
+      "empty": "未发现匹配设备",
+      "groupCount": "{{count}} 台设备",
+      "waitingReport": "等待首次心跳上报..."
+    }
+  },
+  "deviceDetails": {
+    "header": {
+      "lastSeen": "最后在线",
+      "never": "从未上线",
+      "liveUpdates": {
+        "active": "实时更新已就绪",
+        "paused": "实时更新已暂停"
+      },
+      "advanced": "高级操作",
+      "refresh": "刷新数据"
+    },
+    "cockpit": {
+      "screenshot": {
+        "title": "设备截图",
+        "empty": "暂无截图",
+        "noPreview": "无预览图",
+        "history": "截图历史记录",
+        "fullScreen": "全屏查看",
+        "refresh": "刷新截图",
+        "captureQueued": "截图指令已发送"
+      },
+      "nowPlaying": {
+        "label": "当前播放",
+        "none": "未在播放任何节目"
+      }
+    },
+    "actions": {
+      "title": "快捷操作",
+      "power": {
+        "label": "电源控制",
+        "wakeup": "唤醒设备",
+        "sleep": "进入休眠",
+        "restart": "重启设备"
+      },
+      "inputSource": {
+        "label": "信号源切换",
+        "internal": "内置播放器",
+        "hdmi": "HDMI",
+        "dvi": "DVI",
+        "vga": "VGA"
+      },
+      "display": {
+        "label": "显示调节",
+        "unlock": "解锁调节",
+        "adjusting": "调节中...",
+        "brightness": "亮度调节",
+        "volume": "音量调节",
+        "colorTemp": "色温调节"
+      }
+    },
+    "info": {
+      "system": {
+        "title": "系统信息",
+        "uptime": "运行时间",
+        "firmware": "固件版本",
+        "orientation": {
+          "label": "屏幕方向",
+          "landscape": "横屏",
+          "portrait": "竖屏"
+        }
+      },
+      "network": {
+        "title": "网络状态",
+        "connected": "已连接",
+        "disconnected": "未连接",
+        "carrier": "运营商",
+        "ipAddress": "IP 地址",
+        "gateway": "网关地址",
+        "mac": "MAC 地址",
+        "speed": "网络速率",
+        "signal": "信号强度",
+        "notConnected": "网络未连接"
+      },
+      "resources": {
+        "title": "资源占用",
+        "storage": "存储空间",
+        "memory": "运行内存",
+        "used": "已使用",
+        "total": "总容量"
+      }
+    },
+    "tabs": {
+      "assets": "本地素材",
+      "activity": "操作记录",
+      "schedule": "播放排程",
+      "settings": "策略设置"
+    },
+    "activity": {
+      "title": "最近活动",
+      "subtitle": "下发至该设备的最近指令",
+      "viewAll": "查看全部",
+      "empty": "暂无活动记录"
+    },
+    "assets": {
+      "title": "本地缓存素材",
+      "subtitle": "设备上已下载的内容",
+      "clearAll": "清空缓存",
+      "table": {
+        "name": "节目/素材名称",
+        "source": "来源",
+        "size": "大小",
+        "actions": "操作",
+        "cloud": "云端发布",
+        "lan": "局域网发布"
+      },
+      "empty": "设备上暂无缓存素材",
+      "noMatch": "未找到匹配的素材"
+    },
+    "schedule": {
+      "title": "排程概览",
+      "subtitle": "分配给该设备的播放任务",
+      "assigned": "关联排程",
+      "none": "未分配排程",
+      "summary": {
+        "title": "任务汇总",
+        "programs": "节目规则",
+        "actions": "自动指令"
+      },
+      "published": "已发布的节目清单",
+      "status": {
+        "ready": "就绪",
+        "downloading": "下载中",
+        "pending": "等待中"
+      }
+    },
+    "policy": {
+      "time": {
+        "title": "时间同步",
+        "localTime": "设备当前时间",
+        "timezoneId": "时区 ID",
+        "lastSync": "上次同步时间"
+      },
+      "security": {
+        "title": "安全防护",
+        "firewall": {
+          "label": "防火墙",
+          "desc": "拦截未经授权的连接请求"
+        },
+        "autoUpdate": {
+          "label": "自动更新",
+          "desc": "静默下载并应用最新固件"
+        },
+        "usbAccess": {
+          "label": "USB 权限",
+          "desc": "允许从外接存储设备加载内容"
+        },
+        "sync": {
+          "label": "多屏同步",
+          "desc": "与同一局域网下的设备同步播放"
+        }
+      }
+    },
+    "dialogs": {
+      "removeAsset": {
+        "title": "从设备中移除节目？",
+        "descCloud": "此操作将取消该节目的云端发布，并要求设备删除本地缓存 VSN。",
+        "descLocal": "此操作将要求设备删除本地缓存 VSN，不会影响云端发布状态。"
+      },
+      "clearAll": {
+        "title": "清空所有缓存节目？",
+        "desc": "此操作将向设备发送清空所有已下载节目的指令，不会修改云端分配或排程设置。"
+      },
+      "power": {
+        "sleep": {
+          "title": "让设备进入休眠状态？",
+          "desc": "设备将进入休眠模式。内容播放将停止，直到设备被唤醒。",
+          "label": "滑动确认进入休眠"
+        },
+        "wakeup": {
+          "title": "唤醒设备？",
+          "desc": "设备将被唤醒并恢复正常运行。",
+          "label": "滑动确认唤醒"
+        },
+        "restart": {
+          "title": "重启设备？",
+          "desc": "设备将重新启动，此过程可能导致约 90 秒的脱机状态。",
+          "label": "滑动确认重启"
+        }
       }
     }
   }

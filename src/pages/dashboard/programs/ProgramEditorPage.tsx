@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { 
   getProgramDetails, 
@@ -77,6 +78,7 @@ import { ProgramPreviewDialog } from '@/features/programs/editor/components/Prog
 type DraftPromptIntent = { type: 'switch'; nextBaseVersion: number | null } | { type: 'navigate' };
 
 export default function ProgramEditorPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -401,11 +403,11 @@ export default function ProgramEditorPage() {
   const togglePlayback = useCallback(() => setIsPlaying((p) => !p), []);
 
   const saveStatus = useMemo(() => {
-    if (saveMutation.isPending) return 'Saving…';
-    if (dirty) return autosavePending ? 'Autosave pending' : 'Unsaved';
-    if (draft?.updatedAt) return `Saved ${formatRelative(draft.updatedAt)}`;
-    return 'Saved';
-  }, [autosavePending, dirty, draft?.updatedAt, formatRelative, saveMutation.isPending]);
+    if (saveMutation.isPending) return t('programEditor.header.saveStatus.saving');
+    if (dirty) return autosavePending ? t('programEditor.header.saveStatus.autosavePending') : t('programEditor.header.saveStatus.unsaved');
+    if (draft?.updatedAt) return t('programEditor.header.saveStatus.savedAt', { time: formatRelative(draft.updatedAt) });
+    return t('programEditor.header.saveStatus.saved');
+  }, [autosavePending, dirty, draft?.updatedAt, formatRelative, saveMutation.isPending, t]);
   
   const [previewOpen, setPreviewOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
@@ -859,11 +861,11 @@ export default function ProgramEditorPage() {
     <div className="fixed inset-0 z-40 flex flex-col bg-background">
       <div className="flex flex-col gap-3 border-b bg-background/80 px-4 py-4 backdrop-blur lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-start gap-3">
-          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => navigate('/dashboard/programs')}><ArrowLeft className="h-4 w-4" /></Button>
+          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => navigate('/dashboard/programs')} title={t('common.actions.back')}><ArrowLeft className="h-4 w-4" /></Button>
           <div className="min-w-0">
             <h1 className="truncate text-xl font-semibold tracking-tight">{program.name}</h1>
             <p className="text-[10px] font-bold text-muted-foreground">
-              {canvasWidth}×{canvasHeight} · {baseVersion != null ? `v${baseVersion}` : 'Blank'} · {saveStatus}
+              {canvasWidth}×{canvasHeight} · {baseVersion != null ? `v${baseVersion}` : t('programEditor.header.blank')} · {saveStatus}
             </p>
           </div>
         </div>
@@ -872,19 +874,19 @@ export default function ProgramEditorPage() {
           <Select value={baseVersion === null ? 'blank' : String(baseVersion)} onValueChange={(v) => requestBaseVersionChange(v === 'blank' ? null : Number(v))}>
             <SelectTrigger className="h-9 w-[110px] text-[11px] font-bold bg-muted/20 border-none"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="blank" className="text-xs font-bold">Blank</SelectItem>
+              <SelectItem value="blank" className="text-xs font-bold">{t('programEditor.header.blank')}</SelectItem>
               {versionOptions.map(v => <SelectItem key={v} value={String(v)} className="text-xs font-bold">v{v}</SelectItem>)}
             </SelectContent>
           </Select>
 
           <Separator orientation="vertical" className="h-6 mx-2" />
           
-          <Button variant="ghost" size="icon" onClick={undo} disabled={past.length === 0}><Undo2 className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="icon" onClick={redo} disabled={future.length === 0}><Redo2 className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={undo} disabled={past.length === 0} title={t('programEditor.toolbar.undo')}><Undo2 className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={redo} disabled={future.length === 0} title={t('programEditor.toolbar.redo')}><Redo2 className="h-4 w-4" /></Button>
           
-          <Button variant="outline" size="sm" onClick={handleSaveManually} disabled={saveMutation.isPending || (!dirty && !autosavePending)} className="font-bold text-xs h-9 px-4">Save</Button>
-          <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)} className="font-bold text-xs h-9 px-4">Preview</Button>
-          <Button size="sm" onClick={handlePublish} disabled={saveMutation.isPending} className="font-bold text-xs h-9 px-6 shadow-lg shadow-primary/20">Publish</Button>
+          <Button variant="outline" size="sm" onClick={handleSaveManually} disabled={saveMutation.isPending || (!dirty && !autosavePending)} className="font-bold text-xs h-9 px-4">{t('programEditor.toolbar.save')}</Button>
+          <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)} className="font-bold text-xs h-9 px-4">{t('programEditor.toolbar.preview')}</Button>
+          <Button size="sm" onClick={handlePublish} disabled={saveMutation.isPending} className="font-bold text-xs h-9 px-6 shadow-lg shadow-primary/20">{t('programEditor.toolbar.publish')}</Button>
         </div>
       </div>
 
@@ -1010,16 +1012,16 @@ export default function ProgramEditorPage() {
         <DialogContent className="max-w-[500px] p-8">
           <TriangleAlert className="h-10 w-10 text-amber-600 mb-6" />
           <DialogHeader>
-            <DialogTitle>Unsaved Changes</DialogTitle>
-            <DialogDescription>You have modified the workspace. How would you like to proceed?</DialogDescription>
+            <DialogTitle>{t('programEditor.dialogs.unsaved.title')}</DialogTitle>
+            <DialogDescription>{t('programEditor.dialogs.unsaved.desc')}</DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-3 mt-8">
-            <Button variant="ghost" onClick={() => { setDraftPromptOpen(false); if (draftPromptIntent?.type === 'navigate') navigationBlocker.reset?.(); }}>Cancel</Button>
+            <Button variant="ghost" onClick={() => { setDraftPromptOpen(false); if (draftPromptIntent?.type === 'navigate') navigationBlocker.reset?.(); }}>{t('common.actions.cancel')}</Button>
             <Button variant="destructive" onClick={() => {
               setDraftPromptOpen(false);
               if (draftPromptIntent?.type === 'switch') { setBaseVersion(draftPromptIntent.nextBaseVersion); setIsInitializing(true); }
               else navigationBlocker.proceed?.();
-            }}>Discard</Button>
+            }}>{t('programEditor.dialogs.unsaved.discard')}</Button>
             <Button onClick={async () => {
                try {
                  if (vsn) await saveMutation.mutateAsync(vsn);
@@ -1029,7 +1031,7 @@ export default function ProgramEditorPage() {
                setDraftPromptOpen(false);
                if (draftPromptIntent?.type === 'switch') { setBaseVersion(draftPromptIntent.nextBaseVersion); setIsInitializing(true); }
                else navigationBlocker.proceed?.();
-            }}>Save & Continue</Button>
+            }}>{t('programEditor.dialogs.unsaved.saveAndContinue')}</Button>
           </div>
         </DialogContent>
       </Dialog>

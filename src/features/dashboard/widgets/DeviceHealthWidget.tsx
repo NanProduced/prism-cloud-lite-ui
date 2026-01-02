@@ -5,9 +5,11 @@ import { resolveDeviceStatus } from '@/types/device';
 import { Wifi, WifiOff, Monitor } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Progress } from '@/components/ui/progress';
+import { useTranslation } from 'react-i18next';
 
 export const DeviceHealthWidget = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { data: bffResponse, isLoading } = useQuery({
     queryKey: ['devices'],
     queryFn: () => getDevices(),
@@ -38,7 +40,7 @@ export const DeviceHealthWidget = () => {
           </div>
           <div>
             <div className="text-2xl font-bold">{onlineCount}</div>
-            <div className="text-xs text-muted-foreground">Online</div>
+            <div className="text-xs text-muted-foreground">{t('dashboard.widgets.deviceHealth.online')}</div>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -47,14 +49,14 @@ export const DeviceHealthWidget = () => {
           </div>
           <div>
             <div className="text-2xl font-bold">{offlineCount}</div>
-            <div className="text-xs text-muted-foreground">Offline</div>
+            <div className="text-xs text-muted-foreground">{t('dashboard.widgets.deviceHealth.offline')}</div>
           </div>
         </div>
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">Online Rate</span>
+          <span className="text-muted-foreground">{t('dashboard.widgets.deviceHealth.onlineRate')}</span>
           <span className="font-medium">{onlinePercentage}%</span>
         </div>
         <Progress value={onlinePercentage} className="h-1.5" />
@@ -65,7 +67,7 @@ export const DeviceHealthWidget = () => {
         className="mt-4 w-full py-2 text-xs font-medium border rounded-lg hover:bg-muted transition-colors flex items-center justify-center gap-2"
       >
         <Monitor className="h-3.5 w-3.5" />
-        Manage {totalCount} Devices
+        {t('dashboard.widgets.deviceHealth.manageDevices', { count: totalCount })}
       </button>
     </div>
   );

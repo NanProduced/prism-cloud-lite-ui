@@ -7,10 +7,10 @@ export interface RenderedMessage {
   summary: string;
 }
 
-export function renderMessage(message: MessageListItem): RenderedMessage {
+export function renderMessage(message: MessageListItem, tFunc?: any): RenderedMessage {
   try {
     const { type, status, payload = {}, kind } = message;
-    const t = i18n.t.bind(i18n);
+    const t = tFunc || i18n.t.bind(i18n);
 
     const statusLabel = status ? t(`message.status.${status}`) : '';
     const kindLabel = t(`message.kind.${kind}`);

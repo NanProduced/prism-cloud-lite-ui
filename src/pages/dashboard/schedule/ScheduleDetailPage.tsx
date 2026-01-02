@@ -59,6 +59,7 @@ import { ScheduleVisualizer } from '@/components/schedule/ScheduleVisualizer';
 import { ScheduleOnboarding } from '@/components/schedule/ScheduleOnboarding';
 import { useBreadcrumbStore } from '@/store/breadcrumbStore';
 import type { BffResponse } from '@/types/auth';
+import { useTimeFormatter } from '@/hooks/use-time-formatter';
 
 function getBffDisplayError(res: BffResponse<any> | null | undefined): string {
   return res?.error?.displayMessage || res?.error?.message || 'Request failed';
@@ -222,6 +223,7 @@ export default function ScheduleDetailPage() {
   const queryClient = useQueryClient();
   const { scheduleId = '' } = useParams();
   const { setOverride, removeOverride } = useBreadcrumbStore();
+  const { formatDateTime } = useTimeFormatter();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'programs' | 'commands'>('overview');
 
@@ -451,7 +453,7 @@ export default function ScheduleDetailPage() {
               </span>
             </div>
             <p className="text-xs text-muted-foreground truncate">
-              Updated {schedule?.updatedAt ? new Date(schedule.updatedAt).toLocaleString() : '—'}
+              Updated {formatDateTime(schedule?.updatedAt)}
             </p>
           </div>
         </div>

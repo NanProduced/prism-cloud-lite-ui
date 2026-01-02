@@ -70,10 +70,10 @@ export function HistoryDrawer({
   };
 
   // Time range state
-  const [timeRange, setTimeRange] = useState({
+  const [timeRange, setTimeRange] = useState(() => ({
     from: toLocalInputValue(new Date(Date.now() - 24 * 60 * 60 * 1000)),
     to: toLocalInputValue(new Date()),
-  });
+  }));
 
   useEffect(() => {
     if (!open) return;

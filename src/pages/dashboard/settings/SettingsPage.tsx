@@ -35,29 +35,32 @@ import type { UserProfile, UserSession, UserSecurityEvent, UserApiKey } from '@/
 import { getErrorMessage } from '@/services/authApi';
 import { useAuthStore } from '@/store/authStore';
 import { UAParser } from 'ua-parser-js';
+import { useTranslation } from 'react-i18next';
 
 import SettingsAIAssistant from '@/registry/new-york/blocks/settings/settings-ai-assistant';
 
-const TAB_ITEMS = [
-  { value: 'profile', label: 'Profile' },
-  { value: 'preferences', label: 'Preferences' },
-  { value: 'ai-assistant', label: 'AI Assistant' },
-  { value: 'notifications', label: 'Notifications' },
-  { value: 'security', label: 'Security' },
-  { value: 'api-keys', label: 'API Keys' },
-  { value: 'billing', label: 'Billing' },
-] as const;
-
-type SettingsTab = (typeof TAB_ITEMS)[number]['value'];
+type SettingsTab = 'profile' | 'preferences' | 'ai-assistant' | 'notifications' | 'security' | 'api-keys' | 'billing';
 
 function isSettingsTab(value: unknown): value is SettingsTab {
-  return typeof value === 'string' && TAB_ITEMS.some((tab) => tab.value === value);
+  const tabs: SettingsTab[] = ['profile' , 'preferences' , 'ai-assistant' , 'notifications' , 'security' , 'api-keys' , 'billing'];
+  return typeof value === 'string' && tabs.includes(value as SettingsTab);
 }
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const { updateUser } = useAuthStore();
+
+  const TAB_ITEMS = [
+    { value: 'profile', label: t('settings.tabs.profile') },
+    { value: 'preferences', label: t('settings.tabs.preferences') },
+    { value: 'ai-assistant', label: t('settings.tabs.aiAssistant') },
+    { value: 'notifications', label: t('settings.tabs.notifications') },
+    { value: 'security', label: t('settings.tabs.security') },
+    { value: 'api-keys', label: t('settings.tabs.apiKeys') },
+    { value: 'billing', label: t('settings.tabs.billing') },
+  ] as const;
   
   const initialTab = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState<SettingsTab>(

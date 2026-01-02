@@ -5,9 +5,11 @@ import { getDeviceCommandLogs } from '@/services/logApi';
 import { AlertCircle, FileEdit, Clock, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from 'react-i18next';
 
 export const AttentionWidget = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   
   const { data: programsRes } = useQuery({
     queryKey: ['programs'],
@@ -40,8 +42,8 @@ export const AttentionWidget = () => {
           <FileEdit className="h-4 w-4 text-white" />
         </div>
         <div className="flex-1">
-          <div className="text-sm font-semibold">Unpublished Changes</div>
-          <div className="text-xs text-muted-foreground">{unpublishedCount} programs pending</div>
+          <div className="text-sm font-semibold">{t('dashboard.widgets.attention.unpublished')}</div>
+          <div className="text-xs text-muted-foreground">{t('dashboard.widgets.attention.pendingPrograms', { count: unpublishedCount })}</div>
         </div>
         <Badge variant="outline" className="bg-white dark:bg-black">{unpublishedCount}</Badge>
       </div>
@@ -54,17 +56,17 @@ export const AttentionWidget = () => {
           <AlertCircle className="h-4 w-4 text-white" />
         </div>
         <div className="flex-1">
-          <div className="text-sm font-semibold">Failed Commands</div>
-          <div className="text-xs text-muted-foreground">Last 24 hours</div>
+          <div className="text-sm font-semibold">{t('dashboard.widgets.attention.failedCommands')}</div>
+          <div className="text-xs text-muted-foreground">{t('dashboard.widgets.attention.last24h')}</div>
         </div>
         <Badge variant="destructive">{failedCount}</Badge>
       </div>
 
       <div className="mt-auto pt-2 flex items-center justify-between text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
-        <span>System Status</span>
+        <span>{t('dashboard.widgets.attention.systemStatus')}</span>
         <span className="flex items-center gap-1 text-emerald-500">
           <Clock className="h-3 w-3" />
-          Real-time
+          {t('dashboard.widgets.attention.realtime')}
         </span>
       </div>
     </div>
