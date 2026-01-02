@@ -11,17 +11,14 @@ export function PrismIcon({
 }: PrismIconProps) {
   const sizeValue = typeof size === 'number' ? `${size}px` : size;
 
-  // Figma 原始颜色
-  const purpleColor = '#5600EF';
-
   const getFill = () => {
     if (variant === 'gradient') return 'url(#prism-gradient)';
     if (variant === 'outline') return 'none';
-    return purpleColor;
+    return 'hsl(var(--brand))';
   };
 
   const getStroke = () => {
-    if (variant === 'outline') return purpleColor;
+    if (variant === 'outline') return 'hsl(var(--brand))';
     return 'none';
   };
 

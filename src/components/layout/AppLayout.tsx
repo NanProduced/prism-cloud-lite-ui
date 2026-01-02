@@ -28,7 +28,7 @@ const FullPageLoader = () => (
           repeat: Infinity,
           ease: "easeInOut"
         }}
-        className="absolute inset-0 bg-[#82dbf7]/10 blur-[100px] rounded-full"
+        className="absolute inset-0 bg-brand-cyan/10 blur-[100px] rounded-full"
       />
       
       {/* Icon and Pulse */}
@@ -51,7 +51,7 @@ const FullPageLoader = () => (
                key={i}
                animate={{ opacity: [0.2, 1, 0.2] }}
                transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
-               className="size-1.5 rounded-full bg-[#b6f09c]"
+               className="size-1.5 rounded-full bg-brand-green"
              />
            ))}
         </div>
@@ -74,27 +74,10 @@ export const PublicLayout = () => {
     }
   }, [checkAuth]);
 
-  // Apply theme and language in PublicLayout
-  useEffect(() => {
-    const root = document.documentElement;
-    const theme = preferences.theme;
-    
-    if (theme === "system") {
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      root.classList.toggle("dark", prefersDark);
-    } else {
-      root.classList.toggle("dark", theme === "dark");
-    }
-
-    if (i18n.language !== preferences.language) {
-      i18n.changeLanguage(preferences.language);
-    }
-  }, [preferences.theme, preferences.language]);
-
   if (isInitializing) return <FullPageLoader />;
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
       <NotificationCenter />
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
@@ -129,23 +112,6 @@ export const ProtectedLayout = () => {
         checkAuth().catch(err => console.error("[ProtectedLayout] checkAuth failed:", err));
       }
     }, [checkAuth, isAuthenticated, isInitializing]);
-
-    // Apply theme and language in ProtectedLayout
-    useEffect(() => {
-      const root = document.documentElement;
-      const theme = preferences.theme;
-      
-      if (theme === "system") {
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        root.classList.toggle("dark", prefersDark);
-      } else {
-        root.classList.toggle("dark", theme === "dark");
-      }
-
-      if (i18n.language !== preferences.language) {
-        i18n.changeLanguage(preferences.language);
-      }
-    }, [preferences.theme, preferences.language]);
 
     useEffect(() => {
       if (isAuthenticated && user?.publicId) {

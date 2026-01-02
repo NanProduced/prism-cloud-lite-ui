@@ -16,7 +16,7 @@ const sizeClasses = {
 export function PrismWordmark({
   size = 'md',
   className = '',
-  color = 'white',
+  color = 'currentColor',
   showFullName = false
 }: PrismWordmarkProps) {
   return (
@@ -24,8 +24,8 @@ export function PrismWordmark({
       <span style={{ color }}>Prism</span>
       {showFullName && (
         <span
-          className="font-normal ml-2"
-          style={{ color, opacity: 0.7 }}
+          className="font-normal ml-2 opacity-70"
+          style={{ color }}
         >
           Cloud Lite
         </span>

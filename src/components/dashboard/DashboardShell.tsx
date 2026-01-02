@@ -572,14 +572,25 @@ function NotificationPopover() {
 }
 
 function getToneColorByStatus(status?: string) {
+
   switch (status) {
+
     case "SUCCESS":
-      return "text-emerald-600";
+
+      return "text-success";
+
     case "FAILED":
-      return "text-rose-600";
+
+      return "text-destructive";
+
     case "RUNNING":
-      return "text-blue-600 animate-pulse";
+
+      return "text-blue-500 animate-pulse";
+
     default:
+
       return "text-foreground";
+
   }
+
 }

@@ -27,7 +27,7 @@ export function PrismLogo({
   iconOnly = false,
   showFullName = false,
   className = '',
-  color = 'white'
+  color = 'currentColor'
 }: PrismLogoProps) {
   const config = sizeConfig[size];
   const flexDirection = variant === 'vertical' ? 'flex-col' : 'flex-row';
