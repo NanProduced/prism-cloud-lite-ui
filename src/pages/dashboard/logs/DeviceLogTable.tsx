@@ -49,10 +49,10 @@ export function DeviceLogTable({ filters, logTypes }: DeviceLogTableProps) {
     return (
       <Badge variant="outline" className={cn(
         "text-[10px] font-bold px-1.5 h-5",
-        l === 'ERROR' && "bg-rose-50 text-rose-600 border-rose-200",
-        l === 'WARN' && "bg-amber-50 text-amber-600 border-amber-200",
-        l === 'INFO' && "bg-blue-50 text-blue-600 border-blue-200",
-        l === 'DEBUG' && "bg-slate-50 text-slate-600 border-slate-200"
+        l === 'ERROR' && "bg-rose-500/10 text-rose-600 border-rose-500/20",
+        l === 'WARN' && "bg-amber-500/10 text-amber-600 border-amber-500/20",
+        l === 'INFO' && "bg-blue-500/10 text-blue-600 border-blue-500/20",
+        l === 'DEBUG' && "bg-muted text-muted-foreground border-border"
       )}>
         {l}
       </Badge>

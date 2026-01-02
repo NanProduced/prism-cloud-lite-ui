@@ -314,7 +314,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
       </Sidebar>
 
       <SidebarInset className="bg-background">
-        <header className="border-b bg-card px-4 py-3 shadow-sm sm:px-6">
+        <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 py-3 sm:px-6">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 flex-1">
               <SidebarTrigger className="h-9 w-9">
@@ -332,8 +332,8 @@ export function DashboardShell({ children }: PropsWithChildren) {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className={cn(
                     "flex items-center gap-3 rounded-lg px-2 h-9 transition-all duration-500",
-                    currentTierRaw === 'PRO' && "border-amber-200 bg-amber-50/30 hover:bg-amber-50/50 shadow-[0_0_15px_rgba(245,158,11,0.1)]",
-                    currentTierRaw === 'ULTRA' && "border-violet-200 bg-violet-50/30 hover:bg-violet-50/50 shadow-[0_0_15px_rgba(139,92,246,0.1)]"
+                    currentTierRaw === 'PRO' && "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.05)]",
+                    currentTierRaw === 'ULTRA' && "border-fuchsia-500/20 bg-fuchsia-500/5 hover:bg-fuchsia-500/10 shadow-[0_0_15px_rgba(139,92,246,0.05)]"
                   )}>
                     <div className="relative">
                       <Avatar className="h-8 w-8 rounded-lg">
@@ -393,7 +393,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
                     <span>Documentation</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-red-600 focus:bg-red-50 focus:text-red-600" onClick={handleLogout}>
+                  <DropdownMenuItem className="text-red-600 focus:bg-destructive/10 focus:text-red-600" onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
@@ -403,7 +403,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-5rem)] bg-gray-50/50 px-4 pb-4 pt-3 sm:px-6 sm:pb-6 sm:pt-4">
+        <main className="min-h-[calc(100vh-5rem)] bg-background px-4 pb-4 pt-3 sm:px-6 sm:pb-6 sm:pt-4">
           <div className="mx-auto max-w-[1600px]">{children}</div>
         </main>
       </SidebarInset>

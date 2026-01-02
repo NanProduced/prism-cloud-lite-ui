@@ -83,7 +83,7 @@ export function DeviceOnlineTable({
                 <TableCell>
                   <Badge variant="outline" className={cn(
                     "text-[9px] font-bold tracking-widest h-5 px-2",
-                    status === 'online' ? "bg-emerald-50 text-emerald-600 border-emerald-200" : "bg-slate-50 text-slate-400 border-slate-200"
+                    status === 'online' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-muted text-muted-foreground border-border"
                   )}>
                     {status}
                   </Badge>

@@ -558,7 +558,7 @@ export function DeviceTable({
         const isOutdated = diffMinutes > 60;
 
         return (
-          <span className={`text-sm ${isOutdated ? 'text-amber-600 font-semibold' : 'text-gray-600'}`}>
+          <span className={cn("text-sm", isOutdated ? 'text-amber-500 font-semibold' : 'text-muted-foreground')}>
             {formatDateTime(device.lastReportTime)}
           </span>
         );
@@ -616,10 +616,10 @@ export function DeviceTable({
         }
         return (
           <div className="flex items-center gap-2">
-            <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
               <div className={`h-full ${barColor}`} style={{ width: `${brightness}%` }} />
             </div>
-            <span className={`text-sm font-medium ${labelColor} min-w-10`}>
+            <span className={cn("text-sm font-medium min-w-10", labelColor)}>
               {brightness}%
             </span>
           </div>
@@ -663,31 +663,31 @@ export function DeviceTable({
         const percentage = ((storageUsed / row.data.totalStorage) * 100);
         const percentNum = Math.min(100, percentage);
 
-        let labelColor = 'text-gray-600';
+        let labelColor = 'text-foreground/80';
         let bgColor = '';
-        let progressColor = 'bg-blue-500';
+        let progressColor = 'bg-primary';
         if (percentNum > 80) {
-          labelColor = 'text-red-600 font-semibold';
-          bgColor = 'bg-red-50';
-          progressColor = 'bg-red-500';
+          labelColor = 'text-destructive font-semibold';
+          bgColor = 'bg-destructive/10';
+          progressColor = 'bg-destructive';
         } else if (percentNum > 60) {
-          labelColor = 'text-amber-600';
-          bgColor = 'bg-amber-50';
+          labelColor = 'text-amber-500';
+          bgColor = 'bg-amber-500/10';
           progressColor = 'bg-amber-500';
         } else if (percentNum > 40) {
-          labelColor = 'text-blue-600';
-          progressColor = 'bg-blue-500';
+          labelColor = 'text-primary';
+          progressColor = 'bg-primary';
         }
 
         return (
-          <div className={`flex flex-col gap-1.5 px-2 py-1 rounded ${bgColor}`}>
+          <div className={cn("flex flex-col gap-1.5 px-2 py-1 rounded", bgColor)}>
             <div className="flex items-center justify-between gap-2">
-              <span className={`text-sm font-medium ${labelColor}`}>
+              <span className={cn("text-sm font-medium", labelColor)}>
                 {used}/{total} GB
               </span>
-              <span className={`text-xs font-semibold ${labelColor}`}>{percentNum.toFixed(0)}%</span>
+              <span className={cn("text-xs font-semibold", labelColor)}>{percentNum.toFixed(0)}%</span>
             </div>
-            <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
               <div className={`h-full ${progressColor}`} style={{ width: `${percentNum}%` }} />
             </div>
           </div>

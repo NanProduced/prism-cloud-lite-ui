@@ -176,9 +176,9 @@ function DeviceCard({
             <span className="font-bold text-foreground/70 uppercase">{device.networkType || 'OFFLINE'}</span>
           </div>
 
-          <div className={cn('flex items-center gap-1', showOutdatedWarn && 'text-amber-600')}>
+          <div className={cn('flex items-center gap-1', showOutdatedWarn && 'text-amber-500')}>
             <Clock className="h-3 w-3" />
-            <span className={cn(showOutdatedWarn && 'font-black')}>
+            <span className={cn(showOutdatedWarn && 'font-bold')}>
               {lastReportLabel}
             </span>
             {showOutdatedWarn && <AlertTriangle className="h-3.5 w-3.5" />}

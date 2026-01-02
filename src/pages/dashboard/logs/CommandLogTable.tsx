@@ -83,21 +83,21 @@ export function CommandLogTable({ filters, searchText }: CommandLogTableProps) {
 
     if (tone === 'success') {
       return (
-        <Badge variant="outline" className={cn(base, "bg-emerald-50 text-emerald-700 border-emerald-200")}>
+        <Badge variant="outline" className={cn(base, "bg-emerald-500/10 text-emerald-600 border-emerald-500/20")}>
           {t(getStatusLabelKey(userStatus))}
         </Badge>
       );
     }
     if (tone === 'error') {
       return (
-        <Badge variant="outline" className={cn(base, "bg-rose-50 text-rose-700 border-rose-200")}>
+        <Badge variant="outline" className={cn(base, "bg-rose-500/10 text-rose-600 border-rose-500/20")}>
           {t(getStatusLabelKey(userStatus))}
         </Badge>
       );
     }
     if (tone === 'warning') {
       return (
-        <Badge variant="outline" className={cn(base, "bg-amber-50 text-amber-700 border-amber-200")}>
+        <Badge variant="outline" className={cn(base, "bg-amber-500/10 text-amber-600 border-amber-500/20")}>
           {t(getStatusLabelKey(userStatus))}
         </Badge>
       );
@@ -184,15 +184,15 @@ export function CommandLogTable({ filters, searchText }: CommandLogTableProps) {
                     <div className="flex items-center gap-3">
                        <div className={cn(
                           "p-1 rounded-md border shadow-sm",
-                          log.accepted ? "bg-emerald-50 border-emerald-100" : "bg-slate-50 border-slate-100 opacity-40"
+                          log.accepted ? "bg-emerald-500/10 border-emerald-500/20" : "bg-muted border-border opacity-40"
                         )}>
-                         <Check className={cn("h-3 w-3", log.accepted ? "text-emerald-500" : "text-slate-400")} title={log.accepted ? t('logs.command.accepted.true') : t('logs.command.accepted.false')} />
+                         <Check className={cn("h-3 w-3", log.accepted ? "text-emerald-500" : "text-muted-foreground")} title={log.accepted ? t('logs.command.accepted.true') : t('logs.command.accepted.false')} />
                        </div>
                        <div className={cn(
                           "p-1 rounded-md border shadow-sm",
-                          log.covered ? "bg-amber-50 border-amber-100" : "bg-slate-50 border-slate-100 opacity-40"
+                          log.covered ? "bg-amber-500/10 border-amber-500/20" : "bg-muted border-border opacity-40"
                         )}>
-                         <Layers className={cn("h-3 w-3", log.covered ? "text-amber-500" : "text-slate-400")} title={log.covered ? t('logs.command.covered.true') : t('logs.command.covered.false')} />
+                         <Layers className={cn("h-3 w-3", log.covered ? "text-amber-500" : "text-muted-foreground")} title={log.covered ? t('logs.command.covered.true') : t('logs.command.covered.false')} />
                        </div>
                     </div>
                   </td>

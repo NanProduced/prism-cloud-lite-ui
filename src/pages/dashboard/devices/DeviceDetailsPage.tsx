@@ -987,7 +987,7 @@ export default function DeviceDetailsPage() {
          </div>
 
          {/* System Resources */}
-         <Card className="xl:col-span-4 rounded-3xl border-none ring-1 ring-muted/60 bg-slate-50 dark:bg-slate-900/50 p-6 flex flex-col justify-between">
+         <Card className="xl:col-span-4 rounded-3xl border-none ring-1 ring-muted/60 bg-muted/20 p-6 flex flex-col justify-between">
             <CardHeader className="p-0 pb-6">
                <CardTitle className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
                   <Cpu className="h-4 w-4 text-primary" /> {t('deviceDetails.info.resources.title')}

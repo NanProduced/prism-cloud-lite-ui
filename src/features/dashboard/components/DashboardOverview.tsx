@@ -39,7 +39,7 @@ export const DashboardOverview: React.FC = () => {
   return (
     <div className="flex flex-col gap-6 p-1 min-h-screen">
       {/* Dashboard Header */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sticky top-0 z-10 bg-background/80 backdrop-blur-md py-4">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sticky top-14 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-4 -mx-1 px-1 border-b border-transparent data-[stuck]:border-border transition-colors">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t('dashboard.title')}</h1>
           <p className="text-muted-foreground text-sm">

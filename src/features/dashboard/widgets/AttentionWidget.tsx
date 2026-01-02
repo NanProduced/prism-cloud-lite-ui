@@ -36,7 +36,7 @@ export const AttentionWidget = () => {
     <div className="flex flex-col gap-3 h-full">
       <div 
         onClick={() => navigate('/dashboard/programs?filter=unpublished')}
-        className="flex items-center gap-3 p-3 rounded-xl border border-amber-100 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-900/30 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors"
+        className="flex items-center gap-3 p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 cursor-pointer hover:bg-amber-500/10 transition-colors"
       >
         <div className="p-2 bg-amber-500 rounded-lg">
           <FileEdit className="h-4 w-4 text-white" />
@@ -50,7 +50,7 @@ export const AttentionWidget = () => {
 
       <div 
         onClick={() => navigate('/dashboard/logs?tab=terminal&statuses=FAILED,EXPIRED')}
-        className="flex items-center gap-3 p-3 rounded-xl border border-red-100 bg-red-50/50 dark:bg-red-900/10 dark:border-red-900/30 cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
+        className="flex items-center gap-3 p-3 rounded-xl border border-red-500/20 bg-red-500/5 cursor-pointer hover:bg-red-500/10 transition-colors"
       >
         <div className="p-2 bg-red-500 rounded-lg">
           <AlertCircle className="h-4 w-4 text-white" />

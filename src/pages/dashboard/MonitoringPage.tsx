@@ -153,7 +153,7 @@ export default function MonitoringPage() {
   return (
     <div className="flex flex-col gap-4 p-6 h-full overflow-hidden">
       {/* Unified Toolbar */}
-      <div className="flex items-center gap-3 flex-wrap bg-card border rounded-lg p-2 px-4 shadow-sm">
+      <div className="flex items-center gap-3 flex-wrap bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border rounded-xl p-2 px-4 shadow-sm">
         {/* History Filter */}
         <div className="flex items-center gap-2 flex-wrap">
           <DateRangePicker
@@ -282,7 +282,7 @@ export default function MonitoringPage() {
               className="flex-1 flex flex-col overflow-hidden"
             >
               {/* Tab Header - 3个独立数据源Tab */}
-              <div className="bg-card border rounded-lg p-2 px-4 flex items-center justify-between gap-4 shadow-sm">
+              <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border rounded-xl p-2 px-4 flex items-center justify-between gap-4 shadow-sm">
                 <TabsList className="bg-muted/50 h-8">
                   <TabsTrigger
                     value="receiveCard"

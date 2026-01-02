@@ -148,7 +148,7 @@ export default function AnalyticsPage() {
   return (
     <div className="flex flex-col gap-4 p-6 h-full">
       {/* GLOBAL CONTROLS / TOOLBAR */}
-      <div className="flex items-center gap-4 flex-wrap bg-card border rounded-lg p-2 px-4 shadow-sm">
+      <div className="flex items-center gap-4 flex-wrap bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border rounded-xl p-2 px-4 shadow-sm">
         <div className="flex items-center gap-3">
           <DateRangePicker
             value={timeRange}
