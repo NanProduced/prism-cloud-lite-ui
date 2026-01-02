@@ -3,7 +3,7 @@ import { Bot, User, RotateCcw, Maximize2, Minimize2, Sparkles, ChevronDown, Cpu 
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar } from '@/components/ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { 
   DropdownMenu, 
@@ -19,6 +19,8 @@ import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { useAIAssistant } from '../hooks/use-ai-assistant';
 import { AIToolInvocation, AISourceList, type AISource, AIPromptInput } from './ai-assistant-ui';
+import { useAuthStore } from '@/store/authStore';
+import { getAvatarById } from '@/lib/avatars';
 
 interface AIChatWindowProps {
   isOpen: boolean;
@@ -26,6 +28,12 @@ interface AIChatWindowProps {
 
 export function AIChatWindow({ isOpen }: AIChatWindowProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { user } = useAuthStore();
+  
+  const userAvatar = useMemo(() => {
+    if (!user?.avatarId) return null;
+    return getAvatarById(user.avatarId)?.url;
+  }, [user?.avatarId]);
   
   const { 
     messages, 
@@ -89,7 +97,7 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                   <DropdownMenuContent align="start" className="w-48">
                     <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Select AI Engine</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {configs.map((config) => (
+                    {configs.map((config: any) => (
                       <DropdownMenuItem 
                         key={config.provider}
                         onClick={() => switchProvider(config.provider)}
@@ -137,30 +145,37 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
             <div className="space-y-6">
               {messages.map((m: any, index: number) => (
                 <div
-                  key={m.id}
+                  key={m.id || index}
                   className={cn(
                     "flex items-start gap-3",
                     m.role === 'user' ? "flex-row-reverse" : "flex-row"
                   )}
                 >
                   <Avatar className={cn(
-                    "h-8 w-8 border",
+                    "h-8 w-8 border shrink-0",
                     m.role === 'user' ? "bg-background" : "bg-primary"
                   )}>
                     {m.role === 'user' ? (
-                      <User className="h-4 w-4" />
+                      <>
+                        {userAvatar ? (
+                          <AvatarImage src={userAvatar} alt={user?.displayName || 'User'} />
+                        ) : null}
+                        <AvatarFallback>
+                          <User className="h-4 w-4" />
+                        </AvatarFallback>
+                      </>
                     ) : (
                       <Bot className="h-4 w-4 text-primary-foreground" />
                     )}
                   </Avatar>
                   <div className={cn(
-                    "max-w-[80%] rounded-2xl p-3 text-sm shadow-sm",
+                    "max-w-[85%] rounded-2xl p-3 text-sm shadow-sm",
                     m.role === 'user' 
                       ? "bg-primary text-primary-foreground rounded-tr-none" 
                       : "bg-muted/50 border text-foreground rounded-tl-none"
                   )}>
                     {m.content && (
-                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <div className="prose prose-sm dark:prose-invert max-w-none break-words">
                         <ReactMarkdown 
                           remarkPlugins={[remarkGfm]}
                         >
@@ -190,7 +205,7 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
               ))}
               {isLoading && !messages.some((m: any) => m.role === 'assistant' && !m.content && m.toolInvocations) && (
                 <div className="flex items-start gap-3">
-                  <Avatar className="h-8 w-8 bg-primary animate-pulse">
+                  <Avatar className="h-8 w-8 bg-primary animate-pulse shrink-0">
                     <Bot className="h-4 w-4 text-primary-foreground" />
                   </Avatar>
                   <div className="bg-muted/50 border rounded-2xl rounded-tl-none p-3 shadow-sm">
