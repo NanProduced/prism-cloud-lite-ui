@@ -1049,7 +1049,13 @@ export function DeviceTable({
         onCustomFieldCreate={onCustomFieldCreate}
         onCustomFieldDelete={onCustomFieldDelete}
       />
-      <div className="w-full h-[calc(100vh-20rem)]">
+      <div className={cn(
+        "w-full h-[calc(100vh-20rem)]",
+        "lng1771-shadcn", // Enable LyteNyte's shadcn theme support
+        "dark:dark",      // Apply LyteNyte's internal dark mode if parent has .dark
+        "bg-background text-foreground", // Force opaque background
+        "[--ln-selected-row-background:theme(colors.primary/10)]"
+      )}>
         <LyteNyte grid={grid} />
       </div>
     </div>

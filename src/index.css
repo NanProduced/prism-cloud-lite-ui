@@ -59,15 +59,46 @@
 
     --sidebar-ring: 217.2 91.2% 59.8%;
 
-    --brand: 255 100% 47%; /* #5600EF */
-    --brand-foreground: 210 40% 98%;
-    --brand-cyan: 192 91% 74%; /* #82dbf7 */
-    --brand-green: 102 70% 77%; /* #b6f09c */
+    /* LyteNyte shadcn integration vars - Use full HSL for library compatibility */
+    --ln-background: hsl(var(--background));
+    --ln-foreground: hsl(var(--foreground));
+    --ln-border: hsl(var(--border));
+    --ln-primary: hsl(var(--primary));
+    --ln-primary-foreground: hsl(var(--primary-foreground));
+    --ln-secondary: hsl(var(--secondary));
+    --ln-secondary-foreground: hsl(var(--secondary-foreground));
+    --ln-accent: hsl(var(--accent));
+    --ln-accent-foreground: hsl(var(--accent-foreground));
+    --ln-muted: hsl(var(--muted));
+    --ln-muted-foreground: hsl(var(--muted-foreground));
+    --ln-popover: hsl(var(--popover));
+    --ln-popover-foreground: hsl(var(--popover-foreground));
+    --ln-card: hsl(var(--card));
+    --ln-card-foreground: hsl(var(--card-foreground));
+    --ln-radius: var(--radius);
 
-    --success: 142.1 76.2% 36.3%;
-    --success-foreground: 355.7 100% 97.3%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 48 96% 89%;
+    /* Explicit pinned column backgrounds to prevent transparency bleeding */
+    --ln-pinned-background: hsl(var(--background));
+    --ln-pinned-row-background: hsl(var(--background));
+    --ln-header-background: hsl(var(--background));
+
+    --brand: 255 100% 47%; /* #5600EF */
+  }
+
+  /* Force pinned columns to be opaque in LyteNyte */
+  .lng1771-shadcn [data-pinned="start"],
+  .lng1771-shadcn [data-pinned="end"],
+  .lng1771-shadcn .lng-cell-pinned,
+  .lng1771-shadcn .lng-header-cell-pinned {
+    background-color: hsl(var(--background)) !important;
+    z-index: 10 !important;
+  }
+  
+  .dark .lng1771-shadcn [data-pinned="start"],
+  .dark .lng1771-shadcn [data-pinned="end"],
+  .dark .lng1771-shadcn .lng-cell-pinned,
+  .dark .lng1771-shadcn .lng-header-cell-pinned {
+    background-color: hsl(var(--background)) !important;
   }
 
   .dark {
