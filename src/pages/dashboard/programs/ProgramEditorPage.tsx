@@ -295,6 +295,14 @@ export default function ProgramEditorPage() {
       // Capture cover screenshot
       const cover = await captureCover();
 
+      // Ensure program metadata is in sync with VSN resolution
+      const w = Number.parseInt(newVsn.Programs?.Program?.Information?.Width ?? '0', 10);
+      const h = Number.parseInt(newVsn.Programs?.Program?.Information?.Height ?? '0', 10);
+      
+      if (w > 0 && h > 0 && (w !== program?.width || h !== program?.height)) {
+         await updateProgramApi(programId!, { width: w, height: h });
+      }
+
       return saveProgramDraft(programId!, draftId, {
         vsnJson: JSON.stringify(sanitizeVsnForPersist(newVsn)),
         coverBase64: cover?.base64,
@@ -1032,7 +1040,7 @@ export default function ProgramEditorPage() {
 function RightTabButton({ active, onClick, icon, children }: { active: boolean; onClick: () => void; icon: ReactNode; children: ReactNode }) {
   return (
     <button type="button" onClick={onClick} className={cn(
-      "inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black uppercase transition-all",
+      "inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-bold transition-all",
       active ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted"
     )}>
       {icon} {children}

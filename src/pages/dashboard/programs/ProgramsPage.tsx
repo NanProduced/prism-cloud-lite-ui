@@ -187,7 +187,7 @@ export default function ProgramsPage() {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
         <RefreshCw className="h-8 w-8 animate-spin text-primary/40" />
-        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Loading Workspace...</p>
+        <p className="text-xs font-bold text-muted-foreground/60">Loading Workspace...</p>
       </div>
     );
   }
@@ -199,7 +199,7 @@ export default function ProgramsPage() {
           <button
             type="button"
             className={cn(
-              'rounded-lg px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-all',
+              'rounded-lg px-4 py-1.5 text-xs font-bold transition-all',
               tab !== 'templates' ? 'bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.03]' : 'text-muted-foreground/60 hover:text-muted-foreground',
             )}
             onClick={() => setSearchParams((prev) => { const p = new URLSearchParams(prev); p.delete('tab'); return p; })}
@@ -209,7 +209,7 @@ export default function ProgramsPage() {
           <button
             type="button"
             className={cn(
-              'rounded-lg px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-all',
+              'rounded-lg px-4 py-1.5 text-xs font-bold transition-all',
               tab === 'templates' ? 'bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.03]' : 'text-muted-foreground/60 hover:text-muted-foreground',
             )}
             onClick={() => setSearchParams((prev) => { const p = new URLSearchParams(prev); p.set('tab', 'templates'); return p; })}
@@ -337,14 +337,14 @@ export default function ProgramsPage() {
                             {program.name}
                           </Link>
                           {program.unpublishedChanges && (
-                            <Badge variant="outline" className="bg-amber-500/5 text-amber-600 border-amber-500/20 px-1.5 h-4.5 text-[10px] font-bold uppercase">
+                            <Badge variant="outline" className="bg-amber-500/5 text-amber-600 border-amber-500/20 px-1.5 h-4.5 text-[10px] font-bold">
                               Unpublished
                             </Badge>
                           )}
                           
                           <Badge
                             className={cn(
-                              "px-1.5 h-4.5 text-[10px] font-bold uppercase",
+                              "px-1.5 h-4.5 text-[10px] font-bold",
                               !program.latestVersion
                                 ? 'bg-muted text-muted-foreground hover:bg-muted'
                                 : 'bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10',
@@ -452,12 +452,12 @@ export default function ProgramsPage() {
             </DialogHeader>
             <form className="mt-8 space-y-6" onSubmit={(e) => { e.preventDefault(); handleCreate(); }}>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60" htmlFor="program-name">Program Name</label>
+                <label className="text-[10px] font-bold text-muted-foreground/60" htmlFor="program-name">Program Name</label>
                 <Input id="program-name" value={createName} onChange={(e) => setCreateName(e.target.value)} className="h-11 bg-muted/20 border-border/50 text-sm font-bold" />
               </div>
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Source</label>
+                  <label className="text-[10px] font-bold text-muted-foreground/60">Source</label>
                   <Select value={createMode} onValueChange={(v) => setCreateMode(v as any)}>
                     <SelectTrigger className="h-11 bg-muted/20 border-border/50 font-bold text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -467,7 +467,7 @@ export default function ProgramsPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Resolution</label>
+                  <label className="text-[10px] font-bold text-muted-foreground/60">Resolution</label>
                   <Select value={String(createPresetIndex)} onValueChange={(v) => setCreatePresetIndex(Number(v))}>
                     <SelectTrigger className="h-11 bg-muted/20 border-border/50 font-bold text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>{RESOLUTION_PRESETS.map((p, i) => (<SelectItem key={p.label} value={String(i)} className="font-bold">{p.label}</SelectItem>))}</SelectContent>
@@ -475,8 +475,8 @@ export default function ProgramsPage() {
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)} className="font-bold text-xs uppercase tracking-widest px-8">Cancel</Button>
-                <Button type="submit" disabled={createProgramMutation.isPending} className="font-bold text-xs uppercase tracking-widest px-10 h-11 shadow-xl">
+                <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)} className="font-bold text-xs px-8">Cancel</Button>
+                <Button type="submit" disabled={createProgramMutation.isPending} className="font-bold text-xs px-10 h-11 shadow-xl">
                   {createProgramMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-2" />} Create
                 </Button>
               </div>
@@ -497,7 +497,7 @@ export default function ProgramsPage() {
             </DialogHeader>
             <form className="mt-8 space-y-6" onSubmit={(e) => { e.preventDefault(); handleProgramRename(); }}>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60" htmlFor="rename-name">Program Name</label>
+                <label className="text-[10px] font-bold text-muted-foreground/60" htmlFor="rename-name">Program Name</label>
                 <Input 
                   id="rename-name" 
                   value={renameValue} 
@@ -507,8 +507,8 @@ export default function ProgramsPage() {
                 />
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="ghost" onClick={() => setRenameOpen(false)} className="font-bold text-xs uppercase tracking-widest px-8">Cancel</Button>
-                <Button type="submit" disabled={renameMutation.isPending} className="font-bold text-xs uppercase tracking-widest px-10 h-11 shadow-xl">
+                <Button type="button" variant="ghost" onClick={() => setRenameOpen(false)} className="font-bold text-xs px-8">Cancel</Button>
+                <Button type="submit" disabled={renameMutation.isPending} className="font-bold text-xs px-10 h-11 shadow-xl">
                   {renameMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-2" />} Save
                 </Button>
               </div>
@@ -534,10 +534,10 @@ export default function ProgramsPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="mt-8 gap-3">
-              <AlertDialogCancel className="font-bold text-xs uppercase tracking-widest px-8">Cancel</AlertDialogCancel>
+              <AlertDialogCancel className="font-bold text-xs px-8">Cancel</AlertDialogCancel>
               <AlertDialogAction 
                 onClick={handleProgramDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold text-xs uppercase tracking-widest px-10 h-10 shadow-xl shadow-destructive/20"
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold text-xs px-10 h-10 shadow-xl shadow-destructive/20"
               >
                 {deleteMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-2" />} Delete
               </AlertDialogAction>

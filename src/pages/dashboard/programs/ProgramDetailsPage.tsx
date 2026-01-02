@@ -39,6 +39,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { getDevices } from '@/services/deviceApi';
 import { ProgramPublishDialog } from '@/features/programs/publishing/ProgramPublishDialog';
 
 export default function ProgramDetailsPage() {
@@ -64,6 +65,11 @@ export default function ProgramDetailsPage() {
     enabled: !!programId,
   });
 
+  const { data: devicesRes } = useQuery({
+    queryKey: ['devices'],
+    queryFn: () => getDevices(),
+  });
+
   const { data: auditLogsData } = useQuery({
     queryKey: ['programs', programId, 'audit-logs'],
     queryFn: () => getProgramAuditLogs(programId!),
@@ -73,6 +79,12 @@ export default function ProgramDetailsPage() {
   const program = programData?.data;
   const deployments = program?.deployments || [];
   const auditLogs = auditLogsData?.data || [];
+  const deviceMap = useMemo(() => {
+    const map = new Map();
+    (devicesRes?.data || []).forEach(d => map.set(d.deviceId, d));
+    return map;
+  }, [devicesRes?.data]);
+
   const location = useLocation();
 
   // Update breadcrumb with program name
@@ -214,34 +226,34 @@ export default function ProgramDetailsPage() {
       <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
         {/* Main Tabs Area */}
         <div className="space-y-8">
-           <Tabs defaultValue="nodes" className="w-full">
+           <Tabs defaultValue="devices" className="w-full">
               <TabsList className="bg-muted/40 p-1 rounded-xl w-fit">
-                 <TabsTrigger value="nodes" className="px-6 rounded-lg gap-2 font-bold text-xs uppercase tracking-wider data-[state=active]:shadow-sm">
-                    <Monitor className="h-3.5 w-3.5" /> Running Nodes
+                 <TabsTrigger value="devices" className="px-6 rounded-lg gap-2 font-bold text-xs data-[state=active]:shadow-sm">
+                    <Monitor className="h-3.5 w-3.5" /> Running Devices
                  </TabsTrigger>
-                 <TabsTrigger value="releases" className="px-6 rounded-lg gap-2 font-bold text-xs uppercase tracking-wider data-[state=active]:shadow-sm">
+                 <TabsTrigger value="releases" className="px-6 rounded-lg gap-2 font-bold text-xs data-[state=active]:shadow-sm">
                     <Database className="h-3.5 w-3.5" /> Releases
                  </TabsTrigger>
-                 <TabsTrigger value="drafts" className="px-6 rounded-lg gap-2 font-bold text-xs uppercase tracking-wider data-[state=active]:shadow-sm">
+                 <TabsTrigger value="drafts" className="px-6 rounded-lg gap-2 font-bold text-xs data-[state=active]:shadow-sm">
                     <Layers className="h-3.5 w-3.5" /> Drafts
                  </TabsTrigger>
-                 <TabsTrigger value="history" className="px-6 rounded-lg gap-2 font-bold text-xs uppercase tracking-wider data-[state=active]:shadow-sm">
-                    <HistoryIcon className="h-3.5 w-3.5" /> Full Audit Trail
+                 <TabsTrigger value="history" className="px-6 rounded-lg gap-2 font-bold text-xs data-[state=active]:shadow-sm">
+                    <HistoryIcon className="h-3.5 w-3.5" /> Audit Trail
                  </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="nodes" className="mt-6 space-y-4">
+              <TabsContent value="devices" className="mt-6 space-y-4">
                  <Card className="border-0 shadow-sm ring-1 ring-foreground/5 overflow-hidden">
                     <CardHeader className="bg-muted/10 border-b">
                        <div className="flex items-center justify-between">
                           <div>
-                             <CardTitle className="text-sm font-bold">Node Distribution</CardTitle>
+                             <CardTitle className="text-sm font-bold">Device Distribution</CardTitle>
                              <CardDescription className="text-xs">Live deployment status across all devices.</CardDescription>
                           </div>
                           <div className="relative w-64">
                              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                              <Input 
-                                placeholder="Filter nodes..." 
+                                placeholder="Filter devices..." 
                                 value={deviceQuery} 
                                 onChange={e => setDeviceQuery(e.target.value)}
                                 className="h-8 pl-8 text-xs bg-background" 
@@ -253,22 +265,28 @@ export default function ProgramDetailsPage() {
                        <ScrollArea className="h-[500px]">
                           <div className="divide-y divide-foreground/[0.03]">
                              {filteredDeployments.map(d => {
+                                const device = deviceMap.get(d.deviceId);
+                                const status = device?.status || 'offline';
+                                const isOnline = status === 'online';
+
                                 return (
-                                   <div key={d.deviceId} className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-muted/5">
+                                   <div key={d.deviceId} className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-muted/5 cursor-pointer" onClick={() => navigate(`/dashboard/devices/${d.deviceId}`)}>
                                       <div className="min-w-0 flex-1">
-                                         <p className="text-sm font-bold truncate leading-tight">{d.deviceName || d.deviceId}</p>
-                                         <p className="text-[10px] text-muted-foreground font-mono mt-1 opacity-60 uppercase">{String(d.deviceId ?? '').slice(0, 12) || "Unknown"}</p>
+                                         <p className="text-sm font-bold truncate leading-tight">{device?.alias || device?.deviceName || d.deviceName || 'Device'}</p>
+                                         <p className="text-[10px] text-muted-foreground font-medium mt-1 opacity-60">
+                                            {isOnline ? 'Active' : 'Offline'} · {device?.resolution || 'Unknown Res'}
+                                         </p>
                                       </div>
                                       <div className="flex items-center gap-6">
                                          <div className="text-right">
-                                            <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-40 mb-1 tracking-tighter">Status</p>
+                                            <p className="text-[9px] font-bold text-muted-foreground opacity-40 mb-1">Status</p>
                                             <div className="flex items-center gap-1.5 justify-end">
-                                               <div className={cn("w-1 h-1 rounded-full", d.status === 'DOWNLOADED' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" : "bg-amber-500")} />
-                                               <span className="text-[10px] font-black uppercase tracking-tighter">{d.status || 'Assigned'}</span>
+                                               <div className={cn("w-1.5 h-1.5 rounded-full", isOnline ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" : "bg-zinc-300")} />
+                                               <span className={cn("text-[10px] font-bold", isOnline ? "text-foreground" : "text-muted-foreground")}>{isOnline ? 'Online' : 'Offline'}</span>
                                             </div>
                                          </div>
                                          <div className="text-right min-w-[80px]">
-                                            <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-40 mb-1 tracking-tighter">Running</p>
+                                            <p className="text-[9px] font-bold text-muted-foreground opacity-40 mb-1">Running</p>
                                             <Badge variant="outline" className="font-mono text-[10px] h-5 px-1.5 font-black border-primary/20 text-primary bg-primary/5">v{d.releaseVersion}</Badge>
                                          </div>
                                       </div>
@@ -278,7 +296,7 @@ export default function ProgramDetailsPage() {
                              {deployments.length === 0 && (
                                 <div className="py-20 text-center flex flex-col items-center gap-3 opacity-20">
                                    <Monitor className="h-12 w-12" />
-                                   <p className="text-sm font-bold uppercase tracking-widest leading-tight">No Active Deployments</p>
+                                   <p className="text-sm font-bold leading-tight">No Active Deployments</p>
                                    <Button size="sm" variant="outline" className="mt-2" onClick={() => setPublishOpen(true)}>Start First Deployment</Button>
                                 </div>
                              )}
@@ -296,22 +314,40 @@ export default function ProgramDetailsPage() {
                     </CardHeader>
                     <CardContent className="p-8">
                        <div className="relative space-y-8 before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-muted before:to-transparent">
-                          {auditLogs.length > 0 ? auditLogs.map((log) => (
-                             <div key={log.id} className="relative flex items-start gap-6 group">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-background shadow-sm z-10 transition-colors group-hover:border-primary/50">
-                                   <AuditIcon action={log.action} />
-                                </div>
-                                <div className="min-w-0 flex-1 pt-0.5">
-                                   <div className="flex items-center gap-2 mb-1">
-                                      <span className="text-[11px] font-black uppercase tracking-wider text-foreground">{log.action.replace('_', ' ')}</span>
-                                      <span className="text-[10px] text-muted-foreground/60">• {formatDateTime(log.createdAt)}</span>
-                                   </div>
-                                   <p className="text-sm font-medium text-muted-foreground/80 leading-relaxed">
-                                      <span className="text-foreground font-bold">{log.operatorName}</span> {log.action}
-                                   </p>
-                                </div>
-                             </div>
-                          )) : (
+                          {auditLogs.length > 0 ? auditLogs.map((log) => {
+                             const metadata = log.metadata ? (() => {
+                                try { return JSON.parse(log.metadata); } catch { return null; }
+                             })() : null;
+
+                             return (
+                               <div key={log.id} className="relative flex items-start gap-6 group">
+                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-background shadow-sm z-10 transition-colors group-hover:border-primary/50">
+                                     <AuditIcon action={log.action} />
+                                  </div>
+                                  <div className="min-w-0 flex-1 pt-0.5">
+                                     <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-[11px] font-bold text-foreground">{log.action.replace(/_/g, ' ')}</span>
+                                        <span className="text-[10px] text-muted-foreground/60">• {formatDateTime(log.createdAt)}</span>
+                                     </div>
+                                     <div className="text-sm font-medium text-muted-foreground/80 leading-relaxed">
+                                        <span className="text-foreground font-bold">{log.operatorName}</span>
+                                        <span className="mx-1">{
+                                           log.action.includes('PUBLISH') ? 'published' : 
+                                           log.action.includes('CREATE') ? 'created' : 
+                                           log.action.includes('DELETE') ? 'deleted' : 
+                                           log.action.includes('RENAME') ? 'renamed' : 
+                                           log.action.includes('UPDATE') ? 'updated' : 'performed'
+                                        }</span>
+                                        {log.version && <Badge variant="outline" className="h-4.5 px-1 text-[10px] font-bold">v{log.version}</Badge>}
+                                        {metadata?.deviceName && <span className="text-foreground font-semibold"> to {metadata.deviceName}</span>}
+                                        {metadata?.width && metadata?.height && <span className="text-muted-foreground italic"> (resolution: {metadata.width}x{metadata.height})</span>}
+                                        {metadata?.newName && <span className="text-foreground font-semibold"> to "{metadata.newName}"</span>}
+                                        {metadata?.targetVersion && <span className="opacity-60 text-xs"> (target v{metadata.targetVersion})</span>}
+                                     </div>
+                                  </div>
+                               </div>
+                             );
+                          }) : (
                              <div className="py-10 text-center opacity-30 italic text-xs">No audit logs found for this program.</div>
                           )}
                        </div>
@@ -337,8 +373,7 @@ export default function ProgramDetailsPage() {
                                         <span className="text-[10px] text-muted-foreground/60">· {formatDateTime(v.createdAt)}</span>
                                      </div>
                                      <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[10px] text-muted-foreground/70">
-                                        <span className="font-mono">deviceProgramId: {v.deviceProgramId}</span>
-                                        {v.deviceTitleSnapshot ? <span className="truncate max-w-[420px]">title: {v.deviceTitleSnapshot}</span> : null}
+                                        {v.deviceTitleSnapshot ? <span className="truncate max-w-[420px] font-medium italic">"{v.deviceTitleSnapshot}"</span> : <span className="opacity-40 italic">No snapshot name</span>}
                                      </div>
                                   </div>
                                   <div className="flex shrink-0 items-center gap-2">
@@ -370,7 +405,7 @@ export default function ProgramDetailsPage() {
                        ) : (
                          <div className="py-20 text-center flex flex-col items-center gap-3 opacity-40">
                            <Database className="h-12 w-12" />
-                           <p className="text-sm font-bold uppercase tracking-widest leading-tight">No Releases Yet</p>
+                           <p className="text-sm font-bold leading-tight">No Releases Yet</p>
                             <Button size="sm" className="mt-2" onClick={() => { navigate(`/dashboard/programs/${programId}/edit`); }}>Publish v1</Button>
                           </div>
                         )}
@@ -396,9 +431,6 @@ export default function ProgramDetailsPage() {
                                           {d.baseVersion > 0 ? `base v${d.baseVersion}` : 'base Blank'}
                                         </Badge>
                                         <span className="text-[10px] text-muted-foreground/60">· updated {formatDateTime(d.updatedAt)}</span>
-                                     </div>
-                                     <div className="mt-2 flex items-center gap-2 text-[10px] text-muted-foreground/70 font-mono">
-                                        <span>draftId: {d.draftId.slice(0, 8)}...</span>
                                      </div>
                                   </div>
                                   <div className="flex shrink-0 items-center gap-2">
@@ -439,7 +471,7 @@ export default function ProgramDetailsPage() {
                        ) : (
                          <div className="py-20 text-center flex flex-col items-center gap-3 opacity-40">
                            <Layers className="h-12 w-12" />
-                           <p className="text-sm font-bold uppercase tracking-widest leading-tight">No Drafts Yet</p>
+                           <p className="text-sm font-bold leading-tight">No Drafts Yet</p>
                            <Button size="sm" className="mt-2" variant="outline" onClick={() => navigate(`/dashboard/programs/${programId}/edit`)}>
                              Open editor
                            </Button>
@@ -462,11 +494,11 @@ export default function ProgramDetailsPage() {
               <CardContent className="space-y-4 pt-0">
                  <div className="grid grid-cols-2 gap-4">
                     <div className="p-3 rounded-xl bg-muted/20 border">
-                       <p className="text-[9px] font-bold text-muted-foreground uppercase mb-1">Total Nodes</p>
+                       <p className="text-[9px] font-bold text-muted-foreground mb-1">Total Devices</p>
                        <p className="text-lg font-black">{deployments.length}</p>
                     </div>
                     <div className="p-3 rounded-xl bg-muted/20 border">
-                       <p className="text-[9px] font-bold text-muted-foreground uppercase mb-1">Max Version</p>
+                       <p className="text-[9px] font-bold text-muted-foreground mb-1">Max Version</p>
                        <p className="text-lg font-black">v{maxVersion}</p>
                     </div>
                  </div>
@@ -475,12 +507,12 @@ export default function ProgramDetailsPage() {
                  
                  <div className="space-y-3">
                     <div className="flex items-center justify-between text-[11px]">
-                       <span className="text-muted-foreground font-bold uppercase tracking-wider">Storage ID</span>
-                       <span className="font-mono opacity-60 uppercase">{program.id?.slice(0, 8) ?? "Unknown"}...</span>
+                       <span className="text-muted-foreground font-bold">Resolution</span>
+                       <span className="font-bold opacity-80">{program.width}×{program.height}</span>
                     </div>
                     <div className="flex items-center justify-between text-[11px]">
-                       <span className="text-muted-foreground font-bold uppercase tracking-wider">Sync Integrity</span>
-                       <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-700 h-4 px-1.5 text-[8px] font-black uppercase">Verified</Badge>
+                       <span className="text-muted-foreground font-bold">Sync Integrity</span>
+                       <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-700 h-4 px-1.5 text-[8px] font-bold">Verified</Badge>
                     </div>
                  </div>
               </CardContent>

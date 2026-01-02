@@ -451,6 +451,34 @@
       "allFieldsRequired": "请填写所有必填字段"
     }
   },
+  "program": {
+    "publish": {
+      "title": "发布节目",
+      "steps": {
+        "nodes": "选择节点",
+        "strategy": "发布策略",
+        "manifest": "发布清单"
+      },
+      "filter": {
+        "title": "快速筛选",
+        "onlineOnly": "仅在线",
+        "matchResolution": "匹配分辨率 {{width}}x{{height}}",
+        "reset": "重置所有筛选"
+      },
+      "strategy": {
+        "createTitle": "创建新版本发布",
+        "createDesc": "将当前草稿保存为 v{{version}} 并下发。此版本将成为新的生产基准。",
+        "existingTitle": "重新部署现有版本",
+        "existingDesc": "从版本库中选择一个已发布的历史版本进行重新部署或回滚。",
+        "currentLive": "当前线上版本",
+        "legacyArchive": "历史存档",
+        "modeAppend": "追加模式：仅下发至尚未运行此节目的节点。",
+        "modeOverwrite": "覆盖模式：强制所有目标节点同步至选定版本。"
+      },
+      "noNodes": "未找到节点",
+      "noNodesDesc": "没有符合当前筛选条件的设备。"
+    }
+  },
   "message": {
     "type": {
       "device": {

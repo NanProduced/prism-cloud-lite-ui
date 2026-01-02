@@ -725,7 +725,7 @@ function ItemInspector({
                 </div>
 
                 <div className="space-y-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Time (ms)</span>
+                  <span className="text-[10px] font-bold text-muted-foreground/60">Time (ms)</span>
                   <Input
                     type="number"
                     inputMode="numeric"

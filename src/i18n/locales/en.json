@@ -451,6 +451,34 @@
       "allFieldsRequired": "All fields are required"
     }
   },
+  "program": {
+    "publish": {
+      "title": "Publish Program",
+      "steps": {
+        "nodes": "Select Nodes",
+        "strategy": "Strategy",
+        "manifest": "Manifest"
+      },
+      "filter": {
+        "title": "Quick Filters",
+        "onlineOnly": "Online Only",
+        "matchResolution": "Match {{width}}x{{height}}",
+        "reset": "Reset All Filters"
+      },
+      "strategy": {
+        "createTitle": "Create New Version",
+        "createDesc": "Snapshot current draft as v{{version}} and deploy. This becomes the new baseline.",
+        "existingTitle": "Deploy Existing Version",
+        "existingDesc": "Choose a previously published version to redeploy or roll back.",
+        "currentLive": "Current Live Release",
+        "legacyArchive": "Legacy Archive",
+        "modeAppend": "Incremental: Skip nodes already running this program.",
+        "modeOverwrite": "Global Push: Force sync all targeted nodes to selected version."
+      },
+      "noNodes": "No Nodes Found",
+      "noNodesDesc": "No devices matching your current filters."
+    }
+  },
   "message": {
     "type": {
       "device": {

@@ -24,6 +24,8 @@ import type { ProgramDetailResp, ProgramDeploymentResp, ProgramDraftResp, Progra
 import type { VsnDocument } from '@/features/programs/vsn/types';
 import { sanitizeVsnForPersist } from '@/features/programs/vsn/sanitize';
 
+import { useTranslation } from 'react-i18next';
+
 type PublishScope = 'SELECTED' | 'RUNNING';
 type PublishMode = 'APPEND' | 'OVERWRITE';
 type VersionMode = 'CREATE' | 'EXISTING';
@@ -62,6 +64,7 @@ export function ProgramPublishDialog({
   onAfterPublish,
 }: ProgramPublishDialogProps) {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const [step, setStep] = useState(0);
 
   // --- Queries ---
@@ -346,7 +349,7 @@ export function ProgramPublishDialog({
                   <Send className="h-5 w-5" />
                 </div>
                 <div>
-                   <DialogTitle className="text-lg font-bold tracking-tight">Publish Program</DialogTitle>
+                   <DialogTitle className="text-lg font-bold tracking-tight">{t('program.publish.title')}</DialogTitle>
                    <div className="mt-1 flex items-center gap-2">
                       <Badge variant="outline" className="px-1.5 py-0 h-5 bg-background border-primary/20 text-primary text-[10px] font-bold">
                         {program.name}
@@ -365,8 +368,8 @@ export function ProgramPublishDialog({
             <div className="flex-1 flex flex-col p-8 overflow-hidden border-r">
                <div className="flex items-center justify-between mb-8">
                  <PublishStepper currentStep={step} />
-                 <div className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-30">
-                   Phase {step + 1} of 3
+                 <div className="text-[10px] font-bold text-muted-foreground tracking-widest opacity-40">
+                   Step {step + 1} of 3
                  </div>
                </div>
                
@@ -445,17 +448,17 @@ export function ProgramPublishDialog({
             <div className="w-[360px] bg-muted/5 flex flex-col p-6">
                <div className="flex items-center gap-2 mb-6">
                   <History className="h-3.5 w-3.5 text-muted-foreground" />
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Execution Plan</h3>
+                  <h3 className="text-[10px] font-bold tracking-widest text-muted-foreground opacity-60">Execution Plan</h3>
                </div>
                
                <div className="flex-1 space-y-8 flex flex-col min-h-0">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="p-4 rounded-2xl bg-background border shadow-sm flex flex-col items-center">
-                       <p className="text-[9px] font-bold text-muted-foreground uppercase mb-1 tracking-wider">Targets</p>
+                       <p className="text-[9px] font-bold text-muted-foreground mb-1 tracking-wider opacity-60">Targets</p>
                        <p className="text-2xl font-black tabular-nums">{baseTargetDeviceIds.length}</p>
                     </div>
                     <div className="p-4 rounded-2xl bg-background border shadow-sm flex flex-col items-center">
-                       <p className="text-[9px] font-bold text-muted-foreground uppercase mb-1 tracking-wider">Release</p>
+                       <p className="text-[9px] font-bold text-muted-foreground mb-1 tracking-wider opacity-60">Release</p>
                        <p className="text-2xl font-black tabular-nums text-primary">v{plan.targetVersion}</p>
                     </div>
                   </div>
@@ -464,7 +467,7 @@ export function ProgramPublishDialog({
 
                   <div className="flex-1 flex flex-col min-h-0">
                      <div className="flex items-center justify-between mb-3 px-1">
-                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">Device Queue</p>
+                        <p className="text-[10px] font-bold text-muted-foreground tracking-wider opacity-60">Device Queue</p>
                         <Badge variant="secondary" className="h-4 text-[9px] font-black px-1.5">{selectedDeviceIds.size}</Badge>
                      </div>
                      <ScrollArea className="flex-1 -mx-2 px-2 scrollbar-thin">
@@ -475,7 +478,7 @@ export function ProgramPublishDialog({
                                  <div className="flex items-center gap-3 mt-2">
                                     <div className="flex items-center gap-1.5">
                                        <div className={cn("w-1.5 h-1.5 rounded-full", d.status === 'online' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "bg-zinc-300")} />
-                                       <span className="text-[9px] font-black text-muted-foreground/60 uppercase tracking-tighter">{d.status}</span>
+                                       <span className="text-[9px] font-bold text-muted-foreground/60 tracking-tighter">{d.status}</span>
                                     </div>
                                     <div className="h-2.5 w-px bg-muted" />
                                     <span className="text-[9px] font-mono text-muted-foreground/40">{formatDeviceId(d.deviceId)}</span>
@@ -497,7 +500,7 @@ export function ProgramPublishDialog({
                                 <div className="p-4 rounded-full border-2 border-dashed">
                                    <Monitor className="h-10 w-10" />
                                 </div>
-                                <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">Initialize queue<br/>to continue</p>
+                                <p className="text-[10px] font-bold tracking-widest leading-relaxed">Initialize queue<br/>to continue</p>
                              </div>
                            )}
                         </div>
@@ -513,12 +516,17 @@ export function ProgramPublishDialog({
 }
 
 function PublishStepper({ currentStep }: { currentStep: number }) {
-  const steps = ['Select Nodes', 'Strategy', 'Manifest'];
+  const { t } = useTranslation();
+  const steps = [
+    t('program.publish.steps.nodes'),
+    t('program.publish.steps.strategy'),
+    t('program.publish.steps.manifest')
+  ];
   return (
     <div className="flex items-center gap-2 p-1 bg-muted/40 rounded-xl border w-fit shadow-inner">
       {steps.map((s, idx) => (
         <div key={s} className={cn(
-          "px-5 py-2 rounded-lg text-[11px] font-black transition-all flex items-center gap-2.5",
+          "px-5 py-2 rounded-lg text-[11px] font-bold transition-all flex items-center gap-2.5",
           idx === currentStep ? "bg-background text-foreground shadow-md ring-1 ring-foreground/[0.03]" : "text-muted-foreground/40"
         )}>
           <div className={cn(
@@ -527,7 +535,7 @@ function PublishStepper({ currentStep }: { currentStep: number }) {
           )}>
             {idx < currentStep ? <Check className="h-2.5 w-2.5" /> : idx + 1}
           </div>
-          <span className="tracking-tight uppercase">{s}</span>
+          <span className="tracking-tight">{s}</span>
         </div>
       ))}
     </div>
@@ -571,6 +579,7 @@ function DeviceSelectStep({
   onDeviceQueryChange,
   deploymentsByDeviceId
 }: DeviceSelectStepProps) {
+  const { t } = useTranslation();
   const filteredIds = filteredDevices.map((d) => d.deviceId).filter((id) => Number.isFinite(id) && id > 0);
   const allSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedDeviceIds.has(id));
 
@@ -586,7 +595,7 @@ function DeviceSelectStep({
                 className="pl-10 h-11 bg-muted/20 border-border focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary/50 transition-all rounded-xl"
              />
           </div>
-          <Button variant="outline" className="font-black text-[11px] h-11 px-6 rounded-xl uppercase tracking-wider gap-2 shadow-sm" onClick={() => {
+          <Button variant="outline" className="font-bold text-[11px] h-11 px-6 rounded-xl gap-2 shadow-sm" onClick={() => {
             onSelectedDeviceIdsChange((prev) => {
               const next = new Set(prev);
               if (allSelected) filteredIds.forEach((id) => next.delete(id));
@@ -602,7 +611,7 @@ function DeviceSelectStep({
           <div className="flex items-center justify-between">
              <div className="flex items-center gap-3">
                 <Filter className="h-3 w-3 text-muted-foreground" />
-                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Quick Filters</span>
+                <span className="text-[10px] font-bold text-muted-foreground tracking-widest">{t('program.publish.filter.title')}</span>
              </div>
              <div className="flex items-center gap-1 bg-muted/40 p-0.5 rounded-lg border shadow-inner">
                 <button 
@@ -620,9 +629,11 @@ function DeviceSelectStep({
              </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-             <button onClick={() => onOnlineOnlyChange(!onlineOnly)} className={cn("px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all shadow-sm", onlineOnly ? "bg-emerald-500 border-emerald-500 text-white" : "bg-card text-muted-foreground hover:border-muted-foreground/30")}>Online Only</button>
-             <button onClick={() => onResolutionOnlyChange(resolutionOnly === 'match' ? 'any' : 'match')} className={cn("px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all shadow-sm", resolutionOnly === 'match' ? "bg-primary border-primary text-white" : "bg-card text-muted-foreground hover:border-muted-foreground/30")}>
-               Match {programResolution.width}x{programResolution.height}
+             <button onClick={() => onlineOnly ? onOnlineOnlyChange(false) : onOnlineOnlyChange(true)} className={cn("px-4 py-2 rounded-xl text-[10px] font-bold border transition-all shadow-sm", onlineOnly ? "bg-emerald-500 border-emerald-500 text-white" : "bg-card text-muted-foreground hover:border-muted-foreground/30")}>
+                {t('program.publish.filter.onlineOnly')}
+             </button>
+             <button onClick={() => onResolutionOnlyChange(resolutionOnly === 'match' ? 'any' : 'match')} className={cn("px-4 py-2 rounded-xl text-[10px] font-bold border transition-all shadow-sm", resolutionOnly === 'match' ? "bg-primary border-primary text-white" : "bg-card text-muted-foreground hover:border-muted-foreground/30")}>
+               {t('program.publish.filter.matchResolution', { width: programResolution.width, height: programResolution.height })}
              </button>
              <Separator orientation="vertical" className="h-5 mx-2 opacity-50" />
              
@@ -659,9 +670,9 @@ function DeviceSelectStep({
        </div>
 
        <div className="flex-1 border rounded-[2rem] bg-muted/5 overflow-hidden flex flex-col shadow-inner">
-          <div className="flex items-center gap-4 px-10 py-3.5 bg-muted/20 text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 border-b">
+          <div className="flex items-center gap-4 px-10 py-3.5 bg-muted/20 text-[10px] font-bold tracking-widest text-muted-foreground/60 border-b">
              <span className="flex-1">Device</span>
-             <span className="w-32 text-center">STATUS</span>
+             <span className="w-32 text-center">Status</span>
           </div>
 
           {filteredDevices.length > 0 ? (
@@ -683,7 +694,7 @@ function DeviceSelectStep({
                         <Checkbox checked={isSelected} onCheckedChange={() => {}} className="rounded-md h-5 w-5" />
                         <div className="min-w-0 flex-1">
                            <div className="flex items-center gap-2.5">
-                              <span className="text-sm font-black tracking-tight group-hover:text-primary transition-colors">{d.alias || d.deviceName}</span>
+                              <span className="text-sm font-bold tracking-tight group-hover:text-primary transition-colors">{d.alias || d.deviceName}</span>
                               {deployed && (
                                  <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 px-1.5 h-4.5 text-[9px] font-black">
                                     v{deployed.releaseVersion}
@@ -696,7 +707,7 @@ function DeviceSelectStep({
                                           <div className="p-1 rounded-full bg-amber-500/10"><AlertCircle className="h-3.5 w-3.5 text-amber-500" /></div>
                                        </TooltipTrigger>
                                        <TooltipContent className="bg-amber-900 text-amber-50 border-amber-800 p-3 rounded-xl shadow-xl max-w-[280px]">
-                                          <p className="font-bold flex items-center gap-2 mb-1 uppercase text-[10px] tracking-widest"><AlertCircle className="h-3 w-3" /> Resolution Mismatch</p>
+                                          <p className="font-bold flex items-center gap-2 mb-1 text-[10px] tracking-widest"><AlertCircle className="h-3 w-3" /> Resolution Mismatch</p>
                                           <p className="text-[11px] opacity-80 leading-relaxed">This hardware runs at {res.width}x{res.height}, but your program is {programResolution.width}x{programResolution.height}. Content scaling may occur.</p>
                                        </TooltipContent>
                                     </Tooltip>
@@ -704,16 +715,16 @@ function DeviceSelectStep({
                               )}
                            </div>
                            <div className="flex items-center gap-3 mt-1.5">
-                              <p className="text-[9px] text-muted-foreground font-mono opacity-50 tracking-tighter uppercase">{formatDeviceId(d.deviceId)}</p>
+                              <p className="text-[9px] text-muted-foreground font-mono opacity-50 tracking-tighter">{formatDeviceId(d.deviceId)}</p>
                               <div className="h-2 w-px bg-muted" />
-                              <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">{res.width}×{res.height}</span>
+                              <span className="text-[9px] font-bold text-muted-foreground/60 tracking-widest">{res.width}×{res.height}</span>
                            </div>
                         </div>
                         <div className="flex items-center gap-4">
                            <div className="text-right min-w-[80px]">
                               <div className="flex items-center gap-2 justify-end">
                                  <div className={cn("w-1.5 h-1.5 rounded-full transition-all", d.status === 'online' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" : "bg-zinc-300")} />
-                                 <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground group-hover:text-foreground">{d.status}</span>
+                                 <span className="text-[10px] font-bold tracking-tighter text-muted-foreground group-hover:text-foreground">{d.status}</span>
                               </div>
                            </div>
                         </div>
@@ -728,15 +739,15 @@ function DeviceSelectStep({
                   <Monitor className="h-12 w-12 text-muted-foreground" />
                </div>
                <div className="space-y-2 max-w-[320px]">
-                  <p className="text-base font-black uppercase tracking-[0.2em] text-foreground/80">No Nodes Found</p>
+                  <p className="text-base font-bold text-foreground/80">{t('program.publish.noNodes')}</p>
                   <p className="text-[10px] text-muted-foreground font-bold leading-relaxed opacity-60">
-                     We couldn't find any devices matching your current search parameters or active filters.
+                     {t('program.publish.noNodesDesc')}
                   </p>
                </div>
                <Button 
                   variant="default"
                   size="sm" 
-                  className="mt-8 font-black text-[9px] uppercase tracking-[0.2em] px-10 h-10 rounded-xl shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+                  className="mt-8 font-bold text-[9px] px-10 h-10 rounded-xl shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95"
                   onClick={() => {
                      onDeviceQueryChange('');
                      onOnlineOnlyChange(false);
@@ -745,7 +756,7 @@ function DeviceSelectStep({
                      onTagMatchModeChange('any');
                   }}
                >
-                  Reset All Filters
+                  {t('program.publish.filter.reset')}
                </Button>
             </div>
           )}
@@ -775,6 +786,7 @@ interface StrategyStepProps {
 }
 
 function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, program, createDraft, createVsnJsonProvided, isFromEditor, existingVersion, onExistingVersionChange, latest, scope, onScopeChange, selectedCount, deployments, mode, onModeChange, lockVersionMode }: StrategyStepProps) {
+  const { t } = useTranslation();
   const draftBaseLabel = createDraft?.baseVersion == null || createDraft?.baseVersion === 0 ? 'Blank' : `v${createDraft?.baseVersion}`;
   const draftSourceLabel = isFromEditor ? 'current editor draft' : 'latest saved draft';
   const draftHint = createVsnJsonProvided
@@ -793,10 +805,10 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
       <div className="space-y-10 animate-in fade-in slide-in-from-right-2 duration-300 py-4 pr-4">
        <div className="space-y-5">
           <div className="flex items-center justify-between px-1">
-             <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-3">
+             <h4 className="text-[11px] font-bold tracking-widest text-muted-foreground flex items-center gap-3">
                 <div className="h-1 w-6 bg-primary rounded-full" /> Lifecycle Control
              </h4>
-             <Badge variant="outline" className="font-mono text-[10px] opacity-30 border-dashed">VCS: ACTIVE</Badge>
+             <Badge variant="outline" className="font-mono text-[10px] opacity-30 border-dashed">VCS: Active</Badge>
           </div>
           <div className={cn('grid gap-6', shouldShowCreate && shouldShowExisting ? 'grid-cols-2' : 'grid-cols-1')}>
              {shouldShowCreate && (
@@ -822,13 +834,13 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
                 )}
               >
                  {versionMode === 'CREATE' && <div className="absolute top-5 right-5 h-7 w-7 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="h-4 w-4 text-white" /></div>}
-                 <span className="text-lg font-black mb-1.5 tracking-tight group-hover:text-primary transition-colors">Issue Production Release</span>
-                 <p className="text-[13px] text-muted-foreground leading-relaxed">Snapshot the draft as <span className="font-black text-foreground underline decoration-primary/30 underline-offset-2">v{predictedNewVersion}</span>. This release becomes the new baseline for global distribution.</p>
-                 <p className="mt-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{draftHint}</p>
+                 <span className="text-lg font-bold mb-1.5 tracking-tight group-hover:text-primary transition-colors">{t('program.publish.strategy.createTitle')}</span>
+                 <p className="text-[13px] text-muted-foreground leading-relaxed">{t('program.publish.strategy.createDesc', { version: predictedNewVersion })}</p>
+                 <p className="mt-2 text-[10px] font-bold tracking-widest text-muted-foreground/60">{draftHint}</p>
                  <div className="mt-8 flex items-center gap-2">
                     <div
                       className={cn(
-                        "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-md",
+                        "px-2.5 py-1 rounded-lg text-[9px] font-bold tracking-widest shadow-md",
                         canCreate ? "bg-primary text-white shadow-primary/20" : "bg-muted text-muted-foreground shadow-none",
                       )}
                     >
@@ -860,8 +872,8 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
                 )}
               >
                  {versionMode === 'EXISTING' && <div className="absolute top-5 right-5 h-7 w-7 rounded-full bg-primary flex items-center justify-center shadow-lg"><Check className="h-4 w-4 text-white" /></div>}
-                 <span className="text-lg font-black mb-1.5 tracking-tight group-hover:text-primary transition-colors">Redeploy Stable Archive</span>
-                 <p className="text-[13px] text-muted-foreground leading-relaxed mb-6">Access the version library to redistribute or roll back nodes to a previously validated and immutable release snapshot.</p>
+                 <span className="text-lg font-bold mb-1.5 tracking-tight group-hover:text-primary transition-colors">{t('program.publish.strategy.existingTitle')}</span>
+                 <p className="text-[13px] text-muted-foreground leading-relaxed mb-6">{t('program.publish.strategy.existingDesc')}</p>
                 
                 <div className="mt-auto">
                    <Select 
@@ -869,13 +881,13 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
                       onValueChange={v => onExistingVersionChange(Number(v))}
                       disabled={versionMode !== 'EXISTING'}
                    >
-                      <SelectTrigger className="w-full h-12 text-xs font-black px-4 bg-muted/60 border-0 shadow-inner rounded-xl">
+                      <SelectTrigger className="w-full h-12 text-xs font-bold px-4 bg-muted/60 border-0 shadow-inner rounded-xl">
                          <SelectValue placeholder="Select version" />
                       </SelectTrigger>
                       <SelectContent>
                          {[...(program.versions || [])].reverse().map(v => (
                            <SelectItem key={v.version} value={String(v.version)} className="text-xs font-bold">
-                             v{v.version} — {v.version === latest?.version ? 'CURRENT LIVE RELEASE' : 'LEGACY ARCHIVE'}
+                             v{v.version} — {v.version === latest?.version ? t('program.publish.strategy.currentLive') : t('program.publish.strategy.legacyArchive')}
                            </SelectItem>
                          ))}
                       </SelectContent>
@@ -887,29 +899,29 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
         </div>
 
        <div className="space-y-6 pt-10 border-t border-dashed">
-          <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-3 px-1">
+          <h4 className="text-[11px] font-bold tracking-widest text-muted-foreground flex items-center gap-3 px-1">
              <div className="h-1 w-6 bg-emerald-500 rounded-full" /> Traffic Distribution
           </h4>
           <div className="grid grid-cols-2 gap-12">
              <div className="space-y-4">
-                <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.15em] ml-2">Endpoint Selection</span>
+                <span className="text-[10px] font-bold text-muted-foreground/60 tracking-widest ml-2">Endpoint Selection</span>
                 <div className="flex p-1.5 bg-muted/40 rounded-2xl gap-1.5 ring-1 ring-inset ring-foreground/5 shadow-inner">
-                   <button onClick={() => onScopeChange('SELECTED')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest", scope === 'SELECTED' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground")}>QUEUE ({selectedCount})</button>
-                   <button disabled={deployments.length === 0} onClick={() => onScopeChange('RUNNING')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest", scope === 'RUNNING' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground", deployments.length === 0 && "opacity-20 cursor-not-allowed")}>ACTIVE ({deployments.length})</button>
+                   <button onClick={() => onScopeChange('SELECTED')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-bold transition-all tracking-widest", scope === 'SELECTED' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground")}>Queue ({selectedCount})</button>
+                   <button disabled={deployments.length === 0} onClick={() => onScopeChange('RUNNING')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-bold transition-all tracking-widest", scope === 'RUNNING' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground", deployments.length === 0 && "opacity-20 cursor-not-allowed")}>Active ({deployments.length})</button>
                 </div>
              </div>
              <div className="space-y-4">
-                <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.15em] ml-2">Override Protocol</span>
+                <span className="text-[10px] font-bold text-muted-foreground/60 tracking-widest ml-2">Override Protocol</span>
                 <div className="flex p-1.5 bg-muted/40 rounded-2xl gap-1.5 ring-1 ring-inset ring-foreground/5 shadow-inner">
-                   <button disabled={scope === 'RUNNING'} onClick={() => onModeChange('APPEND')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest", mode === 'APPEND' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground", scope === 'RUNNING' && "opacity-20 cursor-not-allowed")}>Append</button>
-                   <button onClick={() => onModeChange('OVERWRITE')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest", mode === 'OVERWRITE' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground")}>Overwrite</button>
+                   <button disabled={scope === 'RUNNING'} onClick={() => onModeChange('APPEND')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-bold transition-all tracking-widest", mode === 'APPEND' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground", scope === 'RUNNING' && "opacity-20 cursor-not-allowed")}>Append</button>
+                   <button onClick={() => onModeChange('OVERWRITE')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-bold transition-all tracking-widest", mode === 'OVERWRITE' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground")}>Overwrite</button>
                 </div>
              </div>
           </div>
           <div className="p-4 rounded-2xl bg-muted/20 border-2 border-dotted flex items-start gap-4 mx-1 group hover:border-muted-foreground/20 transition-colors">
              <ShieldCheck className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5 group-hover:text-primary transition-colors" />
-             <p className="text-[11px] leading-relaxed text-muted-foreground font-bold uppercase tracking-tight opacity-70">
-               {mode === 'APPEND' ? 'Policy: Incremental rollout. Nodes already running an instance of this program will be excluded from the synchronization task.' : 'Policy: Global push. Every targeted node will be forced to synchronize with the selected release version immediately.'}
+             <p className="text-[11px] leading-relaxed text-muted-foreground font-bold tracking-tight opacity-70">
+               {mode === 'APPEND' ? t('program.publish.strategy.modeAppend') : t('program.publish.strategy.modeOverwrite')}
              </p>
           </div>
        </div>
@@ -928,31 +940,31 @@ function ReviewStep({ plan, devices }: { plan: any; devices: Device[] }) {
              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
                 <ShieldCheck className="h-14 w-14 text-emerald-500" />
              </div>
-             <p className="text-[10px] font-black uppercase text-emerald-700/50 mb-2 tracking-[0.2em]">Active Push</p>
+             <p className="text-[10px] font-bold text-emerald-700/50 mb-2 tracking-widest">Active Push</p>
              <p className="text-4xl font-black tabular-nums tracking-tighter text-emerald-700">{plan.counts.deploy + plan.counts.update + plan.counts.rollback}</p>
-             <p className="text-[9px] font-bold text-emerald-600/40 uppercase mt-1">Nodes updating</p>
+             <p className="text-[9px] font-bold text-emerald-600/40 mt-1">Nodes updating</p>
           </div>
           <div className="p-7 rounded-[2.5rem] bg-primary/[0.03] border-2 border-primary/10 shadow-sm relative overflow-hidden group hover:border-primary/30 transition-all">
              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
                 <Database className="h-14 w-14 text-primary" />
              </div>
-             <p className="text-[10px] font-black uppercase text-primary/50 mb-2 tracking-[0.2em]">Target State</p>
+             <p className="text-[10px] font-bold text-primary/50 mb-2 tracking-widest">Target State</p>
              <p className="text-4xl font-black tabular-nums tracking-tighter text-primary">v{plan.targetVersion}</p>
-             <p className="text-[9px] font-bold text-primary/40 uppercase mt-1">Production Rev</p>
+             <p className="text-[9px] font-bold text-primary/40 mt-1">Production Rev</p>
           </div>
           <div className="p-7 rounded-[2.5rem] bg-amber-500/[0.03] border-2 border-amber-500/10 shadow-sm relative overflow-hidden group hover:border-amber-500/30 transition-all">
              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
                 <Clock className="h-14 w-14 text-amber-500" />
              </div>
-             <p className="text-[10px] font-black uppercase text-amber-700/50 mb-2 tracking-[0.2em]">Async Sync</p>
+             <p className="text-[10px] font-bold text-amber-700/50 mb-2 tracking-widest">Async Sync</p>
              <p className="text-4xl font-black tabular-nums tracking-tighter text-amber-700">{plan.counts.pendingSync}</p>
-             <p className="text-[9px] font-bold text-amber-600/40 uppercase mt-1">Pending Recon</p>
+             <p className="text-[9px] font-bold text-emerald-600/40 mt-1">Pending Recon</p>
           </div>
        </div>
 
        <div className="flex-1 border-2 border-muted rounded-[2.5rem] bg-muted/5 overflow-hidden flex flex-col shadow-inner relative">
-          <div className="flex items-center gap-4 px-12 py-4 bg-muted/20 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 border-b">
-             <span className="flex-1">Hardware Node</span>
+          <div className="flex items-center gap-4 px-12 py-4 bg-muted/20 text-[10px] font-bold tracking-widest text-muted-foreground/60 border-b">
+             <span className="flex-1">Hardware Device</span>
              <span className="w-44 text-center">Version Transition</span>
              <span className="w-24 text-right">Status</span>
           </div>
@@ -965,13 +977,13 @@ function ReviewStep({ plan, devices }: { plan: any; devices: Device[] }) {
                   return (
                     <div key={row.deviceId} className={cn("flex items-center gap-8 px-8 py-5 transition-all rounded-3xl mx-1 my-1.5", isChange ? "hover:bg-muted/10 bg-background/50 shadow-sm border border-foreground/[0.02]" : "opacity-30 grayscale")}>
                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-black truncate tracking-tight text-foreground/90">{d?.alias || d?.deviceName}</p>
+                          <p className="text-sm font-bold truncate tracking-tight text-foreground/90">{d?.alias || d?.deviceName}</p>
                           <div className="flex items-center gap-2.5 mt-2 opacity-50">
-                             <p className="text-[9px] font-mono uppercase tracking-tighter tabular-nums">{row.deviceId}</p>
+                             <p className="text-[9px] font-mono tracking-tighter tabular-nums">{row.deviceId}</p>
                           </div>
                        </div>
                        <div className="w-44 flex items-center justify-center gap-5">
-                          <span className="text-[10px] font-black opacity-30 tabular-nums">v{row.current || '0'}</span>
+                          <span className="text-[10px] font-bold opacity-30 tabular-nums">v{row.current || '0'}</span>
                           <div className="flex items-center justify-center w-6 h-6">
                             {row.action === 'deploy' && <Plus className="h-4 w-4 text-blue-500 animate-pulse" />}
                             {row.action === 'update' && <TrendingUp className="h-4 w-4 text-emerald-500 animate-pulse" />}
@@ -979,13 +991,13 @@ function ReviewStep({ plan, devices }: { plan: any; devices: Device[] }) {
                             {row.action === 'no-change' && <Check className="h-4 w-4 text-muted-foreground opacity-20" />}
                             {row.action === 'skip' && <ChevronsRight className="h-4 w-4 opacity-10" />}
                           </div>
-                          <span className={cn("text-[11px] font-black tabular-nums tracking-tighter px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20 shadow-sm", isChange ? "" : "opacity-50 grayscale")}>v{row.target}</span>
+                          <span className={cn("text-[11px] font-bold tabular-nums tracking-tighter px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20 shadow-sm", isChange ? "" : "opacity-50 grayscale")}>v{row.target}</span>
                        </div>
                        <div className="w-24 text-right">
                           <Badge className={cn(
-                            "text-[8px] font-black uppercase tracking-[0.1em] px-2.5 h-5.5 border-0 shadow-sm",
+                            "text-[8px] font-bold tracking-[0.1em] px-2.5 h-5.5 border-0 shadow-sm",
                             row.action === 'deploy' ? "bg-emerald-500 text-white" : row.action === 'rollback' ? "bg-amber-500 text-white" : row.action === 'update' ? "bg-primary text-white" : "bg-muted text-muted-foreground"
-                          )}>{row.action === 'no-change' ? 'SYNCED' : row.action}</Badge>
+                          )}>{row.action === 'no-change' ? 'Synced' : row.action}</Badge>
                        </div>
                     </div>
                   );
