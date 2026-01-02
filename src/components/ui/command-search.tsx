@@ -1,6 +1,22 @@
 import { useEffect, useState } from "react";
 import type { ComponentType } from "react";
-import { Search, FolderPlus, Upload, Send, ArrowUpRight, FileText, Layers } from "lucide-react";
+import { 
+  Search, 
+  FolderPlus, 
+  Upload, 
+  Send, 
+  ArrowUpRight, 
+  FileText, 
+  Layers, 
+  Monitor, 
+  Image as ImageIcon, 
+  Film, 
+  Loader2,
+  ChevronRight
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { searchUnified } from "@/services/searchApi";
 import {
   CommandDialog,
   CommandEmpty,
@@ -11,6 +27,7 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
+import { Badge } from "@/components/ui/badge";
 
 interface CommandItemData {
   id: string;
@@ -19,118 +36,14 @@ interface CommandItemData {
   icon: ComponentType<{ className?: string }>;
   shortcut?: string;
   onSelect: () => void;
+  metadata?: string;
 }
-
-const defaultItems: CommandItemData[] = [
-  // Quick start items
-  {
-    id: "create-program",
-    title: "Create Program",
-    category: "Quick start",
-    icon: FolderPlus,
-    shortcut: "⌘P",
-    onSelect: () => window.location.href = "/dashboard/programs",
-  },
-  {
-    id: "upload-media",
-    title: "Upload Media",
-    category: "Quick start",
-    icon: Upload,
-    shortcut: "⌘U",
-    onSelect: () => window.location.href = "/dashboard/media",
-  },
-  {
-    id: "send-command",
-    title: "Send Command",
-    category: "Quick start",
-    icon: Send,
-    shortcut: "⌘⇧S",
-    onSelect: () => console.log("Send command"),
-  },
-  // Navigation items
-  {
-    id: "dashboard",
-    title: "Dashboard",
-    category: "Navigation",
-    icon: ArrowUpRight,
-    shortcut: "⌘D",
-    onSelect: () => window.location.href = "/dashboard/overview",
-  },
-  {
-    id: "devices",
-    title: "Devices",
-    category: "Navigation",
-    icon: ArrowUpRight,
-    onSelect: () => window.location.href = "/dashboard/devices",
-  },
-  {
-    id: "media",
-    title: "Media Library",
-    category: "Navigation",
-    icon: ArrowUpRight,
-    onSelect: () => window.location.href = "/dashboard/media",
-  },
-  {
-    id: "programs",
-    title: "Programs",
-    category: "Navigation",
-    icon: Layers,
-    onSelect: () => window.location.href = "/dashboard/programs",
-  },
-  {
-    id: "schedule",
-    title: "Schedule",
-    category: "Navigation",
-    icon: ArrowUpRight,
-    onSelect: () => window.location.href = "/dashboard/schedule",
-  },
-  {
-    id: "map",
-    title: "Map",
-    category: "Navigation",
-    icon: ArrowUpRight,
-    onSelect: () => window.location.href = "/dashboard/map",
-  },
-  {
-    id: "monitoring",
-    title: "Monitoring",
-    category: "Navigation",
-    icon: ArrowUpRight,
-    onSelect: () => window.location.href = "/dashboard/monitoring",
-  },
-  {
-    id: "analytics",
-    title: "Analytics",
-    category: "Navigation",
-    icon: ArrowUpRight,
-    onSelect: () => window.location.href = "/dashboard/analytics",
-  },
-  {
-    id: "messages",
-    title: "Messages",
-    category: "Navigation",
-    icon: FileText,
-    onSelect: () => window.location.href = "/dashboard/messages",
-  },
-  {
-    id: "logs",
-    title: "Logs",
-    category: "Navigation",
-    icon: FileText,
-    onSelect: () => window.location.href = "/dashboard/logs",
-  },
-  {
-    id: "settings",
-    title: "Settings",
-    category: "Navigation",
-    icon: ArrowUpRight,
-    onSelect: () => window.location.href = "/dashboard/settings",
-  },
-];
 
 export function CommandSearch() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -144,11 +57,92 @@ export function CommandSearch() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  const filtered = defaultItems.filter((item) =>
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Fetch unified search results
+  const { data: searchResults, isLoading } = useQuery({
+    queryKey: ["unified-search", debouncedSearch],
+    queryFn: () => searchUnified({ q: debouncedSearch, limit: 5 }),
+    enabled: debouncedSearch.length > 0,
+    staleTime: 1000 * 60, // 1 minute
+  });
+
+  const defaultItems: CommandItemData[] = [
+    // Quick start items
+    {
+      id: "create-program",
+      title: "Create Program",
+      category: "Quick start",
+      icon: FolderPlus,
+      shortcut: "⌘P",
+      onSelect: () => navigate("/dashboard/programs"),
+    },
+    {
+      id: "upload-media",
+      title: "Upload Media",
+      category: "Quick start",
+      icon: Upload,
+      shortcut: "⌘U",
+      onSelect: () => navigate("/dashboard/media"),
+    },
+    {
+      id: "send-command",
+      title: "Send Command",
+      category: "Quick start",
+      icon: Send,
+      shortcut: "⌘⇧S",
+      onSelect: () => console.log("Send command"),
+    },
+    // Navigation items
+    {
+      id: "dashboard",
+      title: "Dashboard",
+      category: "Navigation",
+      icon: ArrowUpRight,
+      shortcut: "⌘D",
+      onSelect: () => navigate("/dashboard/overview"),
+    },
+    {
+      id: "devices",
+      title: "Devices",
+      category: "Navigation",
+      icon: ArrowUpRight,
+      onSelect: () => navigate("/dashboard/devices"),
+    },
+    {
+      id: "media",
+      title: "Media Library",
+      category: "Navigation",
+      icon: ArrowUpRight,
+      onSelect: () => navigate("/dashboard/media"),
+    },
+    {
+      id: "programs",
+      title: "Programs",
+      category: "Navigation",
+      icon: Layers,
+      onSelect: () => navigate("/dashboard/programs"),
+    },
+    {
+      id: "schedule",
+      title: "Schedule",
+      category: "Navigation",
+      icon: ArrowUpRight,
+      onSelect: () => navigate("/dashboard/schedule"),
+    },
+  ];
+
+  const filteredDefaultItems = defaultItems.filter((item) =>
     item.title.toLowerCase().includes(search.toLowerCase())
   );
 
-  const groupedItems = filtered.reduce((acc, item) => {
+  const groupedDefaultItems = filteredDefaultItems.reduce((acc, item) => {
     const existing = acc.find((g) => g.category === item.category);
     if (existing) {
       existing.items.push(item);
@@ -158,7 +152,6 @@ export function CommandSearch() {
     return acc;
   }, [] as Array<{ category: string; items: CommandItemData[] }>)
   .sort((a, b) => {
-    // Sort "Quick start" first, then "Navigation"
     const order = { "Quick start": 0, "Navigation": 1 };
     return (order[a.category as keyof typeof order] ?? 2) - (order[b.category as keyof typeof order] ?? 2);
   });
@@ -191,10 +184,103 @@ export function CommandSearch() {
           onValueChange={setSearch}
         />
         <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          {groupedItems.map((group, index) => (
+          {isLoading && (
+            <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Searching...
+            </div>
+          )}
+          
+          <CommandEmpty>{!isLoading && "No results found."}</CommandEmpty>
+
+          {/* API Search Results */}
+          {searchResults?.success && searchResults.data && (
+            <>
+              {searchResults.data.devices && searchResults.data.devices.length > 0 && (
+                <CommandGroup heading="Devices">
+                  {searchResults.data.devices.map((device) => (
+                    <CommandItem
+                      key={`device-${device.id}`}
+                      value={`device-${device.id}-${device.name}`}
+                      onSelect={() => {
+                        navigate(`/dashboard/devices?id=${device.id}`);
+                        setOpen(false);
+                      }}
+                    >
+                      <Monitor className="me-2 h-4 w-4 text-blue-500" />
+                      <div className="flex flex-col">
+                        <span className="font-medium">{device.name}</span>
+                        {device.ip && (
+                          <span className="text-xs text-muted-foreground">{device.ip} • {device.model}</span>
+                        )}
+                      </div>
+                      <div className="ms-auto flex items-center gap-2">
+                        <Badge variant={device.status === 'online' ? 'default' : 'secondary'} className="h-5 text-[10px] px-1.5">
+                          {device.status}
+                        </Badge>
+                        <ChevronRight className="h-3 w-3 text-muted-foreground/50" />
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {searchResults.data.programs && searchResults.data.programs.length > 0 && (
+                <CommandGroup heading="Programs">
+                  {searchResults.data.programs.map((program) => (
+                    <CommandItem
+                      key={`program-${program.id}`}
+                      value={`program-${program.id}-${program.name}`}
+                      onSelect={() => {
+                        navigate(`/dashboard/programs?id=${program.id}`);
+                        setOpen(false);
+                      }}
+                    >
+                      <Layers className="me-2 h-4 w-4 text-purple-500" />
+                      <div className="flex flex-col">
+                        <span className="font-medium">{program.name}</span>
+                        <span className="text-xs text-muted-foreground">{program.resolution}</span>
+                      </div>
+                      <ChevronRight className="ms-auto h-3 w-3 text-muted-foreground/50" />
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {searchResults.data.media && searchResults.data.media.length > 0 && (
+                <CommandGroup heading="Media">
+                  {searchResults.data.media.map((item) => (
+                    <CommandItem
+                      key={`media-${item.id}`}
+                      value={`media-${item.id}-${item.title}`}
+                      onSelect={() => {
+                        navigate(`/dashboard/media?id=${item.id}`);
+                        setOpen(false);
+                      }}
+                    >
+                      {item.kind === 'video' ? (
+                        <Film className="me-2 h-4 w-4 text-orange-500" />
+                      ) : (
+                        <ImageIcon className="me-2 h-4 w-4 text-green-500" />
+                      )}
+                      <div className="flex flex-col">
+                        <span className="font-medium">{item.title}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {item.kind.toUpperCase()} • {(item.size / 1024 / 1024).toFixed(2)} MB
+                        </span>
+                      </div>
+                      <ChevronRight className="ms-auto h-3 w-3 text-muted-foreground/50" />
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+            </>
+          )}
+
+          {/* Default Items (Navigation & Quick Start) */}
+          {groupedDefaultItems.map((group, index) => (
             <div key={group.category}>
-              {index > 0 && <CommandSeparator />}
+              {(index > 0 || (searchResults?.data && Object.values(searchResults.data).some(arr => arr?.length > 0))) && <CommandSeparator />}
               <CommandGroup heading={group.category}>
                 {group.items.map((item) => {
                   const Icon = item.icon;
