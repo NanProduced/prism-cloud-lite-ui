@@ -147,6 +147,18 @@
     "userLabel": "You",
     "justNow": "Just now"
   },
+  "global": {
+    "badge": "Infrastructure",
+    "title": "Global Reach,",
+    "titleHighlight": "Local Speed",
+    "subtitle": "Control thousands of devices worldwide from a single cloud console. Our global CDN ensures high-fidelity content delivery with millisecond precision.",
+    "feature1": "Anywhere Control",
+    "feature1Desc": "Manage your entire fleet from Tokyo to New York via a unified web interface.",
+    "feature2": "Edge Distribution",
+    "feature2Desc": "Strategic CDN nodes minimize latency and guarantee smooth 4K playback.",
+    "feature3": "Real-time Sync",
+    "feature3Desc": "Proprietary protocols for near-instant command propagation across the globe."
+  },
   "stats": {
     "badge": "Performance",
     "title": "Powering the",

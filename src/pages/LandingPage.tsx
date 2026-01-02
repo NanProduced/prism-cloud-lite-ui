@@ -5,6 +5,7 @@ import { Navbar } from '@/components/landing/Navbar';
 import { Hero } from '@/components/landing/Hero';
 import { FeatureSection } from '@/components/landing/FeatureSection';
 import { AIFeatureSection } from '@/components/landing/AIFeatureSection';
+import { GlobalReach } from '@/components/landing/GlobalReach';
 import { StatsSection } from '@/components/landing/StatsSection';
 import { AppFeatures } from '@/components/landing/AppFeatures';
 import { Testimonials } from '@/components/landing/Testimonials';
@@ -47,6 +48,7 @@ export default function LandingPage() {
             <AppFeatures />
             <FeatureSection />
             <AIFeatureSection />
+            <GlobalReach />
             <StatsSection />
             <Testimonials />
             <Integrations />

@@ -147,6 +147,18 @@
     "userLabel": "你",
     "justNow": "刚刚"
   },
+  "global": {
+    "badge": "基础设施",
+    "title": "全球覆盖，",
+    "titleHighlight": "本地速度",
+    "subtitle": "通过单一云端控制台管理世界各地的数千台设备。我们的全球 CDN 确保内容分发具备毫秒级的精准度与高可靠性。",
+    "feature1": "跨地域控制",
+    "feature1Desc": "无论是东京还是纽约，通过统一界面即可实时操控全网设备。",
+    "feature2": "边缘分发",
+    "feature2Desc": "全球部署的 CDN 节点最大限度降低延迟，确保 4K 极清流畅播放。",
+    "feature3": "准实时同步",
+    "feature3Desc": "自研同步协议，让指令在全球范围内实现准实时到达与执行。"
+  },
   "stats": {
     "badge": "性能指标",
     "title": "驱动全球",
