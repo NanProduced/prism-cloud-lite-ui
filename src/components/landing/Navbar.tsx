@@ -37,10 +37,10 @@ export const Navbar: React.FC = () => {
   }, []);
 
   const navLinks = [
-    { name: t("nav.features"), href: "#features" },
-    { name: t("nav.solutions"), href: "#solutions" },
-    { name: t("nav.pricing"), href: "#pricing" },
-    { name: t("nav.docs"), href: "/help", isExternal: true },
+    { name: t("nav.features"), href: "/features" },
+    { name: t("nav.solutions"), href: "/benefits" },
+    { name: t("nav.pricing"), href: "/pricing" },
+    { name: t("nav.docs"), href: "/help" },
   ];
 
   const toggleLanguage = () => {
@@ -58,7 +58,7 @@ export const Navbar: React.FC = () => {
       <Container className="relative">
         <div className="flex h-16 items-center justify-between">
           {/* Logo + Lite Badge */}
-          <div className="flex items-center gap-2.5">
+          <Link to="/" className="flex items-center gap-2.5 group transition-opacity hover:opacity-80">
             <div className="h-6 w-6 flex items-center justify-center">
               <PrismIcon size={24} variant="gradient" />
             </div>
@@ -68,28 +68,18 @@ export const Navbar: React.FC = () => {
             <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
               Lite
             </span>
-          </div>
+          </Link>
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
-              link.isExternal ? (
-                <Link
-                  key={link.name}
-                  to={link.href}
-                  className="text-[13px] font-medium text-gray-400 transition-colors hover:text-white"
-                >
-                  {link.name}
-                </Link>
-              ) : (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  className="text-[13px] font-medium text-gray-400 transition-colors hover:text-white"
-                >
-                  {link.name}
-                </a>
-              )
+              <Link
+                key={link.name}
+                to={link.href}
+                className="text-[13px] font-medium text-gray-400 transition-colors hover:text-white"
+              >
+                {link.name}
+              </Link>
             ))}
           </nav>
 
@@ -180,14 +170,14 @@ export const Navbar: React.FC = () => {
           >
             <Container className="py-4 flex flex-col gap-4">
               {navLinks.map((link) => (
-                <a
+                <Link
                   key={link.name}
-                  href={link.href}
+                  to={link.href}
                   className="text-sm font-medium text-gray-300 hover:text-white block py-2"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {link.name}
-                </a>
+                </Link>
               ))}
               <div className="pt-4 border-t border-white/5 flex flex-col gap-3">
                 {isAuthenticated ? (

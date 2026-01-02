@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Search } from "lucide-react";
+import { Search, Book, Zap, LifeBuoy, Shield, Code, MessageSquare, ChevronRight } from "lucide-react";
 
 import { Navbar } from "@/components/landing/Navbar";
 import { Footer } from "@/components/landing/Footer";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 import {
   helpDocByFilePath,
@@ -180,6 +181,72 @@ function matchesQuery(doc: HelpDoc, query: string) {
   return haystack.includes(q);
 }
 
+const HelpHome = ({ onSearch }: { onSearch: (q: string) => void }) => {
+  const categories = [
+    { title: "快速开始", icon: Zap, desc: "从零开始设置您的第一个显示屏。", color: "text-amber-400", bg: "bg-amber-500/10", link: "/help/getting-started" },
+    { title: "功能指南", icon: Book, desc: "深入了解每个模块的详细用法。", color: "text-blue-400", bg: "bg-blue-500/10", link: "/help/guides" },
+    { title: "常见问题", icon: LifeBuoy, desc: "查找最常见问题的即时解答。", color: "text-emerald-400", bg: "bg-emerald-500/10", link: "/help/faq" },
+    { title: "故障排除", icon: Shield, desc: "解决设备连接和播放中的问题。", color: "text-rose-400", bg: "bg-rose-500/10", link: "/help/errors" },
+    { title: "API 文档", icon: Code, desc: "为开发者提供的接口参考手册。", color: "text-purple-400", bg: "bg-purple-500/10", link: "/api" },
+    { title: "社区支持", icon: MessageSquare, desc: "加入我们的 Discord 与其他用户交流。", color: "text-indigo-400", bg: "bg-indigo-500/10", link: "https://discord.gg/prismcloud" }
+  ];
+
+  return (
+    <div className="space-y-16">
+      {/* Hero */}
+      <div className="text-center py-12">
+        <h1 className="text-4xl md:text-5xl font-bold mb-6">您需要什么帮助？</h1>
+        <div className="max-w-2xl mx-auto relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={20} />
+          <input 
+            type="text" 
+            placeholder="搜索文档、指南或常见问题..." 
+            onChange={(e) => onSearch(e.target.value)}
+            className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 text-lg focus:outline-none focus:border-indigo-500 transition-all shadow-2xl"
+          />
+        </div>
+      </div>
+
+      {/* Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {categories.map((cat, idx) => (
+          <motion.div
+            key={idx}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.05 }}
+          >
+            <Link 
+              to={cat.link}
+              className="block p-8 rounded-3xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] hover:border-white/10 transition-all group h-full"
+            >
+              <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center mb-6", cat.bg, cat.color)}>
+                <cat.icon size={24} />
+              </div>
+              <h3 className="text-xl font-bold mb-3 flex items-center justify-between">
+                {cat.title}
+                <ChevronRight size={18} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+              </h3>
+              <p className="text-slate-500 text-sm leading-relaxed">{cat.desc}</p>
+            </Link>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Bottom CTA */}
+      <div className="p-10 rounded-[32px] bg-gradient-to-br from-indigo-500/10 to-transparent border border-white/5 flex flex-col md:flex-row items-center justify-between gap-8">
+        <div>
+          <h4 className="text-xl font-bold mb-2">没找到您要找的内容？</h4>
+          <p className="text-slate-400 text-sm">我们的支持团队随时为您提供帮助。通常在 24 小时内回复。</p>
+        </div>
+        <button className="px-8 py-3 bg-white text-black rounded-full font-bold hover:bg-slate-200 transition-colors">
+          联系支持
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export default function HelpCenterPage() {
   const location = useLocation();
   const params = useParams();
@@ -192,6 +259,7 @@ export default function HelpCenterPage() {
 
   const requestedDoc = helpDocBySlug.get(slug);
   const doc = requestedDoc ?? helpDocBySlug.get("/help/README");
+  const isHome = slug === "/help/README" || !requestedDoc;
   const notFound = !requestedDoc && slug !== "/help/README";
 
   const [query, setQuery] = useState("");
@@ -362,103 +430,107 @@ export default function HelpCenterPage() {
             </aside>
 
             <main className="min-w-0">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                {!doc || notFound ? (
-                  <div>
-                    <h1 className="text-2xl font-bold text-white">
-                      文档未找到
-                    </h1>
-                    <p className="mt-2 text-sm text-white/70">
-                      路径：<span className="font-mono">{slug}</span>
-                    </p>
-                    <p className="mt-6 text-sm text-white/70">
-                      你可以在左侧搜索或从帮助中心首页开始浏览。
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {doc.meta.module && (
-                          <Badge variant="secondary">{doc.meta.module}</Badge>
-                        )}
-                        {doc.meta.status && doc.meta.status !== "stable" && (
-                          <Badge variant="secondary">{doc.meta.status}</Badge>
-                        )}
-                        {doc.meta.lastUpdated && (
-                          <span className="text-xs text-white/60">
-                            更新：{doc.meta.lastUpdated}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-xs text-white/40 font-mono">
-                        {location.pathname}
-                      </span>
+              {isHome && !query ? (
+                <HelpHome onSearch={setQuery} />
+              ) : (
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-6 md:p-10">
+                  {!doc || notFound ? (
+                    <div>
+                      <h1 className="text-2xl font-bold text-white">
+                        文档未找到
+                      </h1>
+                      <p className="mt-2 text-sm text-white/70">
+                        路径：<span className="font-mono">{slug}</span>
+                      </p>
+                      <p className="mt-6 text-sm text-white/70">
+                        你可以在左侧搜索或从帮助中心首页开始浏览。
+                      </p>
                     </div>
+                  ) : (
+                    <>
+                      <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {doc.meta.module && (
+                            <Badge variant="secondary" className="bg-white/10 border-white/5">{doc.meta.module}</Badge>
+                          )}
+                          {doc.meta.status && doc.meta.status !== "stable" && (
+                            <Badge variant="secondary" className="bg-indigo-500/20 text-indigo-300 border-indigo-500/20">{doc.meta.status}</Badge>
+                          )}
+                          {doc.meta.lastUpdated && (
+                            <span className="text-xs text-white/60">
+                              最后更新：{doc.meta.lastUpdated}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs text-white/20 font-mono">
+                          {location.pathname}
+                        </span>
+                      </div>
 
-                    <div className="help-markdown">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          a: ({ href, children, ...props }) => {
-                          const rawHref = typeof href === "string" ? href : "";
-                          const [pathPart, hashPart] = rawHref.split("#", 2);
+                      <div className="help-markdown">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            a: ({ href, children, ...props }) => {
+                            const rawHref = typeof href === "string" ? href : "";
+                            const [pathPart, hashPart] = rawHref.split("#", 2);
 
-                          if (!rawHref) return <a {...props}>{children}</a>;
-                          if (rawHref.startsWith("#")) {
+                            if (!rawHref) return <a {...props}>{children}</a>;
+                            if (rawHref.startsWith("#")) {
+                              return (
+                                <a href={rawHref} {...props}>
+                                  {children}
+                                </a>
+                              );
+                            }
+                            if (/^(https?:)?\/\//.test(rawHref)) {
+                              return (
+                                <a
+                                  href={rawHref}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  {...props}
+                                >
+                                  {children}
+                                </a>
+                              );
+                            }
+
+                            if (pathPart.endsWith(".md")) {
+                              const resolved = resolveRelativeDocFilePath(
+                                doc.filePath,
+                                pathPart,
+                              );
+                              const targetDoc = resolved
+                                ? helpDocByFilePath.get(resolved)
+                                : null;
+                              if (targetDoc?.meta.slug) {
+                                const to = hashPart
+                                  ? `${targetDoc.meta.slug}#${hashPart}`
+                                  : targetDoc.meta.slug;
+                                return (
+                                  <Link to={to} {...props}>
+                                    {children}
+                                  </Link>
+                                );
+                              }
+                            }
+
                             return (
                               <a href={rawHref} {...props}>
                                 {children}
                               </a>
                             );
-                          }
-                          if (/^(https?:)?\/\//.test(rawHref)) {
-                            return (
-                              <a
-                                href={rawHref}
-                                target="_blank"
-                                rel="noreferrer"
-                                {...props}
-                              >
-                                {children}
-                              </a>
-                            );
-                          }
-
-                          if (pathPart.endsWith(".md")) {
-                            const resolved = resolveRelativeDocFilePath(
-                              doc.filePath,
-                              pathPart,
-                            );
-                            const targetDoc = resolved
-                              ? helpDocByFilePath.get(resolved)
-                              : null;
-                            if (targetDoc?.meta.slug) {
-                              const to = hashPart
-                                ? `${targetDoc.meta.slug}#${hashPart}`
-                                : targetDoc.meta.slug;
-                              return (
-                                <Link to={to} {...props}>
-                                  {children}
-                                </Link>
-                              );
-                            }
-                          }
-
-                          return (
-                            <a href={rawHref} {...props}>
-                              {children}
-                            </a>
-                          );
-                          },
-                        }}
-                      >
-                        {doc.body}
-                      </ReactMarkdown>
-                    </div>
-                  </>
-                )}
-              </div>
+                            },
+                          }}
+                        >
+                          {doc.body}
+                        </ReactMarkdown>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </main>
           </div>
         </div>

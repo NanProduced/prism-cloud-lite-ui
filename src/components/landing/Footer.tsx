@@ -34,18 +34,18 @@ export const Footer = () => {
           <div>
             <h5 className="text-white font-medium mb-6">{t("footer.company")}</h5>
             <ul className="space-y-3 text-[#8a8a8a] text-sm">
-              <li><a href="#" className="hover:text-white transition-colors">Roadmap</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">{t("footer.aboutUs")}</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Benefits</a></li>
+              <li><Link to="/roadmap" className="hover:text-white transition-colors">Roadmap</Link></li>
+              <li><Link to="/about" className="hover:text-white transition-colors">{t("footer.aboutUs")}</Link></li>
+              <li><Link to="/benefits" className="hover:text-white transition-colors">Benefits</Link></li>
             </ul>
           </div>
 
           <div>
             <h5 className="text-white font-medium mb-6">{t("footer.product")}</h5>
             <ul className="space-y-3 text-[#8a8a8a] text-sm">
-              <li><a href="#" className="hover:text-white transition-colors">{t("footer.features")}</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">API</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">{t("footer.pricing")}</a></li>
+              <li><Link to="/features" className="hover:text-white transition-colors">{t("footer.features")}</Link></li>
+              <li><Link to="/api" className="hover:text-white transition-colors">API</Link></li>
+              <li><Link to="/pricing" className="hover:text-white transition-colors">{t("footer.pricing")}</Link></li>
               <li><Link to="/help" className="hover:text-white transition-colors">{t("footer.documentation")}</Link></li>
             </ul>
           </div>
@@ -54,8 +54,8 @@ export const Footer = () => {
             <h5 className="text-white font-medium mb-6">{t("footer.resources")}</h5>
             <ul className="space-y-3 text-[#8a8a8a] text-sm">
               <li><Link to="/help" className="hover:text-white transition-colors">{t("footer.helpCenter")}</Link></li>
-              <li><a href="#" className="hover:text-white transition-colors">{t("footer.community")}</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">{t("footer.blog")}</a></li>
+              <li><a href="https://discord.gg/prismcloud" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">{t("footer.community")}</a></li>
+              <li><Link to="/blog" className="hover:text-white transition-colors">{t("footer.blog")}</Link></li>
             </ul>
           </div>
         </div>

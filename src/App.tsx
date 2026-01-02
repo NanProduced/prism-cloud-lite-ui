@@ -21,6 +21,13 @@ import MonitoringPage from "@/pages/dashboard/MonitoringPage";
 import AnalyticsPage from "@/pages/dashboard/AnalyticsPage";
 import LogsPage from "@/pages/dashboard/logs/LogsPage";
 import HelpCenterPage from "@/pages/help/HelpCenterPage";
+import RoadmapPage from "@/pages/content/RoadmapPage";
+import AboutUsPage from "@/pages/content/AboutUsPage";
+import BenefitsPage from "@/pages/content/BenefitsPage";
+import FeaturesPage from "@/pages/content/FeaturesPage";
+import APIPage from "@/pages/content/APIPage";
+import PricingPage from "@/pages/content/PricingPage";
+import BlogPage from "@/pages/content/BlogPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,6 +49,13 @@ const router = createBrowserRouter([
       { path: "register", element: <AuthPage page="register" /> },
       { path: "forgot-password", element: <AuthPage page="forgot-password" /> },
       { path: "help/*", element: <HelpCenterPage /> },
+      { path: "roadmap", element: <RoadmapPage /> },
+      { path: "about", element: <AboutUsPage /> },
+      { path: "benefits", element: <BenefitsPage /> },
+      { path: "features", element: <FeaturesPage /> },
+      { path: "api", element: <APIPage /> },
+      { path: "pricing", element: <PricingPage /> },
+      { path: "blog", element: <BlogPage /> },
       { path: "logo", element: <LogoShowcase /> },
     ],
   },
