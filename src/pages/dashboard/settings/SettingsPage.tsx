@@ -36,9 +36,12 @@ import { getErrorMessage } from '@/services/authApi';
 import { useAuthStore } from '@/store/authStore';
 import { UAParser } from 'ua-parser-js';
 
+import SettingsAIAssistant from '@/registry/new-york/blocks/settings/settings-ai-assistant';
+
 const TAB_ITEMS = [
   { value: 'profile', label: 'Profile' },
   { value: 'preferences', label: 'Preferences' },
+  { value: 'ai-assistant', label: 'AI Assistant' },
   { value: 'notifications', label: 'Notifications' },
   { value: 'security', label: 'Security' },
   { value: 'api-keys', label: 'API Keys' },
@@ -343,6 +346,10 @@ export default function SettingsPage() {
               }}
             />
           </div>
+        </TabsContent>
+
+        <TabsContent className="mt-0" forceMount value="ai-assistant">
+          <SettingsAIAssistant />
         </TabsContent>
 
         <TabsContent className="mt-0" forceMount value="notifications">

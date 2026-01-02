@@ -1,16 +1,24 @@
-import React, { useState } from 'react';
-import { Bot, Send, User, RotateCcw, Maximize2, Minimize2, Sparkles, Command } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Bot, User, RotateCcw, Maximize2, Minimize2, Sparkles, ChevronDown, Cpu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator
+} from '@/components/ui/dropdown-menu';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { useAIAssistant } from '../hooks/use-ai-assistant';
+import { AIToolInvocation, AISourceList, type AISource, AIPromptInput } from './ai-assistant-ui';
 
 interface AIChatWindowProps {
   isOpen: boolean;
@@ -19,7 +27,30 @@ interface AIChatWindowProps {
 export function AIChatWindow({ isOpen }: AIChatWindowProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   
-  const { messages, input, handleInputChange, handleSubmit, isLoading, reload } = useAIAssistant() as any;
+  const { 
+    messages, 
+    input, 
+    handleInputChange, 
+    handleSubmit, 
+    isLoading, 
+    reload, 
+    data,
+    configs,
+    currentProvider,
+    switchProvider
+  } = useAIAssistant();
+
+  // Extract sources from custom data chunks
+  const sources = useMemo(() => {
+    if (!data || !Array.isArray(data)) return [] as AISource[];
+    return data
+      .filter((chunk: any) => chunk && chunk.type === 'source-url')
+      .map((chunk: any) => ({
+        sourceId: chunk.sourceId,
+        url: chunk.url,
+        title: chunk.title
+      })) as AISource[];
+  }, [data]);
 
   if (!isOpen) return null;
 
@@ -40,15 +71,46 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
               <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
                 <Bot className="h-5 w-5 text-primary-foreground" />
               </div>
-              <div>
+              <div className="flex flex-col">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                   Prism AI Assistant
                   <Badge variant="secondary" className="text-[10px] px-1 h-4">Beta</Badge>
                 </CardTitle>
-                <div className="flex items-center gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] text-muted-foreground">Always active</span>
-                </div>
+                
+                {/* Model Selector Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors outline-none group">
+                      <Cpu className="h-3 w-3" />
+                      <span className="capitalize">{currentProvider?.provider === 'local-vllm' ? 'Local Engine' : currentProvider?.provider || 'Select Model'}</span>
+                      <ChevronDown className="h-2 w-2 opacity-50 group-hover:opacity-100" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Select AI Engine</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {configs.map((config) => (
+                      <DropdownMenuItem 
+                        key={config.provider}
+                        onClick={() => switchProvider(config.provider)}
+                        className="flex items-center justify-between py-2 cursor-pointer"
+                      >
+                        <div className="flex flex-col">
+                          <span className="text-xs font-medium capitalize">
+                            {config.provider === 'local-vllm' ? 'Prism Local' : config.provider}
+                          </span>
+                          <span className="text-[9px] text-muted-foreground">{config.model}</span>
+                        </div>
+                        {config.isDefault && <CheckIcon className="h-3.5 w-3.5 text-primary" />}
+                      </DropdownMenuItem>
+                    ))}
+                    {configs.length === 0 && (
+                      <DropdownMenuItem className="text-[10px] text-muted-foreground italic py-4 justify-center">
+                        No BYOK configured
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -73,7 +135,7 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
           
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-6">
-              {messages.map((m) => (
+              {messages.map((m: any, index: number) => (
                 <div
                   key={m.id}
                   className={cn(
@@ -97,15 +159,36 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                       ? "bg-primary text-primary-foreground rounded-tr-none" 
                       : "bg-muted/50 border text-foreground rounded-tl-none"
                   )}>
-                    <ReactMarkdown 
-                      remarkPlugins={[remarkGfm]}
-                    >
-                      {String((m as any).content ?? '')}
-                    </ReactMarkdown>
+                    {m.content && (
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <ReactMarkdown 
+                          remarkPlugins={[remarkGfm]}
+                        >
+                          {m.content}
+                        </ReactMarkdown>
+                      </div>
+                    )}
+
+                    {/* Render tool calls */}
+                    {m.toolInvocations && m.toolInvocations.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {m.toolInvocations.map((toolInvocation: any) => (
+                          <AIToolInvocation 
+                            key={toolInvocation.toolCallId} 
+                            toolInvocation={toolInvocation} 
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Render sources for the last assistant message */}
+                    {m.role === 'assistant' && index === messages.length - 1 && sources.length > 0 && (
+                      <AISourceList sources={sources} />
+                    )}
                   </div>
                 </div>
               ))}
-              {isLoading && (
+              {isLoading && !messages.some((m: any) => m.role === 'assistant' && !m.content && m.toolInvocations) && (
                 <div className="flex items-start gap-3">
                   <Avatar className="h-8 w-8 bg-primary animate-pulse">
                     <Bot className="h-4 w-4 text-primary-foreground" />
@@ -123,32 +206,12 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
           </ScrollArea>
 
           <CardFooter className="p-4 border-t bg-muted/10">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                // 由于 API 没通，我们可以在这里手动添加消息模拟 UI
-                handleSubmit(e);
-              }}
-              className="flex w-full items-center gap-2"
-            >
-              <div className="relative flex-1 group">
-                <Command className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                <Input
-                  value={input}
-                  onChange={handleInputChange}
-                  placeholder="Ask Prism AI..."
-                  className="pl-9 h-11 bg-background border-muted-foreground/20 focus-visible:ring-primary rounded-xl"
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                  <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-                    <span className="text-xs">↵</span>
-                  </kbd>
-                </div>
-              </div>
-              <Button type="submit" size="icon" className="h-11 w-11 rounded-xl shadow-lg" disabled={isLoading || !input}>
-                <Send className="h-5 w-5" />
-              </Button>
-            </form>
+            <AIPromptInput 
+              value={input}
+              onChange={handleInputChange}
+              onSubmit={handleSubmit}
+              isLoading={isLoading}
+            />
           </CardFooter>
           <div className="px-4 pb-2 text-center">
             <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
@@ -159,5 +222,24 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
         </Card>
       </motion.div>
     </AnimatePresence>
+  );
+}
+
+function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
   );
 }
