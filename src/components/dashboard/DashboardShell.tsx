@@ -1,4 +1,5 @@
 import React, { type ComponentType, type PropsWithChildren, useState, useEffect, useMemo, Suspense, lazy } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Activity,
@@ -10,6 +11,7 @@ import {
   Crown,
   FileText,
   HelpCircle,
+  Home,
   Image,
   Layers,
   LayoutDashboard,
@@ -147,6 +149,7 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 export function DashboardShell({ children }: PropsWithChildren) {
+  const { t } = useTranslation();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [isChatOpen, setIsChatOpen] = useState(false);
   const { isBillingOpen, setBillingOpen } = useSettingsStore();
@@ -381,6 +384,10 @@ export function DashboardShell({ children }: PropsWithChildren) {
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate("/")}>
+                    <Home className="mr-2 h-4 w-4" />
+                    <span>{t("nav.home", "Homepage")}</span>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => window.open("https://docs.prismcloud.dev", "_blank")}>
                     <HelpCircle className="mr-2 h-4 w-4" />
                     <span>Documentation</span>
