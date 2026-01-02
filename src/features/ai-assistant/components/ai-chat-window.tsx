@@ -41,6 +41,7 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
     handleInputChange, 
     handleSubmit, 
     isLoading, 
+    streamingAssistantId,
     reload, 
     data,
     configs,
@@ -176,13 +177,26 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                   )}>
                     {m.content && (
                       <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                        <ReactMarkdown 
-                          remarkPlugins={[remarkGfm]}
-                        >
-                          {m.content}
-                        </ReactMarkdown>
+                        {isLoading && streamingAssistantId === m.id ? (
+                          <div className="whitespace-pre-wrap">{m.content}</div>
+                        ) : (
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {m.content}
+                          </ReactMarkdown>
+                        )}
                       </div>
                     )}
+
+                    {m.role === 'assistant' && m.reasoning?.trim() ? (
+                      <details className="mt-2">
+                        <summary className="cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
+                          推理过程
+                        </summary>
+                        <div className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground/80">
+                          {m.reasoning}
+                        </div>
+                      </details>
+                    ) : null}
 
                     {/* Render tool calls */}
                     {m.toolInvocations && m.toolInvocations.length > 0 && (

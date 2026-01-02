@@ -22,22 +22,22 @@ export interface UpsertAIModelConfigRequest {
  * List all AI model configurations for the current user.
  */
 export const getAIModelConfigs = () =>
-  handleRequest(apiClient.get<BffResponse<AIModelConfig[]>>('/api/v1/assistant/model-configs'));
+  handleRequest(apiClient.get<BffResponse<AIModelConfig[]>>('/assistant/model-configs'));
 
 /**
  * Create or update an AI model configuration (BYOK).
  */
 export const upsertAIModelConfig = (data: UpsertAIModelConfigRequest) =>
-  handleRequest(apiClient.post<BffResponse<AIModelConfig>>('/api/v1/assistant/model-configs', data));
+  handleRequest(apiClient.post<BffResponse<AIModelConfig>>('/assistant/model-configs', data));
 
 /**
  * Set a specific provider as the default for AI Assistant.
  */
 export const setDefaultAIProvider = (provider: string) =>
-  handleRequest(apiClient.post<BffResponse<void>>(`/api/v1/assistant/model-configs/${provider}/default`));
+  handleRequest(apiClient.post<BffResponse<void>>(`/assistant/model-configs/${provider}/default`));
 
 /**
  * Delete an AI model configuration (and its API key).
  */
 export const deleteAIModelConfig = (provider: string) =>
-  handleRequest(apiClient.delete<BffResponse<void>>(`/api/v1/assistant/model-configs/${provider}`));
+  handleRequest(apiClient.delete<BffResponse<void>>(`/assistant/model-configs/${provider}`));
