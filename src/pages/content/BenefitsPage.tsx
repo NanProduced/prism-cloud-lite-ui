@@ -1,173 +1,200 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Navbar } from "@/components/landing/Navbar";
 import { Footer } from "@/components/landing/Footer";
 import { Container } from "@/components/landing/Container";
-import { Zap, Shield, Cpu, Globe2, BarChart3, Cloud } from "lucide-react";
+import { 
+  ShoppingBag, 
+  Building2, 
+  Plane, 
+  GraduationCap, 
+  ArrowRight,
+  AlertCircle,
+  CheckCircle2,
+  TrendingUp
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const benefits = [
-  {
-    title: "Lighting Fast Performance",
-    description: "Built on a modern stack ensuring your content loads and plays without a stutter, even on low-end hardware.",
-    icon: Zap,
-    className: "md:col-span-2",
-    iconColor: "text-amber-400",
-    bgColor: "bg-amber-500/10",
-    borderColor: "border-amber-500/20"
-  },
-  {
-    title: "Secure by Design",
-    description: "Enterprise-grade encryption for your media and communications.",
-    icon: Shield,
-    className: "md:col-span-1",
-    iconColor: "text-emerald-400",
-    bgColor: "bg-emerald-500/10",
-    borderColor: "border-emerald-500/20"
-  },
-  {
-    title: "AI Integration",
-    description: "Leverage the power of Gemini to automate your content strategy and creation.",
-    icon: Cpu,
-    className: "md:col-span-1",
-    iconColor: "text-purple-400",
-    bgColor: "bg-purple-500/10",
-    borderColor: "border-purple-500/20"
-  },
-  {
-    title: "Global Distribution",
-    description: "Scale from one screen to thousands across the globe with our robust CDN infrastructure.",
-    icon: Globe2,
-    className: "md:col-span-2",
-    iconColor: "text-blue-400",
-    bgColor: "bg-blue-500/10",
-    borderColor: "border-blue-500/20"
-  },
-  {
-    title: "Real-time Analytics",
-    description: "Get instant insights into your display network's performance and audience engagement.",
-    icon: BarChart3,
-    className: "md:col-span-1",
-    iconColor: "text-rose-400",
-    bgColor: "bg-rose-500/10",
-    borderColor: "border-rose-500/20"
-  },
-  {
-    title: "Cloud First",
-    description: "Manage everything from anywhere. No complex on-premise servers required.",
-    icon: Cloud,
-    className: "md:col-span-2",
-    iconColor: "text-cyan-400",
-    bgColor: "bg-cyan-500/10",
-    borderColor: "border-cyan-500/20"
-  }
-];
-
 export default function BenefitsPage() {
+  const { t } = useTranslation();
+
+  const scenarios = [
+    {
+      id: "retail",
+      key: "retail",
+      icon: ShoppingBag,
+      color: "from-pink-500 to-rose-500",
+      image: "https://images.unsplash.com/photo-1534452203293-494d7ddbf7e0?q=80&w=1000&auto=format&fit=crop"
+    },
+    {
+      id: "corporate",
+      key: "corporate",
+      icon: Building2,
+      color: "from-blue-500 to-indigo-600",
+      image: "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1000&auto=format&fit=crop"
+    },
+    {
+      id: "transport",
+      key: "transport",
+      icon: Plane,
+      color: "from-cyan-400 to-blue-500",
+      image: "https://images.unsplash.com/photo-1495313196544-7d1adf4e628f?auto=format&fit=crop&q=80&w=2000"
+    },
+    {
+      id: "education",
+      key: "education",
+      icon: GraduationCap,
+      color: "from-emerald-400 to-teal-500",
+      image: "https://images.unsplash.com/photo-1525921429624-479b6a29d840?auto=format&fit=crop&q=80&w=2000"
+    }
+  ];
+
   return (
-    <div className="min-h-screen bg-black text-slate-50 overflow-x-hidden">
+    <div className="min-h-screen bg-black text-slate-50 overflow-x-hidden selection:bg-indigo-500/30 selection:text-indigo-200">
       <Navbar />
 
       <main className="pt-32 pb-20">
         <Container>
-          <div className="max-w-3xl mx-auto text-center mb-24">
-            <motion.h1
+          {/* Header */}
+          <div className="max-w-4xl mx-auto text-center mb-24">
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-4xl md:text-6xl font-bold mb-6 tracking-tight"
             >
-              Why choose <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">Prism Cloud</span>?
-            </motion.h1>
-            <p className="text-lg text-slate-400">
-              We focus on delivering measurable value to your business through cutting-edge display technology and intuitive software.
-            </p>
+              <h1 className="text-4xl md:text-7xl font-bold mb-8 tracking-tight">
+                {t('solutionsPage.title')} <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400">
+                  {t('solutionsPage.titleHighlight')}
+                </span>
+              </h1>
+              <p className="text-xl text-slate-400 leading-relaxed max-w-2xl mx-auto">
+                {t('solutionsPage.subtitle')}
+              </p>
+            </motion.div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {benefits.map((benefit, idx) => (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.1 }}
+          {/* Scenarios List */}
+          <div className="space-y-40">
+            {scenarios.map((scenario, idx) => (
+              <div 
+                key={scenario.id}
                 className={cn(
-                  "group relative p-8 rounded-3xl border bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-300",
-                  benefit.borderColor,
-                  benefit.className
+                  "flex flex-col gap-12 lg:gap-20 items-center",
+                  idx % 2 === 0 ? "lg:flex-row" : "lg:flex-row-reverse"
                 )}
               >
-                <div className={cn(
-                  "w-12 h-12 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3",
-                  benefit.bgColor,
-                  benefit.iconColor
-                )}>
-                  <benefit.icon size={24} />
-                </div>
-                <h3 className="text-xl font-bold mb-3 text-white">{benefit.title}</h3>
-                <p className="text-slate-400 leading-relaxed">{benefit.description}</p>
-                
-                {/* Decorative background glow */}
-                <div className={cn(
-                  "absolute -bottom-10 -right-10 w-32 h-32 rounded-full blur-[60px] opacity-0 group-hover:opacity-20 transition-opacity duration-500",
-                  benefit.bgColor
-                )} />
-              </motion.div>
+                {/* Content Side */}
+                <motion.div 
+                  initial={{ opacity: 0, x: idx % 2 === 0 ? -40 : 40 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, margin: "-100px" }}
+                  className="flex-1 space-y-8"
+                >
+                  <div className={cn(
+                    "w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br text-white shadow-xl",
+                    scenario.color
+                  )}>
+                    <scenario.icon size={28} />
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
+                      {t(`solutionsPage.${scenario.key}.title`)}
+                    </h2>
+                    <p className="text-xl text-slate-400 leading-relaxed">
+                      {t(`solutionsPage.${scenario.key}.description`)}
+                    </p>
+                  </div>
+
+                  {/* Pain Points */}
+                  <div className="p-6 rounded-3xl bg-rose-500/5 border border-rose-500/10 space-y-4">
+                    <h4 className="text-xs font-bold text-rose-400 uppercase tracking-widest flex items-center gap-2">
+                      <AlertCircle size={14} />
+                      Common Pain Points
+                    </h4>
+                    <ul className="space-y-3">
+                      {(t(`solutionsPage.${scenario.key}.painPoints`, { returnObjects: true }) as string[]).map((point, i) => (
+                        <li key={i} className="text-sm text-slate-400 flex items-center gap-2">
+                          <div className="w-1 h-1 rounded-full bg-rose-500" />
+                          {point}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Solution Highlights */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+                      <CheckCircle2 size={14} />
+                      Platform Advantages
+                    </h4>
+                    <ul className="grid grid-cols-1 gap-4">
+                      {(t(`solutionsPage.${scenario.key}.solutions`, { returnObjects: true }) as string[]).map((sol, i) => (
+                        <li key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-white/10 transition-colors group">
+                          <ArrowRight size={18} className="text-indigo-500 mt-0.5 group-hover:translate-x-1 transition-transform" />
+                          <span className="text-slate-300">{sol}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </motion.div>
+
+                {/* Image Side */}
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true, margin: "-100px" }}
+                  className="flex-1 w-full"
+                >
+                  <div className="relative">
+                    <div className={cn(
+                      "absolute -inset-4 rounded-[48px] opacity-20 blur-3xl bg-gradient-to-br",
+                      scenario.color
+                    )} />
+                    <div className="relative aspect-[4/3] rounded-[40px] overflow-hidden border border-white/10 bg-white/5 shadow-2xl">
+                      <img 
+                        src={scenario.image} 
+                        alt={t(`solutionsPage.${scenario.key}.title`)}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      
+                      {/* Floating Impact Card */}
+                      <div className="absolute bottom-8 left-8 right-8 p-6 rounded-3xl bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white">
+                            <TrendingUp size={20} />
+                          </div>
+                          <div>
+                            <div className="text-xs text-white/60 font-bold uppercase tracking-widest">Est. Efficiency</div>
+                            <div className="text-xl font-bold text-white">+40% boost</div>
+                          </div>
+                        </div>
+                        <div className="h-10 w-10 rounded-full border border-white/20 flex items-center justify-center">
+                          <ArrowRight size={16} className="text-white" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
             ))}
           </div>
 
-          {/* Results Section */}
-          <div className="mt-32 p-12 rounded-[40px] bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent border border-white/5">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-              <div>
-                <h2 className="text-3xl font-bold mb-6">Real Results for Real Businesses</h2>
-                <div className="space-y-8">
-                  <div className="flex gap-6">
-                    <div className="text-4xl font-bold text-white">50%</div>
-                    <div>
-                      <div className="font-bold mb-1">Efficiency Boost</div>
-                      <p className="text-sm text-slate-400">Reduce time spent on content updates by half compared to traditional systems.</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-6">
-                    <div className="text-4xl font-bold text-white">30%</div>
-                    <div>
-                      <div className="font-bold mb-1">Higher Engagement</div>
-                      <p className="text-sm text-slate-400">Dynamic, AI-optimized content leads to better audience retention.</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-6">
-                    <div className="text-4xl font-bold text-white">99.9%</div>
-                    <div>
-                      <div className="font-bold mb-1">Uptime Guaranteed</div>
-                      <p className="text-sm text-slate-400">Reliable infrastructure that keeps your screens alive 24/7/365.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="relative">
-                <div className="aspect-square rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center p-8">
-                  {/* Abstract data visualization placeholder */}
-                  <div className="w-full space-y-4">
-                    {[70, 40, 90, 60, 80].map((w, i) => (
-                      <div key={i} className="h-4 bg-white/5 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          whileInView={{ width: `${w}%` }}
-                          viewport={{ once: true }}
-                          transition={{ duration: 1.5, delay: i * 0.1 }}
-                          className="h-full bg-gradient-to-r from-indigo-500 to-purple-500"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {/* Floating badge */}
-                <div className="absolute -top-6 -right-6 p-6 rounded-2xl bg-black border border-indigo-500/30 shadow-2xl shadow-indigo-500/20">
-                  <BarChart3 className="text-indigo-400 mb-2" />
-                  <div className="text-xs font-bold text-white">Live Data</div>
-                </div>
-              </div>
+          {/* Bottom CTA */}
+          <div className="mt-60 p-12 md:p-20 rounded-[40px] bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-center space-y-8 relative overflow-hidden">
+            <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/3 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
+            <h2 className="text-4xl md:text-6xl font-bold tracking-tight relative z-10">
+              Ready to transform your sector?
+            </h2>
+            <p className="text-xl text-indigo-100 max-w-2xl mx-auto relative z-10">
+              Join leading organizations already using Prism Cloud Lite to redefine their visual presence.
+            </p>
+            <div className="pt-4 relative z-10">
+              <button className="px-8 py-4 rounded-2xl bg-white text-indigo-600 font-bold hover:bg-slate-100 transition-all shadow-xl text-lg">
+                Get Started Today
+              </button>
             </div>
           </div>
         </Container>

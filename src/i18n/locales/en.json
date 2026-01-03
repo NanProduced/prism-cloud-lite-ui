@@ -545,6 +545,67 @@
       ]
     }
   },
+  "solutionsPage": {
+    "title": "Industry Solutions",
+    "titleHighlight": "Tailored for Success",
+    "subtitle": "Discover how Prism Cloud Lite transforms visual communication across diverse sectors.",
+    "retail": {
+      "title": "Retail & Dining",
+      "description": "Boost sales and brand consistency with dynamic digital menus and city-wide synchronized promotions.",
+      "painPoints": [
+        "High cost of updating physical menus",
+        "Inconsistent brand image across stores",
+        "Undetected device failures in-store"
+      ],
+      "solutions": [
+        "Dynamic menus that switch by time-of-day automatically.",
+        "One-click HQ control for nationwide campaign synchronization.",
+        "Remote screenshots and proactive monitoring for zero downtime."
+      ]
+    },
+    "corporate": {
+      "title": "Corporate & Office",
+      "description": "Enhance internal communication and modernize your workspace with intelligent signage.",
+      "painPoints": [
+        "Fragmented internal information reach",
+        "Meeting room management confusion",
+        "Ineffective building-wide emergency alerts"
+      ],
+      "solutions": [
+        "Lobby showcases for culture, news, and achievement highlights.",
+        "Real-time meeting room status and scheduled power saving.",
+        "High-priority emergency override for evacuation guidance."
+      ]
+    },
+    "transport": {
+      "title": "Transportation & Hubs",
+      "description": "Provide real-time updates and clear navigation for high-traffic public spaces.",
+      "painPoints": [
+        "Delayed schedule information updates",
+        "Poor visitor wayfinding in complex hubs",
+        "Difficulty managing thousands of distributed screens"
+      ],
+      "solutions": [
+        "Real-time API integration for instant schedule updates.",
+        "Interactive wayfinding and multi-lingual announcement displays.",
+        "Infinite scaling architecture to manage airport-scale fleets."
+      ]
+    },
+    "education": {
+      "title": "Education & Campus",
+      "description": "Connect students and faculty through unified campus-wide digital announcements.",
+      "painPoints": [
+        "Static notice boards that students ignore",
+        "Hard-to-reach outdoor campus areas",
+        "Complex scheduling for multiple faculty needs"
+      ],
+      "solutions": [
+        "Engaging video announcements in hallways and cafeterias.",
+        "Weather-resistant outdoor LED signage management.",
+        "Delegated permissions for different department admins."
+      ]
+    }
+  },
   "program": {
 
     "publish": {
