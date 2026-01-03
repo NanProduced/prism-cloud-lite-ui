@@ -1289,6 +1289,47 @@
     "manifestoTitle": "Our Miracle Manifesto",
     "manifesto": "We proved that with the right human at the helm and a powerful AI crew, the impossible is just a 30-day sprint away. We don't just build software; we incinerate tokens and redefine the future of engineering."
   },
+  "benefitsPage": {
+    "title": "Why Prism Cloud?",
+    "titleHighlight": "Real Value, Not Just Pixels",
+    "subtitle": "Stop managing players and start delivering impact. We provide the infrastructure for growth.",
+    "roi": {
+      "title": "Unmatched Efficiency",
+      "description": "Reduce your operational overhead by up to 60% with our automated cloud-native approach.",
+      "points": [
+        "Zero-touch provisioning for new devices.",
+        "Automated content transcoding and optimization.",
+        "Proactive AI diagnostics reduce onsite maintenance."
+      ]
+    },
+    "reliability": {
+      "title": "Built for Mission-Critical",
+      "description": "Your content is your brand. We ensure it's always visible, no matter what.",
+      "points": [
+        "Resilient offline playback using local cache.",
+        "Delta-update technology minimizes bandwidth usage.",
+        "Real-time health monitoring with SSE telemetry."
+      ]
+    },
+    "ai": {
+      "title": "The AI Advantage",
+      "description": "Transform from reactive troubleshooting to autonomous management.",
+      "points": [
+        "AI Agent handles device recovery instructions.",
+        "Semantic search (RAG) for instant documentation help.",
+        "Predictive scaling for high-traffic content distribution."
+      ]
+    },
+    "scale": {
+      "title": "Infinite Scalability",
+      "description": "From a single lobby to a global network of thousands. We grow with you.",
+      "points": [
+        "Global CDN distribution for low-latency playback.",
+        "Enterprise-grade security (OIDC/OAuth2/RBAC).",
+        "Open API for seamless ERP/CRM integration."
+      ]
+    }
+  },
   "program": {
     "publish": {
       "title": "Publish Program",

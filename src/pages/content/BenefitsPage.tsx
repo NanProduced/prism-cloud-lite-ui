@@ -5,48 +5,48 @@ import { Navbar } from "@/components/landing/Navbar";
 import { Footer } from "@/components/landing/Footer";
 import { Container } from "@/components/landing/Container";
 import { 
-  ShoppingBag, 
-  Building2, 
-  Plane, 
-  GraduationCap, 
-  ArrowRight,
-  AlertCircle,
+  Zap, 
+  ShieldCheck, 
+  Cpu, 
+  BarChart3, 
   CheckCircle2,
-  TrendingUp
+  Clock,
+  Globe,
+  Lock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function BenefitsPage() {
   const { t } = useTranslation();
 
-  const scenarios = [
+  const benefits = [
     {
-      id: "retail",
-      key: "retail",
-      icon: ShoppingBag,
-      color: "from-pink-500 to-rose-500",
-      image: "https://images.unsplash.com/photo-1534452203293-494d7ddbf7e0?q=80&w=1000&auto=format&fit=crop"
+      id: "roi",
+      icon: Clock,
+      color: "text-blue-400",
+      bg: "bg-blue-500/10",
+      border: "border-blue-500/20"
     },
     {
-      id: "corporate",
-      key: "corporate",
-      icon: Building2,
-      color: "from-blue-500 to-indigo-600",
-      image: "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1000&auto=format&fit=crop"
+      id: "reliability",
+      icon: ShieldCheck,
+      color: "text-emerald-400",
+      bg: "bg-emerald-500/10",
+      border: "border-emerald-500/20"
     },
     {
-      id: "transport",
-      key: "transport",
-      icon: Plane,
-      color: "from-cyan-400 to-blue-500",
-      image: "https://images.unsplash.com/photo-1495313196544-7d1adf4e628f?auto=format&fit=crop&q=80&w=2000"
+      id: "ai",
+      icon: Cpu,
+      color: "text-purple-400",
+      bg: "bg-purple-500/10",
+      border: "border-purple-500/20"
     },
     {
-      id: "education",
-      key: "education",
-      icon: GraduationCap,
-      color: "from-emerald-400 to-teal-500",
-      image: "https://images.unsplash.com/photo-1525921429624-479b6a29d840?auto=format&fit=crop&q=80&w=2000"
+      id: "scale",
+      icon: Globe,
+      color: "text-orange-400",
+      bg: "bg-orange-500/10",
+      border: "border-orange-500/20"
     }
   ];
 
@@ -57,143 +57,104 @@ export default function BenefitsPage() {
       <main className="pt-32 pb-20">
         <Container>
           {/* Header */}
-          <div className="max-w-4xl mx-auto text-center mb-24">
+          <div className="max-w-4xl mx-auto text-center mb-32">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <h1 className="text-4xl md:text-7xl font-bold mb-8 tracking-tight">
-                {t('solutionsPage.title')} <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400">
-                  {t('solutionsPage.titleHighlight')}
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-indigo-400 text-xs font-bold uppercase tracking-widest mb-8">
+                <Zap size={14} className="fill-indigo-400" />
+                Value Proposition
+              </div>
+              <h1 className="text-5xl md:text-8xl font-bold mb-8 tracking-tighter leading-[0.85]">
+                {t('benefitsPage.title')} <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-white to-purple-400 animate-gradient-x">
+                  {t('benefitsPage.titleHighlight')}
                 </span>
               </h1>
-              <p className="text-xl text-slate-400 leading-relaxed max-w-2xl mx-auto">
-                {t('solutionsPage.subtitle')}
+              <p className="text-xl text-slate-400 leading-relaxed max-w-2xl mx-auto font-medium">
+                {t('benefitsPage.subtitle')}
               </p>
             </motion.div>
           </div>
 
-          {/* Scenarios List */}
-          <div className="space-y-40">
-            {scenarios.map((scenario, idx) => (
-              <div 
-                key={scenario.id}
+          {/* Value Blocks - Modern Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-40">
+            {benefits.map((benefit, idx) => (
+              <motion.div
+                key={benefit.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.1 }}
                 className={cn(
-                  "flex flex-col gap-12 lg:gap-20 items-center",
-                  idx % 2 === 0 ? "lg:flex-row" : "lg:flex-row-reverse"
+                  "p-10 md:p-16 rounded-[48px] border bg-white/[0.02] flex flex-col justify-between group hover:bg-white/[0.04] transition-all duration-500 shadow-2xl",
+                  benefit.border
                 )}
               >
-                {/* Content Side */}
-                <motion.div 
-                  initial={{ opacity: 0, x: idx % 2 === 0 ? -40 : 40 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true, margin: "-100px" }}
-                  className="flex-1 space-y-8"
-                >
+                <div className="space-y-8">
                   <div className={cn(
-                    "w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br text-white shadow-xl",
-                    scenario.color
+                    "w-20 h-20 rounded-3xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110",
+                    benefit.bg,
+                    benefit.color
                   )}>
-                    <scenario.icon size={28} />
+                    <benefit.icon size={40} />
                   </div>
                   
                   <div className="space-y-4">
-                    <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
-                      {t(`solutionsPage.${scenario.key}.title`)}
+                    <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                      {t(`benefitsPage.${benefit.id}.title`)}
                     </h2>
-                    <p className="text-xl text-slate-400 leading-relaxed">
-                      {t(`solutionsPage.${scenario.key}.description`)}
+                    <p className="text-lg text-slate-400 leading-relaxed font-medium">
+                      {t(`benefitsPage.${benefit.id}.description`)}
                     </p>
                   </div>
+                </div>
 
-                  {/* Pain Points */}
-                  <div className="p-6 rounded-3xl bg-rose-500/5 border border-rose-500/10 space-y-4">
-                    <h4 className="text-xs font-bold text-rose-400 uppercase tracking-widest flex items-center gap-2">
-                      <AlertCircle size={14} />
-                      Common Pain Points
-                    </h4>
-                    <ul className="space-y-3">
-                      {(t(`solutionsPage.${scenario.key}.painPoints`, { returnObjects: true }) as string[]).map((point, i) => (
-                        <li key={i} className="text-sm text-slate-400 flex items-center gap-2">
-                          <div className="w-1 h-1 rounded-full bg-rose-500" />
-                          {point}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Solution Highlights */}
-                  <div className="space-y-4">
-                    <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-2">
-                      <CheckCircle2 size={14} />
-                      Platform Advantages
-                    </h4>
-                    <ul className="grid grid-cols-1 gap-4">
-                      {(t(`solutionsPage.${scenario.key}.solutions`, { returnObjects: true }) as string[]).map((sol, i) => (
-                        <li key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-white/10 transition-colors group">
-                          <ArrowRight size={18} className="text-indigo-500 mt-0.5 group-hover:translate-x-1 transition-transform" />
-                          <span className="text-slate-300">{sol}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </motion.div>
-
-                {/* Image Side */}
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true, margin: "-100px" }}
-                  className="flex-1 w-full"
-                >
-                  <div className="relative">
-                    <div className={cn(
-                      "absolute -inset-4 rounded-[48px] opacity-20 blur-3xl bg-gradient-to-br",
-                      scenario.color
-                    )} />
-                    <div className="relative aspect-[4/3] rounded-[40px] overflow-hidden border border-white/10 bg-white/5 shadow-2xl">
-                      <img 
-                        src={scenario.image} 
-                        alt={t(`solutionsPage.${scenario.key}.title`)}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                      
-                      {/* Floating Impact Card */}
-                      <div className="absolute bottom-8 left-8 right-8 p-6 rounded-3xl bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white">
-                            <TrendingUp size={20} />
-                          </div>
-                          <div>
-                            <div className="text-xs text-white/60 font-bold uppercase tracking-widest">Est. Efficiency</div>
-                            <div className="text-xl font-bold text-white">+40% boost</div>
-                          </div>
-                        </div>
-                        <div className="h-10 w-10 rounded-full border border-white/20 flex items-center justify-center">
-                          <ArrowRight size={16} className="text-white" />
-                        </div>
-                      </div>
+                <div className="mt-12 space-y-4">
+                  {(t(`benefitsPage.${benefit.id}.points`, { returnObjects: true }) as string[]).map((point, i) => (
+                    <div key={i} className="flex items-center gap-4 py-2 border-t border-white/5 first:border-0">
+                      <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", benefit.bg.replace('/10', ''))} />
+                      <span className="text-slate-300 font-medium">{point}</span>
                     </div>
-                  </div>
-                </motion.div>
-              </div>
+                  ))}
+                </div>
+              </motion.div>
             ))}
           </div>
 
+          {/* Stats Bar */}
+          <section className="py-20 border-y border-white/5 mb-40">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
+              {[
+                { label: "Cost Reduction", value: "60%" },
+                { label: "Setup Time", value: "< 5min" },
+                { label: "Uptime SLA", value: "99.9%" },
+                { label: "Security Scale", value: "Enterprise" }
+              ].map((stat, i) => (
+                <div key={i} className="text-center space-y-2">
+                  <div className="text-4xl md:text-6xl font-black tracking-tighter text-white">{stat.value}</div>
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
           {/* Bottom CTA */}
-          <div className="mt-60 p-12 md:p-20 rounded-[40px] bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-center space-y-8 relative overflow-hidden">
-            <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/3 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
-            <h2 className="text-4xl md:text-6xl font-bold tracking-tight relative z-10">
-              Ready to transform your sector?
+          <div className="p-12 md:p-24 rounded-[60px] bg-gradient-to-b from-indigo-500/10 to-transparent border border-white/5 text-center relative overflow-hidden">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent" />
+            <h2 className="text-4xl md:text-7xl font-black mb-10 tracking-tighter text-white">
+              Ready to claim your edge?
             </h2>
-            <p className="text-xl text-indigo-100 max-w-2xl mx-auto relative z-10">
-              Join leading organizations already using Prism Cloud Lite to redefine their visual presence.
+            <p className="text-xl md:text-2xl text-slate-400 max-w-3xl mx-auto mb-12 italic">
+              Stop settling for basic players. Switch to a platform that powers your entire visual ecosystem with intelligence.
             </p>
-            <div className="pt-4 relative z-10">
-              <button className="px-8 py-4 rounded-2xl bg-white text-indigo-600 font-bold hover:bg-slate-100 transition-all shadow-xl text-lg">
-                Get Started Today
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+              <button className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-indigo-500 text-white font-black hover:bg-indigo-400 transition-all shadow-[0_0_40px_rgba(99,102,241,0.4)] text-lg">
+                Start Growing Now
+              </button>
+              <button className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-white/5 border border-white/10 text-white font-black hover:bg-white/10 transition-all text-lg">
+                View Pricing
               </button>
             </div>
           </div>
