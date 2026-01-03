@@ -6,7 +6,8 @@
     "pricing": "Pricing",
     "docs": "Docs",
     "login": "Log in",
-    "getStarted": "Get Started"
+    "getStarted": "Get Started",
+    "dashboard": "Dashboard"
   },
   "hero": {
     "badge": "New",
@@ -461,10 +462,11 @@
       "unknownError": "An error occurred. Please try again",
       "continueUrlMissing": "Invalid login session. Please restart from the login entry",
       "continueUrlInvalid": "Invalid redirect URL",
-            "allFieldsRequired": "All fields are required"
-          }
-        },
-        "featuresPage": {    "title": "Advanced Infrastructure",
+      "allFieldsRequired": "All fields are required"
+    }
+  },
+  "featuresPage": {
+    "title": "Advanced Infrastructure",
     "titleHighlight": "for Visual Networks",
     "subtitle": "Dive deep into the technology that powers Prism Cloud Lite. Built for reliability, scale, and intelligence.",
     "security": {
@@ -606,354 +608,175 @@
       ]
     }
   },
-  "program": {
-
-    "publish": {
-      "title": "Publish Program",
-      "steps": {
-        "nodes": "Select Nodes",
-        "strategy": "Strategy",
-        "manifest": "Manifest"
-      },
-      "filter": {
-        "title": "Quick Filters",
-        "onlineOnly": "Online Only",
-        "matchResolution": "Match {{width}}x{{height}}",
-        "reset": "Reset All Filters"
-      },
-      "strategy": {
-        "createTitle": "Create New Version",
-        "createDesc": "Snapshot current draft as v{{version}} and deploy. This becomes the new baseline.",
-        "existingTitle": "Deploy Existing Version",
-        "existingDesc": "Choose a previously published version to redeploy or roll back.",
-        "currentLive": "Current Live Release",
-        "legacyArchive": "Legacy Archive",
-        "modeAppend": "Incremental: Skip nodes already running this program.",
-        "modeOverwrite": "Global Push: Force sync all targeted nodes to selected version."
-      },
-      "noNodes": "No Nodes Found",
-      "noNodesDesc": "No devices matching your current filters."
-    }
-  },
-  "message": {
-    "type": {
-      "device": {
-        "command": {
-          "finished": {
-            "title": "Command {{status}}",
-            "summary": "Action {{actionType}} on {{target}}"
-          },
-          "batch": {
-            "finished": {
-              "title": "Batch Command Finished",
-              "summary": "{{success}}/{{total}} succeeded, {{failed}} failed"
-            }
-          }
-        }
-      },
-      "program": {
-        "publish": {
-          "online": {
-            "finished": {
-              "title": "Program Online Publishing {{status}}",
-              "summary": "{{programName}} (v{{version}}): {{onlineTargets}}/{{totalTargets}} online devices finished"
-            }
-          },
-          "finished": {
-            "title": "Program Publishing Finished",
-            "summary": "{{programName}} (v{{version}}) published to {{totalTargets}} devices"
-          }
-        }
-      },
-      "media": {
-        "transcode": {
-          "title": "Media Transcoding {{status}}",
-          "summary": "{{sourceTitle}}: {{stage}}{{progress}}"
-        }
-      },
-      "export": {
-        "finished": {
-          "title": "{{type}} {{status}}",
-          "summary": "Format: {{format}}, {{rowCount}} rows"
-        }
-      }
-    },
-    "kind": {
-      "NOTIFICATION": "Notification",
-      "TASK": "Task"
-    },
+  "roadmap": {
+    "title": "Development Journey",
+    "titleHighlight": "The Miracle Month",
+    "subtitle": "How we built a professional-grade digital signage cloud in just 30 days. A story of focus, engineering excellence, and AI collaboration.",
     "status": {
-      "PENDING": "Pending",
-      "RUNNING": "Running",
-      "SUCCESS": "Success",
-      "FAILED": "Failed"
+      "completed": "Completed",
+      "inProgress": "In Progress",
+      "planned": "Planned"
     },
-    "unknown": {
-      "title": "New Message",
-      "summary": "New {{kind}} received"
-    },
-    "ui": {
-      "loading": "Loading message...",
-      "loadFailedTitle": "Unable to load this message",
-      "loadFailedHint": "Please try again.",
-      "close": "Close",
-      "summary": "Message summary",
-      "debugTitle": "Debug details (internal)",
-      "payload": "Raw payload (JSON)",
-      "copyPayload": "Copy JSON",
-      "dismiss": "Dismiss",
-      "inbox": "Inbox",
-      "notifications": "Notifications",
-      "tasks": "Tasks",
-      "markRead": "Mark read",
-      "empty": {
-        "title": "Your inbox is clear",
-        "desc": "Stay tuned! We'll notify you here about system updates, device events, and task completions."
+    "items": [
+      {
+        "date": "Nov 27, 2025",
+        "title": "Genesis & Architecture",
+        "description": "Established the high-performance base using React + Vite. Built the core Auth system (OIDC/OAuth2) and the foundational dashboard layouts.",
+        "features": ["Vite + React", "Tailwind CSS", "Auth System"],
+        "status": "completed"
       },
-      "fields": {
-        "id": "Message ID",
-        "type": "Message type",
-        "operationId": "Operation ID",
-        "taskId": "Task ID"
+      {
+        "date": "Dec 5, 2025",
+        "title": "Media & Studio Core",
+        "description": "Launched the Media Library with MD5 deduplication and the Visual Editor. The Canvas-based engine allows for complex, multi-layer program design.",
+        "features": ["MD5 Deduplication", "Canvas Editor", "Multi-layer Studio"],
+        "status": "completed"
       },
-      "task": {
-        "export": {
-          "title": "Export Task Details",
-          "rows": "rows",
-          "download": "Download File"
-        },
-        "transcode": {
-          "title": "Transcoding task",
-          "progress": "Progress",
-          "liveUpdates": "Live updates unavailable; refreshing periodically.",
-          "openMedia": "Open media library",
-          "retry": "Retry"
-        }
+      {
+        "date": "Dec 15, 2025",
+        "title": "Fleet Command & Control",
+        "description": "Implemented the resilient device communication protocol. Real-time command dispatching and delta-update publishing became a reality.",
+        "features": ["Command System", "Online Monitoring", "Delta Updates"],
+        "status": "completed"
+      },
+      {
+        "date": "Dec 28, 2025",
+        "title": "The AI Breakthrough",
+        "description": "Integrated Spring AI and Function Calling. Prism AI became an autonomous agent capable of diagnosing offline devices and searching knowledge bases via RAG.",
+        "features": ["Spring AI", "Function Calling", "RAG Integration"],
+        "status": "completed"
+      },
+      {
+        "date": "Jan 3, 2026",
+        "title": "Polishing & Ecosystem",
+        "description": "Refined the UX with multi-language support (EN/ZH) and advanced telemetry visualization. Finalizing the Landing experience for launch.",
+        "features": ["i18n Support", "Telemetry SSE", "Responsive Landing"],
+        "status": "in-progress"
       }
-    }
+    ],
+    "feedbackTitle": "Have a feature request?",
+    "feedbackDesc": "We're always listening to our community. Tell us what you'd like to see next.",
+    "feedbackBtn": "Share Feedback"
   },
-  "programEditor": {
-    "header": {
-      "blank": "Blank",
-      "saveStatus": {
-        "saving": "Saving...",
-        "unsaved": "Unsaved",
-        "autosavePending": "Autosave pending",
-        "saved": "Saved",
-        "savedAt": "Saved {{time}}"
-      }
+  "billing": {
+    "title": "Subscription Plans",
+    "subtitle": "Choose the scale that fits your business needs",
+    "header": "Simple, Transparent Pricing",
+    "headerDesc": "Choose the plan that's right for your business. No hidden fees.",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "savePercent": "SAVE 20%",
+    "whatsIncluded": "What's included",
+    "compareFeatures": "Compare all features",
+    "faqTitle": "Frequently Asked Questions",
+    "customQuoteTitle": "Need a custom solution?",
+    "customQuoteDesc": "Have specific requirements or a large-scale deployment? Let's talk about a tailor-made plan for your organization.",
+    "getCustomQuote": "Get a Custom Quote",
+    "currentPlan": "Current Plan",
+    "expiresAt": "Expires on {{date}}",
+    "reloginNotice": "Subscription updated! Please re-login to activate all features.",
+    "free": {
+      "name": "Free",
+      "price": "$0",
+      "description": "Essential features for small setups",
+      "features": [
+        "20 Devices & 20 Programs",
+        "2GB Cloud Storage",
+        "AI Assistant: 10-msg context, 20k tokens/day",
+        "Exports: Standard (CSV/JSON), limited time-range",
+        "3 Custom device columns"
+      ]
     },
-    "toolbar": {
-      "undo": "Undo",
-      "redo": "Redo",
-      "save": "Save",
-      "preview": "Preview",
-      "publish": "Publish"
-    },
-    "panels": {
-      "left": {
-        "pages": "Pages",
-        "regions": "Regions",
-        "materials": "Media",
-        "searchMaterials": "Search media...",
-        "addPage": "Add Page",
-        "addRegion": "Add Region",
-        "addText": "Add Text"
-      },
-      "timeline": {
-        "title": "Timeline",
-        "speed": "Speed"
-      },
-      "inspector": {
-        "title": "Inspector",
-        "program": "Program Settings",
-        "page": "Page Settings",
-        "region": "Region Settings",
-        "item": "Item Settings",
-        "rename": "Rename Program",
-        "resolution": "Resolution",
-        "targetDevice": "Preview Device",
-        "noDoc": "No document loaded.",
-        "labels": {
-          "programName": "Program name",
-          "targetDevice": "Target device (resolution)",
-          "canvasResolution": "Canvas resolution",
-          "width": "Width",
-          "height": "Height",
-          "apply": "Apply",
-          "loopType": "Loop type",
-          "autoDuration": "Auto duration",
-          "fixedDuration": "Fixed duration",
-          "appointDuration": "AppointDuration (ms)",
-          "background": "Background",
-          "title": "Title",
-          "windowType": "Window type",
-          "normal": "Normal",
-          "sync": "Sync playback",
-          "ticker": "Single-line ticker",
-          "isSchedule": "Is schedule region",
-          "layer": "Layer",
-          "rect": "Rect",
-          "borderWidth": "BorderWidth",
-          "borderColor": "BorderColor",
-          "backColor": "BackColor (optional)",
-          "duration": "Duration (ms)",
-          "repeat": "Repeat",
-          "opacity": "Opacity",
-          "fit": "Fit",
-          "contain": "Contain",
-          "transition": "Transition",
-          "transitionTime": "Time (ms)",
-          "volume": "Volume (0..1)",
-          "textMode": "Text mode",
-          "text": "Text",
-          "textColor": "TextColor",
-          "font": "Font",
-          "italic": "Italic",
-          "underline": "Underline",
-          "yes": "Yes",
-          "no": "No"
-        }
-      },
-      "problems": {
-        "title": "Problems",
-        "empty": "No issues found"
-      },
-      "items": {
-        "image": "Image",
-        "video": "Video",
-        "text": "Text",
-        "gif": "GIF",
-        "unsupported": "Unsupported item"
-      }
-    },
-    "dialogs": {
-      "unsaved": {
-        "title": "Unsaved Changes",
-        "desc": "You have modified the workspace. How would you like to proceed?",
-        "discard": "Discard",
-        "saveAndContinue": "Save & Continue"
-      }
-    }
-  },
-    "billing": {
-      "title": "Subscription Plans",
-      "subtitle": "Choose the scale that fits your business needs",
-      "header": "Simple, Transparent Pricing",
-      "headerDesc": "Choose the plan that's right for your business. No hidden fees.",
-      "monthly": "Monthly",
-      "yearly": "Yearly",
-      "savePercent": "SAVE 20%",
-      "whatsIncluded": "What's included",
-      "compareFeatures": "Compare all features",
-      "faqTitle": "Frequently Asked Questions",
-      "customQuoteTitle": "Need a custom solution?",
-      "customQuoteDesc": "Have specific requirements or a large-scale deployment? Let's talk about a tailor-made plan for your organization.",
-      "getCustomQuote": "Get a Custom Quote",
-      "currentPlan": "Current Plan",
-      "expiresAt": "Expires on {{date}}",
-      "reloginNotice": "Subscription updated! Please re-login to activate all features.",
-      "free": {
-        "name": "Free",
-        "price": "$0",
-        "description": "Essential features for small setups",
-        "features": [
-          "20 Devices & 20 Programs",
-          "2GB Cloud Storage",
-          "AI Assistant: 10-msg context, 20k tokens/day",
-          "Exports: Standard (CSV/JSON), limited time-range",
-          "3 Custom device columns"
-        ]
-      },
-      "pro": {
-        "name": "Pro",
-        "price": "$29",
-        "priceYearly": "$23",
-        "period": "/mo",
-        "description": "Powerful tools for growing networks",
-        "features": [
-          "100 Devices & 200 Programs",
-          "50GB Cloud Storage",
-          "AI Assistant: 30-msg context, Unlimited tokens, BYOK",
-          "Exports: Full (XLSX/Parquet), priority processing",
-          "Exclusive API Access",
-          "20 Custom device columns"
-        ],
-        "button": "Upgrade with Code"
-      },
-      "ultra": {
-        "name": "Ultra",
-        "price": "Custom",
-        "description": "Tailored solutions for large enterprises",
-        "features": [
-          "Unlimited Devices & Programs",
-          "Enterprise Security (SSO)",
-          "AI Assistant: Custom fine-tuning & higher limits",
-          "Dedicated Account Manager",
-          "SLA Guarantee",
-          "Custom Feature Development"
-        ],
-        "button": "Contact Sales"
-      },
-      "redeem": {
-        "title": "Redeem Code",
-        "description": "Enter your 12-character PRDEMO code to upgrade",
-        "placeholder": "PRDEMO-XXXX-XXXX",
-        "button": "Verify & Activate",
-        "submitting": "Activating...",
-        "success": "Activation successful! Your plan is now Pro.",
-        "error": "Invalid or expired code"
-      },
-      "faqs": [
-        {
-          "q": "Can I change plans at any time?",
-          "a": "Yes, you can upgrade or downgrade your plan at any time from your dashboard."
-        },
-        {
-          "q": "Do you offer discounts for non-profits?",
-          "a": "We do! Please contact our sales team to discuss special pricing for NGOs and educational institutions."
-        },
-        {
-          "q": "What happens if I exceed my storage limit?",
-          "a": "We'll notify you when you reach 90% of your limit. You can always upgrade for more space."
-        }
+    "pro": {
+      "name": "Pro",
+      "price": "$29",
+      "priceYearly": "$23",
+      "period": "/mo",
+      "description": "Powerful tools for growing networks",
+      "features": [
+        "100 Devices & 200 Programs",
+        "50GB Cloud Storage",
+        "AI Assistant: 30-msg context, Unlimited tokens, BYOK",
+        "Exports: Full (XLSX/Parquet), priority processing",
+        "Exclusive API Access",
+        "20 Custom device columns"
       ],
-      "aiComparison": {
-        "title": "AI Assistant Capability Comparison",
-        "subtitle": "Prism AI capabilities scale with your subscription and compute choices.",
-        "columns": {
-          "feature": "Capability",
-          "freeLocal": "Free (Local)",
-          "pro": "Pro / Ultra",
-          "freeByok": "Free (BYOK)"
-        },
-        "features": {
-          "memory": "Context Memory",
-          "memoryDesc": "Max history messages",
-          "rag": "Knowledge Base (RAG)",
-          "ragDesc": "Retrieved document sources",
-          "agent": "Agent Reasoning",
-          "agentDesc": "Tool calls & recursive rounds",
-          "quota": "Daily Token Quota",
-          "quotaDesc": "Local model compute limit"
-        },
-        "values": {
-          "msg10": "10 Messages",
-          "msg30": "30 Messages",
-          "rag4": "Top 4 Sources",
-          "rag8": "Top 8 Sources",
-          "basic": "Basic (1 round)",
-          "advanced": "Advanced (3 rounds)",
-          "limit20k": "20,000 / day",
-          "unlimited": "Unlimited",
-          "notApplicable": "N/A"
-        },
-            "byokNotice": "Bring Your Own Key: Use your OpenAI/Gemini API key on Free tier to unlock Pro-level AI context and reasoning limits."
-            }
-          },
-          "export": {
-            "title": "Export Data",
-            "subtitle": "Configure fields and format for your export task",    "type": {
+      "button": "Upgrade with Code"
+    },
+    "ultra": {
+      "name": "Ultra",
+      "price": "Custom",
+      "description": "Tailored solutions for large enterprises",
+      "features": [
+        "Unlimited Devices & Programs",
+        "Enterprise Security (SSO)",
+        "AI Assistant: Custom fine-tuning & higher limits",
+        "Dedicated Account Manager",
+        "SLA Guarantee",
+        "Custom Feature Development"
+      ],
+      "button": "Contact Sales"
+    },
+    "redeem": {
+      "title": "Redeem Code",
+      "description": "Enter your 12-character PRDEMO code to upgrade",
+      "placeholder": "PRDEMO-XXXX-XXXX",
+      "button": "Verify & Activate",
+      "submitting": "Activating...",
+      "success": "Activation successful! Your plan is now Pro.",
+      "error": "Invalid or expired code"
+    },
+    "faqs": [
+      {
+        "q": "Can I change plans at any time?",
+        "a": "Yes, you can upgrade or downgrade your plan at any time from your dashboard."
+      },
+      {
+        "q": "Do you offer discounts for non-profits?",
+        "a": "We do! Please contact our sales team to discuss special pricing for NGOs and educational institutions."
+      },
+      {
+        "q": "What happens if I exceed my storage limit?",
+        "a": "We'll notify you when you reach 90% of your limit. You can always upgrade for more space."
+      }
+    ],
+    "aiComparison": {
+      "title": "AI Assistant Capability Comparison",
+      "subtitle": "Prism AI capabilities scale with your subscription and compute choices.",
+      "columns": {
+        "feature": "Capability",
+        "freeLocal": "Free (Local)",
+        "pro": "Pro / Ultra",
+        "freeByok": "Free (BYOK)"
+      },
+      "features": {
+        "memory": "Context Memory",
+        "memoryDesc": "Max history messages",
+        "rag": "Knowledge Base (RAG)",
+        "ragDesc": "Retrieved document sources",
+        "agent": "Agent Reasoning",
+        "agentDesc": "Tool calls & recursive rounds",
+        "quota": "Daily Token Quota",
+        "quotaDesc": "Local model compute limit"
+      },
+      "values": {
+        "msg10": "10 Messages",
+        "msg30": "30 Messages",
+        "rag4": "Top 4 Sources",
+        "rag8": "Top 8 Sources",
+        "basic": "Basic (1 round)",
+        "advanced": "Advanced (3 rounds)",
+        "limit20k": "20,000 / day",
+        "unlimited": "Unlimited",
+        "notApplicable": "N/A"
+      },
+      "byokNotice": "Bring Your Own Key: Use your OpenAI/Gemini API key on Free tier to unlock Pro-level AI context and reasoning limits."
+    }
+  },
+  "export": {
+    "title": "Export Data",
+    "subtitle": "Configure fields and format for your export task",
+    "type": {
       "DEVICE_LOGS": "Device Logs",
       "COMMAND_LOGS": "Command Logs",
       "DEVICE_ONLINE_SESSIONS": "Device Online Sessions",
@@ -1392,6 +1215,34 @@
           "label": "Slide to confirm restart"
         }
       }
+    }
+  },
+  "program": {
+    "publish": {
+      "title": "Publish Program",
+      "steps": {
+        "nodes": "Select Nodes",
+        "strategy": "Strategy",
+        "manifest": "Manifest"
+      },
+      "filter": {
+        "title": "Quick Filters",
+        "onlineOnly": "Online Only",
+        "matchResolution": "Match {{width}}x{{height}}",
+        "reset": "Reset All Filters"
+      },
+      "strategy": {
+        "createTitle": "Create New Version",
+        "createDesc": "Snapshot current draft as v{{version}} and deploy. This becomes the new baseline.",
+        "existingTitle": "Deploy Existing Version",
+        "existingDesc": "Choose a previously published version to redeploy or roll back.",
+        "currentLive": "Current Live Release",
+        "legacyArchive": "Legacy Archive",
+        "modeAppend": "Incremental: Skip nodes already running this program.",
+        "modeOverwrite": "Global Push: Force sync all targeted nodes to selected version."
+      },
+      "noNodes": "No Nodes Found",
+      "noNodesDesc": "No devices matching your current filters."
     }
   }
 }

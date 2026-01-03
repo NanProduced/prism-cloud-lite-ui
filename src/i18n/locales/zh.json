@@ -600,14 +600,64 @@
         "校园户外区域信息覆盖困难",
         "多院系、多角色的排程管理复杂"
       ],
-      "solutions": [
-        "走廊与食堂的高吸引力视频公告。",
-        "统一管理具备工业防护的户外 LED 屏。",
-        "分级权限体系，适配各部门独立运维。"
-      ]
-    }
+              "solutions": [
+                "走廊与食堂的高吸引力视频公告。",
+                "统一管理具备工业防护的户外 LED 屏。",
+                "分级权限体系，适配各部门独立运维。"
+              ]
+            }
+          },
+          "roadmap": {    "title": "研发历程",
+    "titleHighlight": "奇迹之月",
+    "subtitle": "我们如何在短短 30 天内构建出专业级的数字标牌云。这是一个关于专注、卓越工程和 AI 协作的故事。",
+    "status": {
+      "completed": "已完成",
+      "inProgress": "进行中",
+      "planned": "计划中"
+    },
+    "items": [
+      {
+        "date": "2025.11.27",
+        "title": "破土动工与架构确立",
+        "description": "基于 React + Vite 确立了高性能底层架构。完成了核心认证系统 (OIDC/OAuth2) 以及基础仪表盘布局的搭建。",
+        "features": ["Vite + React", "Tailwind CSS", "认证系统"],
+        "status": "completed"
+      },
+      {
+        "date": "2025.12.05",
+        "title": "素材库与创意中心",
+        "description": "上线了支持 MD5 去重的素材库及可视化编辑器。基于 Canvas 的引擎支持复杂的多图层节目设计与渲染。",
+        "features": ["MD5 去重", "Canvas 编辑器", "多图层Studio"],
+        "status": "completed"
+      },
+      {
+        "date": "2025.12.15",
+        "title": "集群控制与发布协议",
+        "description": "实现了具备高弹性的设备通信协议。支持实时指令下发、增量更新发布以及全网设备在线状态监控。",
+        "features": ["指令系统", "在线监控", "增量发布"],
+        "status": "completed"
+      },
+      {
+        "date": "2025.12.28",
+        "title": "AI 助手的突破",
+        "description": "深度集成 Spring AI 与 Function Calling。Prism AI 进化为能够自动诊断设备故障、检索知识库 (RAG) 的智能体。",
+        "features": ["Spring AI", "函数调用", "RAG 检索"],
+        "status": "completed"
+      },
+      {
+        "date": "2026.01.03",
+        "title": "细节打磨与生态构建",
+        "description": "完成了中英双语 (i18n) 适配及高级遥测可视化。目前正在完善 Landing 页面交互，准备正式发布。",
+        "features": ["多语言支持", "遥测可视化", "响应式 Landing"],
+        "status": "in-progress"
+      }
+    ],
+    "feedbackTitle": "有功能建议？",
+    "feedbackDesc": "我们始终倾听社区的声音。告诉我们您接下来想看到什么功能。",
+    "feedbackBtn": "分享反馈"
   },
   "program": {
+
     "publish": {
       "title": "发布节目",
       "steps": {
