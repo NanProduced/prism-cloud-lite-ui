@@ -280,10 +280,10 @@ export default function DeviceDetailsPage() {
         // Handle screenshot operation feedback
         if (activeScreenshotOpId && scope.operationId === activeScreenshotOpId) {
           if (data.status === 'CONFIRMED' || data.status === 'COMPLETED') {
-            toast.success('Screenshot command confirmed by device');
+            toast.success(t('deviceDetails.toasts.screenshotConfirmed'));
             setActiveScreenshotOpId(null);
           } else if (data.status === 'FAILED' || data.status === 'EXPIRED') {
-            toast.error(`Screenshot command failed: ${data.status}`);
+            toast.error(`${t('deviceDetails.toasts.screenshotFailed')}: ${data.status}`);
             setActiveScreenshotOpId(null);
           }
         }
@@ -351,11 +351,11 @@ export default function DeviceDetailsPage() {
         type: 'BRIGHTNESS',
         body: { brightness: Math.round(value * 2.55) }
       });
-      toast.success('Brightness updated');
+      toast.success(t('deviceDetails.toasts.brightnessUpdated'));
     } catch (err) {
-      toast.error('Failed to update brightness');
+      toast.error(t('common.errors.updateFailed'));
     }
-  }, [deviceId]);
+  }, [deviceId, t]);
 
   const applyVolume = useCallback(async (value: number) => {
     try {
@@ -363,11 +363,11 @@ export default function DeviceDetailsPage() {
         type: 'VOLUME',
         body: { musicvolume: value }
       });
-      toast.success('Volume updated');
+      toast.success(t('deviceDetails.toasts.volumeUpdated'));
     } catch (err) {
-      toast.error('Failed to update volume');
+      toast.error(t('common.errors.updateFailed'));
     }
-  }, [deviceId]);
+  }, [deviceId, t]);
 
   const applyColorTemp = useCallback(async (value: number) => {
     try {
@@ -375,11 +375,11 @@ export default function DeviceDetailsPage() {
         type: 'COLOR_TEMP',
         body: { colortemp: value }
       });
-      toast.success('Color temperature updated');
+      toast.success(t('deviceDetails.toasts.colorTempUpdated'));
     } catch (err) {
-      toast.error('Failed to update color temperature');
+      toast.error(t('common.errors.updateFailed'));
     }
-  }, [deviceId]);
+  }, [deviceId, t]);
 
   const handleBrightnessChange = (value: number) => {
     setBrightnessPct(value);
@@ -406,9 +406,9 @@ export default function DeviceDetailsPage() {
         type: 'INPUT_MODE',
         body: { inputmode: value }
       });
-      toast.success('Input source updated');
+      toast.success(t('deviceDetails.toasts.inputSourceUpdated'));
     } catch (err) {
-      toast.error('Failed to update input source');
+      toast.error(t('common.errors.updateFailed'));
     }
   };
 
@@ -424,12 +424,12 @@ export default function DeviceDetailsPage() {
       const res = await executeDeviceAction(deviceId!, { type: 'SCREENSHOT', body: {} });
       if (res.success && res.data?.operationId) {
         setActiveScreenshotOpId(res.data.operationId);
-        toast.info('Screenshot command dispatched');
+        toast.info(t('deviceDetails.cockpit.screenshot.captureQueued'));
       } else {
-        toast.success('Screenshot command dispatched');
+        toast.success(t('deviceDetails.cockpit.screenshot.captureQueued'));
       }
     } catch (err) {
-      toast.error('Failed to dispatch capture command');
+      toast.error(t('deviceDetails.toasts.screenshotFailed'));
     } finally {
       setIsCapturing(false);
     }
@@ -445,9 +445,9 @@ export default function DeviceDetailsPage() {
         type: actionType, 
         body: { command } 
       });
-      toast.success(`Command ${command} accepted`);
+      toast.success(t('deviceDetails.toasts.commandAccepted', { command }));
     } catch (err) {
-      toast.error('Dispatch failed');
+      toast.error(t('deviceDetails.toasts.dispatchFailed'));
     }
     setConfirmDialog({ open: false, type: null });
   };
@@ -459,9 +459,9 @@ export default function DeviceDetailsPage() {
       }
       queryClient.invalidateQueries({ queryKey: ['device-screenshots', deviceId] });
       queryClient.invalidateQueries({ queryKey: ['user-storage-quota'] });
-      toast.success('Screenshot(s) deleted');
+      toast.success(t('deviceDetails.toasts.screenshotsDeleted'));
     } catch (err) {
-      toast.error('Failed to delete screenshots');
+      toast.error(t('common.errors.deleteFailed'));
     }
   };
 
@@ -470,9 +470,9 @@ export default function DeviceDetailsPage() {
       await clearScreenshots(deviceId!);
       queryClient.invalidateQueries({ queryKey: ['device-screenshots', deviceId] });
       queryClient.invalidateQueries({ queryKey: ['user-storage-quota'] });
-      toast.success('History cleared');
+      toast.success(t('deviceDetails.toasts.historyCleared'));
     } catch (err) {
-      toast.error('Failed to clear history');
+      toast.error(t('common.errors.deleteFailed'));
     }
   };
 
@@ -494,7 +494,7 @@ export default function DeviceDetailsPage() {
         if (!resp.success) {
           throw resp;
         }
-        toast.success('Unpublished from this device');
+        toast.success(t('deviceDetails.toasts.unpublishSuccess'));
       } else {
         const resp = await deleteDeviceProgram(deviceId, {
           vsnName: assetDeleteTarget.vsnName,
@@ -503,17 +503,17 @@ export default function DeviceDetailsPage() {
         if (!resp.success) {
           throw resp;
         }
-        toast.success('Delete command sent');
+        toast.success(t('deviceDetails.toasts.deleteCommandSent'));
       }
       setAssetDeleteTarget(null);
       refreshAfterProgramOps();
     } catch (err: any) {
-      const displayMsg = err.error?.displayMessage || err.message || 'Failed to delete program';
-      toast.error('Deletion failed', { description: displayMsg });
+      const displayMsg = err.error?.displayMessage || err.message || t('common.errors.unknown');
+      toast.error(t('common.errors.deleteFailed'), { description: displayMsg });
     } finally {
       setAssetActionLoading(false);
     }
-  }, [assetDeleteTarget, deviceId, refreshAfterProgramOps]);
+  }, [assetDeleteTarget, deviceId, refreshAfterProgramOps, t]);
 
   const handleConfirmClearAllPrograms = useCallback(async () => {
     if (!deviceId) return;
@@ -523,29 +523,29 @@ export default function DeviceDetailsPage() {
       if (!resp.success) {
         throw resp;
       }
-      toast.success('Clear-all command sent');
+      toast.success(t('deviceDetails.toasts.clearCommandSent'));
       setAssetClearAllOpen(false);
       refreshAfterProgramOps();
     } catch (err: any) {
-      const displayMsg = err.error?.displayMessage || err.message || 'Failed to clear programs';
-      toast.error('Clear failed', { description: displayMsg });
+      const displayMsg = err.error?.displayMessage || err.message || t('common.errors.unknown');
+      toast.error(t('common.errors.deleteFailed'), { description: displayMsg });
     } finally {
       setAssetActionLoading(false);
     }
-  }, [deviceId, refreshAfterProgramOps]);
+  }, [deviceId, refreshAfterProgramOps, t]);
 
   if (isDeviceLoading) return (
     <div className="flex flex-col items-center justify-center h-[70vh] gap-4">
       <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      <p className="text-sm font-medium text-muted-foreground">Loading device details...</p>
+      <p className="text-sm font-medium text-muted-foreground">{t('deviceDetails.states.loading')}</p>
     </div>
   );
 
   if (!device || !device.deviceProperties) return (
     <div className="flex flex-col items-center justify-center h-[70vh] gap-4">
       <AlertTriangle className="h-12 w-12 text-amber-500" />
-      <p className="text-sm font-medium">Device data unavailable</p>
-      <Button variant="outline" onClick={() => navigate(returnTo)}>Back</Button>
+      <p className="text-sm font-medium">{t('deviceDetails.states.unavailable')}</p>
+      <Button variant="outline" onClick={() => navigate(returnTo)}>{t('common.actions.back')}</Button>
     </div>
   );
 
@@ -679,9 +679,9 @@ export default function DeviceDetailsPage() {
                       <div className="bg-amber-500/90 backdrop-blur-md border border-amber-400/50 rounded-xl p-3 flex items-center gap-3 shadow-2xl">
                         <AlertTriangle className="h-4 w-4 text-amber-950 shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-amber-950">Device offline</p>
+                          <p className="text-sm font-semibold text-amber-950">{t('deviceDetails.states.offline')}</p>
                           <p className="text-xs text-amber-900">
-                             Actions will be queued until the device reconnects.
+                             {t('deviceDetails.states.offlineDesc')}
                           </p>
                         </div>
                       </div>
@@ -921,7 +921,7 @@ export default function DeviceDetailsPage() {
          {/* Hardware Information */}
          <div className="xl:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4">
             <InfoGroup title={t('deviceDetails.info.system.title')} icon={Layers}>
-               <InfoItem label={t('deviceDetails.info.system.uptime')} value={formatUptime(Math.floor((realProps.info?.info.up || 0) / 1000))} highlight />
+               <InfoItem label={t('deviceDetails.info.system.uptime')} value={formatUptime(Math.floor((realProps.info?.info.up || 0) / 1000), t)} highlight />
                <InfoItem label={t('deviceDetails.info.system.firmware')} value={realProps.info?.info.vername} />
                <InfoItem label={t('deviceDetails.info.system.orientation.label')} value={realProps.screen_orientation?.orientation === 'landscape' ? t('deviceDetails.info.system.orientation.landscape') : t('deviceDetails.info.system.orientation.portrait')} />
             </InfoGroup>
@@ -1341,8 +1341,8 @@ export default function DeviceDetailsPage() {
                                  ))
                               ) : (
                                  <tr>
-                                    <td colSpan={4} className="py-10 text-center text-muted-foreground">
-                                       <p className="text-sm">No programs assigned</p>
+                                    <td colSpan={3} className="py-10 text-center text-muted-foreground">
+                                       <p className="text-sm">{t('deviceDetails.schedule.none')}</p>
                                     </td>
                                  </tr>
                               )}
@@ -1531,7 +1531,7 @@ export default function DeviceDetailsPage() {
                   </Button>
                   
                   <div className="mt-6 px-8 py-3 bg-white/10 backdrop-blur-2xl rounded-full border border-white/10 text-white/90 text-xs font-bold tracking-[0.3em] shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
-                     Press ESC or Click Outside to exit
+                     {t('deviceDetails.states.exitPreview')}
                   </div>
                </div>
             </DialogContent>
@@ -1543,11 +1543,12 @@ export default function DeviceDetailsPage() {
 }
 
 function PolicyData({ label, value, active = false }: { label: string, value: any, active?: boolean }) {
+  const { t } = useTranslation();
   return (
     <div className="flex justify-between items-center text-sm">
        <span className="text-muted-foreground">{label}</span>
        <div className="flex items-center gap-2">
-          <span className="font-medium">{value || 'Not set'}</span>
+          <span className="font-medium">{value || t('common.notSet')}</span>
           {active && <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />}
        </div>
     </div>
@@ -1583,7 +1584,7 @@ function InfoItem({ label, value, copyable = false, highlight = false, fontMono 
           {value || "—"}
         </span>
         {copyable && value && (
-          <button onClick={() => { navigator.clipboard.writeText(String(value)); toast.info("Copied"); }}
+          <button onClick={() => { navigator.clipboard.writeText(String(value)); toast.info(t('common.toasts.copied', 'Copied')); }}
             className="p-1 opacity-0 group-hover/item:opacity-100 hover:bg-muted rounded text-primary transition-all">
             <Copy className="h-3 w-3" />
           </button>
@@ -1633,7 +1634,10 @@ function ResourceProgress({ label, used, total, unit, color = "bg-primary", t }:
 }
 
 function VisibilityRow({ name, id, source, status, progress, t }: { name: string, id: number, source: 'direct' | 'schedule', status: string, progress: number, t: any }) {
-   const statusLabel = status === 'DOWNLOADED' || status === 'downloaded' ? t('deviceDetails.schedule.status.ready') : status === 'DOWNLOADING' ? t('deviceDetails.schedule.status.downloading') : t('deviceDetails.schedule.status.pending');
+   const isReady = status === 'DOWNLOADED' || status === 'downloaded';
+   const isDownloading = status === 'DOWNLOADING';
+   const statusLabel = isReady ? t('deviceDetails.schedule.status.ready') : isDownloading ? t('deviceDetails.schedule.status.downloading') : t('deviceDetails.schedule.status.pending');
+   
    return (
       <tr className="hover:bg-muted/5 transition-colors">
          <td className="px-4 py-3">
@@ -1641,7 +1645,7 @@ function VisibilityRow({ name, id, source, status, progress, t }: { name: string
          </td>
          <td className="px-4 py-3">
             <div className="flex items-center gap-2">
-               <div className={cn("h-1.5 w-1.5 rounded-full", statusLabel === 'Ready' ? "bg-emerald-500" : "bg-amber-500 animate-pulse")} />
+               <div className={cn("h-1.5 w-1.5 rounded-full", isReady ? "bg-emerald-500" : "bg-amber-500 animate-pulse")} />
                <span className="text-xs text-muted-foreground">{statusLabel}</span>
             </div>
          </td>
@@ -1652,11 +1656,11 @@ function VisibilityRow({ name, id, source, status, progress, t }: { name: string
    );
 }
 
-function formatUptime(seconds: number): string {
+function formatUptime(seconds: number, t: any): string {
   const d = Math.floor(seconds / (3600 * 24));
   const h = Math.floor((seconds % (3600 * 24)) / 3600);
   const m = Math.floor((seconds % 3600) / 60);
-  if (d > 0) return `${d}D ${h}h ${m}m`;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
+  if (d > 0) return `${d}${t('common.units.day')} ${h}${t('common.units.hour')} ${m}${t('common.units.minute')}`;
+  if (h > 0) return `${h}${t('common.units.hour')} ${m}${t('common.units.minute')}`;
+  return `${m}${t('common.units.minute')}`;
 }

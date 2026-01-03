@@ -1,4 +1,36 @@
 {
+  "common": {
+    "actions": {
+      "back": "Back",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "delete": "Delete",
+      "save": "Save",
+      "edit": "Edit",
+      "view": "View",
+      "open": "Open",
+      "refresh": "Refresh",
+      "close": "Close"
+    },
+    "errors": {
+      "unknown": "An unknown error occurred",
+      "network": "Network connection error",
+      "updateFailed": "Update failed",
+      "deleteFailed": "Delete failed",
+      "loadFailed": "Load failed"
+    },
+    "notSet": "Not set",
+    "search": "Search",
+    "toasts": {
+      "copied": "Copied to clipboard"
+    },
+    "units": {
+      "day": "d",
+      "hour": "h",
+      "minute": "m",
+      "second": "s"
+    }
+  },
   "nav": {
     "home": "Home",
     "features": "Features",
@@ -1312,7 +1344,9 @@
         "mac": "MAC",
         "speed": "Speed",
         "signal": "Signal",
-        "notConnected": "Not connected"
+        "notConnected": "Not connected",
+        "ethernet": "Ethernet",
+        "hotspot": "Hotspot"
       },
       "resources": {
         "title": "Resources",
@@ -1420,6 +1454,29 @@
           "label": "Slide to confirm restart"
         }
       }
+    },
+    "states": {
+      "loading": "Loading device details...",
+      "unavailable": "Device data unavailable",
+      "offline": "Device offline",
+      "offlineDesc": "Actions will be queued until the device reconnects.",
+      "exitPreview": "Press ESC or Click Outside to exit"
+    },
+    "toasts": {
+      "brightnessUpdated": "Brightness updated",
+      "volumeUpdated": "Volume updated",
+      "colorTempUpdated": "Color temperature updated",
+      "inputSourceUpdated": "Input source updated",
+      "screenshotDispatched": "Screenshot command dispatched",
+      "screenshotFailed": "Failed to dispatch capture command",
+      "screenshotConfirmed": "Screenshot command confirmed by device",
+      "commandAccepted": "Command {{command}} accepted",
+      "dispatchFailed": "Dispatch failed",
+      "screenshotsDeleted": "Screenshot(s) deleted",
+      "historyCleared": "History cleared",
+      "unpublishSuccess": "Unpublished from this device",
+      "deleteCommandSent": "Delete command sent",
+      "clearCommandSent": "Clear-all command sent"
     }
   },
   "aboutPage": {

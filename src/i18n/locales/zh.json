@@ -1,4 +1,36 @@
 {
+  "common": {
+    "actions": {
+      "back": "返回",
+      "cancel": "取消",
+      "confirm": "确认",
+      "delete": "删除",
+      "save": "保存",
+      "edit": "编辑",
+      "view": "查看",
+      "open": "打开",
+      "refresh": "刷新",
+      "close": "关闭"
+    },
+    "errors": {
+      "unknown": "发生未知错误",
+      "network": "网络连接异常",
+      "updateFailed": "更新失败",
+      "deleteFailed": "删除失败",
+      "loadFailed": "加载失败"
+    },
+    "notSet": "未设置",
+    "search": "搜索",
+    "toasts": {
+      "copied": "已复制到剪贴板"
+    },
+    "units": {
+      "day": "天",
+      "hour": "时",
+      "minute": "分",
+      "second": "秒"
+    }
+  },
   "nav": {
     "home": "首页",
     "features": "功能特性",
@@ -1400,6 +1432,212 @@
       "lastSynced": "上次同步：{{time}}",
       "syncPending": "等待同步...",
       "systemOnline": "系统在线"
+    }
+  },
+  "deviceDetails": {
+    "header": {
+      "lastSeen": "最后在线",
+      "never": "从未上线",
+      "liveUpdates": {
+        "active": "实时更新已激活",
+        "paused": "实时更新已暂停"
+      },
+      "advanced": "高级指令",
+      "refresh": "刷新状态"
+    },
+    "cockpit": {
+      "screenshot": {
+        "title": "屏幕截图",
+        "empty": "暂无截图",
+        "noPreview": "无预览",
+        "history": "截图历史",
+        "fullScreen": "全屏查看",
+        "refresh": "刷新截图",
+        "captureQueued": "截图指令已发送"
+      },
+      "nowPlaying": {
+        "label": "正在播放",
+        "none": "无播放内容"
+      }
+    },
+    "actions": {
+      "title": "快捷操作",
+      "power": {
+        "label": "电源控制",
+        "wakeup": "唤醒设备",
+        "sleep": "进入休眠",
+        "restart": "重启设备"
+      },
+      "inputSource": {
+        "label": "信号源",
+        "internal": "内部播放器",
+        "hdmi": "HDMI",
+        "dvi": "DVI",
+        "vga": "VGA"
+      },
+      "display": {
+        "label": "显示调节",
+        "unlock": "解锁调节",
+        "adjusting": "调节中...",
+        "brightness": "屏幕亮度",
+        "volume": "音量调节",
+        "colorTemp": "色温调节"
+      }
+    },
+    "info": {
+      "system": {
+        "title": "硬件信息",
+        "uptime": "在线时长",
+        "firmware": "固件版本",
+        "orientation": {
+          "label": "屏幕方向",
+          "landscape": "横屏",
+          "portrait": "竖屏"
+        }
+      },
+      "network": {
+        "title": "网络状态",
+        "connected": "已连接",
+        "disconnected": "断开连接",
+        "carrier": "运营商",
+        "ipAddress": "IP 地址",
+        "gateway": "网关地址",
+        "mac": "MAC 地址",
+        "speed": "连接速度",
+        "signal": "信号强度",
+        "notConnected": "未连接网络",
+        "ethernet": "以太网",
+        "hotspot": "热点"
+      },
+      "resources": {
+        "title": "系统资源",
+        "storage": "存储空间",
+        "memory": "内存容量",
+        "used": "已用",
+        "total": "总量"
+      }
+    },
+    "tabs": {
+      "assets": "本地素材",
+      "activity": "操作日志",
+      "schedule": "排程详情",
+      "settings": "策略设置"
+    },
+    "activity": {
+      "title": "最近活动",
+      "subtitle": "发送至此设备的操作记录",
+      "viewAll": "查看全部",
+      "empty": "暂无活动记录"
+    },
+    "assets": {
+      "title": "本地素材",
+      "subtitle": "设备本地缓存的内容",
+      "clearAll": "清空缓存",
+      "table": {
+        "name": "节目名称",
+        "source": "来源",
+        "size": "大小",
+        "actions": "操作",
+        "cloud": "云端下发",
+        "lan": "局域网"
+      },
+      "empty": "无缓存素材",
+      "noMatch": "未找到匹配素材"
+    },
+    "schedule": {
+      "title": "播放排程",
+      "subtitle": "分配至此设备的节目计划",
+      "assigned": "已分配排程",
+      "none": "未分配排程",
+      "summary": {
+        "title": "排程摘要",
+        "programs": "节目数量",
+        "actions": "触发动作"
+      },
+      "published": "已发布节目",
+      "status": {
+        "ready": "已就绪",
+        "downloading": "下载中",
+        "pending": "等待中"
+      }
+    },
+    "policy": {
+      "time": {
+        "title": "时间策略",
+        "localTime": "设备本地时间",
+        "timezoneId": "时区 ID",
+        "lastSync": "上次同步时间"
+      },
+      "security": {
+        "title": "安全与同步",
+        "firewall": {
+          "label": "网络防火墙",
+          "desc": "阻止未授权的入站连接"
+        },
+        "autoUpdate": {
+          "label": "自动更新",
+          "desc": "自动应用系统固件更新"
+        },
+        "usbAccess": {
+          "label": "USB 访问",
+          "desc": "允许从 USB 设备读取内容"
+        },
+        "sync": {
+          "label": "多屏同步",
+          "desc": "与同组设备保持播放同步"
+        }
+      }
+    },
+    "dialogs": {
+      "removeAsset": {
+        "title": "从设备移除节目？",
+        "descCloud": "这将停止该节目在设备上的发布，并请求设备删除缓存文件。",
+        "descLocal": "这将请求设备删除缓存文件。云端发布状态不会改变。"
+      },
+      "clearAll": {
+        "title": "清空所有缓存节目？",
+        "desc": "这将向设备发送指令以清除所有下载的节目文件。不会影响云端分配或排程计划。"
+      },
+      "power": {
+        "sleep": {
+          "title": "让设备进入休眠？",
+          "desc": "设备将进入低功耗休眠模式。内容播放将停止，直到设备被再次唤醒。",
+          "label": "滑动确认进入休眠"
+        },
+        "wakeup": {
+          "title": "唤醒设备？",
+          "desc": "设备将被唤醒并恢复正常操作与播放。",
+          "label": "滑动确认唤醒设备"
+        },
+        "restart": {
+          "title": "重启设备？",
+          "desc": "设备将立即重新启动。重启过程大约需要 90 秒，期间设备将不可用。",
+          "label": "滑动确认重启设备"
+        }
+      }
+    },
+    "states": {
+      "loading": "正在加载设备详情...",
+      "unavailable": "设备数据不可用",
+      "offline": "设备离线",
+      "offlineDesc": "指令将在设备重新连接后执行。",
+      "exitPreview": "按 ESC 或点击空白区域退出"
+    },
+    "toasts": {
+      "brightnessUpdated": "亮度已更新",
+      "volumeUpdated": "音量已更新",
+      "colorTempUpdated": "色温已更新",
+      "inputSourceUpdated": "信号源已更新",
+      "screenshotDispatched": "截图指令已下发",
+      "screenshotFailed": "截图指令下发失败",
+      "screenshotConfirmed": "截图指令已确认",
+      "commandAccepted": "指令 {{command}} 已受理",
+      "dispatchFailed": "指令下发失败",
+      "screenshotsDeleted": "截图已删除",
+      "historyCleared": "历史记录已清空",
+      "unpublishSuccess": "已从该设备取消发布",
+      "deleteCommandSent": "删除指令已发送",
+      "clearCommandSent": "清空指令已发送"
     }
   },
   "export": {
