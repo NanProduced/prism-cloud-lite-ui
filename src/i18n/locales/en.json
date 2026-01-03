@@ -4,6 +4,7 @@
     "features": "Features",
     "solutions": "Solutions",
     "pricing": "Pricing",
+    "blog": "Blog",
     "docs": "Docs",
     "login": "Log in",
     "getStarted": "Get Started",
@@ -298,24 +299,26 @@
     "titleHighlight": "Engineering Excellence",
     "description": "Explore our latest thoughts on the intersection of media distribution, cloud infrastructure, and artificial intelligence.",
     "readMore": "Read Article",
-    "posts": [
-      {
-        "title": "The Future of Visual Networks",
-        "desc": "How 5G and Edge Computing are transforming static displays into intelligent, interactive communication nodes.",
-        "tag": "Industry Trends"
-      },
-      {
-        "title": "AI in Digital Signage",
-        "desc": "Beyond automation: Using Large Language Models to manage and troubleshoot global terminal fleets via natural language.",
-        "tag": "Innovation"
-      },
-      {
-        "title": "Optimizing Global Distribution",
-        "desc": "Deep dive into MD5 content addressing and cloud transcoding for seamless 24/7 high-fidelity playback.",
-        "tag": "Technical"
-      }
-    ]
-  },
+          "posts": [
+            {
+              "title": "The Future of Visual Networks",
+              "desc": "How 5G and Edge Computing are transforming static displays into intelligent, interactive communication nodes.",
+              "tag": "Industry Trends",
+              "slug": "/blog/future-of-visual-networks"
+            },
+            {
+              "title": "AI in Digital Signage",
+              "desc": "Beyond automation: Using Large Language Models to manage and troubleshoot global terminal fleets via natural language.",
+              "tag": "Innovation",
+              "slug": "/blog/ai-in-digital-signage"
+            },
+            {
+              "title": "Optimizing Global Distribution",
+              "desc": "Deep dive into MD5 content addressing and cloud transcoding for seamless 24/7 high-fidelity playback.",
+              "tag": "Technical",
+              "slug": "/blog/optimizing-global-distribution"
+            }
+          ]  },
   "useCases": {
     "title": "Transforming spaces across sectors",
     "industries": "Industries",

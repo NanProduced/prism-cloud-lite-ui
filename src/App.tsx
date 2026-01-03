@@ -56,6 +56,7 @@ const router = createBrowserRouter([
       { path: "api", element: <APIPage /> },
       { path: "pricing", element: <PricingPage /> },
       { path: "blog", element: <BlogPage /> },
+      { path: "blog/:slug", element: <BlogPage /> },
       { path: "logo", element: <LogoShowcase /> },
     ],
   },

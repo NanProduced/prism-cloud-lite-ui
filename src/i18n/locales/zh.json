@@ -4,6 +4,7 @@
     "features": "功能特性",
     "solutions": "解决方案",
     "pricing": "定价",
+    "blog": "博客",
     "docs": "文档",
     "login": "登录",
     "getStarted": "立即开始",
@@ -298,24 +299,26 @@
     "titleHighlight": "卓越工程",
     "description": "探索我们关于媒体分发、云基础设施和人工智能交汇点的最新思考。",
     "readMore": "阅读文章",
-    "posts": [
-      {
-        "title": "视觉网络的未来",
-        "desc": "5G 和边缘计算如何将静态显示屏转变为智能、互动的通信节点。",
-        "tag": "行业趋势"
-      },
-      {
-        "title": "数字标牌中的 AI",
-        "desc": "超越自动化：使用大语言模型通过自然语言管理全球终端集群并排查故障。",
-        "tag": "技术创新"
-      },
-      {
-        "title": "优化全球分发",
-        "desc": "深入探讨 MD5 内容寻址和云转码，实现无缝的 24/7 高保真播放。",
-        "tag": "技术深挖"
-      }
-    ]
-  },
+          "posts": [
+            {
+              "title": "视觉网络的未来",
+              "desc": "5G 和 边缘计算如何将静态显示屏转变为智能、互动的通信节点。",
+              "tag": "行业趋势",
+              "slug": "/blog/future-of-visual-networks"
+            },
+            {
+              "title": "数字标牌中的 AI",
+              "desc": "超越自动化：使用大语言模型通过自然语言管理全球终端集群并排查故障。",
+              "tag": "技术创新",
+              "slug": "/blog/ai-in-digital-signage"
+            },
+            {
+              "title": "优化全球分发",
+              "desc": "深入探讨 MD5 内容寻址和云转码，实现无缝的 24/7 高保真播放。",
+              "tag": "技术深挖",
+              "slug": "/blog/optimizing-global-distribution"
+            }
+          ]  },
   "useCases": {
     "title": "赋能各行业",
     "industries": "行业",

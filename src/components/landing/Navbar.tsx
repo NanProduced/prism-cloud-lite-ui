@@ -40,6 +40,7 @@ export const Navbar: React.FC = () => {
     { name: t("nav.features"), href: "/features" },
     { name: t("nav.solutions"), href: "/benefits" },
     { name: t("nav.pricing"), href: "/pricing" },
+    { name: t("nav.blog", "Blog"), href: "/blog" },
     { name: t("nav.docs"), href: "/help" },
   ];
 
