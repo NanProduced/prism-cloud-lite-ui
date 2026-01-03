@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ReactNode } from "react";
+import { Link } from "react-router-dom";
 
 interface BentoCardProps {
   title: string;
@@ -10,6 +11,7 @@ interface BentoCardProps {
   className?: string;
   graphic?: ReactNode;
   delay?: number;
+  href?: string;
 }
 
 const BentoCard = ({
@@ -18,6 +20,7 @@ const BentoCard = ({
   className,
   graphic,
   delay = 0,
+  href,
 }: BentoCardProps) => {
   return (
     <FadeIn delay={delay} className={cn("group", className)}>
@@ -37,9 +40,12 @@ const BentoCard = ({
           <p className="text-neutral-400 text-sm leading-relaxed mb-4">
             {description}
           </p>
-          <button className="w-9 h-9 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-400 hover:bg-neutral-700 hover:text-white transition-colors">
+          <Link 
+            to={href || "#"} 
+            className="w-9 h-9 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-400 hover:bg-neutral-700 hover:text-white transition-colors"
+          >
             <ArrowRight className="w-4 h-4" />
-          </button>
+          </Link>
         </div>
 
         {/* Graphic - Bottom */}
@@ -260,6 +266,7 @@ export const AppFeatures = () => {
       graphic: <SecurityMockup />,
       className: "col-span-1 md:col-span-2",
       delay: 0,
+      href: "/features#security",
     },
     {
       title: t("appFeatures.transcode.title"),
@@ -267,6 +274,7 @@ export const AppFeatures = () => {
       graphic: <TranscodeMockup />,
       className: "col-span-1",
       delay: 0.05,
+      href: "/features#transcode",
     },
     {
       title: t("appFeatures.editor.title"),
@@ -274,6 +282,7 @@ export const AppFeatures = () => {
       graphic: <EditorMockup />,
       className: "col-span-1",
       delay: 0.1,
+      href: "/features#editor",
     },
     {
       title: t("appFeatures.analytics.title"),
@@ -281,6 +290,7 @@ export const AppFeatures = () => {
       graphic: <AnalyticsMockup />,
       className: "col-span-1",
       delay: 0.15,
+      href: "/features#analytics",
     },
     {
       title: t("appFeatures.developer.title"),
@@ -288,6 +298,7 @@ export const AppFeatures = () => {
       graphic: <DeveloperMockup />,
       className: "col-span-1",
       delay: 0.2,
+      href: "/features#developer",
     },
     {
       title: t("appFeatures.audit.title"),
@@ -295,6 +306,7 @@ export const AppFeatures = () => {
       graphic: <AuditMockup />,
       className: "col-span-1 md:col-span-3",
       delay: 0.25,
+      href: "/features#audit",
     },
   ];
 
@@ -326,6 +338,7 @@ export const AppFeatures = () => {
               graphic={feature.graphic}
               className={feature.className}
               delay={feature.delay}
+              href={feature.href}
             />
           ))}
         </div>

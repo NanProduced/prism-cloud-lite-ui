@@ -461,10 +461,92 @@
       "unknownError": "An error occurred. Please try again",
       "continueUrlMissing": "Invalid login session. Please restart from the login entry",
       "continueUrlInvalid": "Invalid redirect URL",
-      "allFieldsRequired": "All fields are required"
+            "allFieldsRequired": "All fields are required"
+          }
+        },
+        "featuresPage": {    "title": "Advanced Infrastructure",
+    "titleHighlight": "for Visual Networks",
+    "subtitle": "Dive deep into the technology that powers Prism Cloud Lite. Built for reliability, scale, and intelligence.",
+    "security": {
+      "title": "Enterprise Identity & Security",
+      "description": "Standardized authentication and authorization layers ensuring your visual network remains under your control.",
+      "techTitle": "Architectural Highlights",
+      "techPoints": [
+        "OpenID Connect (OIDC) & OAuth 2.0 integration for enterprise-grade identity management.",
+        "Single Logout (SLO) support ensures all sessions are terminated across the ecosystem.",
+        "Secure cookie-based session management with HttpOnly and SameSite enforcement.",
+        "Role-Based Access Control (RBAC) governing every API endpoint and device command."
+      ]
+    },
+    "transcode": {
+      "title": "Smart Cloud Transcoding",
+      "description": "Ensure your content plays flawlessly on any hardware, regardless of original file formats or bitrates.",
+      "techTitle": "Engineering Highlights",
+      "techPoints": [
+        "Distributed transcoding workers powered by FFmpeg for high-throughput media processing.",
+        "Automatic H.264/AVC optimization to maximize compatibility across heterogeneous device fleets.",
+        "Cloud-native storage integration with MD5 content-addressing for instant deduplication.",
+        "Priority queueing system ensuring urgent content is processed with millisecond latency."
+      ]
+    },
+    "editor": {
+      "title": "Professional Visual Editor",
+      "description": "A powerful WYSIWYG studio that bridges the gap between creative design and technical deployment.",
+      "techTitle": "Core Capabilities",
+      "techPoints": [
+        "High-performance Canvas-based layout engine supporting complex multi-layer stacking.",
+        "Real-time preview system that mirrors device-side rendering logic for precision.",
+        "Dynamic resolution support with automatic aspect-ratio correction and safe-zone guides.",
+        "Versioned snapshots allow for instant rollbacks and history tracking of program changes."
+      ]
+    },
+    "analytics": {
+      "title": "Real-time Fleet Analytics",
+      "description": "Total visibility into your global infrastructure with sub-second telemetry and health monitoring.",
+      "techTitle": "Data Architecture",
+      "techPoints": [
+        "Server-Sent Events (SSE) backbone for live, push-based heartbeat and metric updates.",
+        "Time-series data aggregation for CPU, Memory, and Storage trends across thousands of nodes.",
+        "Automated health-check loops with intelligent threshold-based alerting systems.",
+        "Deep-dive telemetry including network signal strength and firmware-level diagnostics."
+      ]
+    },
+    "developer": {
+      "title": "API-First & Extensible",
+      "description": "Built for developers by developers. Integrate Prism Cloud into your existing enterprise stack seamlessly.",
+      "techTitle": "Connectivity Hub",
+      "techPoints": [
+        "Robust RESTful API with comprehensive Swagger/OpenAPI documentation for all services.",
+        "Programmable Webhooks for real-time integration with external ERP/CRM systems.",
+        "Developer API Keys with granular permissions and automated rotation capabilities.",
+        "Custom Device Columns and metadata support for complex business-specific tagging."
+      ]
+    },
+    "audit": {
+      "title": "Immutable Audit Trail",
+      "description": "Comprehensive logging for compliance, security, and troubleshooting across the entire network.",
+      "techTitle": "Compliance Layer",
+      "techPoints": [
+        "Structured operation logs capturing every command, parameter, and execution result.",
+        "Change tracking for all media, programs, and schedules with detailed actor attribution.",
+        "Exportable audit reports in multiple formats (XLSX, Parquet) for long-term archiving.",
+        "Distributed tracing integration for end-to-end visibility of complex batch operations."
+      ]
+    },
+    "aiAssistant": {
+      "title": "Next-Gen AI Co-pilot",
+      "description": "More than just a chatbot. An autonomous agent that understands your infrastructure and automates operations.",
+      "techTitle": "Intelligence Stack",
+      "techPoints": [
+        "Powered by Spring AI with multi-model support including GPT-4, Gemini, and local vLLM.",
+        "Advanced Retrieval-Augmented Generation (RAG) using pgvector and semantic document indexing.",
+        "Autonomous Function Calling allows the AI to query real-time database and monitoring data.",
+        "BYOK (Bring Your Own Key) architecture for privacy-conscious enterprise deployments."
+      ]
     }
   },
   "program": {
+
     "publish": {
       "title": "Publish Program",
       "steps": {
@@ -693,124 +775,124 @@
       }
     }
   },
-  "billing": {
-    "title": "Subscription Plans",
-    "subtitle": "Choose the scale that fits your business needs",
-    "header": "Simple, Transparent Pricing",
-    "headerDesc": "Choose the plan that's right for your business. No hidden fees.",
-    "monthly": "Monthly",
-    "yearly": "Yearly",
-    "savePercent": "SAVE 20%",
-    "whatsIncluded": "What's included",
-    "compareFeatures": "Compare all features",
-    "faqTitle": "Frequently Asked Questions",
-    "customQuoteTitle": "Need a custom solution?",
-    "customQuoteDesc": "Have specific requirements or a large-scale deployment? Let's talk about a tailor-made plan for your organization.",
-    "getCustomQuote": "Get a Custom Quote",
-    "currentPlan": "Current Plan",
-    "expiresAt": "Expires on {{date}}",
-    "reloginNotice": "Subscription updated! Please re-login to activate all features.",
-    "free": {
-      "name": "Free",
-      "price": "$0",
-      "description": "Essential features for small setups",
-      "features": [
-        "20 Devices & 20 Programs",
-        "2GB Cloud Storage",
-        "AI Assistant: 10-msg context, 20k tokens/day",
-        "Exports: Standard (CSV/JSON), limited time-range",
-        "3 Custom device columns"
-      ]
-    },
-    "pro": {
-      "name": "Pro",
-      "price": "$29",
-      "priceYearly": "$23",
-      "period": "/mo",
-      "description": "Powerful tools for growing networks",
-      "features": [
-        "100 Devices & 200 Programs",
-        "50GB Cloud Storage",
-        "AI Assistant: 30-msg context, Unlimited tokens, BYOK",
-        "Exports: Full (XLSX/Parquet), priority processing",
-        "Exclusive API Access",
-        "20 Custom device columns"
-      ],
-      "button": "Upgrade with Code"
-    },
-    "ultra": {
-      "name": "Ultra",
-      "price": "Custom",
-      "description": "Tailored solutions for large enterprises",
-      "features": [
-        "Unlimited Devices & Programs",
-        "Enterprise Security (SSO)",
-        "AI Assistant: Custom fine-tuning & higher limits",
-        "Dedicated Account Manager",
-        "SLA Guarantee",
-        "Custom Feature Development"
-      ],
-      "button": "Contact Sales"
-    },
-    "redeem": {
-      "title": "Redeem Code",
-      "description": "Enter your 12-character PRDEMO code to upgrade",
-      "placeholder": "PRDEMO-XXXX-XXXX",
-      "button": "Verify & Activate",
-      "submitting": "Activating...",
-      "success": "Activation successful! Your plan is now Pro.",
-      "error": "Invalid or expired code"
-    },
-        "faqs": [
-          {
-            "q": "Can I change plans at any time?",
-            "a": "Yes, you can upgrade or downgrade your plan at any time from your dashboard."
-          },
-          {
-            "q": "Do you offer discounts for non-profits?",
-            "a": "We do! Please contact our sales team to discuss special pricing for NGOs and educational institutions."
-          },
-          {
-            "q": "What happens if I exceed my storage limit?",
-            "a": "We'll notify you when you reach 90% of your limit. You can always upgrade for more space."  
-          }
+    "billing": {
+      "title": "Subscription Plans",
+      "subtitle": "Choose the scale that fits your business needs",
+      "header": "Simple, Transparent Pricing",
+      "headerDesc": "Choose the plan that's right for your business. No hidden fees.",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "savePercent": "SAVE 20%",
+      "whatsIncluded": "What's included",
+      "compareFeatures": "Compare all features",
+      "faqTitle": "Frequently Asked Questions",
+      "customQuoteTitle": "Need a custom solution?",
+      "customQuoteDesc": "Have specific requirements or a large-scale deployment? Let's talk about a tailor-made plan for your organization.",
+      "getCustomQuote": "Get a Custom Quote",
+      "currentPlan": "Current Plan",
+      "expiresAt": "Expires on {{date}}",
+      "reloginNotice": "Subscription updated! Please re-login to activate all features.",
+      "free": {
+        "name": "Free",
+        "price": "$0",
+        "description": "Essential features for small setups",
+        "features": [
+          "20 Devices & 20 Programs",
+          "2GB Cloud Storage",
+          "AI Assistant: 10-msg context, 20k tokens/day",
+          "Exports: Standard (CSV/JSON), limited time-range",
+          "3 Custom device columns"
+        ]
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "$29",
+        "priceYearly": "$23",
+        "period": "/mo",
+        "description": "Powerful tools for growing networks",
+        "features": [
+          "100 Devices & 200 Programs",
+          "50GB Cloud Storage",
+          "AI Assistant: 30-msg context, Unlimited tokens, BYOK",
+          "Exports: Full (XLSX/Parquet), priority processing",
+          "Exclusive API Access",
+          "20 Custom device columns"
         ],
-        "aiComparison": {
-          "title": "AI Assistant Capability Comparison",
-          "subtitle": "Prism AI capabilities scale with your subscription and compute choices.",
-          "columns": {
-            "feature": "Capability",
-            "freeLocal": "Free (Local)",
-            "pro": "Pro / Ultra",
-            "freeByok": "Free (BYOK)"
-          },
-          "features": {
-            "memory": "Context Memory",
-            "memoryDesc": "Max history messages",
-            "rag": "Knowledge Base (RAG)",
-            "ragDesc": "Retrieved document sources",
-            "agent": "Agent Reasoning",
-            "agentDesc": "Tool calls & recursive rounds",
-            "quota": "Daily Token Quota",
-            "quotaDesc": "Local model compute limit"
-          },
-          "values": {
-            "msg10": "10 Messages",
-            "msg30": "30 Messages",
-            "rag4": "Top 4 Sources",
-            "rag8": "Top 8 Sources",
-            "basic": "Basic (1 round)",
-            "advanced": "Advanced (3 rounds)",
-            "limit20k": "20,000 / day",
-            "unlimited": "Unlimited",
-            "notApplicable": "N/A"
-          },
-          "byokNotice": "Bring Your Own Key: Use your OpenAI/Gemini API key on Free tier to unlock Pro-level AI context and reasoning limits."
+        "button": "Upgrade with Code"
+      },
+      "ultra": {
+        "name": "Ultra",
+        "price": "Custom",
+        "description": "Tailored solutions for large enterprises",
+        "features": [
+          "Unlimited Devices & Programs",
+          "Enterprise Security (SSO)",
+          "AI Assistant: Custom fine-tuning & higher limits",
+          "Dedicated Account Manager",
+          "SLA Guarantee",
+          "Custom Feature Development"
+        ],
+        "button": "Contact Sales"
+      },
+      "redeem": {
+        "title": "Redeem Code",
+        "description": "Enter your 12-character PRDEMO code to upgrade",
+        "placeholder": "PRDEMO-XXXX-XXXX",
+        "button": "Verify & Activate",
+        "submitting": "Activating...",
+        "success": "Activation successful! Your plan is now Pro.",
+        "error": "Invalid or expired code"
+      },
+      "faqs": [
+        {
+          "q": "Can I change plans at any time?",
+          "a": "Yes, you can upgrade or downgrade your plan at any time from your dashboard."
+        },
+        {
+          "q": "Do you offer discounts for non-profits?",
+          "a": "We do! Please contact our sales team to discuss special pricing for NGOs and educational institutions."
+        },
+        {
+          "q": "What happens if I exceed my storage limit?",
+          "a": "We'll notify you when you reach 90% of your limit. You can always upgrade for more space."
         }
-      },  "export": {
-    "title": "Export Data",
-    "subtitle": "Configure fields and format for your export task",
-    "type": {
+      ],
+      "aiComparison": {
+        "title": "AI Assistant Capability Comparison",
+        "subtitle": "Prism AI capabilities scale with your subscription and compute choices.",
+        "columns": {
+          "feature": "Capability",
+          "freeLocal": "Free (Local)",
+          "pro": "Pro / Ultra",
+          "freeByok": "Free (BYOK)"
+        },
+        "features": {
+          "memory": "Context Memory",
+          "memoryDesc": "Max history messages",
+          "rag": "Knowledge Base (RAG)",
+          "ragDesc": "Retrieved document sources",
+          "agent": "Agent Reasoning",
+          "agentDesc": "Tool calls & recursive rounds",
+          "quota": "Daily Token Quota",
+          "quotaDesc": "Local model compute limit"
+        },
+        "values": {
+          "msg10": "10 Messages",
+          "msg30": "30 Messages",
+          "rag4": "Top 4 Sources",
+          "rag8": "Top 8 Sources",
+          "basic": "Basic (1 round)",
+          "advanced": "Advanced (3 rounds)",
+          "limit20k": "20,000 / day",
+          "unlimited": "Unlimited",
+          "notApplicable": "N/A"
+        },
+            "byokNotice": "Bring Your Own Key: Use your OpenAI/Gemini API key on Free tier to unlock Pro-level AI context and reasoning limits."
+            }
+          },
+          "export": {
+            "title": "Export Data",
+            "subtitle": "Configure fields and format for your export task",    "type": {
       "DEVICE_LOGS": "Device Logs",
       "COMMAND_LOGS": "Command Logs",
       "DEVICE_ONLINE_SESSIONS": "Device Online Sessions",

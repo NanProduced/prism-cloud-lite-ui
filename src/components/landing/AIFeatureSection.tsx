@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import {
   Sparkles,
   Send,
@@ -12,7 +13,8 @@ import {
   Zap,
   RotateCcw,
   Circle,
-  User
+  User,
+  ArrowRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FadeIn } from "@/components/ui/FadeIn";
@@ -364,10 +366,17 @@ export const AIFeatureSection = () => {
             </FadeIn>
 
             {/* Description */}
-            <FadeIn delay={0.2}>
+            <FadeIn delay={0.2} className="space-y-6">
               <p className="text-neutral-500 text-lg leading-relaxed max-w-xl">
                 {t("ai.description")}
               </p>
+              <Link 
+                to="/features#aiAssistant" 
+                className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 font-semibold transition-colors group"
+              >
+                Learn more about Prism AI Architecture 
+                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+              </Link>
             </FadeIn>
 
             {/* Features Grid */}
