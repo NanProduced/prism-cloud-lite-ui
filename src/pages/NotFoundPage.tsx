@@ -6,99 +6,72 @@ export default function NotFoundPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="relative w-full min-h-screen bg-cover bg-center overflow-hidden"
+    <div className="fixed inset-0 w-full h-full bg-cover bg-center overflow-hidden flex flex-col"
       style={{
         backgroundImage: "url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1440&h=900&fit=crop')",
         backgroundColor: "#0b0a00"
       }}>
       {/* Dark overlay */}
-      <div className="absolute inset-0 bg-black/50 mix-blend-multiply" />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px]" />
 
       {/* Header - Logo and Menu */}
-      <div className="relative z-10">
-        <div className="flex items-center justify-between px-10 py-6 border-b border-white/10">
+      <div className="relative z-10 w-full">
+        <div className="flex items-center justify-between px-10 py-6">
           {/* Logo */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6 }}
-            className="h-6 flex items-center gap-2"
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={() => navigate("/")}
           >
-            <div className="h-6 w-6 flex items-center justify-center">
-              <PrismIcon size={24} variant="gradient" />
-            </div>
-            <span className="text-gray-300 font-semibold">Prism Cloud</span>
+            <PrismIcon size={32} variant="gradient" />
+            <span className="text-white text-xl font-black tracking-tighter">Prism Cloud</span>
           </motion.div>
-
-          {/* Menu */}
-          <div className="flex items-center gap-8">
-            <nav className="flex gap-8">
-              <a href="/" className="text-white/70 hover:text-white transition-colors font-semibold text-sm">
-                About
-              </a>
-              <a href="/" className="text-white/70 hover:text-white transition-colors font-semibold text-sm">
-                Products
-              </a>
-              <a href="/" className="text-white/70 hover:text-white transition-colors font-semibold text-sm">
-                Pricing
-              </a>
-              <a href="/" className="text-white/70 hover:text-white transition-colors font-semibold text-sm">
-                Login
-              </a>
-            </nav>
-            <button className="text-white hover:text-gray-300 transition-colors">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M11 19a8 8 0 100-16 8 8 0 000 16zm0-2a6 6 0 110-12 6 6 0 010 12zm3.5-9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-              </svg>
-            </button>
-          </div>
         </div>
       </div>
 
       {/* 404 Content */}
-      <div className="relative z-10 h-screen flex flex-col items-center justify-center">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 text-center">
         <motion.div
-          className="text-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
         >
-          {/* 404 Number */}
-          <div className="mb-4">
-            <h1 className="text-9xl font-bold text-white drop-shadow-lg">404</h1>
-          </div>
-
-          {/* Error Message */}
-          <p className="text-2xl text-white mb-12 font-light tracking-wide">
-            Sorry, we were unable to find that page
-          </p>
-
-          {/* Search Bar */}
-          <div className="flex justify-center mb-12">
-            <div className="w-96 relative">
-              <input
-                type="text"
-                placeholder="Search"
-                className="w-full px-6 py-3 bg-white/10 border border-white/30 rounded text-white placeholder-white/50 focus:outline-none focus:border-white/50 transition-colors backdrop-blur-sm"
-              />
-              <button className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 transition-colors">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M11 19a8 8 0 100-16 8 8 0 000 16zm0-2a6 6 0 110-12 6 6 0 010 12zm3.5-9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-                </svg>
-              </button>
+          <div className="relative inline-block mb-8">
+            <h1 className="text-[12rem] md:text-[20rem] font-black text-white/10 leading-none select-none">404</h1>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="space-y-4">
+                <h2 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase italic">Lost in Space</h2>
+                <p className="text-slate-400 font-medium max-w-md mx-auto">
+                  The page you are looking for has been consumed by a black hole or never existed in this dimension.
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Action Button */}
-          <motion.button
-            onClick={() => navigate("/")}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors"
-          >
-            Go Back Home
-          </motion.button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mt-8">
+            <button
+              onClick={() => navigate("/")}
+              className="px-10 py-4 bg-indigo-500 text-white font-black rounded-2xl hover:bg-indigo-400 transition-all shadow-[0_0_40px_rgba(99,102,241,0.4)] text-lg uppercase tracking-widest"
+            >
+              Back to Earth
+            </button>
+            <button
+              onClick={() => navigate("/help")}
+              className="px-10 py-4 bg-white/5 border border-white/10 text-white font-black rounded-2xl hover:bg-white/10 transition-all text-lg uppercase tracking-widest"
+            >
+              Get Rescue
+            </button>
+          </div>
         </motion.div>
+      </div>
+
+      {/* Footer Decoration */}
+      <div className="relative z-10 p-10 flex justify-center">
+        <div className="text-[10px] font-black text-white/20 uppercase tracking-[0.5em]">
+          Synthetic Intelligence Monitoring Active
+        </div>
       </div>
     </div>
   );
