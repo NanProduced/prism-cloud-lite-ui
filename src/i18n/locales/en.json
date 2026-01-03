@@ -1217,6 +1217,78 @@
       }
     }
   },
+  "aboutPage": {
+    "title": "One Human, Nine AIs",
+    "titleHighlight": "And 500 Million Tokens",
+    "subtitle": "Most startups hire humans. We hired a GPU farm. Meet the synthetic squad that built Prism Cloud Lite in record time.",
+    "tokenCount": "500M+",
+    "tokenDesc": "Tokens Burned",
+    "humanTitle": "The Orchestrator",
+    "humanName": "Nan",
+    "humanBio": "Product Visionary, Backend Architect, and the only human in the office who actually needs coffee. Nan directed the chaos, made the high-level technical decisions, and authored the core backend while conducting his silicon orchestra.",
+    "aiLeadsTitle": "Synthetic Leads",
+    "aiLeads": [
+      {
+        "name": "Codex 5.2 High",
+        "role": "Backend Lead & Logic Core",
+        "desc": "The ultimate soul behind the architecture. Handled system-wide design and deep requirement analysis to ensure zero leaks in backend logic.",
+        "model": "codex"
+      },
+      {
+        "name": "Gemini-3-Pro",
+        "role": "Frontend Lead & UI Artisan",
+        "desc": "The guardian of pixels and interaction. Masterfully crafted critical UI components and conquered complex frontend engineering hurdles.",
+        "model": "gemini"
+      },
+      {
+        "name": "Claude Opus 4.5",
+        "role": "Full-Stack Advisor & Consultant",
+        "desc": "The squad's strategic brain. Specialized in solving the most stubborn full-stack challenges and UX architectural flaws.",
+        "model": "claude"
+      }
+    ],
+    "aiSpecialistsTitle": "The Specialist Squad",
+    "aiSpecialists": [
+      {
+        "name": "Gemini-3-Flash",
+        "role": "Frontend Speedster",
+        "desc": "Implemented frontend modules at lightning speed and handled API integration with precision.",
+        "model": "gemini"
+      },
+      {
+        "name": "Claude Sonnet 4.5",
+        "role": "Backend Heavy Lifter",
+        "desc": "The powerhouse of business logic execution. Authored a significant portion of the service implementation.",
+        "model": "claude"
+      },
+      {
+        "name": "Qwen3",
+        "role": "Polish & Detail Expert",
+        "desc": "Quietly fixed loose ends and ensured system stability during the final miracle sprint.",
+        "model": "qwen"
+      },
+      {
+        "name": "DeepSeek-R1",
+        "role": "Localization Force",
+        "desc": "Deeply involved in conversational logic and document alignment for a perfect native experience.",
+        "model": "deepseek"
+      },
+      {
+        "name": "V0 / Figma Make",
+        "role": "Generative Design",
+        "desc": "Instantly transformed abstract ideas into pixel-perfect UI concepts.",
+        "model": "v0"
+      },
+      {
+        "name": "Serena MCP",
+        "role": "Context Oracle",
+        "desc": "The intelligence agent layer that maintained project context and guided the synthetic minds.",
+        "model": "serena"
+      }
+    ],
+    "manifestoTitle": "Our Miracle Manifesto",
+    "manifesto": "We proved that with the right human at the helm and a powerful AI crew, the impossible is just a 30-day sprint away. We don't just build software; we incinerate tokens and redefine the future of engineering."
+  },
   "program": {
     "publish": {
       "title": "Publish Program",
