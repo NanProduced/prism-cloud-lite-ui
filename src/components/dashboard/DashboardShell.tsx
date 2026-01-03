@@ -60,6 +60,7 @@ import {
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { cn, formatBytes } from "@/lib/utils";
 import { PrismIcon } from "@/components/shared/logo";
@@ -149,7 +150,17 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 export function DashboardShell({ children }: PropsWithChildren) {
+  return (
+    <SidebarProvider>
+      <DashboardShellContent>{children}</DashboardShellContent>
+    </SidebarProvider>
+  );
+}
+
+function DashboardShellContent({ children }: PropsWithChildren) {
   const { t } = useTranslation();
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [isChatOpen, setIsChatOpen] = useState(false);
   const { isBillingOpen, setBillingOpen } = useSettingsStore();
@@ -203,112 +214,112 @@ export function DashboardShell({ children }: PropsWithChildren) {
   };
 
   return (
-    <SidebarProvider>
+    <>
       <Sidebar collapsible="icon" className="border-r bg-sidebar">
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                className="h-auto flex-col items-start gap-3 rounded-lg border bg-sidebar-accent/50 px-4 py-4 text-left hover:bg-sidebar-accent transition-colors cursor-pointer"
+                className={cn(
+                  "h-auto flex-col items-start gap-3 rounded-lg border bg-sidebar-accent/50 px-4 py-4 text-left hover:bg-sidebar-accent transition-all cursor-pointer",
+                  isCollapsed && "items-center px-0 py-4 border-transparent bg-transparent"
+                )}
                 tooltip={t('shell.workspace')}
               >
-                <div className="flex items-center gap-3 w-full">
-                  <PrismIcon size={28} variant="gradient" className="flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1 flex-wrap">
-                      <span className="text-base font-bold text-sidebar-foreground">Prism Cloud</span>
-                      {currentTierRaw === 'PRO' ? (
-                        <Badge className="text-[10px] font-bold px-1.5 py-0 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 text-white border-none shadow-[0_0_15px_rgba(245,158,11,0.3)] animate-pulse">PRO</Badge>
-                      ) : currentTierRaw === 'ULTRA' ? (
-                        <Badge className="text-[10px] font-bold px-1.5 py-0 bg-gradient-to-r from-fuchsia-500 to-violet-600 text-white border-none shadow-[0_0_15px_rgba(139,92,246,0.3)]">ULTRA</Badge>
-                      ) : (
-                        <Badge className="text-sm font-bold px-1.5 py-0.5 bg-primary text-white">Lite</Badge>
-                      )}
+                <div className={cn("flex items-center gap-3 w-full", isCollapsed && "justify-center gap-0")}>
+                  <PrismIcon size={isCollapsed ? 24 : 28} variant="gradient" className="flex-shrink-0 transition-transform duration-300" />
+                  {!isCollapsed && (
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-base font-bold text-sidebar-foreground">Prism Cloud</span>
+                        {currentTierRaw === 'PRO' ? (
+                          <Badge className="text-[10px] font-bold px-1.5 py-0 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 text-white border-none shadow-[0_0_15px_rgba(245,158,11,0.3)] animate-pulse">PRO</Badge>
+                        ) : currentTierRaw === 'ULTRA' ? (
+                          <Badge className="text-[10px] font-bold px-1.5 py-0 bg-gradient-to-r from-fuchsia-500 to-violet-600 text-white border-none shadow-[0_0_15px_rgba(139,92,246,0.3)]">ULTRA</Badge>
+                        ) : (
+                          <Badge className="text-sm font-bold px-1.5 py-0.5 bg-primary text-white">Lite</Badge>
+                        )}
+                      </div>
+                      <p className="text-[10px] tracking-[0.2em] text-muted-foreground mt-1 uppercase font-medium">
+                        {currentTierRaw === 'FREE' ? 'Workspace' : `${currentTierRaw} Instance`}
+                      </p>
                     </div>
-                    <p className="text-[10px] tracking-[0.2em] text-muted-foreground mt-1 uppercase font-medium">
-                      {currentTierRaw === 'FREE' ? t('shell.workspace') : t('shell.instance', { tier: currentTierRaw })}
-                    </p>
-                  </div>
+                  )}
                 </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarMenu>
-              {NAV_GROUPS.map((group, groupIndex) => (
-                <div key={groupIndex}>
-                  {groupIndex > 0 && <div className="my-2 border-t border-sidebar-border" />}
-                  <SidebarGroup className="py-2">
-                    <SidebarMenu>
-                      {group.items.map((item) => (
-                        <div key={item.href}>
-                          <SidebarMenuItem>
-                            <SidebarMenuButton
-                              isActive={isNavActive(item.href)}
-                              tooltip={t(item.label)}
-                              className="rounded-lg text-sm"
-                              onClick={(e) => {
-                                if (item.children && item.children.length > 0) {
-                                  e.preventDefault();
-                                  toggleExpanded(item.label);
-                                } else {
-                                  navigate(item.href);
-                                }
-                              }}
+          {NAV_GROUPS.map((group, groupIndex) => (
+            <SidebarGroup key={groupIndex} className={cn("py-2", isCollapsed && "px-2")}>
+              {groupIndex > 0 && !isCollapsed && <div className="mb-4 border-t border-sidebar-border mx-2" />}
+              <SidebarMenu>
+                {group.items.map((item) => (
+                  <div key={item.href}>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={isNavActive(item.href)}
+                        tooltip={t(item.label)}
+                        className="rounded-lg text-sm"
+                        onClick={(e) => {
+                          if (item.children && item.children.length > 0) {
+                            if (isCollapsed) {
+                              navigate(item.href);
+                            } else {
+                              e.preventDefault();
+                              toggleExpanded(item.label);
+                            }
+                          } else {
+                            navigate(item.href);
+                          }
+                        }}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {!isCollapsed && (
+                          <>
+                            <span className="flex-1">{t(item.label)}</span>
+                            {item.children && item.children.length > 0 && (
+                              <ChevronDown
+                                className={cn(
+                                  "h-4 w-4 transition-transform",
+                                  expandedItems.has(item.label) && "rotate-180"
+                                )}
+                              />
+                            )}
+                          </>
+                        )}
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    {item.children && item.children.length > 0 && expandedItems.has(item.label) && !isCollapsed && (
+                      <SidebarMenuSub>
+                        {item.children.map((child) => (
+                          <SidebarMenuSubItem key={child.href}>
+                            <SidebarMenuSubButton
+                              isActive={isNavActive(child.href)}
+                              onClick={() => navigate(child.href)}
                             >
-                              <div className="flex items-center gap-3">
-                                <item.icon className="h-4 w-4" />
-                                <span>{t(item.label)}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {item.badge && (
-                                  <SidebarMenuBadge>
-                                    {item.badge}
-                                  </SidebarMenuBadge>
-                                )}
-                                {item.children && item.children.length > 0 && (
-                                  <ChevronDown
-                                    className={cn(
-                                      "h-4 w-4 transition-transform",
-                                      expandedItems.has(item.label) && "rotate-180"
-                                    )}
-                                  />
-                                )}
-                              </div>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                          {item.children && item.children.length > 0 && expandedItems.has(item.label) && (
-                            <SidebarMenuSub>
-                              {item.children.map((child) => (
-                                <SidebarMenuSubItem key={child.href}>
-                                  <SidebarMenuSubButton
-                                    isActive={isNavActive(child.href)}
-                                    onClick={() => navigate(child.href)}
-                                  >
-                                    {t(child.label)}
-                                  </SidebarMenuSubButton>
-                                </SidebarMenuSubItem>
-                              ))}
-                            </SidebarMenuSub>
-                          )}
-                        </div>
-                      ))}
-                    </SidebarMenu>
-                  </SidebarGroup>
-                </div>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
+                              {t(child.label)}
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    )}
+                  </div>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+          ))}
         </SidebarContent>
         <SidebarFooter>
-          <StoragePanel 
-            tier={currentTierLabel} 
-            navigate={navigate} 
-            usage={storageQuota ?? undefined}
-            onUpgrade={() => setBillingOpen(true)}
-          />
+          {!isCollapsed && (
+            <StoragePanel 
+              tier={currentTierLabel} 
+              navigate={navigate} 
+              usage={storageQuota ?? undefined}
+              onUpgrade={() => setBillingOpen(true)}
+            />
+          )}
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
@@ -413,7 +424,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
       <Suspense fallback={null}>
         <BillingPlanSelector open={isBillingOpen} onOpenChange={setBillingOpen} />
       </Suspense>
-    </SidebarProvider>
+    </>
   );
 }
 
