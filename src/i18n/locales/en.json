@@ -696,6 +696,17 @@
   "billing": {
     "title": "Subscription Plans",
     "subtitle": "Choose the scale that fits your business needs",
+    "header": "Simple, Transparent Pricing",
+    "headerDesc": "Choose the plan that's right for your business. No hidden fees.",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "savePercent": "SAVE 20%",
+    "whatsIncluded": "What's included",
+    "compareFeatures": "Compare all features",
+    "faqTitle": "Frequently Asked Questions",
+    "customQuoteTitle": "Need a custom solution?",
+    "customQuoteDesc": "Have specific requirements or a large-scale deployment? Let's talk about a tailor-made plan for your organization.",
+    "getCustomQuote": "Get a Custom Quote",
     "currentPlan": "Current Plan",
     "expiresAt": "Expires on {{date}}",
     "reloginNotice": "Subscription updated! Please re-login to activate all features.",
@@ -704,26 +715,26 @@
       "price": "$0",
       "description": "Essential features for small setups",
       "features": [
-        "20 Devices",
-        "20 Programs",
-        "10 Versions per program",
-        "3 Custom device columns",
-        "2GB Cloud Storage"
+        "20 Devices & 20 Programs",
+        "2GB Cloud Storage",
+        "AI Assistant: 10-msg context, 20k tokens/day",
+        "Exports: Standard (CSV/JSON), limited time-range",
+        "3 Custom device columns"
       ]
     },
     "pro": {
       "name": "Pro",
       "price": "$29",
+      "priceYearly": "$23",
       "period": "/mo",
       "description": "Powerful tools for growing networks",
       "features": [
-        "100 Devices",
-        "200 Programs",
-        "20 Versions per program",
-        "20 Custom device columns",
+        "100 Devices & 200 Programs",
         "50GB Cloud Storage",
-        "Priority Transcoding",
-        "Exclusive API Access"
+        "AI Assistant: 30-msg context, Unlimited tokens, BYOK",
+        "Exports: Full (XLSX/Parquet), priority processing",
+        "Exclusive API Access",
+        "20 Custom device columns"
       ],
       "button": "Upgrade with Code"
     },
@@ -732,13 +743,12 @@
       "price": "Custom",
       "description": "Tailored solutions for large enterprises",
       "features": [
-        "Unlimited Devices",
-        "Unlimited Programs",
-        "Unlimited History",
+        "Unlimited Devices & Programs",
         "Enterprise Security (SSO)",
+        "AI Assistant: Custom fine-tuning & higher limits",
         "Dedicated Account Manager",
-        "Custom Feature Development",
-        "SLA Guarantee"
+        "SLA Guarantee",
+        "Custom Feature Development"
       ],
       "button": "Contact Sales"
     },
@@ -750,9 +760,54 @@
       "submitting": "Activating...",
       "success": "Activation successful! Your plan is now Pro.",
       "error": "Invalid or expired code"
-    }
-  },
-  "export": {
+    },
+        "faqs": [
+          {
+            "q": "Can I change plans at any time?",
+            "a": "Yes, you can upgrade or downgrade your plan at any time from your dashboard."
+          },
+          {
+            "q": "Do you offer discounts for non-profits?",
+            "a": "We do! Please contact our sales team to discuss special pricing for NGOs and educational institutions."
+          },
+          {
+            "q": "What happens if I exceed my storage limit?",
+            "a": "We'll notify you when you reach 90% of your limit. You can always upgrade for more space."  
+          }
+        ],
+        "aiComparison": {
+          "title": "AI Assistant Capability Comparison",
+          "subtitle": "Prism AI capabilities scale with your subscription and compute choices.",
+          "columns": {
+            "feature": "Capability",
+            "freeLocal": "Free (Local)",
+            "pro": "Pro / Ultra",
+            "freeByok": "Free (BYOK)"
+          },
+          "features": {
+            "memory": "Context Memory",
+            "memoryDesc": "Max history messages",
+            "rag": "Knowledge Base (RAG)",
+            "ragDesc": "Retrieved document sources",
+            "agent": "Agent Reasoning",
+            "agentDesc": "Tool calls & recursive rounds",
+            "quota": "Daily Token Quota",
+            "quotaDesc": "Local model compute limit"
+          },
+          "values": {
+            "msg10": "10 Messages",
+            "msg30": "30 Messages",
+            "rag4": "Top 4 Sources",
+            "rag8": "Top 8 Sources",
+            "basic": "Basic (1 round)",
+            "advanced": "Advanced (3 rounds)",
+            "limit20k": "20,000 / day",
+            "unlimited": "Unlimited",
+            "notApplicable": "N/A"
+          },
+          "byokNotice": "Bring Your Own Key: Use your OpenAI/Gemini API key on Free tier to unlock Pro-level AI context and reasoning limits."
+        }
+      },  "export": {
     "title": "Export Data",
     "subtitle": "Configure fields and format for your export task",
     "type": {
