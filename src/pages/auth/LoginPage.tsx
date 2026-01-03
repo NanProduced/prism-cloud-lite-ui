@@ -283,14 +283,14 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
     return (
       <div className="min-h-screen bg-[#131619] flex items-center justify-center overflow-hidden">
         <div className="relative">
-          <div className="absolute inset-0 bg-[#82dbf7]/10 blur-[100px] rounded-full animate-pulse" />
+          <div className="absolute inset-0 bg-brand-cyan/20 blur-[100px] rounded-full" />
           <div className="relative z-10 flex flex-col items-center gap-4">
-            <PrismIcon size={64} variant="gradient" className="animate-pulse" />
+            <PrismIcon size={64} variant="gradient" />
             <div className="flex gap-1.5 mt-2">
                {[0, 1, 2].map((i) => (
                  <div
                    key={i}
-                   className="size-1.5 rounded-full bg-[#b6f09c] animate-pulse"
+                   className="size-1.5 rounded-full bg-brand-green shadow-[0_0_8px_rgba(182,240,156,0.5)] animate-pulse"
                    style={{ animationDelay: `${i * 0.2}s` }}
                  />
                ))}
@@ -302,7 +302,7 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
   }
 
   return (
-    <div className="bg-[#131619] relative rounded-[24px] w-full max-w-[1440px] h-[800px] lg:h-[900px] overflow-hidden flex flex-col lg:block mx-auto mt-10">
+    <div className="bg-[#131619] relative rounded-[24px] w-full max-w-[1440px] h-[800px] lg:h-[900px] overflow-hidden flex flex-col lg:block mx-auto">
       <div className="absolute left-[48px] top-[48px] right-[48px] flex justify-between items-center z-20">
         <div className="flex items-center gap-3">
           <Logo />

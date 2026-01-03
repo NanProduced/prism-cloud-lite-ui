@@ -1054,7 +1054,7 @@ export function DeviceTable({
         "lng1771-shadcn", // Enable LyteNyte's shadcn theme support
         "dark:dark",      // Apply LyteNyte's internal dark mode if parent has .dark
         "bg-background text-foreground", // Force opaque background
-        "[--ln-selected-row-background:theme(colors.primary/10)]"
+        "[--ln-selected-row-background:hsl(var(--primary)/0.1)]"
       )}>
         <LyteNyte grid={grid} />
       </div>

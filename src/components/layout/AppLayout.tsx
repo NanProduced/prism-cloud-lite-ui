@@ -15,7 +15,7 @@ import { PrismIcon } from "@/components/shared/logo";
 
 // Loading Screen Component
 const FullPageLoader = () => (
-  <div className="min-h-screen bg-background flex items-center justify-center overflow-hidden">
+  <div className="min-h-screen bg-[#131619] flex items-center justify-center overflow-hidden">
     <div className="relative">
       {/* Background Glow */}
       <motion.div 
@@ -28,7 +28,7 @@ const FullPageLoader = () => (
           repeat: Infinity,
           ease: "easeInOut"
         }}
-        className="absolute inset-0 bg-brand-cyan/10 blur-[100px] rounded-full"
+        className="absolute inset-0 bg-brand-cyan/20 blur-[100px] rounded-full"
       />
       
       {/* Icon and Pulse */}
@@ -51,7 +51,7 @@ const FullPageLoader = () => (
                key={i}
                animate={{ opacity: [0.2, 1, 0.2] }}
                transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
-               className="size-1.5 rounded-full bg-brand-green"
+               className="size-1.5 rounded-full bg-brand-green shadow-[0_0_8px_rgba(182,240,156,0.5)]"
              />
            ))}
         </div>

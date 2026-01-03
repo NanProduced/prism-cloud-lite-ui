@@ -83,6 +83,8 @@
     --ln-header-background: hsl(var(--background));
 
     --brand: 255 100% 47%; /* #5600EF */
+    --brand-cyan: 194 88% 74%; /* #82dbf7 */
+    --brand-green: 101 71% 78%; /* #b6f09c */
   }
 
   /* Force pinned columns to be opaque in LyteNyte */
