@@ -773,6 +773,48 @@
       "byokNotice": "Bring Your Own Key: Use your OpenAI/Gemini API key on Free tier to unlock Pro-level AI context and reasoning limits."
     }
   },
+  "apiPage": {
+    "title": "Developer First",
+    "titleHighlight": "Open & Powerful REST API",
+    "subtitle": "Integrate digital signage capabilities into your own business systems with simple REST interfaces. Supports API Key authentication and standard CURL calls.",
+    "sidebar": {
+      "gettingStarted": "Getting Started",
+      "authentication": "Authentication",
+      "resources": "Resources",
+      "devices": "Devices",
+      "media": "Media Library",
+      "programs": "Programs",
+      "telemetry": "Telemetry"
+    },
+    "auth": {
+      "title": "Authentication",
+      "desc": "All API requests must include a valid API Key. You can create one in [Settings -> API Keys].",
+      "header": "Auth Header:",
+      "notice": "Keep your Secret Key safe. It is only displayed once upon creation."
+    },
+    "endpoints": {
+      "listDevices": {
+        "title": "List All Devices",
+        "desc": "Retrieve real-time status and basic information for all registered devices in your workspace."
+      },
+      "sendCommand": {
+        "title": "Send Command",
+        "desc": "Remotely control devices to perform actions like rebooting, adjusting brightness, or capturing screenshots."
+      },
+      "listPrograms": {
+        "title": "Query Programs",
+        "desc": "Get a list of created programs, including resolution details and publishing history."
+      },
+      "publishProgram": {
+        "title": "Publish Program",
+        "desc": "Deploy a specific version of a program to a set of target devices for content updates."
+      },
+      "getMetrics": {
+        "title": "Get Telemetry",
+        "desc": "Query time-series sensor data (CPU, Memory, Temperature, etc.) from your devices."
+      }
+    }
+  },
   "export": {
     "title": "Export Data",
     "subtitle": "Configure fields and format for your export task",

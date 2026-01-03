@@ -1116,6 +1116,48 @@
       "byokNotice": "BYOK 优势：在免费版绑定您自己的 OpenAI/Gemini API 密钥，即可解锁专业版的上下文长度与高级推理能力。"
     }
   },
+  "apiPage": {
+    "title": "开发者优先",
+    "titleHighlight": "开放且强大的 REST API",
+    "subtitle": "通过简单的 REST 接口，将数字标牌能力集成到您的业务系统中。支持 API Key 认证与标准 CURL 调用。",
+    "sidebar": {
+      "gettingStarted": "开始使用",
+      "authentication": "认证机制",
+      "resources": "资源模型",
+      "devices": "设备管理",
+      "media": "素材中心",
+      "programs": "节目分发",
+      "telemetry": "实时遥测"
+    },
+    "auth": {
+      "title": "认证机制",
+      "desc": "所有 API 请求必须包含有效的 API Key。您可以在【设置 -> API 密钥】中创建。",
+      "header": "认证请求头:",
+      "notice": "请妥善保管您的 Secret Key，系统仅在创建时显示一次。"
+    },
+    "endpoints": {
+      "listDevices": {
+        "title": "列出所有设备",
+        "desc": "获取当前空间下所有已注册设备的实时状态与基本信息。"
+      },
+      "sendCommand": {
+        "title": "下发指令",
+        "desc": "远程控制设备执行动作，如重启、调整亮度或抓取实时截图。"
+      },
+      "listPrograms": {
+        "title": "查询节目",
+        "desc": "获取已制作的节目清单，包括分辨率信息与发布历史。"
+      },
+      "publishProgram": {
+        "title": "发布节目",
+        "desc": "将指定版本的节目推送到一组目标设备，实现内容更新。"
+      },
+      "getMetrics": {
+        "title": "获取遥测数据",
+        "desc": "查询设备的时序传感器数据（CPU、内存、温度等）。"
+      }
+    }
+  },
   "export": {
     "title": "导出数据",
     "subtitle": "配置导出任务的字段和格式",
