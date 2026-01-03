@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { getPlaybackOverview } from '@/services/telemetryApi';
 import { PlayCircle, Award } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { useTranslation } from 'react-i18next';
 
 export const PlaybackOverviewWidget = () => {
+  const { t } = useTranslation();
   const { data: playbackRes, isLoading } = useQuery({
     queryKey: ['telemetry', 'playback-overview'],
     queryFn: () => getPlaybackOverview({
@@ -29,7 +31,7 @@ export const PlaybackOverviewWidget = () => {
   return (
     <div className="space-y-4 h-full flex flex-col">
       <div className="flex items-center justify-between">
-        <div className="text-[10px] font-bold text-muted-foreground uppercase">Top Programs (7D)</div>
+        <div className="text-[10px] font-bold text-muted-foreground uppercase">{t('dashboard.widgets.playbackStats.topPrograms')}</div>
         <Award className="h-3.5 w-3.5 text-amber-500" />
       </div>
       
@@ -46,7 +48,7 @@ export const PlaybackOverviewWidget = () => {
         {topPrograms.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full opacity-30">
             <PlayCircle className="h-8 w-8 mb-2" />
-            <span className="text-xs">No data available</span>
+            <span className="text-xs">{t('dashboard.widgets.playbackStats.noData')}</span>
           </div>
         )}
       </div>

@@ -8,7 +8,87 @@
     "docs": "文档",
     "login": "登录",
     "getStarted": "立即开始",
-    "dashboard": "控制台"
+    "dashboard": "控制台",
+    "devices": "设备管理",
+    "mediaLibrary": "素材库",
+    "programs": "节目管理",
+    "allPrograms": "全部节目",
+    "templates": "模版管理",
+    "schedule": "排程管理",
+    "map": "地图监控",
+    "monitoring": "设备遥测",
+    "analytics": "数据分析",
+    "messages": "消息中心",
+    "inbox": "收件箱",
+    "notifications": "系统通知",
+    "tasks": "后台任务",
+    "logs": "审计日志",
+    "deviceLogs": "设备日志",
+    "terminalLogs": "指令日志",
+    "settings": "系统设置"
+  },
+  "shell": {
+    "workspace": "工作空间",
+    "instance": "{{tier}} 实例",
+    "profile": "个人资料",
+    "billing": "订阅账单",
+    "documentation": "产品文档",
+    "logout": "退出登录",
+    "storage": {
+      "title": "云端存储",
+      "unlimited": "无限容量",
+      "upgrade": "升级方案"
+    },
+    "notifications": {
+      "title": "系统通知",
+      "subtitle": "最近系统事件",
+      "viewAll": "查看全部",
+      "unread": "{{count}} 条未读",
+      "empty": "暂无通知"
+    },
+    "search": {
+      "placeholder": "搜索功能、设备或文档...",
+      "empty": "未找到结果",
+      "hint": "搜索...",
+      "dialogPlaceholder": "输入命令或进行搜索...",
+      "searching": "正在搜索...",
+      "categories": {
+        "quickStart": "快速开始",
+        "navigation": "导航",
+        "devices": "设备",
+        "programs": "节目",
+        "media": "素材"
+      },
+      "actions": {
+        "createProgram": "创建节目",
+        "uploadMedia": "上传素材",
+        "sendCommand": "下发指令"
+      }
+    },
+    "theme": {
+      "toggle": "切换主题",
+      "light": "浅色模式",
+      "dark": "深色模式",
+      "system": "跟随系统"
+    },
+    "breadcrumbs": {
+      "dashboard": "控制台",
+      "overview": "概览",
+      "devices": "设备管理",
+      "deviceDetails": "设备详情",
+      "media": "素材库",
+      "programs": "节目管理",
+      "programDetails": "节目详情",
+      "editor": "编辑器",
+      "schedule": "排程管理",
+      "scheduleDetails": "排程详情",
+      "map": "地图监控",
+      "monitoring": "设备遥测",
+      "analytics": "数据分析",
+      "messages": "消息中心",
+      "logs": "审计日志",
+      "settings": "系统设置"
+    }
   },
   "hero": {
     "badge": "新",
@@ -774,6 +854,44 @@
       ]
     }
   },
+  "logs": {
+    "command": {
+      "actionType": {
+        "BRIGHTNESS": "调整亮度",
+        "POWER": "电源控制",
+        "COLOR_TEMP": "调整色温",
+        "VOLUME": "调整音量",
+        "CLEAR_CACHE": "清除缓存",
+        "INPUT_MODE": "切换信号源",
+        "TIMEZONE": "设置时区",
+        "LOCALE": "设置语言",
+        "CONTENT_REPORT_SWITCH": "内容报告开关",
+        "SCREENSHOT": "远程截屏",
+        "SET_SENSOR_REPORT_TIME": "设置遥测周期",
+        "DELETE_DEVICE_VSN": "移除特定节目",
+        "CLEAR_DEVICE_PROGRAM": "清除全部节目",
+        "UNKNOWN": "未知指令"
+      },
+      "status": {
+        "PUBLISHED": "已下发",
+        "CONFIRMED": "已确认",
+        "COMPLETED": "执行成功",
+        "EXPIRED": "已过期",
+        "FAILED": "执行失败"
+      },
+      "statusUi": {
+        "DONE": "已完成",
+        "UNKNOWN": "状态未知"
+      },
+      "trackingLevel": {
+        "UPDATE_ONLY": "仅更新",
+        "ACK_ONLY": "仅确认",
+        "PROPERTY_MATCH": "属性匹配",
+        "EXPLICIT_RESULT": "显式结果",
+        "UNKNOWN": "未知级别"
+      }
+    }
+  },
   "program": {
     "publish": {
       "title": "发布节目",
@@ -1159,6 +1277,129 @@
         "title": "获取遥测数据",
         "desc": "查询设备的时序传感器数据（CPU、内存、温度等）。"
       }
+    }
+  },
+  "dashboard": {
+    "title": "控制台",
+    "subtitle": "欢迎回来。这是您所有设备今天的运行状况。",
+    "toolbar": {
+      "addWidget": "添加组件",
+      "templates": "模版布局",
+      "chooseLayout": "选择布局",
+      "layoutDefault": "默认布局 (均衡)",
+      "layoutOps": "运维聚焦",
+      "finishEditing": "完成编辑",
+      "customize": "自定义布局"
+    },
+    "library": {
+      "title": "组件库",
+      "description": "添加功能卡片到您的控制台，以自定义您的工作流程。",
+      "added": "已添加",
+      "categories": {
+        "Business": "业务",
+        "Insight": "洞察",
+        "Utility": "实用工具"
+      }
+    },
+    "widgets": {
+      "attention": {
+        "title": "待处理事项",
+        "description": "聚合待处理任务和失败指令",
+        "unpublished": "未发布的变更",
+        "pendingPrograms": "{{count}} 个节目待下发",
+        "failedCommands": "失败的指令",
+        "last24h": "最近 24 小时",
+        "systemStatus": "系统状态",
+        "realtime": "实时"
+      },
+      "deviceHealth": {
+        "title": "设备健康度",
+        "description": "在线/离线设备摘要",
+        "online": "在线",
+        "offline": "离线",
+        "onlineRate": "在线率",
+        "manageDevices": "管理 {{count}} 台设备"
+      },
+      "recentActivity": {
+        "title": "最近动态",
+        "description": "指令日志和消息的时间轴",
+        "newTask": "新任务",
+        "notification": "系统通知",
+        "empty": "暂无动态"
+      },
+      "storage": {
+        "title": "云端存储",
+        "description": "空间使用情况的详细分解",
+        "mismatch": "不匹配：账本与配额服务之间存在 {{size}} 差异。",
+        "items": "项"
+      },
+      "quickActions": {
+        "title": "快捷操作",
+        "description": "常用任务的快捷方式",
+        "addDevice": "添加设备",
+        "createProgram": "创建节目",
+        "viewLogs": "查看日志",
+        "messages": "系统消息"
+      },
+      "playbackStats": {
+        "title": "播放统计",
+        "description": "热门节目和媒体播放表现",
+        "topPrograms": "热门节目 (7天)",
+        "noData": "暂无数据"
+      },
+      "onlineTrend": {
+        "title": "在线趋势",
+        "description": "设备随时间变化的在线时长趋势",
+        "uptime": "在线时长 (7天)"
+      },
+      "subscription": {
+        "title": "订阅状态",
+        "description": "用户方案和配额状态",
+        "plan": "{{tier}} 方案",
+        "active": "生效中",
+        "inactive": "未激活",
+        "premiumSupport": "高级支持已激活",
+        "renewsOn": "续期日期 {{date}}",
+        "never": "从不",
+        "upgrade": "升级方案",
+        "extend": "续费订阅"
+      },
+      "weather": {
+        "title": "天气",
+        "description": "当地天气状况",
+        "unavailable": "天气信息不可用",
+        "checkConnection": "请检查网络连接"
+      },
+      "calendar": {
+        "title": "日历",
+        "description": "本地日期和日历视图",
+        "agenda": "日程安排",
+        "goToday": "回到今天",
+        "devices": "台设备",
+        "noSchedules": "暂无活跃排程"
+      },
+      "memo": {
+        "title": "便签",
+        "description": "快速记事的个人便签",
+        "scratchpad": "随手记",
+        "placeholder": "输入一些需要记住的事情...",
+        "clearConfirm": "清空此便签？",
+        "changeColor": "更换颜色",
+        "clear": "清空"
+      },
+      "pinnedDevices": {
+        "title": "置顶设备",
+        "description": "所选屏幕的实时状态",
+        "liveScreens": "实时屏幕 ({{count}}/4)",
+        "selectTitle": "选择要置顶的设备",
+        "idle": "空闲",
+        "noPinned": "暂无置顶设备。点击 + 添加。"
+      }
+    },
+    "footer": {
+      "lastSynced": "上次同步：{{time}}",
+      "syncPending": "等待同步...",
+      "systemOnline": "系统在线"
     }
   },
   "export": {

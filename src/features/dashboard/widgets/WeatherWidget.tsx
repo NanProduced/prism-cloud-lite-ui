@@ -8,8 +8,10 @@ import { geolocation } from '@/lib/maptiler';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { updateUserSettings } from '@/services/userApi';
+import { useTranslation } from 'react-i18next';
 
 export const WeatherWidget = ({ settings, onUpdateSettings }: { settings?: any, onUpdateSettings?: (s: any) => void }) => {
+  const { t } = useTranslation();
   const [weather, setWeather] = useState<any>(null);
   const [location, setLocation] = useState<string>(settings?.locationName || 'Shanghai');
   const [loading, setLoading] = useState(true);
@@ -113,7 +115,7 @@ export const WeatherWidget = ({ settings, onUpdateSettings }: { settings?: any, 
   if (error) return (
     <div className="flex flex-col items-center justify-center h-full text-muted-foreground opacity-50">
       <AlertCircle className="h-8 w-8 mb-2" />
-      <span className="text-[10px] font-medium text-center">Weather Unavailable<br/>Check Connection</span>
+      <span className="text-[10px] font-medium text-center">{t('dashboard.widgets.weather.unavailable')}<br/>{t('dashboard.widgets.weather.checkConnection')}</span>
     </div>
   );
 

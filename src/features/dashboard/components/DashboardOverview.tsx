@@ -70,10 +70,10 @@ export const DashboardOverview: React.FC = () => {
                   <DropdownMenuLabel>{t('dashboard.toolbar.chooseLayout')}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => resetLayout(DEFAULT_LAYOUT)}>
-                    Default (Balanced)
+                    {t('dashboard.toolbar.layoutDefault')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => resetLayout(OPS_FOCUS_LAYOUT)}>
-                    Ops Focus
+                    {t('dashboard.toolbar.layoutOps')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -126,10 +126,10 @@ export const DashboardOverview: React.FC = () => {
             <Monitor className="h-3 w-3" />
             Prism Cloud Lite
           </span>
-          <span className="opacity-40">System Online</span>
+          <span className="opacity-40">{t('dashboard.footer.systemOnline')}</span>
         </div>
         <div className="flex items-center gap-4 opacity-40">
-          <span>{t('dashboard.footer.lastSynced', { time: layout.updatedAt ? new Date(layout.updatedAt).toLocaleTimeString() : t('deviceDetails.cockpit.screenshot.captureQueued') })}</span>
+          <span>{t('dashboard.footer.lastSynced', { time: layout.updatedAt ? new Date(layout.updatedAt).toLocaleTimeString() : t('dashboard.footer.syncPending') })}</span>
         </div>
       </div>
     </div>

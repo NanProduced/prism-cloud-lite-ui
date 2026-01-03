@@ -7,8 +7,10 @@ import { Crown, ShieldCheck, Zap, BarChart2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useSettingsStore } from '@/store/settingsStore';
 import { formatBytes, cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 export const SubscriptionWidget = () => {
+  const { t } = useTranslation();
   const { formatDateTime } = useTimeFormatter();
   const { setBillingOpen } = useSettingsStore();
 
@@ -44,18 +46,13 @@ export const SubscriptionWidget = () => {
             <Crown className={cn("h-4 w-4", isPro && "fill-current")} />
           </div>
           <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none">Subscription</span>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none">{t('dashboard.widgets.subscription.title')}</span>
             <span className={cn(
               "text-sm font-bold tracking-tight",
               isPro && "text-amber-600 dark:text-amber-400",
               isUltra && "text-violet-600 dark:text-violet-400"
             )}>
-              {(() => {
-                const t = sub?.tier || 'FREE';
-                if (t === 'PRO') return 'Pro';
-                if (t === 'ULTRA') return 'Ultra';
-                return 'Free';
-              })()} Plan
+              {t('dashboard.widgets.subscription.plan', { tier: sub?.tier || 'FREE' })}
             </span>
           </div>
         </div>
@@ -63,7 +60,7 @@ export const SubscriptionWidget = () => {
           "text-[10px] font-bold h-5 uppercase border-none",
           sub?.proActive ? "bg-emerald-100 text-emerald-700 shadow-sm" : "bg-slate-100 text-slate-500"
         )}>
-          {sub?.proActive ? 'Active' : 'Inactive'}
+          {sub?.proActive ? t('dashboard.widgets.subscription.active') : t('dashboard.widgets.subscription.inactive')}
         </Badge>
       </div>
 
@@ -92,17 +89,17 @@ export const SubscriptionWidget = () => {
           <div className="p-2 rounded-xl bg-background/60 border border-border/40 backdrop-blur-sm">
              <div className="flex items-center gap-2 text-[10px] font-bold text-foreground/80">
                <ShieldCheck className={cn("h-3.5 w-3.5", isPro ? "text-amber-500" : "text-violet-500")} />
-               Premium Support Active
+               {t('dashboard.widgets.subscription.premiumSupport')}
              </div>
              <p className="text-[9px] text-muted-foreground mt-1 px-5">
-               Renews on {sub?.endAt ? formatDateTime(sub.endAt).split(' ')[0] : 'Never'}
+               {t('dashboard.widgets.subscription.renewsOn', { date: sub?.endAt ? formatDateTime(sub.endAt).split(' ')[0] : t('dashboard.widgets.subscription.never') })}
              </p>
           </div>
         ) : (
           <div className="flex items-center justify-between text-[9px] text-muted-foreground font-medium">
             <span className="flex items-center gap-1 px-1">
               <ShieldCheck className="h-3 w-3" />
-              Renews: Never
+              {t('dashboard.widgets.subscription.renewsOn', { date: t('dashboard.widgets.subscription.never') })}
             </span>
           </div>
         )}
@@ -117,7 +114,7 @@ export const SubscriptionWidget = () => {
           )}
         >
           <Zap className="h-3 w-3 fill-current" />
-          {isPro || isUltra ? 'Extend Subscription' : 'Upgrade Plan'}
+          {isPro || isUltra ? t('dashboard.widgets.subscription.extend') : t('dashboard.widgets.subscription.upgrade')}
         </button>
       </div>
     </div>

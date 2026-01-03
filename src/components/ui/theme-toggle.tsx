@@ -45,28 +45,28 @@ export function ThemeToggle() {
           variant="ghost"
           size="icon"
           className="h-9 w-9 rounded-lg"
-          title={t('hero.miniDashboard.overview.attention')} // Just using a placeholder for now, ideally 'settings.theme.toggle'
+          title={t('shell.theme.toggle')}
         >
           {isDark ? (
             <Moon className="h-[1.2rem] w-[1.2rem]" />
           ) : (
             <Sun className="h-[1.2rem] w-[1.2rem]" />
           )}
-          <span className="sr-only">Toggle theme</span>
+          <span className="sr-only">{t('shell.theme.toggle')}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => updatePreferences({ theme: "light" })}>
           <Sun className="mr-2 h-4 w-4" />
-          <span>{t('auth.common.continue')} Light</span> 
+          <span>{t('shell.theme.light')}</span> 
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => updatePreferences({ theme: "dark" })}>
           <Moon className="mr-2 h-4 w-4" />
-          <span>Dark</span>
+          <span>{t('shell.theme.dark')}</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => updatePreferences({ theme: "system" })}>
           <Monitor className="mr-2 h-4 w-4" />
-          <span>System</span>
+          <span>{t('shell.theme.system')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

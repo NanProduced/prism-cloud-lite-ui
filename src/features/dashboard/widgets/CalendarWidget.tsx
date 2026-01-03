@@ -10,8 +10,10 @@ import { CalendarClock, ChevronRight, ListTodo, ChevronLeft, Calendar as Calenda
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 
 export const CalendarWidget = () => {
+  const { t } = useTranslation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const navigate = useNavigate();
   
@@ -46,7 +48,7 @@ export const CalendarWidget = () => {
             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
               <ChevronLeft className="h-3 w-3" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setCurrentDate(new Date())} title="Go to today">
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setCurrentDate(new Date())} title={t('dashboard.widgets.calendar.goToday')}>
               <div className="h-1.5 w-1.5 rounded-full bg-primary" />
             </Button>
             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
@@ -85,7 +87,7 @@ export const CalendarWidget = () => {
         <div className="flex items-center justify-between mb-2">
           <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground flex items-center gap-1">
             <CalendarClock className="h-2.5 w-2.5" />
-            Agenda
+            {t('dashboard.widgets.calendar.agenda')}
           </span>
         </div>
         
@@ -101,7 +103,7 @@ export const CalendarWidget = () => {
                   {item.name}
                 </div>
                 <div className="flex items-center justify-between mt-1">
-                  <span className="text-[8px] text-muted-foreground font-medium">{item.boundDevices} devices</span>
+                  <span className="text-[8px] text-muted-foreground font-medium">{item.boundDevices} {t('dashboard.widgets.calendar.devices')}</span>
                   <ChevronRight className="h-2.5 w-2.5 text-muted-foreground/30 group-hover:item:translate-x-0.5 transition-transform" />
                 </div>
               </button>
@@ -109,7 +111,7 @@ export const CalendarWidget = () => {
             {upcomingSchedules.length === 0 && (
               <div className="py-8 text-center flex flex-col items-center gap-1 opacity-20">
                 <CalendarIcon className="h-6 w-6" />
-                <p className="text-[9px] font-medium leading-tight">No active<br/>schedules</p>
+                <p className="text-[9px] font-medium leading-tight">{t('dashboard.widgets.calendar.noSchedules')}</p>
               </div>
             )}
           </div>

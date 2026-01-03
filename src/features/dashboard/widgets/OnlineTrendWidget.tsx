@@ -4,8 +4,10 @@ import { getActiveDeviceCountBuckets } from '@/services/telemetryApi';
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { TrendingUp } from 'lucide-react';
 import { useSettingsStore } from '@/store/settingsStore';
+import { useTranslation } from 'react-i18next';
 
 export const OnlineTrendWidget = () => {
+  const { t } = useTranslation();
   const { preferences } = useSettingsStore();
   const isDark = preferences.theme === 'dark' || (preferences.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   const { data: trendRes, isLoading } = useQuery({
@@ -32,7 +34,7 @@ export const OnlineTrendWidget = () => {
     <div className="flex flex-col h-full gap-2">
       <div className="flex items-center gap-2">
         <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-        <span className="text-[10px] font-bold uppercase tracking-wider">Online Uptime (7D)</span>
+        <span className="text-[10px] font-bold uppercase tracking-wider">{t('dashboard.widgets.onlineTrend.uptime')}</span>
       </div>
       
       <div className="flex-1 w-full min-h-0">

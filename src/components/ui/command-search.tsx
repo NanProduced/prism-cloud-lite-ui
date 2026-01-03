@@ -28,6 +28,7 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "react-i18next";
 
 interface CommandItemData {
   id: string;
@@ -40,6 +41,7 @@ interface CommandItemData {
 }
 
 export function CommandSearch() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -77,7 +79,7 @@ export function CommandSearch() {
     // Quick start items
     {
       id: "create-program",
-      title: "Create Program",
+      title: t('shell.search.actions.createProgram'),
       category: "Quick start",
       icon: FolderPlus,
       shortcut: "⌘P",
@@ -85,7 +87,7 @@ export function CommandSearch() {
     },
     {
       id: "upload-media",
-      title: "Upload Media",
+      title: t('shell.search.actions.uploadMedia'),
       category: "Quick start",
       icon: Upload,
       shortcut: "⌘U",
@@ -93,7 +95,7 @@ export function CommandSearch() {
     },
     {
       id: "send-command",
-      title: "Send Command",
+      title: t('shell.search.actions.sendCommand'),
       category: "Quick start",
       icon: Send,
       shortcut: "⌘⇧S",
@@ -102,7 +104,7 @@ export function CommandSearch() {
     // Navigation items
     {
       id: "dashboard",
-      title: "Dashboard",
+      title: t('nav.dashboard'),
       category: "Navigation",
       icon: ArrowUpRight,
       shortcut: "⌘D",
@@ -110,28 +112,28 @@ export function CommandSearch() {
     },
     {
       id: "devices",
-      title: "Devices",
+      title: t('nav.devices'),
       category: "Navigation",
       icon: ArrowUpRight,
       onSelect: () => navigate("/dashboard/devices"),
     },
     {
       id: "media",
-      title: "Media Library",
+      title: t('nav.mediaLibrary'),
       category: "Navigation",
       icon: ArrowUpRight,
       onSelect: () => navigate("/dashboard/media"),
     },
     {
       id: "programs",
-      title: "Programs",
+      title: t('nav.programs'),
       category: "Navigation",
       icon: Layers,
       onSelect: () => navigate("/dashboard/programs"),
     },
     {
       id: "schedule",
-      title: "Schedule",
+      title: t('nav.schedule'),
       category: "Navigation",
       icon: ArrowUpRight,
       onSelect: () => navigate("/dashboard/schedule"),
@@ -156,6 +158,12 @@ export function CommandSearch() {
     return (order[a.category as keyof typeof order] ?? 2) - (order[b.category as keyof typeof order] ?? 2);
   });
 
+  const getCategoryLabel = (cat: string) => {
+    if (cat === "Quick start") return t('shell.search.categories.quickStart');
+    if (cat === "Navigation") return t('shell.search.categories.navigation');
+    return cat;
+  };
+
   return (
     <>
       <button
@@ -169,7 +177,7 @@ export function CommandSearch() {
             strokeWidth={2}
             aria-hidden="true"
           />
-          <span className="font-normal text-muted-foreground/70">Search...</span>
+          <span className="font-normal text-muted-foreground/70">{t('shell.search.hint')}</span>
         </span>
         <kbd className="ms-auto inline-flex h-5 max-h-full items-center rounded border border-border bg-background px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground/70">
           <span>⌘</span>
@@ -179,7 +187,7 @@ export function CommandSearch() {
 
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput
-          placeholder="Type a command or search..."
+          placeholder={t('shell.search.dialogPlaceholder')}
           value={search}
           onValueChange={setSearch}
         />
@@ -187,17 +195,17 @@ export function CommandSearch() {
           {isLoading && (
             <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Searching...
+              {t('shell.search.searching')}
             </div>
           )}
           
-          <CommandEmpty>{!isLoading && "No results found."}</CommandEmpty>
+          <CommandEmpty>{!isLoading && t('shell.search.empty')}</CommandEmpty>
 
           {/* API Search Results */}
           {searchResults?.success && searchResults.data && (
             <>
               {searchResults.data.devices && searchResults.data.devices.length > 0 && (
-                <CommandGroup heading="Devices">
+                <CommandGroup heading={t('shell.search.categories.devices')}>
                   {searchResults.data.devices.map((device) => (
                     <CommandItem
                       key={`device-${device.id}`}
@@ -226,7 +234,7 @@ export function CommandSearch() {
               )}
 
               {searchResults.data.programs && searchResults.data.programs.length > 0 && (
-                <CommandGroup heading="Programs">
+                <CommandGroup heading={t('shell.search.categories.programs')}>
                   {searchResults.data.programs.map((program) => (
                     <CommandItem
                       key={`program-${program.id}`}
@@ -248,7 +256,7 @@ export function CommandSearch() {
               )}
 
               {searchResults.data.media && searchResults.data.media.length > 0 && (
-                <CommandGroup heading="Media">
+                <CommandGroup heading={t('shell.search.categories.media')}>
                   {searchResults.data.media.map((item) => (
                     <CommandItem
                       key={`media-${item.id}`}
@@ -281,7 +289,7 @@ export function CommandSearch() {
           {groupedDefaultItems.map((group, index) => (
             <div key={group.category}>
               {(index > 0 || (searchResults?.data && Object.values(searchResults.data).some(arr => arr?.length > 0))) && <CommandSeparator />}
-              <CommandGroup heading={group.category}>
+              <CommandGroup heading={getCategoryLabel(group.category)}>
                 {group.items.map((item) => {
                   const Icon = item.icon;
                   return (

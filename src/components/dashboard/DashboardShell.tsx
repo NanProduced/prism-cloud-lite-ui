@@ -96,54 +96,54 @@ type NavGroup = {
 const NAV_GROUPS: NavGroup[] = [
   {
     items: [
-      { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard/overview" },
-      { label: "Devices", icon: Monitor, href: "/dashboard/devices" },
+      { label: "nav.dashboard", icon: LayoutDashboard, href: "/dashboard/overview" },
+      { label: "nav.devices", icon: Monitor, href: "/dashboard/devices" },
     ],
   },
   {
     items: [
-      { label: "Media Library", icon: Image, href: "/dashboard/media" },
+      { label: "nav.mediaLibrary", icon: Image, href: "/dashboard/media" },
       {
-        label: "Programs",
+        label: "nav.programs",
         icon: Layers,
         href: "/dashboard/programs",
         children: [
-          { label: "All Programs", href: "/dashboard/programs" },
-          { label: "Templates", href: "/dashboard/programs?tab=templates" },
+          { label: "nav.allPrograms", href: "/dashboard/programs" },
+          { label: "nav.templates", href: "/dashboard/programs?tab=templates" },
         ],
       },
-      { label: "Schedule", icon: CalendarClock, href: "/dashboard/schedule" },
+      { label: "nav.schedule", icon: CalendarClock, href: "/dashboard/schedule" },
     ],
   },
   {
     items: [
-      { label: "Map", icon: MapIcon, href: "/dashboard/map" },
-      { label: "Monitoring", icon: Activity, href: "/dashboard/monitoring" },
-      { label: "Analytics", icon: BarChart3, href: "/dashboard/analytics" },
+      { label: "nav.map", icon: MapIcon, href: "/dashboard/map" },
+      { label: "nav.monitoring", icon: Activity, href: "/dashboard/monitoring" },
+      { label: "nav.analytics", icon: BarChart3, href: "/dashboard/analytics" },
     ],
   },
   {
     items: [
       {
-        label: "Messages",
+        label: "nav.messages",
         icon: MessageSquare,
         href: "/dashboard/messages",
         children: [
-          { label: "Inbox", href: "/dashboard/messages" },
-          { label: "Notifications", href: "/dashboard/messages?tab=notifications" },
-          { label: "Tasks", href: "/dashboard/messages?tab=tasks" },
+          { label: "nav.inbox", href: "/dashboard/messages" },
+          { label: "nav.notifications", href: "/dashboard/messages?tab=notifications" },
+          { label: "nav.tasks", href: "/dashboard/messages?tab=tasks" },
         ],
       },
       {
-        label: "Logs",
+        label: "nav.logs",
         icon: FileText,
         href: "/dashboard/logs",
         children: [
-          { label: "Device Logs", href: "/dashboard/logs" },
-          { label: "Command Logs", href: "/dashboard/logs?tab=terminal" },
+          { label: "nav.deviceLogs", href: "/dashboard/logs" },
+          { label: "nav.terminalLogs", href: "/dashboard/logs?tab=terminal" },
         ],
       },
-      { label: "Settings", icon: Settings, href: "/dashboard/settings" },
+      { label: "nav.settings", icon: Settings, href: "/dashboard/settings" },
     ],
   },
 ];
@@ -210,7 +210,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
             <SidebarMenuItem>
               <SidebarMenuButton
                 className="h-auto flex-col items-start gap-3 rounded-lg border bg-sidebar-accent/50 px-4 py-4 text-left hover:bg-sidebar-accent transition-colors cursor-pointer"
-                tooltip="Workspace"
+                tooltip={t('shell.workspace')}
               >
                 <div className="flex items-center gap-3 w-full">
                   <PrismIcon size={28} variant="gradient" className="flex-shrink-0" />
@@ -226,7 +226,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
                       )}
                     </div>
                     <p className="text-[10px] tracking-[0.2em] text-muted-foreground mt-1 uppercase font-medium">
-                      {currentTierRaw === 'FREE' ? 'Workspace' : `${currentTierRaw} Instance`}
+                      {currentTierRaw === 'FREE' ? t('shell.workspace') : t('shell.instance', { tier: currentTierRaw })}
                     </p>
                   </div>
                 </div>
@@ -247,7 +247,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
                           <SidebarMenuItem>
                             <SidebarMenuButton
                               isActive={isNavActive(item.href)}
-                              tooltip={item.label}
+                              tooltip={t(item.label)}
                               className="rounded-lg text-sm"
                               onClick={(e) => {
                                 if (item.children && item.children.length > 0) {
@@ -260,7 +260,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
                             >
                               <div className="flex items-center gap-3">
                                 <item.icon className="h-4 w-4" />
-                                <span>{item.label}</span>
+                                <span>{t(item.label)}</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 {item.badge && (
@@ -287,7 +287,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
                                     isActive={isNavActive(child.href)}
                                     onClick={() => navigate(child.href)}
                                   >
-                                    {child.label}
+                                    {t(child.label)}
                                   </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
                               ))}
@@ -372,30 +372,30 @@ export function DashboardShell({ children }: PropsWithChildren) {
                   <DropdownMenuGroup>
                     <DropdownMenuItem onClick={() => navigate("/dashboard/settings?tab=profile")}>
                       <UserIcon className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
+                      <span>{t('shell.profile')}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate("/dashboard/settings")}>
                       <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
+                      <span>{t('nav.settings')}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate("/dashboard/settings?tab=billing")}>
                       <CreditCard className="mr-2 h-4 w-4" />
-                      <span>Billing</span>
+                      <span>{t('shell.billing')}</span>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate("/")}>
                     <Home className="mr-2 h-4 w-4" />
-                    <span>{t("nav.home", "Homepage")}</span>
+                    <span>{t("nav.home")}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => window.open("https://docs.prismcloud.dev", "_blank")}>
                     <HelpCircle className="mr-2 h-4 w-4" />
-                    <span>Documentation</span>
+                    <span>{t('shell.documentation')}</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-red-600 focus:bg-destructive/10 focus:text-red-600" onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
+                    <span>{t('shell.logout')}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -428,6 +428,7 @@ function StoragePanel({
   onUpgrade: () => void;
   usage?: { usedBytes: number; quotaBytes: number }
 }) {
+  const { t } = useTranslation();
   const isUnlimited = usage?.quotaBytes === -1;
   const usedSpaceGB = (usage?.usedBytes || 0) / (1024 * 1024 * 1024);
   const totalSpaceGB = (isUnlimited ? 0 : (usage?.quotaBytes || 2 * 1024 * 1024 * 1024)) / (1024 * 1024 * 1024);
@@ -438,7 +439,7 @@ function StoragePanel({
   return (
     <div className="rounded-lg border bg-muted/50 p-4">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-semibold text-foreground/80">Cloud Storage</h4>
+        <h4 className="text-sm font-semibold text-foreground/80">{t('shell.storage.title')}</h4>
         <Badge variant="outline" className="text-[10px] font-bold h-5 bg-background shadow-sm border-primary/20 text-primary">{tier}</Badge>
       </div>
 
@@ -453,7 +454,7 @@ function StoragePanel({
         >
           {usedSpaceGB.toFixed(2)}GB / {isUnlimited ? '∞' : `${totalSpaceGB.toFixed(0)}GB`}
         </p>
-        {isUnlimited && <span className="text-[9px] font-bold text-primary/60 uppercase tracking-widest">Unlimited</span>}
+        {isUnlimited && <span className="text-[9px] font-bold text-primary/60 uppercase tracking-widest">{t('shell.storage.unlimited')}</span>}
       </div>
 
       {tier === "Free" && (
@@ -461,7 +462,7 @@ function StoragePanel({
           className="w-full h-8 text-[11px] font-bold rounded-lg shadow-md hover:shadow-lg transition-all"
           onClick={onUpgrade}
         >
-          Upgrade Plan
+          {t('shell.storage.upgrade')}
         </Button>
       )}
     </div>
@@ -469,6 +470,7 @@ function StoragePanel({
 }
 
 function NotificationPopover() {
+  const { t } = useTranslation();
   const { unreadCount, recentMessages, markLocalAsRead } = useMessageStore();
   const navigate = useNavigate();
   const { formatRelative } = useTimeFormatter();
@@ -491,7 +493,7 @@ function NotificationPopover() {
           variant="ghost"
           size="icon"
           className="relative h-9 w-9 rounded-lg"
-          title="Notifications"
+          title={t('shell.notifications.title')}
         >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
@@ -503,8 +505,8 @@ function NotificationPopover() {
         <div className="border-b px-4 py-3">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-sm font-semibold">Notifications</h4>
-              <p className="text-xs text-muted-foreground">Latest system events</p>
+              <h4 className="text-sm font-semibold">{t('shell.notifications.title')}</h4>
+              <p className="text-xs text-muted-foreground">{t('shell.notifications.subtitle')}</p>
             </div>
             <Button
               variant="ghost"
@@ -512,12 +514,12 @@ function NotificationPopover() {
               className="h-7 text-xs"
               onClick={() => navigate("/dashboard/messages")}
             >
-              View all
+              {t('shell.notifications.viewAll')}
             </Button>
           </div>
           {unreadCount > 0 && (
             <Badge variant="secondary" className="mt-2 text-xs">
-              {unreadCount} unread
+              {t('shell.notifications.unread', { count: unreadCount })}
             </Badge>
           )}
         </div>
@@ -525,7 +527,7 @@ function NotificationPopover() {
         <div className="max-h-[400px] overflow-y-auto">
           {recentMessages.length === 0 ? (
             <div className="flex h-32 items-center justify-center text-center p-4">
-              <p className="text-xs text-muted-foreground">No notifications yet</p>
+              <p className="text-xs text-muted-foreground">{t('shell.notifications.empty')}</p>
             </div>
           ) : (
             <div className="flex flex-col">

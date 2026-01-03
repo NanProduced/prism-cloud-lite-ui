@@ -3,6 +3,7 @@ import { ResponsiveGridLayout, useContainerWidth } from 'react-grid-layout';
 import type { WidgetConfig } from '../types';
 import { WIDGET_REGISTRY } from '../WidgetRegistry';
 import { WidgetFrame } from './WidgetFrame';
+import { useTranslation } from 'react-i18next';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
@@ -21,6 +22,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
   onRemoveWidget,
   onUpdateWidgetSettings,
 }) => {
+  const { t } = useTranslation();
   const { width, containerRef, mounted } = useContainerWidth();
 
   const layouts = useMemo(() => ({
@@ -52,7 +54,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
             return (
               <div key={widget.id}>
                 <WidgetFrame
-                  title={definition.title}
+                  title={t(definition.title)}
                   icon={definition.icon}
                   isEditMode={isEditMode}
                   onRemove={widget.pinned ? undefined : () => onRemoveWidget(widget.id)}

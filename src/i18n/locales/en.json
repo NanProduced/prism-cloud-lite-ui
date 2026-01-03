@@ -1,6 +1,6 @@
 {
   "nav": {
-    "home": "Homepage",
+    "home": "Home",
     "features": "Features",
     "solutions": "Solutions",
     "pricing": "Pricing",
@@ -8,7 +8,87 @@
     "docs": "Docs",
     "login": "Log in",
     "getStarted": "Get Started",
-    "dashboard": "Dashboard"
+    "dashboard": "Dashboard",
+    "devices": "Devices",
+    "mediaLibrary": "Media Library",
+    "programs": "Programs",
+    "allPrograms": "All Programs",
+    "templates": "Templates",
+    "schedule": "Schedule",
+    "map": "Map",
+    "monitoring": "Monitoring",
+    "analytics": "Analytics",
+    "messages": "Messages",
+    "inbox": "Inbox",
+    "notifications": "Notifications",
+    "tasks": "Tasks",
+    "logs": "Logs",
+    "deviceLogs": "Device Logs",
+    "terminalLogs": "Command Logs",
+    "settings": "Settings"
+  },
+  "shell": {
+    "workspace": "Workspace",
+    "instance": "{{tier}} Instance",
+    "profile": "Profile",
+    "billing": "Billing",
+    "documentation": "Documentation",
+    "logout": "Log out",
+    "storage": {
+      "title": "Cloud Storage",
+      "unlimited": "Unlimited",
+      "upgrade": "Upgrade Plan"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "subtitle": "Latest system events",
+      "viewAll": "View all",
+      "unread": "{{count}} unread",
+      "empty": "No notifications yet"
+    },
+    "search": {
+      "placeholder": "Search features, devices or docs...",
+      "empty": "No results found",
+      "hint": "Search...",
+      "dialogPlaceholder": "Type a command or search...",
+      "searching": "Searching...",
+      "categories": {
+        "quickStart": "Quick start",
+        "navigation": "Navigation",
+        "devices": "Devices",
+        "programs": "Programs",
+        "media": "Media"
+      },
+      "actions": {
+        "createProgram": "Create Program",
+        "uploadMedia": "Upload Media",
+        "sendCommand": "Send Command"
+      }
+    },
+    "theme": {
+      "toggle": "Toggle theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "breadcrumbs": {
+      "dashboard": "Dashboard",
+      "overview": "Overview",
+      "devices": "Devices",
+      "deviceDetails": "Device Details",
+      "media": "Media Library",
+      "programs": "Programs",
+      "programDetails": "Program Details",
+      "editor": "Editor",
+      "schedule": "Schedule",
+      "scheduleDetails": "Schedule Details",
+      "map": "Map",
+      "monitoring": "Monitoring",
+      "analytics": "Analytics",
+      "messages": "Messages",
+      "logs": "Logs",
+      "settings": "Settings"
+    }
   },
   "hero": {
     "badge": "New",
@@ -1003,12 +1083,25 @@
       "addWidget": "Add Widget",
       "templates": "Templates",
       "chooseLayout": "Choose a Layout",
+      "layoutDefault": "Default (Balanced)",
+      "layoutOps": "Ops Focus",
       "finishEditing": "Finish Editing",
       "customize": "Customize"
+    },
+    "library": {
+      "title": "Widget Library",
+      "description": "Add functional cards to your dashboard to customize your workflow.",
+      "added": "Added",
+      "categories": {
+        "Business": "Business",
+        "Insight": "Insight",
+        "Utility": "Utility"
+      }
     },
     "widgets": {
       "attention": {
         "title": "Needs Attention",
+        "description": "Aggregated pending tasks and failed commands",
         "unpublished": "Unpublished Changes",
         "pendingPrograms": "{{count}} programs pending",
         "failedCommands": "Failed Commands",
@@ -1018,6 +1111,7 @@
       },
       "deviceHealth": {
         "title": "Device Health",
+        "description": "Summary of online/offline devices",
         "online": "Online",
         "offline": "Offline",
         "onlineRate": "Online Rate",
@@ -1025,18 +1119,84 @@
       },
       "recentActivity": {
         "title": "Recent Activity",
+        "description": "Timeline of command logs and messages",
         "newTask": "New Task",
         "notification": "Notification",
         "empty": "No recent activity"
       },
       "storage": {
         "title": "Cloud Storage",
+        "description": "Detailed breakdown of space usage",
         "mismatch": "Mismatch: {{size}} between ledger and quota service.",
         "items": "items"
+      },
+      "quickActions": {
+        "title": "Quick Actions",
+        "description": "Shortcuts to common tasks",
+        "addDevice": "Add Device",
+        "createProgram": "Create Program",
+        "viewLogs": "View Logs",
+        "messages": "Messages"
+      },
+      "playbackStats": {
+        "title": "Playback Stats",
+        "description": "Top programs and media performance",
+        "topPrograms": "Top Programs (7D)",
+        "noData": "No data available"
+      },
+      "onlineTrend": {
+        "title": "Online Trend",
+        "description": "Device uptime trend over time",
+        "uptime": "Online Uptime (7D)"
+      },
+      "subscription": {
+        "title": "Subscription",
+        "description": "User plan and quota status",
+        "plan": "{{tier}} Plan",
+        "active": "Active",
+        "inactive": "Inactive",
+        "premiumSupport": "Premium Support Active",
+        "renewsOn": "Renews on {{date}}",
+        "never": "Never",
+        "upgrade": "Upgrade Plan",
+        "extend": "Extend Subscription"
+      },
+      "weather": {
+        "title": "Weather",
+        "description": "Local weather conditions",
+        "unavailable": "Weather Unavailable",
+        "checkConnection": "Check Connection"
+      },
+      "calendar": {
+        "title": "Calendar",
+        "description": "Local date and calendar view",
+        "agenda": "Agenda",
+        "goToday": "Go to today",
+        "devices": "devices",
+        "noSchedules": "No active schedules"
+      },
+      "memo": {
+        "title": "Sticky Note",
+        "description": "Personal memo for quick notes",
+        "scratchpad": "Scratchpad",
+        "placeholder": "Type something to remember...",
+        "clearConfirm": "Clear this note?",
+        "changeColor": "Change Color",
+        "clear": "Clear"
+      },
+      "pinnedDevices": {
+        "title": "Pinned Devices",
+        "description": "Live status of selected screens",
+        "liveScreens": "Live Screens ({{count}}/4)",
+        "selectTitle": "Select Devices to Pin",
+        "idle": "Idle",
+        "noPinned": "No devices pinned. Click + to add."
       }
     },
     "footer": {
-      "lastSynced": "Last synced: {{time}}"
+      "lastSynced": "Last synced: {{time}}",
+      "syncPending": "Sync pending...",
+      "systemOnline": "System Online"
     }
   },
   "devices": {
@@ -1373,6 +1533,44 @@
         "Enterprise-grade security (OIDC/OAuth2/RBAC).",
         "Open API for seamless ERP/CRM integration."
       ]
+    }
+  },
+  "logs": {
+    "command": {
+      "actionType": {
+        "BRIGHTNESS": "Brightness",
+        "POWER": "Power",
+        "COLOR_TEMP": "Color Temperature",
+        "VOLUME": "Volume",
+        "CLEAR_CACHE": "Clear Cache",
+        "INPUT_MODE": "Input Mode",
+        "TIMEZONE": "Timezone",
+        "LOCALE": "Locale",
+        "CONTENT_REPORT_SWITCH": "Content Report",
+        "SCREENSHOT": "Screenshot",
+        "SET_SENSOR_REPORT_TIME": "Telemetry Cycle",
+        "DELETE_DEVICE_VSN": "Delete Program",
+        "CLEAR_DEVICE_PROGRAM": "Clear All Programs",
+        "UNKNOWN": "Unknown Command"
+      },
+      "status": {
+        "PUBLISHED": "Published",
+        "CONFIRMED": "Confirmed",
+        "COMPLETED": "Completed",
+        "EXPIRED": "Expired",
+        "FAILED": "Failed"
+      },
+      "statusUi": {
+        "DONE": "Done",
+        "UNKNOWN": "Unknown"
+      },
+      "trackingLevel": {
+        "UPDATE_ONLY": "Update Only",
+        "ACK_ONLY": "Ack Only",
+        "PROPERTY_MATCH": "Property Match",
+        "EXPLICIT_RESULT": "Explicit Result",
+        "UNKNOWN": "Unknown"
+      }
     }
   },
   "program": {

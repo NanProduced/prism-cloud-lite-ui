@@ -6,6 +6,7 @@ import { Monitor, Wifi, WifiOff, Settings2, Check, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useTranslation } from 'react-i18next';
 import {
   Popover,
   PopoverContent,
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/popover";
 
 export const PinnedDevicesWidget = ({ settings, onUpdateSettings }: { settings?: any, onUpdateSettings?: (s: any) => void }) => {
+  const { t } = useTranslation();
   const { data: devicesRes, isLoading } = useQuery({
     queryKey: ['devices'],
     queryFn: () => getDevices(),
@@ -39,7 +41,7 @@ export const PinnedDevicesWidget = ({ settings, onUpdateSettings }: { settings?:
       <div className="flex items-center justify-between">
         <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
           <Monitor className="h-3 w-3" />
-          Live Screens ({pinnedDevices.length}/4)
+          {t('dashboard.widgets.pinnedDevices.liveScreens', { count: pinnedDevices.length })}
         </div>
         
         <Popover>
@@ -50,7 +52,7 @@ export const PinnedDevicesWidget = ({ settings, onUpdateSettings }: { settings?:
           </PopoverTrigger>
           <PopoverContent className="w-64 p-0" align="end">
             <div className="p-2 border-b">
-              <div className="text-xs font-bold">Select Devices to Pin</div>
+              <div className="text-xs font-bold">{t('dashboard.widgets.pinnedDevices.selectTitle')}</div>
             </div>
             <ScrollArea className="h-48">
               <div className="p-1">
@@ -100,7 +102,7 @@ export const PinnedDevicesWidget = ({ settings, onUpdateSettings }: { settings?:
               </div>
               <div className="p-1.5">
                 <div className="text-[10px] font-bold truncate leading-tight">{device.deviceName}</div>
-                <div className="text-[8px] text-muted-foreground truncate">{device.playingProgram || 'Idle'}</div>
+                <div className="text-[8px] text-muted-foreground truncate">{device.playingProgram || t('dashboard.widgets.pinnedDevices.idle')}</div>
               </div>
             </div>
           );
@@ -108,7 +110,7 @@ export const PinnedDevicesWidget = ({ settings, onUpdateSettings }: { settings?:
         {pinnedDevices.length === 0 && (
           <div className="col-span-2 flex flex-col items-center justify-center py-6 opacity-30">
             <Monitor className="h-8 w-8 mb-1" />
-            <span className="text-[10px] font-medium text-center">No devices pinned.<br/>Click + to add.</span>
+            <span className="text-[10px] font-medium text-center">{t('dashboard.widgets.pinnedDevices.noPinned')}</span>
           </div>
         )}
       </div>

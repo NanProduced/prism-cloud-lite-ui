@@ -9,24 +9,10 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { useBreadcrumbStore } from "@/store/breadcrumbStore";
-
-// Route to breadcrumb label mapping
-const routeMap: Record<string, string> = {
-  "/dashboard": "Dashboard",
-  "/dashboard/overview": "Overview",
-  "/dashboard/devices": "Devices",
-  "/dashboard/media": "Media Library",
-  "/dashboard/programs": "Programs",
-  "/dashboard/schedule": "Schedule",
-  "/dashboard/map": "Map",
-  "/dashboard/monitoring": "Monitoring",
-  "/dashboard/analytics": "Analytics",
-  "/dashboard/messages": "Messages",
-  "/dashboard/logs": "Logs",
-  "/dashboard/settings": "Settings",
-};
+import { useTranslation } from "react-i18next";
 
 export function BreadcrumbNav() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const pathname = location.pathname.replace(/\/$/, "") || "/";
@@ -47,6 +33,22 @@ export function BreadcrumbNav() {
       
       // Try exact match and normalized match
       const override = overrides[currentPath] || overrides[currentPath + "/"];
+      
+      const routeMap: Record<string, string> = {
+        "/dashboard": t('shell.breadcrumbs.dashboard'),
+        "/dashboard/overview": t('shell.breadcrumbs.overview'),
+        "/dashboard/devices": t('shell.breadcrumbs.devices'),
+        "/dashboard/media": t('shell.breadcrumbs.media'),
+        "/dashboard/programs": t('shell.breadcrumbs.programs'),
+        "/dashboard/schedule": t('shell.breadcrumbs.schedule'),
+        "/dashboard/map": t('shell.breadcrumbs.map'),
+        "/dashboard/monitoring": t('shell.breadcrumbs.monitoring'),
+        "/dashboard/analytics": t('shell.breadcrumbs.analytics'),
+        "/dashboard/messages": t('shell.breadcrumbs.messages'),
+        "/dashboard/logs": t('shell.breadcrumbs.logs'),
+        "/dashboard/settings": t('shell.breadcrumbs.settings'),
+      };
+      
       const mapped = routeMap[currentPath];
       
       let label = override || mapped;
@@ -58,13 +60,13 @@ export function BreadcrumbNav() {
         const prevPrevSegment = paths[i - 2] ?? "";
 
         if (prevPrevSegment === "programs" && segment === "edit") {
-          label = "Editor";
+          label = t('shell.breadcrumbs.editor');
         } else if (prevSegment === "programs") {
-          label = "Program Details";
+          label = t('shell.breadcrumbs.programDetails');
         } else if (prevSegment === "schedule" || prevSegment === "schedules") {
-          label = "Schedule Details";
+          label = t('shell.breadcrumbs.scheduleDetails');
         } else if (prevSegment === "devices") {
-          label = "Device Details";
+          label = t('shell.breadcrumbs.deviceDetails');
         } else {
           label = segment;
         }

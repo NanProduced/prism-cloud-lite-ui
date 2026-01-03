@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { StickyNote, Check, Palette, Trash2, Pin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { updateUserSettings } from '@/services/userApi';
+import { useTranslation } from 'react-i18next';
 
 const COLORS = [
   { name: 'Amber', bg: 'bg-amber-50/50', border: 'border-amber-100', text: 'text-amber-700', primary: 'bg-amber-500' },
@@ -11,6 +12,7 @@ const COLORS = [
 ];
 
 export const MemoWidget = ({ settings, onUpdateSettings }: { settings?: any, onUpdateSettings?: (s: any) => void }) => {
+  const { t } = useTranslation();
   const [content, setContent] = useState(settings?.content || '');
   const [isSaving, setIsSaving] = useState(false);
   const colorIdx = settings?.colorIdx || 0;
@@ -52,7 +54,7 @@ export const MemoWidget = ({ settings, onUpdateSettings }: { settings?: any, onU
   };
 
   const clearNote = () => {
-    if (window.confirm('Clear this note?')) {
+    if (window.confirm(t('dashboard.widgets.memo.clearConfirm'))) {
       setContent('');
       saveToBackend('', colorIdx);
     }
@@ -68,7 +70,7 @@ export const MemoWidget = ({ settings, onUpdateSettings }: { settings?: any, onU
           <div className={cn("p-1.5 rounded-lg text-white shadow-sm", color.primary)}>
             <StickyNote className="h-3 w-3" />
           </div>
-          <span className={cn("text-[10px] font-black uppercase tracking-widest", color.text)}>Scratchpad</span>
+          <span className={cn("text-[10px] font-black uppercase tracking-widest", color.text)}>{t('dashboard.widgets.memo.scratchpad')}</span>
         </div>
         
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -77,10 +79,10 @@ export const MemoWidget = ({ settings, onUpdateSettings }: { settings?: any, onU
           ) : (
             <div className="h-1.5 w-1.5 bg-emerald-500 rounded-full mr-2 opacity-30" />
           )}
-          <button onClick={cycleColor} className="p-1 hover:bg-black/5 rounded transition-colors" title="Change Color">
+          <button onClick={cycleColor} className="p-1 hover:bg-black/5 rounded transition-colors" title={t('dashboard.widgets.memo.changeColor')}>
             <Palette className="h-3 w-3 text-muted-foreground/60" />
           </button>
-          <button onClick={clearNote} className="p-1 hover:bg-black/5 rounded transition-colors" title="Clear">
+          <button onClick={clearNote} className="p-1 hover:bg-black/5 rounded transition-colors" title={t('dashboard.widgets.memo.clear')}>
             <Trash2 className="h-3 w-3 text-muted-foreground/60" />
           </button>
         </div>
@@ -91,7 +93,7 @@ export const MemoWidget = ({ settings, onUpdateSettings }: { settings?: any, onU
           "flex-1 w-full bg-transparent resize-none border-none focus:ring-0 text-[11px] leading-relaxed p-1 font-medium placeholder:opacity-30",
           color.text
         )}
-        placeholder="Type something to remember..."
+        placeholder={t('dashboard.widgets.memo.placeholder')}
         value={content}
         onChange={handleChange}
       />
