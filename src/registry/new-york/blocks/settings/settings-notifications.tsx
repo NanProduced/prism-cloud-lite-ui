@@ -18,6 +18,8 @@ import {
   type NotificationSettingsV2,
 } from "@/types/notificationSettings";
 
+import { useTranslation } from "react-i18next";
+
 export interface SettingsNotificationsProps {
   settings?: NotificationSettingsV2;
   onSave?: (next: NotificationSettingsV2) => Promise<void>;
@@ -29,6 +31,7 @@ export default function SettingsNotifications({
   onSave,
   className,
 }: SettingsNotificationsProps) {
+  const { t } = useTranslation();
   const [isSaving, setIsSaving] = useState(false);
   const [localSettings, setLocalSettings] = useState<NotificationSettingsV2>(settings);
 
@@ -39,21 +42,21 @@ export default function SettingsNotifications({
   const kindOptions = useMemo(
     () =>
       [
-        { value: "NOTIFICATION" as const, label: "Notifications" },
-        { value: "TASK" as const, label: "Tasks" },
+        { value: "NOTIFICATION" as const, label: t('message.kind.NOTIFICATION') },
+        { value: "TASK" as const, label: t('message.kind.TASK') },
       ] satisfies Array<{ value: MessageKind; label: string }>,
-    []
+    [t]
   );
 
   const statusOptions = useMemo(
     () =>
       [
-        { value: "SUCCESS" as const, label: "Success" },
-        { value: "FAILED" as const, label: "Failed" },
-        { value: "RUNNING" as const, label: "Running" },
-        { value: "PENDING" as const, label: "Pending" },
+        { value: "SUCCESS" as const, label: t('message.status.SUCCESS') },
+        { value: "FAILED" as const, label: t('message.status.FAILED') },
+        { value: "RUNNING" as const, label: t('message.status.RUNNING') },
+        { value: "PENDING" as const, label: t('message.status.PENDING') },
       ] satisfies Array<{ value: MessageStatus; label: string }>,
-    []
+    [t]
   );
 
   const toggleFromArray = <T,>(items: T[], value: T, checked: boolean) => {
@@ -77,9 +80,9 @@ export default function SettingsNotifications({
       <CardHeader>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <CardTitle className="wrap-break-word">Notifications</CardTitle>
+            <CardTitle className="wrap-break-word">{t('settings.notifications.title')}</CardTitle>
             <CardDescription className="wrap-break-word">
-              Controls in-app toasts for Message Center events. This does not affect which messages are stored or shown in the Inbox.
+              {t('settings.notifications.subtitle')}
             </CardDescription>
           </div>
           {onSave && (
@@ -94,12 +97,12 @@ export default function SettingsNotifications({
               {isSaving ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  <span className="whitespace-nowrap">Saving…</span>
+                  <span className="whitespace-nowrap">{t('programEditor.header.saveStatus.saving')}</span>
                 </>
               ) : (
                 <>
                   <Save className="size-4" />
-                  <span className="whitespace-nowrap">Save</span>
+                  <span className="whitespace-nowrap">{t('common.actions.save')}</span>
                 </>
               )}
             </Button>
@@ -117,10 +120,10 @@ export default function SettingsNotifications({
                 </div>
                 <div className="flex flex-col gap-0.5">
                   <FieldLabel className="mb-0" htmlFor="toast-enabled">
-                    In-app toasts
+                    {t('settings.notifications.inAppToasts')}
                   </FieldLabel>
                   <FieldDescription className="text-xs">
-                    Show toast notifications for message events.
+                    {t('settings.notifications.showToastsDesc')}
                   </FieldDescription>
                 </div>
               </div>
@@ -141,10 +144,10 @@ export default function SettingsNotifications({
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div className="flex flex-col gap-0.5">
                     <FieldLabel className="mb-0" htmlFor="toast-on-created">
-                      On message created
+                      {t('settings.notifications.onCreated')}
                     </FieldLabel>
                     <FieldDescription className="text-xs">
-                      Trigger on <span className="font-mono">message.created</span>.
+                      {t('settings.notifications.onCreatedDesc')}
                     </FieldDescription>
                   </div>
                   <Switch
@@ -164,10 +167,10 @@ export default function SettingsNotifications({
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div className="flex flex-col gap-0.5">
                     <FieldLabel className="mb-0" htmlFor="toast-on-updated">
-                      On message updated
+                      {t('settings.notifications.onUpdated')}
                     </FieldLabel>
                     <FieldDescription className="text-xs">
-                      Trigger on <span className="font-mono">message.updated</span> when status changes.
+                      {t('settings.notifications.onUpdatedDesc')}
                     </FieldDescription>
                   </div>
                   <Switch
@@ -190,13 +193,13 @@ export default function SettingsNotifications({
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <Filter className="size-5 text-muted-foreground" />
-              <h3 className="font-semibold text-base">Filters</h3>
+              <h3 className="font-semibold text-base">{t('settings.notifications.filters')}</h3>
             </div>
 
             <div className="rounded-lg border bg-muted/30 p-4">
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div className="space-y-3">
-                  <div className="text-sm font-medium">Kinds</div>
+                  <div className="text-sm font-medium">{t('settings.notifications.kinds')}</div>
                   <div className="space-y-2">
                     {kindOptions.map((opt) => (
                       <label key={opt.value} className="flex items-center gap-2 text-sm">
@@ -219,7 +222,7 @@ export default function SettingsNotifications({
                 </div>
 
                 <div className="space-y-3">
-                  <div className="text-sm font-medium">Statuses</div>
+                  <div className="text-sm font-medium">{t('settings.notifications.statuses')}</div>
                   <div className="space-y-2">
                     {statusOptions.map((opt) => (
                       <label key={opt.value} className="flex items-center gap-2 text-sm">
@@ -245,9 +248,9 @@ export default function SettingsNotifications({
               <Separator className="my-4" />
 
               <div className="space-y-3">
-                <div className="text-sm font-medium">Message types</div>
+                <div className="text-sm font-medium">{t('settings.notifications.messageTypes')}</div>
                 <FieldDescription>
-                  If you select no types, it means <span className="font-medium">allow all</span>.
+                  {t('settings.notifications.allowAllHint')}
                 </FieldDescription>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {MESSAGE_TYPE_OPTIONS.map((opt) => (
@@ -282,17 +285,17 @@ export default function SettingsNotifications({
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <Clock className="size-5 text-muted-foreground" />
-              <h3 className="font-semibold text-base">Quiet Hours</h3>
+              <h3 className="font-semibold text-base">{t('settings.notifications.quietHours')}</h3>
             </div>
 
             <Field>
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div className="flex flex-col gap-1">
                   <FieldLabel className="mb-0" htmlFor="quiet-hours">
-                    Enable Quiet Hours
+                    {t('settings.notifications.enableQuietHours')}
                   </FieldLabel>
                   <FieldDescription>
-                    Suppress toasts during these hours (messages are still stored in the Inbox).
+                    {t('settings.notifications.quietHoursDesc')}
                   </FieldDescription>
                 </div>
                 <Switch
@@ -314,7 +317,7 @@ export default function SettingsNotifications({
             {localSettings.toast.quietHours.enabled && (
               <div className="grid grid-cols-1 gap-4 rounded-lg border bg-muted/30 p-4 sm:grid-cols-2">
                 <Field>
-                  <FieldLabel htmlFor="quiet-start">Start</FieldLabel>
+                  <FieldLabel htmlFor="quiet-start">{t('settings.notifications.start')}</FieldLabel>
                   <FieldContent>
                     <InputGroup>
                       <InputGroupInput
@@ -336,7 +339,7 @@ export default function SettingsNotifications({
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="quiet-end">End</FieldLabel>
+                  <FieldLabel htmlFor="quiet-end">{t('settings.notifications.end')}</FieldLabel>
                   <FieldContent>
                     <InputGroup>
                       <InputGroupInput
@@ -360,7 +363,7 @@ export default function SettingsNotifications({
             )}
 
             <Field>
-              <FieldLabel htmlFor="toast-cooldown">Toast cooldown (seconds)</FieldLabel>
+              <FieldLabel htmlFor="toast-cooldown">{t('settings.notifications.toastCooldown')}</FieldLabel>
               <FieldContent>
                 <InputGroup>
                   <InputGroupInput
@@ -382,7 +385,7 @@ export default function SettingsNotifications({
                 </InputGroup>
               </FieldContent>
               <FieldDescription>
-                Prevents repeated toasts for the same message in a short period.
+                {t('settings.notifications.cooldownDesc')}
               </FieldDescription>
             </Field>
           </div>

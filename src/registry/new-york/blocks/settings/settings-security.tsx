@@ -100,31 +100,49 @@ export interface SettingsSecurityProps {
   className?: string;
 }
 
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
+import { useTranslation } from "react-i18next";
+
+export interface SecuritySession {
+  id: string;
+  device: string;
+  browser?: string;
+  os?: string;
+  location: string;
+  ipAddress: string;
+  lastActive: Date;
+  createdAt: Date;
+  expiresAt: Date;
+  current: boolean;
 }
 
-function formatRelativeTime(date: Date): string {
-  const now = Date.now();
-  const diff = now - date.getTime();
-  const minutes = Math.floor(diff / 60_000);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
+export interface SecurityEvent {
+  id: string;
+  type: "login" | "password_change" | "2fa_enabled" | "2fa_disabled" | "logout";
+  description: string;
+  ipAddress: string;
+  location: string;
+  timestamp: Date;
+  status: "success" | "failed" | "suspicious";
+}
 
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-  return formatDate(date);
+export interface SettingsSecurityProps {
+  twoFactorEnabled?: boolean;
+  sessions?: SecuritySession[];
+  securityHistory?: SecurityEvent[];
+  onPasswordChange?: (
+    currentPassword: string,
+    newPassword: string
+  ) => Promise<void>;
+  onEnable2FA?: () => Promise<void>;
+  onDisable2FA?: () => Promise<void>;
+  onRevokeSession?: (sessionId: string) => Promise<void>;
+  onRevokeAllSessions?: () => Promise<void>;
+  onGenerateBackupCodes?: () => Promise<string[]>;
+  className?: string;
 }
 
 function IpLocationDisplay({ ip, fallback }: { ip: string; fallback: string }) {
+  const { t } = useTranslation();
   const [location, setLocation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -136,7 +154,7 @@ function IpLocationDisplay({ ip, fallback }: { ip: string; fallback: string }) {
     }).finally(() => setLoading(false));
   });
 
-  if (loading) return <span className="animate-pulse">Locating...</span>;
+  if (loading) return <span className="animate-pulse">{t('settings.security.locating')}</span>;
   return <span>{location || fallback}</span>;
 }
 
@@ -152,6 +170,7 @@ export default function SettingsSecurity({
   onGenerateBackupCodes,
   className,
 }: SettingsSecurityProps) {
+  const { t } = useTranslation();
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isRevoking, setIsRevoking] = useState<string | null>(null);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
@@ -159,6 +178,30 @@ export default function SettingsSecurity({
   const [showBackupCodes, setShowBackupCodes] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
+
+  function formatDate(date: Date): string {
+    return new Intl.DateTimeFormat(t('auth.common.language') === 'zh' ? 'zh-CN' : 'en-US', {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(date);
+  }
+  
+  function formatRelativeTime(date: Date): string {
+    const now = Date.now();
+    const diff = now - date.getTime();
+    const minutes = Math.floor(diff / 60_000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+  
+    if (minutes < 1) return t('ai.justNow');
+    if (minutes < 60) return `${minutes}${t('common.units.minute')}${t('common.units.ago')}`;
+    if (hours < 24) return `${hours}${t('common.units.hour')}${t('common.units.ago')}`;
+    if (days < 7) return `${days}${t('common.units.day')}${t('common.units.ago')}`;
+    return formatDate(date);
+  }
 
   const [passwordData, setPasswordData] = useState({
     current: "",
@@ -170,22 +213,22 @@ export default function SettingsSecurity({
     setErrors({});
 
     if (!passwordData.current.trim()) {
-      setErrors({ current: "Current password is required" });
+      setErrors({ current: t('auth.register.allFieldsRequired') });
       return;
     }
 
     if (!passwordData.new.trim()) {
-      setErrors({ new: "New password is required" });
+      setErrors({ new: t('auth.register.allFieldsRequired') });
       return;
     }
 
     if (passwordData.new.length < 8) {
-      setErrors({ new: "Password must be at least 8 characters" });
+      setErrors({ new: t('settings.security.dialog.passwordLengthHint') });
       return;
     }
 
     if (passwordData.new !== passwordData.confirm) {
-      setErrors({ confirm: "Passwords do not match" });
+      setErrors({ confirm: t('auth.register.passwordsDoNotMatch') });
       return;
     }
 
@@ -197,7 +240,7 @@ export default function SettingsSecurity({
     } catch (error) {
       setErrors({
         _general:
-          error instanceof Error ? error.message : "Failed to change password",
+          error instanceof Error ? error.message : t('settings.security.dialog.error'),
       });
     } finally {
       setIsChangingPassword(false);
@@ -216,7 +259,7 @@ export default function SettingsSecurity({
         backupCodes:
           error instanceof Error
             ? error.message
-            : "Failed to generate backup codes",
+            : t('common.errors.unknown'),
       });
     }
   };
@@ -240,13 +283,13 @@ export default function SettingsSecurity({
       case "success":
         return (
           <Badge className="text-xs" variant="default">
-            Success
+            {t('message.status.SUCCESS')}
           </Badge>
         );
       case "failed":
         return (
           <Badge className="text-xs" variant="destructive">
-            Failed
+            {t('message.status.FAILED')}
           </Badge>
         );
       case "suspicious":
@@ -256,7 +299,7 @@ export default function SettingsSecurity({
             variant="destructive"
           >
             <AlertTriangle className="size-3" />
-            <span>Suspicious</span>
+            <span>{t('logs.command.statusUi.PROBLEMS')}</span>
           </Badge>
         );
     }
@@ -267,9 +310,9 @@ export default function SettingsSecurity({
       <CardHeader>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <CardTitle className="wrap-break-word">Security</CardTitle>
+            <CardTitle className="wrap-break-word">{t('settings.security.title')}</CardTitle>
             <CardDescription className="wrap-break-word">
-              Manage your account security and authentication
+              {t('settings.security.subtitle')}
             </CardDescription>
           </div>
         </div>
@@ -284,7 +327,7 @@ export default function SettingsSecurity({
                 <div className="flex size-8 items-center justify-center rounded-lg bg-muted">
                   <Key className="size-4" />
                 </div>
-                <FieldLabel className="mb-0">Password</FieldLabel>
+                <FieldLabel className="mb-0">{t('settings.security.passwordTitle')}</FieldLabel>
               </div>
               <Dialog
                 onOpenChange={setPasswordDialogOpen}
@@ -292,14 +335,14 @@ export default function SettingsSecurity({
               >
                 <DialogTrigger asChild>
                   <Button className="w-full" type="button" variant="outline">
-                    Change Password
+                    {t('settings.security.changePassword')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Change Password</DialogTitle>
+                    <DialogTitle>{t('settings.security.dialog.title')}</DialogTitle>
                     <DialogDescription>
-                      Enter your current password and choose a new one
+                      {t('settings.security.dialog.desc')}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="flex flex-col gap-4">
@@ -313,7 +356,7 @@ export default function SettingsSecurity({
 
                     <Field>
                       <FieldLabel htmlFor="current-password">
-                        Current Password{" "}
+                        {t('settings.security.dialog.currentPassword')}{" "}
                         <span className="text-destructive">*</span>
                       </FieldLabel>
                       <FieldContent>
@@ -338,7 +381,7 @@ export default function SettingsSecurity({
 
                     <Field>
                       <FieldLabel htmlFor="new-password">
-                        New Password <span className="text-destructive">*</span>
+                        {t('settings.security.dialog.newPassword')} <span className="text-destructive">*</span>
                       </FieldLabel>
                       <FieldContent>
                         <InputGroup>
@@ -356,14 +399,14 @@ export default function SettingsSecurity({
                         </InputGroup>
                         {errors.new && <FieldError>{errors.new}</FieldError>}
                         <FieldDescription>
-                          Must be at least 8 characters long
+                          {t('settings.security.dialog.passwordLengthHint')}
                         </FieldDescription>
                       </FieldContent>
                     </Field>
 
                     <Field>
                       <FieldLabel htmlFor="confirm-password">
-                        Confirm Password{" "}
+                        {t('settings.security.dialog.confirmPassword')}{" "}
                         <span className="text-destructive">*</span>
                       </FieldLabel>
                       <FieldContent>
@@ -392,7 +435,7 @@ export default function SettingsSecurity({
                       type="button"
                       variant="outline"
                     >
-                      Cancel
+                      {t('common.actions.cancel')}
                     </Button>
                     <Button
                       disabled={isChangingPassword}
@@ -402,10 +445,10 @@ export default function SettingsSecurity({
                       {isChangingPassword ? (
                         <>
                           <Loader2 className="size-4 animate-spin" />
-                          Changing…
+                          {t('settings.security.dialog.changing')}
                         </>
                       ) : (
-                        "Change Password"
+                        t('settings.security.changePassword')
                       )}
                     </Button>
                   </DialogFooter>
@@ -416,14 +459,14 @@ export default function SettingsSecurity({
             {/* Two-Factor Authentication */}
             <div className="group relative flex flex-col gap-4 rounded-lg border p-4 bg-muted/20">
               <div className="absolute right-4 top-4">
-                <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 border-none shadow-none">Coming Soon</Badge>
+                <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 border-none shadow-none">{t('settings.security.twoFactorBadge')}</Badge>
               </div>
               <div className="flex items-center gap-2 opacity-50">
                 <div className="flex size-8 items-center justify-center rounded-lg bg-muted">
                   <Shield className="size-4" />
                 </div>
                 <FieldLabel className="mb-0">
-                  Two-Factor Authentication
+                  {t('settings.security.twoFactorTitle')}
                 </FieldLabel>
               </div>
               <div className="flex flex-col gap-3 opacity-50">
@@ -446,7 +489,7 @@ export default function SettingsSecurity({
                         type="button"
                         variant="outline"
                       >
-                        View Backup Codes
+                        {t('settings.security.viewBackupCodes')}
                       </Button>
                       <Button
                         className="w-full"
@@ -454,7 +497,7 @@ export default function SettingsSecurity({
                         type="button"
                         variant="destructive"
                       >
-                        Disable 2FA
+                        {t('settings.security.disable2FA')}
                       </Button>
                     </div>
                   </>
@@ -467,7 +510,7 @@ export default function SettingsSecurity({
                   >
                     <div className="flex items-center gap-2">
                       <Shield className="size-4" />
-                      <span>Enable 2FA</span>
+                      <span>{t('settings.security.enable2FA')}</span>
                     </div>
                   </Button>
                 )}
@@ -483,7 +526,7 @@ export default function SettingsSecurity({
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <Monitor className="size-5 text-muted-foreground" />
-                <h3 className="font-semibold text-base">Active Sessions</h3>
+                <h3 className="font-semibold text-base">{t('settings.security.sessionsTitle')}</h3>
               </div>
               {sessions.length > 1 && (
                 <AlertDialog>
@@ -493,20 +536,20 @@ export default function SettingsSecurity({
                       type="button"
                       variant="outline"
                     >
-                      Revoke All
+                      {t('settings.security.revokeAll')}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Revoke All Sessions?</AlertDialogTitle>
+                      <AlertDialogTitle>{t('settings.security.revokeAllTitle')}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will sign you out from all devices except this one.
+                        {t('settings.security.revokeAllDesc')}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogCancel>{t('common.actions.cancel')}</AlertDialogCancel>
                       <AlertDialogAction onClick={onRevokeAllSessions}>
-                        Revoke All
+                        {t('settings.security.revokeAll')}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -516,7 +559,7 @@ export default function SettingsSecurity({
 
             {sessions.length === 0 ? (
               <p className="text-muted-foreground text-sm">
-                No active sessions
+                {t('settings.security.noSessions')}
               </p>
             ) : (
               <div className="flex flex-col gap-3">
@@ -540,7 +583,7 @@ export default function SettingsSecurity({
                           </span>
                           {session.current && (
                             <Badge className="text-[10px] h-4 px-1.5 bg-green-500 hover:bg-green-600 text-white border-none" variant="default">
-                              Current Session
+                              {t('settings.security.currentSession')}
                             </Badge>
                           )}
                         </div>
@@ -552,15 +595,15 @@ export default function SettingsSecurity({
                           </div>
                           <div className="flex items-center gap-1.5">
                             <Clock className="size-3 opacity-70" />
-                            <span>First seen: {formatDate(session.createdAt)}</span>
+                            <span>{t('settings.security.firstSeen')}: {formatDate(session.createdAt)}</span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <Activity className="size-3 opacity-70" />
-                            <span>Last active: {formatRelativeTime(session.lastActive)}</span>
+                            <span>{t('settings.security.lastActive')}: {formatRelativeTime(session.lastActive)}</span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <Shield className="size-3 opacity-70" />
-                            <span>Expires: {formatDate(session.expiresAt)}</span>
+                            <span>{t('settings.security.expires')}: {formatDate(session.expiresAt)}</span>
                           </div>
                         </div>
                       </div>
@@ -581,12 +624,12 @@ export default function SettingsSecurity({
                         {isRevoking === session.id ? (
                           <>
                             <Loader2 className="size-3 animate-spin" />
-                            Revoking…
+                            {t('settings.security.revoking')}
                           </>
                         ) : (
                           <>
                             <Trash2 className="size-3" />
-                            Revoke
+                            {t('settings.security.revoke')}
                           </>
                         )}
                       </Button>
@@ -603,12 +646,12 @@ export default function SettingsSecurity({
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <Clock className="size-5 text-muted-foreground" />
-              <h3 className="font-semibold text-base">Security History</h3>
+              <h3 className="font-semibold text-base">{t('settings.security.historyTitle')}</h3>
             </div>
 
             {securityHistory.length === 0 ? (
               <p className="text-muted-foreground text-sm">
-                No security events
+                {t('settings.security.noHistory')}
               </p>
             ) : (
               <div className="flex flex-col gap-3">
@@ -656,10 +699,9 @@ export default function SettingsSecurity({
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Backup Codes</DialogTitle>
+            <DialogTitle>{t('settings.security.backupCodes.title')}</DialogTitle>
             <DialogDescription>
-              Save these codes in a safe place. You can use them to access your
-              account if you lose access to your authenticator app.
+              {t('settings.security.backupCodes.desc')}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4">
@@ -678,12 +720,12 @@ export default function SettingsSecurity({
               {showBackupCodes ? (
                 <div className="flex items-center gap-2">
                   <EyeOff className="size-4" />
-                  <span>Hide Codes</span>
+                  <span>{t('settings.security.backupCodes.hide')}</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <Eye className="size-4" />
-                  <span>Show Codes</span>
+                  <span>{t('settings.security.backupCodes.show')}</span>
                 </div>
               )}
             </Button>
@@ -693,7 +735,7 @@ export default function SettingsSecurity({
               onClick={() => setBackupCodesDialogOpen(false)}
               type="button"
             >
-              Done
+              {t('logs.common.done')}
             </Button>
           </DialogFooter>
         </DialogContent>

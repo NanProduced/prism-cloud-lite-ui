@@ -148,7 +148,9 @@ export default function BillingPage() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">{t('billing.currentPlan')}</p>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-2xl font-bold">{subscription?.tier || 'FREE'}</h2>
+                  <h2 className="text-2xl font-bold">
+                    {subscription?.tier ? t(`billing.${subscription.tier.toLowerCase()}.name`, { defaultValue: subscription.tier }) : t('billing.free.name')}
+                  </h2>
                   {subscription?.proActive && (
                     <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-none">{t('billing.active')}</Badge>
                   )}

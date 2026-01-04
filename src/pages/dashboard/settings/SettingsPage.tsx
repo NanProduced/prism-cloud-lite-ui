@@ -234,17 +234,17 @@ export default function SettingsPage() {
     const os = parser.getOS();
     const device = parser.getDevice();
 
-    const browserName = browser.name ? `${browser.name} ${browser.major || ''}` : 'Unknown Browser';
-    const osName = os.name ? `${os.name} ${os.version || ''}` : 'Unknown OS';
+    const browserName = browser.name ? `${browser.name} ${browser.major || ''}` : t('settings.security.unknownBrowser');
+    const osName = os.name ? `${os.name} ${os.version || ''}` : t('settings.security.unknownOS');
     
     // Construct a friendly device string
     let deviceDisplay = s.deviceName || osName;
     if (device.model) {
       deviceDisplay = `${device.vendor || ''} ${device.model}`.trim();
     } else if (os.name === 'Windows') {
-      deviceDisplay = 'Windows PC';
+      deviceDisplay = t('settings.security.windowsPC');
     } else if (os.name === 'Mac OS') {
-      deviceDisplay = 'Mac';
+      deviceDisplay = t('settings.security.mac');
     }
 
     return {
@@ -252,7 +252,7 @@ export default function SettingsPage() {
       device: deviceDisplay,
       browser: browserName,
       os: osName,
-      location: s.ipAddress === '127.0.0.1' || s.ipAddress === '0:0:0:0:0:0:0:1' ? 'Localhost' : 'Unknown',
+      location: s.ipAddress === '127.0.0.1' || s.ipAddress === '0:0:0:0:0:0:0:1' ? t('settings.security.localhost') : t('settings.security.unknownLocation'),
       ipAddress: s.ipAddress || '',
       lastActive: new Date(s.lastUsedAt),
       createdAt: new Date(s.createdAt),
@@ -273,9 +273,9 @@ export default function SettingsPage() {
   const securityHistory: SecurityEvent[] = (securityHistoryData?.data?.items || []).map((e) => ({
     id: e.id.toString(),
     type: normalizeSecurityEventType(e.type),
-    description: e.type, // Keep raw type for now
+    description: t(`settings.security.events.${e.type}`, { defaultValue: e.type }),
     ipAddress: e.ipAddress || '',
-    location: 'Unknown',
+    location: t('settings.security.unknownLocation'),
     timestamp: new Date(e.createdAt),
     status: e.success ? 'success' : 'failed',
   }));
@@ -291,7 +291,7 @@ export default function SettingsPage() {
   }));
 
   if (isProfileLoading && !profileData) {
-    return <div className="flex justify-center p-12 text-sm text-muted-foreground">{t('programEditor.states.loading')}</div>;
+    return <div className="flex justify-center p-12 text-sm text-muted-foreground">{t('common.states.loading')}</div>;
   }
 
   return (
@@ -361,7 +361,7 @@ export default function SettingsPage() {
             onSave={async (next) => {
               try {
                 await updateNotificationSettings(next);
-                toast.success('Settings saved');
+                toast.success(t('settings.draftPolicy.saveSuccess')); // Reuse or use a specific key if needed
               } catch (error: any) {
                 toast.error(getErrorMessage(error));
                 throw error;
@@ -373,10 +373,10 @@ export default function SettingsPage() {
         <TabsContent className="mt-0" forceMount value="security">
           <SettingsSecurity
             onDisable2FA={async () => {
-              toast.info('2FA configuration not supported yet');
+              toast.info(t('settings.security.twoFactorBadge'));
             }}
             onEnable2FA={async () => {
-              toast.info('2FA configuration not supported yet');
+              toast.info(t('settings.security.twoFactorBadge'));
             }}
             onGenerateBackupCodes={async () => {
               return [];

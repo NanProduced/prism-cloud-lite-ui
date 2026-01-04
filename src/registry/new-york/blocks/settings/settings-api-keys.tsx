@@ -88,23 +88,39 @@ export interface SettingsAPIKeysProps {
   className?: string;
 }
 
-const availableScopes = [
-  { id: "read", label: "Read", description: "Read-only access" },
-  { id: "write", label: "Write", description: "Read and write access" },
-  { id: "admin", label: "Admin", description: "Full administrative access" },
-];
+import { useTranslation } from "react-i18next";
+
+export interface APIKey {
+  id: string;
+  name: string;
+  key: string;
+  createdAt: Date;
+  lastUsed?: Date;
+  expiresAt?: Date;
+  scopes: string[];
+  usageCount?: number;
+  rateLimit?: {
+    limit: number;
+    remaining: number;
+    resetAt: Date;
+  };
+}
+
+export interface SettingsAPIKeysProps {
+  apiKeys?: APIKey[];
+  onCreate?: (data: {
+    name: string;
+    expiresAt?: Date;
+    scopes: string[];
+  }) => Promise<APIKey>;
+  onRevoke?: (keyId: string) => Promise<void>;
+  onRegenerate?: (keyId: string) => Promise<APIKey>;
+  className?: string;
+}
 
 function maskKey(key: string): string {
   if (key.length <= 8) return "•".repeat(key.length);
   return `${key.slice(0, 4)}${"•".repeat(key.length - 8)}${key.slice(-4)}`;
-}
-
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
 }
 
 export default function SettingsAPIKeys({
@@ -114,6 +130,7 @@ export default function SettingsAPIKeys({
   onRegenerate,
   className,
 }: SettingsAPIKeysProps) {
+  const { t } = useTranslation();
   const [isCreating, setIsCreating] = useState(false);
   const [isRevoking, setIsRevoking] = useState<string | null>(null);
   const [isRegenerating, setIsRegenerating] = useState<string | null>(null);
@@ -121,6 +138,20 @@ export default function SettingsAPIKeys({
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const availableScopes = [
+    { id: "read", label: t('settings.apiKeys.scopes.read'), description: "Read-only access" },
+    { id: "write", label: t('settings.apiKeys.scopes.write'), description: "Read and write access" },
+    { id: "admin", label: t('settings.apiKeys.scopes.admin'), description: "Full administrative access" },
+  ];
+  
+  function formatDate(date: Date): string {
+    return new Intl.DateTimeFormat(t('auth.common.language') === 'zh' ? 'zh-CN' : 'en-US', {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(date);
+  }
 
   const [newKeyData, setNewKeyData] = useState({
     name: "",
@@ -132,12 +163,12 @@ export default function SettingsAPIKeys({
     setErrors({});
 
     if (!newKeyData.name.trim()) {
-      setErrors({ name: "Name is required" });
+      setErrors({ name: t('auth.register.allFieldsRequired') });
       return;
     }
 
     if (newKeyData.scopes.length === 0) {
-      setErrors({ scopes: "At least one scope is required" });
+      setErrors({ scopes: t('auth.register.allFieldsRequired') });
       return;
     }
 
@@ -162,7 +193,7 @@ export default function SettingsAPIKeys({
     } catch (error) {
       setErrors({
         _general:
-          error instanceof Error ? error.message : "Failed to create API key",
+          error instanceof Error ? error.message : t('settings.apiKeys.dialog.error'),
       });
     } finally {
       setIsCreating(false);
@@ -219,23 +250,23 @@ export default function SettingsAPIKeys({
       <CardHeader>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <CardTitle className="wrap-break-word">API Keys</CardTitle>
+            <CardTitle className="wrap-break-word">{t('settings.apiKeys.title')}</CardTitle>
             <CardDescription className="wrap-break-word">
-              Manage your API keys for programmatic access
+              {t('settings.apiKeys.subtitle')}
             </CardDescription>
           </div>
           <Dialog onOpenChange={setCreateDialogOpen} open={createDialogOpen}>
             <DialogTrigger asChild>
               <Button className="w-full shrink-0 sm:w-auto" type="button">
                 <Plus className="size-4" />
-                <span className="whitespace-nowrap">Create API Key</span>
+                <span className="whitespace-nowrap">{t('settings.apiKeys.create')}</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Create API Key</DialogTitle>
+                <DialogTitle>{t('settings.apiKeys.dialog.title')}</DialogTitle>
                 <DialogDescription>
-                  Create a new API key with specific permissions
+                  {t('settings.apiKeys.dialog.desc')}
                 </DialogDescription>
               </DialogHeader>
               <div className="flex flex-col gap-4">
@@ -249,7 +280,7 @@ export default function SettingsAPIKeys({
 
                 <Field>
                   <FieldLabel htmlFor="key-name">
-                    Name <span className="text-destructive">*</span>
+                    {t('settings.apiKeys.dialog.name')} <span className="text-destructive">*</span>
                   </FieldLabel>
                   <FieldContent>
                     <InputGroup>
@@ -271,9 +302,9 @@ export default function SettingsAPIKeys({
 
                 <Field className="opacity-50 pointer-events-none relative">
                   <div className="absolute right-0 top-0">
-                    <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 border-none shadow-none">Coming Soon</Badge>
+                    <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 border-none shadow-none">{t('settings.security.twoFactorBadge')}</Badge>
                   </div>
-                  <FieldLabel htmlFor="expires">Expires In</FieldLabel>
+                  <FieldLabel htmlFor="expires">{t('settings.apiKeys.dialog.expires')}</FieldLabel>
                   <FieldContent>
                     <Select
                       disabled
@@ -300,10 +331,10 @@ export default function SettingsAPIKeys({
 
                 <Field className="opacity-50 pointer-events-none relative">
                    <div className="absolute right-0 top-0">
-                    <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 border-none shadow-none">Coming Soon</Badge>
+                    <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 border-none shadow-none">{t('settings.security.twoFactorBadge')}</Badge>
                   </div>
                   <FieldLabel>
-                    Permissions <span className="text-destructive">*</span>
+                    {t('settings.apiKeys.dialog.permissions')} <span className="text-destructive">*</span>
                   </FieldLabel>
                   <FieldContent>
                     <div className="flex flex-col gap-3">
@@ -342,7 +373,7 @@ export default function SettingsAPIKeys({
                   type="button"
                   variant="outline"
                 >
-                  Cancel
+                  {t('common.actions.cancel')}
                 </Button>
                 <Button
                   disabled={isCreating}
@@ -352,10 +383,10 @@ export default function SettingsAPIKeys({
                   {isCreating ? (
                     <>
                       <Loader2 className="size-4 animate-spin" />
-                      Creating…
+                      {t('settings.apiKeys.regenerating')}
                     </>
                   ) : (
-                    "Create Key"
+                    t('settings.apiKeys.create')
                   )}
                 </Button>
               </DialogFooter>
@@ -370,9 +401,9 @@ export default function SettingsAPIKeys({
               <Plus className="size-6 text-muted-foreground" />
             </div>
             <div className="flex flex-col gap-2">
-              <p className="font-medium text-sm">No API keys</p>
+              <p className="font-medium text-sm">{t('settings.apiKeys.noKeys')}</p>
               <p className="text-muted-foreground text-sm">
-                Create your first API key to get started
+                {t('settings.apiKeys.createFirst')}
               </p>
             </div>
           </div>
@@ -413,12 +444,12 @@ export default function SettingsAPIKeys({
                               {isRegenerating === apiKey.id ? (
                                 <>
                                   <Loader2 className="size-4 animate-spin" />
-                                  Regenerating…
+                                  {t('settings.apiKeys.regenerating')}
                                 </>
                               ) : (
                                 <>
                                   <RefreshCw className="size-4" />
-                                  Regenerate
+                                  {t('settings.apiKeys.regenerate')}
                                 </>
                               )}
                             </Button>
@@ -434,12 +465,12 @@ export default function SettingsAPIKeys({
                                   {isRevoking === apiKey.id ? (
                                     <>
                                       <Loader2 className="size-4 animate-spin" />
-                                      Revoking…
+                                      {t('settings.security.revoking')}
                                     </>
                                   ) : (
                                     <>
                                       <Trash2 className="size-4" />
-                                      Revoke
+                                      {t('common.actions.delete')}
                                     </>
                                   )}
                                 </Button>
@@ -447,20 +478,20 @@ export default function SettingsAPIKeys({
                               <AlertDialogContent>
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>
-                                    Revoke API Key?
+                                    {t('settings.apiKeys.revokeTitle')}
                                   </AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This will permanently revoke the API key{" "}
-                                    <strong>{apiKey.name}</strong>. This action
-                                    cannot be undone.
-                                  </AlertDialogDescription>
+                                  <AlertDialogDescription
+                                    dangerouslySetInnerHTML={{
+                                      __html: t('settings.apiKeys.revokeDesc', { name: apiKey.name })
+                                    }}
+                                  />
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogCancel>{t('common.actions.cancel')}</AlertDialogCancel>
                                   <AlertDialogAction
                                     onClick={() => handleRevoke(apiKey.id)}
                                   >
-                                    Revoke Key
+                                    {t('settings.security.revoke')}
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
@@ -500,15 +531,15 @@ export default function SettingsAPIKeys({
                         </Button>
                       </div>
                       <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-xs">
-                        <span>Created: {formatDate(apiKey.createdAt)}</span>
+                        <span>{t('workflow.step3.title')}: {formatDate(apiKey.createdAt)}</span>
                         {apiKey.lastUsed && (
-                          <span>Last used: {formatDate(apiKey.lastUsed)}</span>
+                          <span>{t('settings.apiKeys.lastUsed')}: {formatDate(apiKey.lastUsed)}</span>
                         )}
                         {apiKey.expiresAt && (
-                          <span>Expires: {formatDate(apiKey.expiresAt)}</span>
+                          <span>{t('settings.security.expires')}: {formatDate(apiKey.expiresAt)}</span>
                         )}
                         {apiKey.usageCount !== undefined && (
-                          <span>{apiKey.usageCount} requests</span>
+                          <span>{t('settings.apiKeys.usageCount', { count: apiKey.usageCount })}</span>
                         )}
                       </div>
                       {apiKey.scopes.length > 0 && (
@@ -527,11 +558,10 @@ export default function SettingsAPIKeys({
                       {apiKey.rateLimit && (
                         <div className="flex flex-col gap-1">
                           <p className="text-muted-foreground text-xs">
-                            Rate Limit: {apiKey.rateLimit.remaining} /{" "}
-                            {apiKey.rateLimit.limit} remaining
+                            {t('settings.apiKeys.rateLimit', { remaining: apiKey.rateLimit.remaining, limit: apiKey.rateLimit.limit })}
                           </p>
                           <p className="text-muted-foreground text-xs">
-                            Resets: {formatDate(apiKey.rateLimit.resetAt)}
+                            {t('settings.apiKeys.resets')}: {formatDate(apiKey.rateLimit.resetAt)}
                           </p>
                         </div>
                       )}

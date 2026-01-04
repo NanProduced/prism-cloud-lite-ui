@@ -17,6 +17,8 @@ import { InputGroup, InputGroupInput } from "@/registry/new-york/ui/input-group"
 import { Separator } from "@/registry/new-york/ui/separator";
 import { ALL_AVATARS, getAvatarById } from "@/lib/avatars";
 
+import { useTranslation } from "react-i18next";
+
 export interface ProfileData {
   name: string;
   email: string;
@@ -39,6 +41,7 @@ export default function SettingsProfile({
   onBindPhoneConfirm,
   className,
 }: SettingsProfileProps) {
+  const { t } = useTranslation();
   const [isSaving, setIsSaving] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -67,7 +70,7 @@ export default function SettingsProfile({
 
   const handleSendOtp = async () => {
     if (!formData.phone) {
-      setErrors({ phone: "Phone number is required" });
+      setErrors({ phone: t('auth.register.emailPlaceholder') }); // Reuse phone validation if available or generic
       return;
     }
     setErrors({});
@@ -77,7 +80,7 @@ export default function SettingsProfile({
       setOtpSent(true);
       setCountdown(60);
     } catch (error) {
-      setErrors({ phone: error instanceof Error ? error.message : "Failed to send OTP" });
+      setErrors({ phone: error instanceof Error ? error.message : t('auth.forgotPassword.otpSent') });
     } finally {
       setIsSendingOtp(false);
     }
@@ -85,7 +88,7 @@ export default function SettingsProfile({
 
   const handleConfirmBind = async () => {
     if (!otpCode) {
-      setErrors({ otp: "Verification code is required" });
+      setErrors({ otp: t('auth.register.codePlaceholder') });
       return;
     }
     setErrors({});
@@ -98,7 +101,7 @@ export default function SettingsProfile({
         setOtpCode("");
       }
     } catch (error) {
-      setErrors({ otp: error instanceof Error ? error.message : "Failed to confirm" });
+      setErrors({ otp: error instanceof Error ? error.message : t('common.errors.unknown') });
     } finally {
       setIsConfirmingOtp(false);
     }
@@ -108,7 +111,7 @@ export default function SettingsProfile({
     setErrors({});
 
     if (!formData.name.trim()) {
-      setErrors({ name: "Display name is required" });
+      setErrors({ name: t('auth.register.allFieldsRequired') });
       return;
     }
 
@@ -117,7 +120,7 @@ export default function SettingsProfile({
       await onSave?.(formData);
     } catch (error) {
       setErrors({
-        _general: error instanceof Error ? error.message : "Failed to save",
+        _general: error instanceof Error ? error.message : t('common.errors.unknown'),
       });
     } finally {
       setIsSaving(false);
@@ -131,9 +134,9 @@ export default function SettingsProfile({
       <CardHeader>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <CardTitle className="wrap-break-word">Profile</CardTitle>
+            <CardTitle className="wrap-break-word">{t('settings.profile.title')}</CardTitle>
             <CardDescription className="wrap-break-word">
-              Choose a preset avatar and manage your display name.
+              {t('settings.profile.subtitle')}
             </CardDescription>
           </div>
           {onSave && (
@@ -148,12 +151,12 @@ export default function SettingsProfile({
               {isSaving ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  <span className="whitespace-nowrap">Saving…</span>
+                  <span className="whitespace-nowrap">{t('programEditor.header.saveStatus.saving')}</span>
                 </>
               ) : (
                 <>
                   <Save className="size-4" />
-                  <span className="whitespace-nowrap">Save</span>
+                  <span className="whitespace-nowrap">{t('common.actions.save')}</span>
                 </>
               )}
             </Button>
@@ -169,7 +172,7 @@ export default function SettingsProfile({
           )}
 
           <Field>
-            <FieldLabel>Avatar</FieldLabel>
+            <FieldLabel>{t('settings.profile.avatar')}</FieldLabel>
             <FieldContent>
               <div className="flex items-center justify-between gap-4 rounded-lg border bg-muted/30 p-4">
                 <div className="flex items-center gap-4">
@@ -189,10 +192,10 @@ export default function SettingsProfile({
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground">
-                      Profile Picture
+                      {t('settings.profile.avatarPicture')}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Click "Change" to pick a new one.
+                      {t('settings.profile.avatarChangeHint')}
                     </p>
                   </div>
                 </div>
@@ -205,12 +208,12 @@ export default function SettingsProfile({
                   {showAvatarPicker ? (
                     <>
                       <ChevronUp className="size-4" />
-                      <span>Hide</span>
+                      <span>{t('settings.profile.hide')}</span>
                     </>
                   ) : (
                     <>
                       <ChevronDown className="size-4" />
-                      <span>Change</span>
+                      <span>{t('settings.profile.change')}</span>
                     </>
                   )}
                 </Button>
@@ -261,7 +264,7 @@ export default function SettingsProfile({
           <div className="flex flex-col gap-4">
             <Field>
               <FieldLabel htmlFor="display-name">
-                Display name <span className="text-destructive">*</span>
+                {t('settings.profile.name')} <span className="text-destructive">*</span>
               </FieldLabel>
               <FieldContent>
                 <InputGroup>
@@ -271,7 +274,7 @@ export default function SettingsProfile({
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, name: e.target.value }))
                     }
-                    placeholder="Your display name"
+                    placeholder={t('settings.profile.displayPlaceholder')}
                     value={formData.name}
                   />
                 </InputGroup>
@@ -280,7 +283,7 @@ export default function SettingsProfile({
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="email">Email</FieldLabel>
+              <FieldLabel htmlFor="email">{t('settings.profile.email')}</FieldLabel>
               <FieldContent>
                 <InputGroup>
                   <InputGroupInput
@@ -295,7 +298,7 @@ export default function SettingsProfile({
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="phone">Phone Number</FieldLabel>
+              <FieldLabel htmlFor="phone">{t('settings.profile.phone')}</FieldLabel>
               <FieldContent>
                 {profile?.phone ? (
                   <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
@@ -306,11 +309,11 @@ export default function SettingsProfile({
                       <p className="text-sm font-medium">{profile.phone}</p>
                       <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
                         <ShieldCheck className="size-3" />
-                        <span>Verified & Bound</span>
+                        <span>{t('settings.profile.verifiedBound')}</span>
                       </div>
                     </div>
                     <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
-                      Active
+                      {t('settings.profile.active')}
                     </Badge>
                   </div>
                 ) : (
@@ -319,20 +322,20 @@ export default function SettingsProfile({
                       <div className="flex items-center justify-between gap-4 rounded-lg border border-dashed p-4">
                         <div className="flex items-center gap-3 text-muted-foreground">
                           <Phone className="size-5 opacity-50" />
-                          <p className="text-sm">No phone number linked to this account.</p>
+                          <p className="text-sm">{t('settings.profile.noPhoneLinked')}</p>
                         </div>
                         <Button
                           onClick={() => setIsBindingMode(true)}
                           size="sm"
                           variant="outline"
                         >
-                          Link Phone
+                          {t('settings.profile.linkPhone')}
                         </Button>
                       </div>
                     ) : (
                       <div className="rounded-lg border bg-card p-4 space-y-4">
                         <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-medium">Link Phone Number</h4>
+                          <h4 className="text-sm font-medium">{t('settings.profile.linkPhoneTitle')}</h4>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -342,7 +345,7 @@ export default function SettingsProfile({
                               setOtpSent(false);
                             }}
                           >
-                            Cancel
+                            {t('common.actions.cancel')}
                           </Button>
                         </div>
 
@@ -351,7 +354,7 @@ export default function SettingsProfile({
                             <InputGroup>
                               <InputGroupInput
                                 id="phone-input"
-                                placeholder="Phone number (e.g. 13800138000)"
+                                placeholder={t('settings.profile.phonePlaceholder')}
                                 value={formData.phone}
                                 onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                                 disabled={otpSent}
@@ -363,7 +366,7 @@ export default function SettingsProfile({
                                   onClick={handleSendOtp}
                                   disabled={isSendingOtp || !formData.phone}
                                 >
-                                  {isSendingOtp ? <Loader2 className="size-3 animate-spin" /> : "Send Code"}
+                                  {isSendingOtp ? <Loader2 className="size-3 animate-spin" /> : t('settings.profile.sendCode')}
                                 </Button>
                               )}
                             </InputGroup>
@@ -373,18 +376,18 @@ export default function SettingsProfile({
                           {otpSent && (
                             <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
                               <div className="flex items-center justify-between">
-                                <label className="text-xs font-medium text-muted-foreground">Verification Code</label>
+                                <label className="text-xs font-medium text-muted-foreground">{t('settings.profile.verificationCode')}</label>
                                 <button
                                   className="text-xs text-primary hover:underline disabled:opacity-50"
                                   disabled={countdown > 0 || isSendingOtp}
                                   onClick={handleSendOtp}
                                 >
-                                  {countdown > 0 ? `Resend in ${countdown}s` : "Resend Code"}
+                                  {countdown > 0 ? t('settings.profile.resendIn', { seconds: countdown }) : t('settings.profile.resendCode')}
                                 </button>
                               </div>
                               <InputGroup>
                                 <InputGroupInput
-                                  placeholder="6-digit code"
+                                  placeholder={t('settings.profile.digitCodePlaceholder')}
                                   value={otpCode}
                                   onChange={(e) => setOtpCode(e.target.value)}
                                 />
@@ -398,10 +401,10 @@ export default function SettingsProfile({
                                 {isConfirmingOtp ? (
                                   <>
                                     <Loader2 className="size-4 animate-spin mr-2" />
-                                    Confirming...
+                                    {t('settings.profile.confirming')}
                                   </>
                                 ) : (
-                                  "Verify & Link"
+                                  t('settings.profile.verifyAndLink')
                                 )}
                               </Button>
                             </div>

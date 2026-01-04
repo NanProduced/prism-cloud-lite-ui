@@ -193,7 +193,7 @@ export default function SettingsPreferences({
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <CardTitle className="wrap-break-word">{t('settings.tabs.preferences')}</CardTitle>
             <CardDescription className="wrap-break-word">
-              Server timestamps are stored in UTC. Choose how they are displayed in the UI.
+              {t('settings.preferences.utcNotice')}
             </CardDescription>
           </div>
           {onSave && (
@@ -208,7 +208,7 @@ export default function SettingsPreferences({
               {isSaving ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  <span className="whitespace-nowrap">Saving...</span>
+                  <span className="whitespace-nowrap">{t('programEditor.header.saveStatus.saving')}</span>
                 </>
               ) : (
                 <>
@@ -226,7 +226,7 @@ export default function SettingsPreferences({
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <Sun className="size-5 text-muted-foreground" />
-              <h3 className="font-semibold text-base">Appearance</h3>
+              <h3 className="font-semibold text-base">{t('settings.preferences.appearance')}</h3>
             </div>
 
             <Field>
@@ -269,7 +269,7 @@ export default function SettingsPreferences({
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <Globe className="size-5 text-muted-foreground" />
-              <h3 className="font-semibold text-base">Language & Region</h3>
+              <h3 className="font-semibold text-base">{t('settings.preferences.langRegion')}</h3>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -283,7 +283,7 @@ export default function SettingsPreferences({
                     value={localPreferences.language}
                   >
                     <SelectTrigger className="w-full" id="language">
-                      <SelectValue placeholder="Select language" />
+                      <SelectValue placeholder={t('auth.common.language')} />
                     </SelectTrigger>
                     <SelectContent>
                       {languages.map((l) => (
@@ -309,7 +309,7 @@ export default function SettingsPreferences({
                     value={localPreferences.timezone}
                   >
                     <SelectTrigger className="w-full" id="timezone">
-                      <SelectValue placeholder="Select timezone" />
+                      <SelectValue placeholder={t('settings.deviceDefaults.timezone.selectPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
                       {timezones.map((tz) => (
@@ -332,7 +332,7 @@ export default function SettingsPreferences({
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <Calendar className="size-5 text-muted-foreground" />
-              <h3 className="font-semibold text-base">Date & Time</h3>
+              <h3 className="font-semibold text-base">{t('settings.preferences.dateTime')}</h3>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -349,7 +349,7 @@ export default function SettingsPreferences({
                     value={localPreferences.dateFormat}
                   >
                     <SelectTrigger className="w-full" id="date-format">
-                      <SelectValue placeholder="Select format" />
+                      <SelectValue placeholder={t('settings.deviceDefaults.timezone.selectPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
                       {dateFormats.map((df) => (
@@ -378,19 +378,19 @@ export default function SettingsPreferences({
                     value={localPreferences.timeFormat}
                   >
                     <SelectTrigger className="w-full" id="time-format">
-                      <SelectValue placeholder="Select format" />
+                      <SelectValue placeholder={t('settings.deviceDefaults.timezone.selectPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="24h">
                         <span className="flex items-center gap-2">
                           <Clock className="size-4" />
-                          24-hour
+                          {t('settings.preferences.time24')}
                         </span>
                       </SelectItem>
                       <SelectItem value="12h">
                         <span className="flex items-center gap-2">
                           <Clock className="size-4" />
-                          12-hour (AM/PM)
+                          {t('settings.preferences.time12')}
                         </span>
                       </SelectItem>
                     </SelectContent>
@@ -410,7 +410,7 @@ export default function SettingsPreferences({
                       {t('settings.preferences.showSeconds')}
                     </FieldLabel>
                     <FieldDescription className="text-xs">
-                      Include seconds in time displays.
+                      {t('settings.preferences.secondsDesc')}
                     </FieldDescription>
                   </div>
                 </div>
@@ -427,11 +427,11 @@ export default function SettingsPreferences({
             <div className="rounded-lg border bg-muted/30 p-4">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Clock className="size-4 text-muted-foreground" />
-                Preview
+                {t('settings.preferences.preview')}
               </div>
               <p className="mt-2 font-mono text-sm">{preview}</p>
               <p className="mt-2 text-xs text-muted-foreground">
-                Example stored as UTC: <span className="font-mono">2025-12-13T02:37:19.000Z</span>
+                {t('settings.preferences.utcExample')} <span className="font-mono">2025-12-13T02:37:19.000Z</span>
               </p>
             </div>
           </div>
@@ -441,12 +441,12 @@ export default function SettingsPreferences({
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <Globe className="size-5 text-muted-foreground" />
-              <h3 className="font-semibold text-base">Map & Location</h3>
+              <h3 className="font-semibold text-base">{t('settings.preferences.mapLocation')}</h3>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field>
-                <FieldLabel htmlFor="map-location-mode">Location Priority</FieldLabel>
+                <FieldLabel htmlFor="map-location-mode">{t('settings.preferences.locationPriority')}</FieldLabel>
                 <FieldContent>
                   <Select
                     onValueChange={(next) =>
@@ -458,17 +458,17 @@ export default function SettingsPreferences({
                     value={localPreferences.mapLocationMode}
                   >
                     <SelectTrigger className="w-full" id="map-location-mode">
-                      <SelectValue placeholder="Select priority" />
+                      <SelectValue placeholder={t('settings.deviceDefaults.timezone.selectPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="auto">Auto (Manual preferred)</SelectItem>
-                      <SelectItem value="reported">Reported Only</SelectItem>
-                      <SelectItem value="manual">Manual Only</SelectItem>
+                      <SelectItem value="auto">{t('settings.preferences.locationAuto')}</SelectItem>
+                      <SelectItem value="reported">{t('settings.preferences.locationReported')}</SelectItem>
+                      <SelectItem value="manual">{t('settings.preferences.locationManual')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </FieldContent>
                 <FieldDescription>
-                  Choose which coordinate source to prioritize on the map.
+                  {t('settings.preferences.locationDesc')}
                 </FieldDescription>
               </Field>
             </div>
@@ -479,12 +479,12 @@ export default function SettingsPreferences({
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <Timer className="size-5 text-muted-foreground" />
-              <h3 className="font-semibold text-base">Commands</h3>
+              <h3 className="font-semibold text-base">{t('settings.preferences.commands')}</h3>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field>
-                <FieldLabel htmlFor="command-timeout">Default Command Timeout</FieldLabel>
+                <FieldLabel htmlFor="command-timeout">{t('settings.preferences.commandTimeout')}</FieldLabel>
                 <FieldContent>
                   <Select
                     onValueChange={(next) =>
@@ -496,25 +496,26 @@ export default function SettingsPreferences({
                     value={String(localPreferences.defaultCommandTimeout)}
                   >
                     <SelectTrigger className="w-full" id="command-timeout">
-                      <SelectValue placeholder="Select timeout" />
+                      <SelectValue placeholder={t('settings.deviceDefaults.timezone.selectPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="15">15 minutes</SelectItem>
-                      <SelectItem value="60">1 hour</SelectItem>
-                      <SelectItem value="1440">24 hours</SelectItem>
-                      <SelectItem value="4320">3 days</SelectItem>
-                      <SelectItem value="10080">7 days</SelectItem>
+                      <SelectItem value="15">15 {t('common.units.minute')}</SelectItem>
+                      <SelectItem value="60">1 {t('common.units.hour')}</SelectItem>
+                      <SelectItem value="1440">24 {t('common.units.hour')}</SelectItem>
+                      <SelectItem value="4320">3 {t('common.units.day')}</SelectItem>
+                      <SelectItem value="10080">7 {t('common.units.day')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </FieldContent>
                 <FieldDescription>
-                  Commands will expire if not retrieved by devices within this period.
+                  {t('settings.preferences.commandTimeoutDesc')}
                 </FieldDescription>
               </Field>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            }
+            

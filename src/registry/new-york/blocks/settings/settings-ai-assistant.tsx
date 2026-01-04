@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Bot, Key, Check, Plus, Trash2, ShieldCheck, ExternalLink, Info } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/store/notificationStore';
@@ -42,7 +42,10 @@ import { Switch } from '@/registry/new-york/ui/switch';
 import { Separator } from '@/registry/new-york/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
+import { useTranslation } from 'react-i18next';
+
 export default function SettingsAIAssistant() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
@@ -66,12 +69,12 @@ export default function SettingsAIAssistant() {
     mutationFn: upsertAIModelConfig,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-assistant', 'configs'] });
-      toast.success('AI Model configuration saved');
+      toast.success(t('settings.aiAssistant.dialog.success'));
       setIsDialogOpen(false);
       resetForm();
     },
     onError: (err: any) => {
-      toast.error(err.message || 'Failed to save configuration');
+      toast.error(err.message || t('settings.aiAssistant.dialog.error'));
     }
   });
 
@@ -79,7 +82,7 @@ export default function SettingsAIAssistant() {
     mutationFn: setDefaultAIProvider,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-assistant', 'configs'] });
-      toast.success('Default provider updated');
+      toast.success(t('settings.aiAssistant.dialog.success'));
     },
   });
 
@@ -87,7 +90,7 @@ export default function SettingsAIAssistant() {
     mutationFn: deleteAIModelConfig,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-assistant', 'configs'] });
-      toast.success('Configuration removed');
+      toast.success(t('settings.aiAssistant.removed'));
     },
   });
 
@@ -108,13 +111,13 @@ export default function SettingsAIAssistant() {
     setIsDialogOpen(true);
   };
 
-  const providers = [
-    { id: 'local-vllm', name: 'Prism Local (VLLM)', models: ['default'] },
-    { id: 'openai', name: 'OpenAI (BYOK)', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'] },
-    { id: 'gemini', name: 'Google Gemini (BYOK)', models: ['gemini-1.5-pro', 'gemini-1.5-flash'] },
-  ];
+  const providers = useMemo(() => [
+    { id: 'local-vllm', name: t('settings.aiAssistant.providers.localVllm'), models: ['default'] },
+    { id: 'openai', name: t('settings.aiAssistant.providers.openai'), models: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'] },
+    { id: 'gemini', name: t('settings.aiAssistant.providers.gemini'), models: ['gemini-1.5-pro', 'gemini-1.5-flash'] },
+  ], [t]);
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading AI configurations...</div>;
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground">{t('settings.aiAssistant.loading')}</div>;
 
   return (
     <div className="space-y-6">
@@ -122,30 +125,30 @@ export default function SettingsAIAssistant() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <CardTitle>AI Assistant Settings</CardTitle>
+              <CardTitle>{t('settings.aiAssistant.title')}</CardTitle>
               <CardDescription>
-                Configure the LLM models that power your AI Assistant. You can use our built-in engine or Bring Your Own Key (BYOK).
+                {t('settings.aiAssistant.subtitle')}
               </CardDescription>
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button onClick={resetForm} size="sm" className="gap-2">
-                  <Plus className="h-4 w-4" /> Add Provider
+                  <Plus className="h-4 w-4" /> {t('settings.aiAssistant.addProvider')}
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                  <DialogTitle>Configure AI Provider</DialogTitle>
+                  <DialogTitle>{t('settings.aiAssistant.dialog.title')}</DialogTitle>
                   <DialogDescription>
-                    Connect your own AI API keys to access advanced models.
+                    {t('settings.aiAssistant.dialog.desc')}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="provider">Provider</Label>
+                    <Label htmlFor="provider">{t('settings.aiAssistant.dialog.provider')}</Label>
                     <Select value={provider} onValueChange={setProvider}>
                       <SelectTrigger id="provider">
-                        <SelectValue placeholder="Select provider" />
+                        <SelectValue placeholder={t('settings.deviceDefaults.timezone.selectPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         {providers.map(p => (
@@ -158,10 +161,10 @@ export default function SettingsAIAssistant() {
                   {provider !== 'local-vllm' && (
                     <>
                       <div className="grid gap-2">
-                        <Label htmlFor="model">Model Name</Label>
+                        <Label htmlFor="model">{t('settings.aiAssistant.dialog.model')}</Label>
                         <Select value={model} onValueChange={setModel}>
                           <SelectTrigger id="model">
-                            <SelectValue placeholder="Select model" />
+                            <SelectValue placeholder={t('settings.deviceDefaults.timezone.selectPlaceholder')} />
                           </SelectTrigger>
                           <SelectContent>
                             {providers.find(p => p.id === provider)?.models.map(m => (
@@ -171,7 +174,7 @@ export default function SettingsAIAssistant() {
                         </Select>
                       </div>
                       <div className="grid gap-2">
-                        <Label htmlFor="apiKey">API Key (Write-only)</Label>
+                        <Label htmlFor="apiKey">{t('settings.aiAssistant.dialog.apiKey')}</Label>
                         <Input 
                           id="apiKey" 
                           type="password" 
@@ -180,7 +183,7 @@ export default function SettingsAIAssistant() {
                           onChange={(e) => setApiKey(e.target.value)}
                         />
                         <p className="text-[10px] text-muted-foreground italic">
-                          Leave empty to keep existing key if editing.
+                          {t('settings.aiAssistant.dialog.apiKeyHint')}
                         </p>
                       </div>
                     </>
@@ -188,8 +191,8 @@ export default function SettingsAIAssistant() {
 
                   <div className="flex items-center justify-between space-x-2 rounded-lg border p-3">
                     <div className="space-y-0.5">
-                      <Label className="text-sm">Default Provider</Label>
-                      <p className="text-xs text-muted-foreground">Use this as the primary model</p>
+                      <Label className="text-sm">{t('settings.aiAssistant.dialog.defaultProvider')}</Label>
+                      <p className="text-xs text-muted-foreground">{t('settings.aiAssistant.dialog.defaultProviderDesc')}</p>
                     </div>
                     <Switch 
                       checked={makeDefault} 
@@ -198,7 +201,7 @@ export default function SettingsAIAssistant() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>{t('common.actions.cancel')}</Button>
                   <Button 
                     onClick={() => upsertMutation.mutate({
                       provider,
@@ -209,7 +212,7 @@ export default function SettingsAIAssistant() {
                     })}
                     disabled={upsertMutation.isPending}
                   >
-                    {upsertMutation.isPending ? "Saving..." : "Save Configuration"}
+                    {upsertMutation.isPending ? t('settings.aiAssistant.dialog.saving') : t('common.actions.save')}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -219,16 +222,16 @@ export default function SettingsAIAssistant() {
         <CardContent className="space-y-4">
           <Alert variant="default" className="bg-primary/5 border-primary/20">
             <Info className="h-4 w-4 text-primary" />
-            <AlertTitle className="text-primary font-bold">Pro Feature Tip</AlertTitle>
+            <AlertTitle className="text-primary font-bold">{t('settings.aiAssistant.proTipTitle')}</AlertTitle>
             <AlertDescription className="text-xs">
-              Using BYOK (Bring Your Own Key) gives you higher rate limits and access to more powerful RAG capabilities.
+              {t('settings.aiAssistant.proTipDesc')}
             </AlertDescription>
           </Alert>
 
           <div className="rounded-md border">
             {configs.length === 0 ? (
               <div className="p-8 text-center text-sm text-muted-foreground italic">
-                No custom providers configured. Prism Local is used by default.
+                {t('settings.aiAssistant.noProviders')}
               </div>
             ) : (
               <div className="divide-y">
@@ -240,15 +243,15 @@ export default function SettingsAIAssistant() {
                       </div>
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium capitalize">{config.provider === 'local-vllm' ? 'Prism Local' : config.provider}</p>
+                          <p className="text-sm font-medium capitalize">{config.provider === 'local-vllm' ? t('settings.aiAssistant.providers.localName') : config.provider}</p>
                           {config.isDefault && (
                             <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 text-[10px] hover:bg-emerald-500/20">
-                              Default
+                              {t('hero.miniDashboard.programs.published')}
                             </Badge>
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          Model: <span className="font-mono">{config.model}</span>
+                          {t('programEditor.panels.inspector.program')}: <span className="font-mono">{config.model}</span>
                           {config.hasApiKey && ` • Key ending in ${config.apiKeyLast4}`}
                         </p>
                       </div>
@@ -256,7 +259,7 @@ export default function SettingsAIAssistant() {
                     <div className="flex items-center gap-2">
                       {!config.isDefault && (
                         <Button variant="ghost" size="sm" onClick={() => setDefaultMutation.mutate(config.provider)}>
-                          Set Default
+                          {t('settings.aiAssistant.setDefault')}
                         </Button>
                       )}
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(config)}>
@@ -275,7 +278,7 @@ export default function SettingsAIAssistant() {
         <CardFooter className="bg-muted/30 p-4 border-t">
           <p className="text-xs text-muted-foreground flex items-center gap-2">
             <ShieldCheck className="h-3.5 w-3.5" />
-            Keys are encrypted and stored securely on our backend.
+            {t('settings.aiAssistant.keysSecure')}
           </p>
         </CardFooter>
       </Card>
