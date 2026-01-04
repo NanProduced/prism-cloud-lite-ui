@@ -27,6 +27,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSettingsStore } from "@/store/settingsStore";
+import { FeedbackDialog } from "@/components/shared/FeedbackDialog";
 
 import {
   helpDocByFilePath,
@@ -207,6 +209,7 @@ function matchesQuery(doc: HelpDoc, query: string) {
 }
 
 const HelpHome = ({ onSearch, lang }: { onSearch: (q: string) => void, lang: string }) => {
+  const { setFeedbackOpen } = useSettingsStore();
   const content = {
     zh: {
       title: "您需要什么帮助？",
@@ -292,7 +295,10 @@ const HelpHome = ({ onSearch, lang }: { onSearch: (q: string) => void, lang: str
           <h4 className="text-2xl font-bold mb-3 text-white tracking-tight">{content.ctaTitle}</h4>
           <p className="text-slate-400 font-medium">{content.ctaDesc}</p>
         </div>
-        <button className="relative z-10 px-10 py-4 bg-white text-black rounded-2xl font-black hover:bg-slate-200 transition-all shadow-xl whitespace-nowrap">
+        <button 
+          onClick={() => setFeedbackOpen(true)}
+          className="relative z-10 px-10 py-4 bg-white text-black rounded-2xl font-black hover:bg-slate-200 transition-all shadow-xl whitespace-nowrap"
+        >
           {content.ctaBtn}
         </button>
       </div>
@@ -302,6 +308,7 @@ const HelpHome = ({ onSearch, lang }: { onSearch: (q: string) => void, lang: str
 
 export default function HelpCenterPage() {
   const { i18n } = useTranslation();
+  const { isFeedbackOpen, setFeedbackOpen } = useSettingsStore();
   const lang = i18n.language === "zh-CN" || i18n.language === "zh" ? "zh" : "en";
   const navigate = useNavigate();
   const params = useParams();
@@ -696,6 +703,7 @@ export default function HelpCenterPage() {
         </div>
       </div>
       <Footer />
+      <FeedbackDialog open={isFeedbackOpen} onOpenChange={setFeedbackOpen} />
     </div>
   );
 }

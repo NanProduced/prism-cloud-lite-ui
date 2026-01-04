@@ -1,6 +1,7 @@
 import React, { type ComponentType, type PropsWithChildren, useState, useEffect, useMemo, Suspense, lazy } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Activity,
   BarChart3,
@@ -27,7 +28,8 @@ import {
   Camera,
   Moon,
   Zap,
-  ShieldCheck
+  ShieldCheck,
+  MessageSquareWarning
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -79,6 +81,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { BreadcrumbNav } from "@/components/dashboard/BreadcrumbNav";
 import { CommandSearch } from "@/components/ui/command-search";
 import { AIChatBubble, AIChatWindow } from "@/features/ai-assistant";
+import { FeedbackDialog } from "@/components/shared/FeedbackDialog";
 
 const BillingPlanSelector = lazy(() => import("@/components/billing/BillingPlanSelector").then(m => ({ default: m.BillingPlanSelector })));
 
@@ -163,7 +166,7 @@ function DashboardShellContent({ children }: PropsWithChildren) {
   const isCollapsed = state === "collapsed";
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const { isBillingOpen, setBillingOpen } = useSettingsStore();
+  const { isBillingOpen, setBillingOpen, isFeedbackOpen, setFeedbackOpen } = useSettingsStore();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuthStore();
@@ -403,6 +406,10 @@ function DashboardShellContent({ children }: PropsWithChildren) {
                     <HelpCircle className="mr-2 h-4 w-4" />
                     <span>{t('shell.documentation')}</span>
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFeedbackOpen(true)}>
+                    <MessageSquareWarning className="mr-2 h-4 w-4" />
+                    <span>{t('feedback.ui.title')}</span>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-red-600 focus:bg-destructive/10 focus:text-red-600" onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
@@ -419,11 +426,31 @@ function DashboardShellContent({ children }: PropsWithChildren) {
         </main>
       </SidebarInset>
 
+      <div className="fixed bottom-24 right-8 z-40">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+        >
+          <Button
+            size="icon"
+            variant="outline"
+            className="h-10 w-10 rounded-full shadow-lg bg-background/80 backdrop-blur-sm border-primary/20 text-primary hover:bg-primary hover:text-white transition-all duration-300"
+            onClick={() => setFeedbackOpen(true)}
+            title={t('feedback.ui.title')}
+          >
+            <MessageSquareWarning className="h-5 w-5" />
+          </Button>
+        </motion.div>
+      </div>
+
       <AIChatWindow isOpen={isChatOpen} />
       <AIChatBubble isOpen={isChatOpen} onClick={() => setIsChatOpen(!isChatOpen)} />
       <Suspense fallback={null}>
         <BillingPlanSelector open={isBillingOpen} onOpenChange={setBillingOpen} />
       </Suspense>
+      <FeedbackDialog open={isFeedbackOpen} onOpenChange={setFeedbackOpen} />
     </>
   );
 }

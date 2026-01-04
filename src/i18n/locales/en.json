@@ -2665,6 +2665,41 @@
     },
     "popular": "Most Popular"
   },
+  "feedback": {
+    "ui": {
+      "title": "Report a Bug or Feedback",
+      "subtitle": "Your feedback helps us make Prism Cloud better.",
+      "fields": {
+        "title": "Brief Title",
+        "content": "Detailed Description",
+        "email": "Your Email (for updates)",
+        "includeUrl": "Include current page URL",
+        "attachments": "Attachments & Screenshots"
+      },
+      "placeholders": {
+        "title": "e.g., Schedule page layout is broken on mobile",
+        "content": "Please describe what happened and how to reproduce it..."
+      },
+      "actions": {
+        "addAttachment": "Add image or file",
+        "submit": "Submit Feedback"
+      },
+      "hints": {
+        "attachmentSize": "Max 10MB per file, up to 5 files"
+      }
+    },
+    "success": {
+      "title": "Submission Successful!",
+      "desc": "Thank you for your feedback. Our team will review it as soon as possible."
+    },
+    "errors": {
+      "allFieldsRequired": "Please provide a title and detailed description",
+      "uploadInProgress": "Attachments are still uploading, please wait"
+    },
+    "toasts": {
+      "submitSuccess": "Feedback received"
+    }
+  },
   "settings": {
     "tabs": {
       "profile": "Profile",

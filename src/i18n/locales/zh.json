@@ -1782,6 +1782,41 @@
     },
     "popular": "最受欢迎"
   },
+  "feedback": {
+    "ui": {
+      "title": "报告问题或建议",
+      "subtitle": "您的反馈能帮助我们打造更好的 Prism Cloud。",
+      "fields": {
+        "title": "简要标题",
+        "content": "详细描述",
+        "email": "您的邮箱 (用于跟进进度)",
+        "includeUrl": "包含当前页面链接",
+        "attachments": "附件与截图"
+      },
+      "placeholders": {
+        "title": "例如：排程页面在手机端显示异常",
+        "content": "请描述发生了什么，以及如何复现此问题..."
+      },
+      "actions": {
+        "addAttachment": "添加图片或文件",
+        "submit": "提交反馈"
+      },
+      "hints": {
+        "attachmentSize": "单个文件不超过 10MB，最多 5 个文件"
+      }
+    },
+    "success": {
+      "title": "提交成功！",
+      "desc": "感谢您的反馈。我们的团队会尽快查看并处理。"
+    },
+    "errors": {
+      "allFieldsRequired": "请填写标题和详细描述",
+      "uploadInProgress": "附件正在上传中，请稍候"
+    },
+    "toasts": {
+      "submitSuccess": "反馈已收到"
+    }
+  },
   "settings": {
     "tabs": {
       "profile": "基本信息",
