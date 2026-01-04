@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { DeviceCustomFieldDef, DeviceCustomFieldOption, DeviceCustomFieldType } from '@/types/device-custom-field';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -49,18 +50,20 @@ const QUOTAS = {
   ULTRA: 100,
 };
 
-const FIELD_TYPES: Array<{ value: DeviceCustomFieldType; label: string }> = [
-  { value: 'TEXT', label: 'Text' },
-  { value: 'NUMBER', label: 'Number' },
-  { value: 'DATETIME', label: 'Datetime' },
-  { value: 'BOOLEAN', label: 'Boolean' },
-  { value: 'SELECT', label: 'Select' },
-  { value: 'MULTI_SELECT', label: 'Multi-select' },
-  { value: 'URL', label: 'URL' },
-  { value: 'EMAIL', label: 'Email' },
-  { value: 'PHONE', label: 'Phone' },
-  { value: 'COUNTRY', label: 'Country' },
-];
+function getFieldTypes(t: any): Array<{ value: DeviceCustomFieldType; label: string }> {
+  return [
+    { value: 'TEXT', label: t('devices.customFields.types.TEXT') },
+    { value: 'NUMBER', label: t('devices.customFields.types.NUMBER') },
+    { value: 'DATETIME', label: t('devices.customFields.types.DATETIME') },
+    { value: 'BOOLEAN', label: t('devices.customFields.types.BOOLEAN') },
+    { value: 'SELECT', label: t('devices.customFields.types.SELECT') },
+    { value: 'MULTI_SELECT', label: t('devices.customFields.types.MULTI_SELECT') },
+    { value: 'URL', label: t('devices.customFields.types.URL') },
+    { value: 'EMAIL', label: t('devices.customFields.types.EMAIL') },
+    { value: 'PHONE', label: t('devices.customFields.types.PHONE') },
+    { value: 'COUNTRY', label: t('devices.customFields.types.COUNTRY') },
+  ];
+}
 
 function slugify(value: string): string {
   return stableKey(value, '_');
@@ -115,6 +118,7 @@ function IconPicker({
   onChange: (next?: string) => void;
   compact?: boolean;
 }) {
+  const { t } = useTranslation();
   const Icon = resolveTagIcon(value);
 
   return (
@@ -144,7 +148,7 @@ function IconPicker({
                 {Icon ? <Icon className="h-3.5 w-3.5 text-primary" /> : <Plus className="h-3.5 w-3.5 text-muted-foreground/40" />}
               </div>
               <span className={cn("truncate", !Icon && "text-muted-foreground/60")}>
-                {Icon ? "Icon assigned" : "Select icon"}
+                {Icon ? t('devices.customFields.form.iconAssigned') : t('devices.customFields.form.selectIcon')}
               </span>
             </div>
             <ChevronDown className="h-3 w-3 opacity-40 shrink-0" />
@@ -154,8 +158,8 @@ function IconPicker({
       <PopoverContent align="start" className="w-[340px] p-0 shadow-xl border-border rounded-xl overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
         <div className="flex flex-col">
           <div className="px-4 py-2.5 bg-muted/30 border-b flex items-center justify-between">
-            <span className="text-xs font-semibold text-foreground/70">Pick a header icon</span>
-            {value && <button onClick={() => onChange(undefined)} className="text-[10px] text-destructive hover:underline font-semibold">Clear</button>}
+            <span className="text-xs font-semibold text-foreground/70">{t('devices.customFields.form.selectIcon')}</span>
+            {value && <button onClick={() => onChange(undefined)} className="text-[10px] text-destructive hover:underline font-semibold">{t('grid.sort.clear')}</button>}
           </div>
           <div className="p-3 grid grid-cols-6 gap-2">
             {TAG_ICON_OPTIONS.map(({ key, Icon: OptionIcon, label }) => (
@@ -191,6 +195,7 @@ function OptionColorPicker({
   disabled?: boolean;
   onChange: (next?: string) => void;
 }) {
+  const { t } = useTranslation();
   const isCustomHex = Boolean(value && isHexColor(value));
   const customColorValue = isCustomHex && value ? value : '#64748b';
 
@@ -203,7 +208,7 @@ function OptionColorPicker({
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72 p-3" onOpenAutoFocus={(e) => e.preventDefault()}>
         <div className="grid gap-3">
-          <div className="text-xs font-semibold text-muted-foreground">Option color</div>
+          <div className="text-xs font-semibold text-muted-foreground">{t('devices.customFields.form.optionColor')}</div>
           <div className="flex items-center gap-2 flex-wrap">
             <Button
               type="button"
@@ -238,7 +243,7 @@ function OptionColorPicker({
             ))}
 
             <div className="flex items-center gap-2 ms-auto">
-              <div className="text-xs text-muted-foreground">Custom</div>
+              <div className="text-xs text-muted-foreground">{t('devices.customFields.form.customColor')}</div>
               <input
                 type="color"
                 value={customColorValue}
@@ -273,7 +278,9 @@ export function DeviceCustomFieldsSheet({
   onCustomFieldCreate: (def: DeviceCustomFieldDef) => void;
   onCustomFieldDelete: (fieldId: number) => void;
 }) {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
+  const fieldTypes = useMemo(() => getFieldTypes(t), [t]);
   const currentQuota = useMemo(() => {
     const t = (tier || 'FREE').toUpperCase() as keyof typeof QUOTAS;
     return QUOTAS[t] || QUOTAS.FREE;
@@ -331,7 +338,7 @@ export function DeviceCustomFieldsSheet({
 
   const handleDelete = (fieldId: number) => {
     onCustomFieldDelete(fieldId);
-    toast('Custom field deleted');
+    toast(t('devices.customFields.deleteSuccess'));
   };
 
   return (
@@ -348,7 +355,7 @@ export function DeviceCustomFieldsSheet({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <Settings2 className="h-4 w-4" />
-          Custom Fields
+          {t('devices.customFields.title')}
           <Badge variant="secondary" className="ml-1">
             {customFieldDefs.length}
           </Badge>
@@ -372,21 +379,21 @@ export function DeviceCustomFieldsSheet({
               )}
               <div className="space-y-0.5">
                 <DialogTitle className="text-base font-bold tracking-tight">
-                  {activeView === 'list' && "Custom fields"}
-                  {activeView === 'create' && "Create new field"}
-                  {activeView === 'options' && "Manage choices"}
+                  {activeView === 'list' && t('devices.customFields.manage')}
+                  {activeView === 'create' && t('devices.customFields.createTitle')}
+                  {activeView === 'options' && t('devices.customFields.editChoices')}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground truncate">
-                  {activeView === 'list' && "Manage device metadata and grid columns"}
-                  {activeView === 'create' && "Add a new data dimension to your devices"}
-                  {activeView === 'options' && `Configuring options for ${optionsFor?.displayName}`}
+                  {activeView === 'list' && t('devices.customFields.manage')}
+                  {activeView === 'create' && t('devices.customFields.createSubtitle')}
+                  {activeView === 'options' && t('devices.customFields.form.choicePlaceholder', { name: optionsFor?.displayName })}
                 </DialogDescription>
               </div>
             </div>
 
             <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg border bg-muted/30 shrink-0">
                <div className="text-right leading-none">
-                  <p className="text-[10px] font-bold text-muted-foreground tracking-tight mb-0.5">Usage</p>
+                  <p className="text-[10px] font-bold text-muted-foreground tracking-tight mb-0.5">{t('devices.customFields.usage')}</p>
                   <p className="text-xs font-mono font-bold text-foreground">
                     {ordered.length}/{currentQuota}
                   </p>
@@ -412,11 +419,11 @@ export function DeviceCustomFieldsSheet({
               <div className="flex flex-col h-full">
                 <div className="p-4 px-6 flex items-center justify-between bg-muted/5 border-b shrink-0">
                    <div className="text-[11px] font-bold text-muted-foreground tracking-tight">
-                     {ordered.length} active columns
+                     {t('devices.customFields.activeColumns', { count: ordered.length })}
                    </div>
                    <Button size="sm" className="gap-2 rounded-lg font-bold text-xs h-8 px-4 shadow-sm" onClick={() => setActiveView('create')} disabled={!canCreate}>
                       <Plus className="h-3.5 w-3.5" />
-                      Add field
+                      {t('devices.customFields.addField')}
                    </Button>
                 </div>
                 <ScrollArea className="flex-1">
@@ -424,11 +431,11 @@ export function DeviceCustomFieldsSheet({
                     {ordered.length === 0 && (
                       <div className="text-sm text-muted-foreground py-24 text-center flex flex-col items-center gap-4 opacity-30">
                         <Settings2 className="h-12 w-12" />
-                        <p className="font-medium">Define your first custom field to start organizing device metadata.</p>
+                        <p className="font-medium">{t('devices.customFields.empty')}</p>
                       </div>
                     )}
                     {ordered.map((def) => {
-                      const typeLabel = FIELD_TYPES.find((t) => t.value === def.fieldType)?.label ?? def.fieldType;
+                      const typeLabel = fieldTypes.find((t) => t.value === def.fieldType)?.label ?? def.fieldType;
                       const locked = Boolean(def.planTierRequired && !isProActive);
                       const canManageOptions = def.fieldType === 'SELECT' || def.fieldType === 'MULTI_SELECT';
                       const isEditing = editingFieldId === def.fieldId;
@@ -499,7 +506,7 @@ export function DeviceCustomFieldsSheet({
                     options: draft.options,
                   });
                   setActiveView('list');
-                  toast('Custom field created');
+                  toast(t('devices.customFields.createSuccess'));
                 }}
               />
             )}
@@ -531,6 +538,7 @@ function CreateFieldForm({
   onCancel: () => void;
   onCreate: (draft: { type: DeviceCustomFieldType; name: string; icon?: string; options?: DeviceCustomFieldOption[] }) => void;
 }) {
+  const { t } = useTranslation();
   const [type, setType] = useState<DeviceCustomFieldType>('TEXT');
   const [name, setName] = useState('');
   const [icon, setIcon] = useState<string | undefined>(undefined);
@@ -538,6 +546,7 @@ function CreateFieldForm({
   const [options, setOptions] = useState<DeviceCustomFieldOption[]>([]);
   const [newOptionName, setNewOptionName] = useState('');
 
+  const fieldTypes = useMemo(() => getFieldTypes(t), [t]);
   const needsOptions = type === 'SELECT' || type === 'MULTI_SELECT';
 
   const typeIcons: Record<DeviceCustomFieldType, any> = {
@@ -557,7 +566,7 @@ function CreateFieldForm({
     const val = newOptionName.trim();
     if (!val) return;
     if (options.some(o => o.displayName.toLowerCase() === val.toLowerCase())) {
-      toast('Option already exists');
+      toast(t('devices.customFields.form.choiceAlreadyExists'));
       return;
     }
     const next: DeviceCustomFieldOption = {
@@ -578,16 +587,16 @@ function CreateFieldForm({
         <div className="p-8 space-y-10 max-w-4xl mx-auto">
           {/* Step 1 */}
           <section className="space-y-4">
-            <h3 className="text-xs font-bold text-muted-foreground pl-1">1. Choose data format</h3>
+            <h3 className="text-xs font-bold text-muted-foreground pl-1">{t('devices.customFields.form.step1')}</h3>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              {FIELD_TYPES.map((t) => {
-                const Icon = typeIcons[t.value] || Type;
-                const isSelected = type === t.value;
+              {fieldTypes.map((ft) => {
+                const Icon = typeIcons[ft.value] || Type;
+                const isSelected = type === ft.value;
                 return (
                   <button
-                    key={t.value}
+                    key={ft.value}
                     type="button"
-                    onClick={() => setType(t.value)}
+                    onClick={() => setType(ft.value)}
                     className={cn(
                       "flex flex-col items-center gap-3 p-4 rounded-xl border transition-all duration-200",
                       isSelected 
@@ -601,7 +610,7 @@ function CreateFieldForm({
                     )}>
                       <Icon className="h-4 w-4" />
                     </div>
-                    <span className={cn("text-[11px] font-bold", isSelected ? "text-primary" : "text-foreground/70")}>{t.label}</span>
+                    <span className={cn("text-[11px] font-bold", isSelected ? "text-primary" : "text-foreground/70")}>{ft.label}</span>
                   </button>
                 );
               })}
@@ -611,14 +620,14 @@ function CreateFieldForm({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
             {/* Step 2 */}
             <section className="space-y-6">
-               <h3 className="text-xs font-bold text-muted-foreground pl-1">2. Identity</h3>
+               <h3 className="text-xs font-bold text-muted-foreground pl-1">{t('devices.customFields.form.step2')}</h3>
                <div className="space-y-5">
                   <div className="space-y-2">
-                    <p className="text-[11px] font-bold text-foreground/80 px-1">Display name</p>
-                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Asset category" className="h-10 rounded-xl shadow-sm border-muted-foreground/20" />
+                    <p className="text-[11px] font-bold text-foreground/80 px-1">{t('devices.customFields.form.displayName')}</p>
+                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('devices.customFields.form.placeholder')} className="h-10 rounded-xl shadow-sm border-muted-foreground/20" />
                   </div>
                   <div className="space-y-2">
-                     <p className="text-[11px] font-bold text-foreground/80 px-1">Column icon (Optional)</p>
+                     <p className="text-[11px] font-bold text-foreground/80 px-1">{t('devices.customFields.form.icon')}</p>
                      <IconPicker value={icon} onChange={setIcon} />
                   </div>
                </div>
@@ -627,23 +636,23 @@ function CreateFieldForm({
             {/* Step 3 */}
             {needsOptions && (
               <section className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                <h3 className="text-xs font-bold text-muted-foreground pl-1">3. Choices</h3>
+                <h3 className="text-xs font-bold text-muted-foreground pl-1">{t('devices.customFields.form.step3')}</h3>
                 <div className="space-y-3">
                   <div className="flex gap-2">
                     <Input
                       value={newOptionName}
                       onChange={(e) => setNewOptionName(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addOption())}
-                      placeholder="Type and hit Enter..."
+                      placeholder={t('devices.customFields.form.choicePlaceholder')}
                       className="h-10 rounded-xl"
                     />
-                    <Button type="button" onClick={addOption} className="h-10 px-4 font-bold shadow-md">Add</Button>
+                    <Button type="button" onClick={addOption} className="h-10 px-4 font-bold shadow-md">{t('devices.customFields.form.addChoice')}</Button>
                   </div>
                   <div className="rounded-2xl border bg-muted/10 overflow-hidden shadow-inner">
                     <ScrollArea className="h-[240px]">
                       <div className="p-1.5 space-y-1">
                         {options.length === 0 ? (
-                          <div className="py-20 text-center text-xs text-muted-foreground italic opacity-50">No choices added yet</div>
+                          <div className="py-20 text-center text-xs text-muted-foreground italic opacity-50">{t('devices.customFields.form.noChoices')}</div>
                         ) : (
                           options.map((opt, idx) => (
                             <div key={opt.optionId} className="flex items-center justify-between gap-3 p-2 px-3.5 rounded-xl bg-background border shadow-sm group">
@@ -667,13 +676,13 @@ function CreateFieldForm({
 
       {/* Footer */}
       <footer className="px-8 py-4 border-t bg-muted/5 flex items-center justify-end gap-3 shrink-0">
-        <Button variant="ghost" onClick={onCancel} className="h-9 px-6 font-bold text-xs tracking-tight text-muted-foreground">Discard</Button>
+        <Button variant="ghost" onClick={onCancel} className="h-9 px-6 font-bold text-xs tracking-tight text-muted-foreground">{t('devices.customFields.form.discard')}</Button>
         <Button
           onClick={() => onCreate({ type, name, icon, options: needsOptions ? options : undefined })}
           disabled={!name.trim() || (needsOptions && options.length === 0)}
           className="h-9 px-8 font-bold text-xs tracking-tight shadow-lg shadow-primary/10"
         >
-          Create field
+          {t('devices.customFields.form.save')}
         </Button>
       </footer>
     </div>
@@ -691,6 +700,7 @@ function OptionsEditor({
   onClose: () => void;
   onOptionsChange: (next: DeviceCustomFieldOption[]) => void;
 }) {
+  const { t } = useTranslation();
   const [drafts, setDrafts] = useState<DeviceCustomFieldOption[]>( (field.options ?? []).slice().sort(sortBySequence) );
   const [newOptionName, setNewOptionName] = useState('');
 
@@ -715,17 +725,17 @@ function OptionsEditor({
       <ScrollArea className="flex-1">
         <div className="p-8 space-y-8 max-w-2xl mx-auto">
           <div className="space-y-4 p-6 rounded-2xl border bg-muted/20 shadow-inner">
-            <h4 className="text-xs font-bold text-muted-foreground pl-1">Add new choice</h4>
+            <h4 className="text-xs font-bold text-muted-foreground pl-1">{t('devices.customFields.form.addChoice')}</h4>
             <div className="flex gap-2">
-              <Input value={newOptionName} onChange={(e) => setNewOptionName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addOption()} placeholder="e.g. Standard" className="h-11 bg-background rounded-xl font-bold" />
-              <Button onClick={addOption} className="h-11 px-6 font-bold shadow-lg" disabled={locked}>Add</Button>
+              <Input value={newOptionName} onChange={(e) => setNewOptionName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addOption()} placeholder={t('devices.customFields.form.choicePlaceholder')} className="h-11 bg-background rounded-xl font-bold" />
+              <Button onClick={addOption} className="h-11 px-6 font-bold shadow-lg" disabled={locked}>{t('devices.customFields.form.addChoice')}</Button>
             </div>
           </div>
 
           <div className="rounded-2xl border bg-card overflow-hidden shadow-sm">
             <div className="p-2 space-y-1">
               {drafts.length === 0 ? (
-                <div className="py-24 text-center text-xs text-muted-foreground opacity-40 italic">No options defined</div>
+                <div className="py-24 text-center text-xs text-muted-foreground opacity-40 italic">{t('devices.customFields.form.noChoices')}</div>
               ) : (
                 drafts.map((o, idx) => (
                   <div key={o.optionKey} className="group flex items-center gap-4 p-2.5 px-4 rounded-xl hover:bg-muted/30 transition-all border border-transparent hover:border-border">
@@ -741,7 +751,7 @@ function OptionsEditor({
                     </div>
                     <Input value={o.displayName} disabled={locked} onChange={(e) => setDrafts(drafts.map((x, i) => i === idx ? { ...x, displayName: e.target.value } : x))} className="flex-1 h-10 bg-transparent border-transparent focus-visible:bg-background focus-visible:border-border font-bold text-sm rounded-lg" />
                     <OptionColorPicker value={o.color} disabled={locked} onChange={(color) => setDrafts(drafts.map((x, i) => i === idx ? { ...x, color } : x))} />
-                    <button type="button" className={cn("px-2.5 py-1 rounded-lg border text-[10px] font-bold transition-all", o.active ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-muted text-muted-foreground grayscale")} onClick={() => !locked && setDrafts(drafts.map((x, i) => i === idx ? { ...x, active: !x.active } : x))}>{o.active ? "Active" : "Hidden"}</button>
+                    <button type="button" className={cn("px-2.5 py-1 rounded-lg border text-[10px] font-bold transition-all", o.active ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-muted text-muted-foreground grayscale")} onClick={() => !locked && setDrafts(drafts.map((x, i) => i === idx ? { ...x, active: !x.active } : x))}>{o.active ? t('devices.customFields.form.active') : t('devices.customFields.form.hidden')}</button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={() => setDrafts(drafts.filter((_, i) => i !== idx))} disabled={locked}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))
@@ -752,10 +762,10 @@ function OptionsEditor({
       </ScrollArea>
 
       <footer className="px-8 py-4 border-t bg-muted/5 flex items-center justify-between shrink-0">
-        <p className="text-xs font-bold text-muted-foreground italic">{drafts.length} options configured</p>
+        <p className="text-xs font-bold text-muted-foreground italic">{t('devices.customFields.activeOptions', { count: drafts.length })}</p>
         <div className="flex gap-3">
-          <Button variant="ghost" onClick={onClose} className="h-9 px-6 font-bold text-xs text-muted-foreground">Cancel</Button>
-          <Button className="h-9 px-10 font-bold text-xs shadow-lg shadow-primary/10" onClick={() => { onOptionsChange(drafts.map((o, i) => ({ ...o, sequence: i + 1 }))); toast('Options updated'); onClose(); }} disabled={locked}>Save changes</Button>
+          <Button variant="ghost" onClick={onClose} className="h-9 px-6 font-bold text-xs text-muted-foreground">{t('common.actions.cancel')}</Button>
+          <Button className="h-9 px-10 font-bold text-xs shadow-lg shadow-primary/10" onClick={() => { onOptionsChange(drafts.map((o, i) => ({ ...o, sequence: i + 1 }))); toast(t('devices.customFields.updateSuccess')); onClose(); }} disabled={locked}>{t('common.actions.save')}</Button>
         </div>
       </footer>
     </div>

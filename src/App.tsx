@@ -2,7 +2,6 @@ import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PublicLayout, ProtectedLayout } from "@/components/layout/AppLayout";
 import LandingPage from "@/pages/LandingPage";
-import LogoShowcase from "@/pages/LogoShowcase";
 import AuthPage from "@/pages/AuthPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import OverviewPage from "@/pages/dashboard/OverviewPage";
@@ -57,7 +56,6 @@ const router = createBrowserRouter([
       { path: "pricing", element: <PricingPage /> },
       { path: "blog", element: <BlogPage /> },
       { path: "blog/:slug", element: <BlogPage /> },
-      { path: "logo", element: <LogoShowcase /> },
     ],
   },
   {

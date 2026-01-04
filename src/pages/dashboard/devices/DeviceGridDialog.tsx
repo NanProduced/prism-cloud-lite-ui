@@ -347,8 +347,8 @@ export function DeviceGridDialog({
                           typeof current === 'string'
                             ? current
                             : current === undefined
-                              ? 'none'
-                              : 'custom';
+                              ? t('grid.header.none')
+                              : t('grid.header.custom');
                         return (
                           <div
                             key={String(c.id)}
@@ -368,7 +368,7 @@ export function DeviceGridDialog({
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onSelect={() => onSetAgg(String(c.id), undefined)}>
-                                  None
+                                  {t('grid.header.none')}
                                 </DropdownMenuItem>
                                 {allowed.map((fn) => (
                                   <DropdownMenuItem

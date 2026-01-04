@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import type {
   Column,
   Grid,
@@ -101,26 +102,27 @@ function defaultSortOnForColumn<T>(column: Column<T>): SortOn {
 }
 
 function sortOnOptionsForColumn<T>(
-  column: Column<T>
+  column: Column<T>,
+  t: any
 ): { value: SortOn; label: string }[] {
   const kind = sortKindForColumn(column);
   if (kind === "number") {
     return [
-      { value: "default", label: "Value" },
-      { value: "absoluteValue", label: "Absolute value" },
+      { value: "default", label: t('grid.sort.options.value') },
+      { value: "absoluteValue", label: t('grid.sort.options.absoluteValue') },
     ];
   }
   if (kind === "date") {
     return [
-      { value: "dateOnly", label: "Date only" },
-      { value: "dateTime", label: "Date & time" },
+      { value: "dateOnly", label: t('grid.sort.options.dateOnly') },
+      { value: "dateTime", label: t('grid.sort.options.dateTime') },
     ];
   }
   return [
-    { value: "default", label: "Default" },
-    { value: "caseInsensitive", label: "Case insensitive" },
-    { value: "trimWhitespace", label: "Trim whitespace" },
-    { value: "ignorePunctuation", label: "Ignore punctuation" },
+    { value: "default", label: t('grid.sort.options.default') },
+    { value: "caseInsensitive", label: t('grid.sort.options.caseInsensitive') },
+    { value: "trimWhitespace", label: t('grid.sort.options.trimWhitespace') },
+    { value: "ignorePunctuation", label: t('grid.sort.options.ignorePunctuation') },
   ];
 }
 
@@ -211,6 +213,7 @@ export function PrismSortManagerDialog<T>({
   columns: Column<T>[];
   className?: string;
 }) {
+  const { t } = useTranslation();
   const sortModel = grid.state.sortModel.useValue();
   const sortableColumns = useMemo(
     () => columns.filter((c) => c.uiHints?.sortable !== false),
@@ -277,27 +280,27 @@ export function PrismSortManagerDialog<T>({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className={cn("gap-2", className)}>
           <ArrowUpDown className="h-4 w-4" />
-          Sort
+          {t('grid.sort.title')}
         </Button>
       </DialogTrigger>
 
       <DialogContent className="!w-[min(92vw,52rem)] !max-w-none p-0 overflow-hidden max-h-[85vh]">
         <DialogHeader className="px-6 py-4 border-b bg-muted/20">
-          <DialogTitle>Sort</DialogTitle>
+          <DialogTitle>{t('grid.sort.title')}</DialogTitle>
         </DialogHeader>
 
         <div className="px-6 py-4 grid gap-3 overflow-auto">
           <div className="grid grid-cols-[1.4fr_1.2fr_0.8fr_auto] gap-2 text-xs font-semibold text-muted-foreground">
-            <div>Column</div>
-            <div>Sort On</div>
-            <div>Order</div>
+            <div>{t('grid.sort.column')}</div>
+            <div>{t('grid.sort.sortOn')}</div>
+            <div>{t('grid.sort.order')}</div>
             <div />
           </div>
 
           <div className="grid gap-2">
             {draft.map((d, idx) => {
               const col = d.columnId ? columnLookup.get(d.columnId) : undefined;
-              const sortOnOptions = col ? sortOnOptionsForColumn(col) : [];
+              const sortOnOptions = col ? sortOnOptionsForColumn(col, t) : [];
               const sortOnNormalized =
                 col && !sortOnOptions.some((o) => o.value === d.sortOn)
                   ? defaultSortOnForColumn(col)
@@ -314,7 +317,7 @@ export function PrismSortManagerDialog<T>({
                 <div key={d.id} className="grid grid-cols-[1.4fr_1.2fr_0.8fr_auto] gap-2 items-center">
                   <SelectMenu
                     valueLabel={col ? String(col.name ?? col.id) : undefined}
-                    placeholder="Select…"
+                    placeholder={t('grid.sort.select')}
                     contentClassName="max-h-72"
                   >
                     <DropdownMenuCheckboxItem
@@ -329,7 +332,7 @@ export function PrismSortManagerDialog<T>({
                         );
                       }}
                     >
-                      Select…
+                      {t('grid.sort.select')}
                     </DropdownMenuCheckboxItem>
                     {sortableColumns.map((c) => {
                       const id = String(c.id);
@@ -358,7 +361,7 @@ export function PrismSortManagerDialog<T>({
 
                   <SelectMenu
                     valueLabel={col ? (sortOnOptions.find((o) => o.value === sortOnNormalized)?.label ?? String(sortOnNormalized)) : undefined}
-                    placeholder="Sort on…"
+                    placeholder={t('grid.sort.sortOn') + "…"}
                     disabled={!col}
                     contentClassName="max-h-60"
                   >
@@ -379,8 +382,8 @@ export function PrismSortManagerDialog<T>({
                   </SelectMenu>
 
                   <SelectMenu
-                    valueLabel={d.order === "asc" ? "Asc" : "Desc"}
-                    placeholder="Order"
+                    valueLabel={d.order === "asc" ? t('grid.sort.ascending') : t('grid.sort.descending')}
+                    placeholder={t('grid.sort.order')}
                     contentClassName="w-44"
                   >
                     <DropdownMenuRadioGroup
@@ -390,8 +393,8 @@ export function PrismSortManagerDialog<T>({
                         setDraft((prev) => prev.map((p) => (p.id === d.id ? { ...p, order: next } : p)));
                       }}
                     >
-                      <DropdownMenuRadioItem value="asc">Asc</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="desc">Desc</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="asc">{t('grid.sort.ascending')}</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="desc">{t('grid.sort.descending')}</DropdownMenuRadioItem>
                     </DropdownMenuRadioGroup>
                   </SelectMenu>
 
@@ -435,14 +438,14 @@ export function PrismSortManagerDialog<T>({
 
         <div className="px-6 py-4 border-t bg-muted/20 flex items-center justify-between">
           <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-            Cancel
+            {t('common.actions.cancel')}
           </Button>
           <div className="flex items-center gap-2">
             <Button type="button" variant="outline" onClick={clear}>
-              Clear
+              {t('grid.sort.clear')}
             </Button>
             <Button type="button" onClick={apply} disabled={!hasValidSort}>
-              Apply
+              {t('grid.sort.apply')}
             </Button>
           </div>
         </div>

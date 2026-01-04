@@ -4,6 +4,7 @@ import type {
   HeaderCellRendererParams,
   SortModelItem,
 } from '@1771technologies/lytenyte-core/types';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -54,9 +55,9 @@ function sortKindForColumn<T>(column: Column<T>): SortModelItem<T>['sort'] {
   }
 }
 
-function aggLabel(fn: AggModelFn<unknown>): string {
+function aggLabel(fn: AggModelFn<unknown>, t: any): string {
   if (typeof fn === 'string') return fn;
-  return 'custom';
+  return t('grid.header.custom');
 }
 
 function iconForCustomFieldType(type?: unknown) {
@@ -87,6 +88,7 @@ function iconForCustomFieldType(type?: unknown) {
 }
 
 export function PrismHeaderRenderer<T>({ grid, column }: HeaderCellRendererParams<T>) {
+  const { t } = useTranslation();
   const sortModel = grid.state.sortModel.useValue();
   const rowGroupModel = grid.state.rowGroupModel.useValue();
   const columns = grid.state.columns.useValue();
@@ -213,7 +215,7 @@ export function PrismHeaderRenderer<T>({ grid, column }: HeaderCellRendererParam
           <span className="truncate font-medium">{column.name ?? column.id}</span>
           {rowGroupModel.length > 0 && currentAgg && (
             <span className="text-xs font-semibold text-sky-600 dark:text-sky-400">
-              ({aggLabel(currentAgg as AggModelFn<unknown>)})
+              ({aggLabel(currentAgg as AggModelFn<unknown>, t)})
             </span>
           )}
         </div>
@@ -267,21 +269,21 @@ export function PrismHeaderRenderer<T>({ grid, column }: HeaderCellRendererParam
                 onSelect={() => applySort('asc')}
               >
                 <ArrowUp className="h-4 w-4" />
-                Sort Ascending
+                {t('grid.header.sortAsc')}
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={!isSortable}
                 onSelect={() => applySort('desc')}
               >
                 <ArrowDown className="h-4 w-4" />
-                Sort Descending
+                {t('grid.header.sortDesc')}
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={!isSortable || sortDir === 'none'}
                 onSelect={() => applySort('none')}
               >
                 <ArrowUpDown className="h-4 w-4" />
-                Clear Sort
+                {t('grid.header.clearSort')}
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
@@ -289,7 +291,7 @@ export function PrismHeaderRenderer<T>({ grid, column }: HeaderCellRendererParam
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   <Pin className="h-4 w-4" />
-                  Column Pin
+                  {t('grid.header.pin')}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
                   <DropdownMenuRadioGroup
@@ -298,15 +300,15 @@ export function PrismHeaderRenderer<T>({ grid, column }: HeaderCellRendererParam
                   >
                     <DropdownMenuRadioItem value="center">
                       <PinOff className="h-4 w-4" />
-                      Unpinned
+                      {t('grid.header.unpinned')}
                     </DropdownMenuRadioItem>
                     <DropdownMenuRadioItem value="start">
                       <Pin className="h-4 w-4" />
-                      Pin Left
+                      {t('grid.header.pinLeft')}
                     </DropdownMenuRadioItem>
                     <DropdownMenuRadioItem value="end">
                       <Pin className="h-4 w-4" />
-                      Pin Right
+                      {t('grid.header.pinRight')}
                     </DropdownMenuRadioItem>
                   </DropdownMenuRadioGroup>
                 </DropdownMenuSubContent>
@@ -315,21 +317,21 @@ export function PrismHeaderRenderer<T>({ grid, column }: HeaderCellRendererParam
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   <Spline className="h-4 w-4" />
-                  Autosize
+                  {t('grid.header.autosize')}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
                   <DropdownMenuItem onSelect={() => autosizeColumn(false)}>
-                    Autosize Column
+                    {t('grid.header.autosizeColumn')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => autosizeColumn(true)}>
-                    Autosize Column (Include Header)
+                    {t('grid.header.autosizeColumnHeader')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={() => autosizeAll(false)}>
-                    Autosize All Columns
+                    {t('grid.header.autosizeAll')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => autosizeAll(true)}>
-                    Autosize All (Include Headers)
+                    {t('grid.header.autosizeAllHeaders')}
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
@@ -341,7 +343,7 @@ export function PrismHeaderRenderer<T>({ grid, column }: HeaderCellRendererParam
                 onSelect={() => setHidden(true)}
               >
                 <EyeOff className="h-4 w-4" />
-                Hide Column
+                {t('grid.header.hideColumn')}
               </DropdownMenuItem>
 
               <DropdownMenuItem
@@ -349,18 +351,18 @@ export function PrismHeaderRenderer<T>({ grid, column }: HeaderCellRendererParam
                 onSelect={toggleGroupBy}
               >
                 <Text className="h-4 w-4" />
-                {isGrouped ? 'Ungroup' : 'Group By'} {column.name ?? column.id}
+                {isGrouped ? t('grid.header.ungroup') : t('grid.header.groupBy')} {column.name ?? column.id}
               </DropdownMenuItem>
 
               {allowedAggs.length > 0 && (
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger disabled={rowGroupModel.length === 0}>
                     <Sigma className="h-4 w-4" />
-                    Aggregate
+                    {t('grid.header.aggregate')}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
                     <DropdownMenuRadioGroup
-                      value={currentAgg ? aggLabel(currentAgg as AggModelFn<unknown>) : 'none'}
+                      value={currentAgg ? aggLabel(currentAgg as AggModelFn<unknown>, t) : 'none'}
                       onValueChange={(v) => {
                         if (v === 'none') {
                           setAgg(undefined);
@@ -370,7 +372,7 @@ export function PrismHeaderRenderer<T>({ grid, column }: HeaderCellRendererParam
                       }}
                     >
                       <DropdownMenuRadioItem value="none">
-                        None
+                        {t('grid.header.none')}
                       </DropdownMenuRadioItem>
                       {allowedAggs.map((fn) => (
                         <DropdownMenuRadioItem key={fn} value={String(fn)}>
