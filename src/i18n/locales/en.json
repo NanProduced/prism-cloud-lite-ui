@@ -1286,6 +1286,79 @@
       "empty": "No devices found",
       "groupCount": "{{count}} devices",
       "waitingReport": "Waiting for first report..."
+    },
+    "filter": {
+      "search": "Search…",
+      "searchOptions": "Search options...",
+      "noMatches": "No matches",
+      "extracting": "Extracting...",
+      "selectAll": "Select All",
+      "deselectAll": "Deselect All",
+      "noTags": "No Tags",
+      "reset": "Reset",
+      "done": "Done",
+      "startDate": "start date",
+      "endDate": "end date",
+      "clearDates": "Clear dates",
+      "filterByTag": "Filter by tag name...",
+      "enterNumber": "Enter number...",
+      "enterText": "Enter text...",
+      "operators": {
+        "equals": "Equals",
+        "notEquals": "Not equals",
+        "contains": "Contains",
+        "notContains": "Not contains",
+        "greaterThan": "Greater than",
+        "lessThan": "Less than",
+        "greaterOrEqual": "Greater or equal",
+        "lessOrEqual": "Less or equal",
+        "beginsWith": "Begins with"
+      },
+      "status": {
+        "online": "Online",
+        "offline": "Offline",
+        "pending": "Pending"
+      },
+      "network": {
+        "wifi": "WiFi",
+        "4g": "4G",
+        "ethernet": "Ethernet"
+      }
+    },
+    "dialog": {
+      "columns": "Columns",
+      "searchColumns": "Search columns…",
+      "searchGroupable": "Search groupable columns…",
+      "searchAggregations": "Search aggregations…",
+      "rowGroups": "Row Groups",
+      "selectColumnToGroup": "Select a column to group",
+      "noMoreGroupable": "No more groupable columns",
+      "aggregations": "Aggregations",
+      "addRowGroupForAgg": "Add a row group to enable aggregations.",
+      "noAggregatable": "No aggregatable columns",
+      "hideColumn": "Hide column",
+      "showColumn": "Show column",
+      "pinLeft": "Pin left",
+      "pinRight": "Pin right",
+      "unpin": "Unpin",
+      "dragToReorder": "Drag to reorder",
+      "clearSearchToReorder": "Clear search to reorder"
+    },
+    "gridToolbar": {
+      "quickSearch": "Quick search…",
+      "selected": "Selected",
+      "clear": "Clear",
+      "actions": "Actions",
+      "batchCommand": "Batch Command",
+      "wakeSleep": "Wake/Sleep",
+      "reboot": "Reboot",
+      "screenshot": "Screenshot",
+      "export": "Export",
+      "exportCsv": "Export CSV",
+      "exportCsvHeaders": "Export CSV (With Headers)",
+      "excelExport": "Excel Export",
+      "resetAll": "Reset",
+      "rowGroups": "Row Groups:"
     }
   },
   "deviceDetails": {

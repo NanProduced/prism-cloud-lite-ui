@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils';
 import { CountryFlag } from '@/components/ui/country-flag';
 import { UrlGlimpseLink } from './UrlGlimpseLink';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
+import { useLyteNyteTheme } from '@/hooks/use-lytenyte-theme';
 import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -112,6 +113,7 @@ export function DeviceTable({
   const gridId = useId();
   const navigate = useNavigate();
   const { formatDateTime } = useTimeFormatter();
+  const lyteNyteTheme = useLyteNyteTheme();
 
   const customColumns = useMemo<Column<Device>[]>(() => {
     const sorted = customFieldDefs.slice().sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
@@ -1051,10 +1053,7 @@ export function DeviceTable({
       />
       <div className={cn(
         "w-full h-[calc(100vh-20rem)]",
-        "lng1771-shadcn", // Enable LyteNyte's shadcn theme support
-        "dark:dark",      // Apply LyteNyte's internal dark mode if parent has .dark
-        "bg-background text-foreground", // Force opaque background
-        "[--ln-selected-row-background:hsl(var(--primary)/0.1)]"
+        lyteNyteTheme, // Dynamic theme: "lng1771-shadcn" or "lng1771-shadcn dark"
       )}>
         <LyteNyte grid={grid} />
       </div>

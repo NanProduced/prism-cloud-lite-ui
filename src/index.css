@@ -59,48 +59,9 @@
 
     --sidebar-ring: 217.2 91.2% 59.8%;
 
-    /* LyteNyte shadcn integration vars - Use full HSL for library compatibility */
-    --ln-background: hsl(var(--background));
-    --ln-foreground: hsl(var(--foreground));
-    --ln-border: hsl(var(--border));
-    --ln-primary: hsl(var(--primary));
-    --ln-primary-foreground: hsl(var(--primary-foreground));
-    --ln-secondary: hsl(var(--secondary));
-    --ln-secondary-foreground: hsl(var(--secondary-foreground));
-    --ln-accent: hsl(var(--accent));
-    --ln-accent-foreground: hsl(var(--accent-foreground));
-    --ln-muted: hsl(var(--muted));
-    --ln-muted-foreground: hsl(var(--muted-foreground));
-    --ln-popover: hsl(var(--popover));
-    --ln-popover-foreground: hsl(var(--popover-foreground));
-    --ln-card: hsl(var(--card));
-    --ln-card-foreground: hsl(var(--card-foreground));
-    --ln-radius: var(--radius);
-
-    /* Explicit pinned column backgrounds to prevent transparency bleeding */
-    --ln-pinned-background: hsl(var(--background));
-    --ln-pinned-row-background: hsl(var(--background));
-    --ln-header-background: hsl(var(--background));
-
     --brand: 255 100% 47%; /* #5600EF */
     --brand-cyan: 194 88% 74%; /* #82dbf7 */
     --brand-green: 101 71% 78%; /* #b6f09c */
-  }
-
-  /* Force pinned columns to be opaque in LyteNyte */
-  .lng1771-shadcn [data-pinned="start"],
-  .lng1771-shadcn [data-pinned="end"],
-  .lng1771-shadcn .lng-cell-pinned,
-  .lng1771-shadcn .lng-header-cell-pinned {
-    background-color: hsl(var(--background)) !important;
-    z-index: 10 !important;
-  }
-  
-  .dark .lng1771-shadcn [data-pinned="start"],
-  .dark .lng1771-shadcn [data-pinned="end"],
-  .dark .lng1771-shadcn .lng-cell-pinned,
-  .dark .lng1771-shadcn .lng-header-cell-pinned {
-    background-color: hsl(var(--background)) !important;
   }
 
   .dark {
@@ -162,6 +123,19 @@
       BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
       'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   }
+}
+
+/* LyteNyte Grid: Override default typeface to include Chinese fonts for proper auto-sizing */
+.lng1771-shadcn {
+  --lng1771-typeface: 'Geist Sans', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', ui-sans-serif, system-ui, sans-serif;
+  /* Map shadcn CSS variables to LyteNyte expected --color-* variables */
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-accent: hsl(var(--accent));
+  --color-primary: hsl(var(--primary));
+  --color-secondary: hsl(var(--secondary));
+  --color-muted: hsl(var(--muted));
+  --color-border: hsl(var(--border));
 }
 
 @layer utilities {

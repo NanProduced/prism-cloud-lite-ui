@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AggModelFn, Column } from '@1771technologies/lytenyte-core/types';
 import type { Device } from '@/types/device';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,7 @@ export function DeviceGridDialog({
   onRemoveGroup,
   onSetAgg,
 }: DeviceGridDialogProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [columnQuery, setColumnQuery] = useState('');
   const [groupQuery, setGroupQuery] = useState('');
@@ -88,7 +90,7 @@ export function DeviceGridDialog({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <SlidersHorizontal className="h-4 w-4" />
-          Columns
+          {t('devices.dialog.columns')}
           <Badge variant="secondary" className="ml-1">
             {visibleCount}/{columns.length}
           </Badge>
@@ -97,13 +99,13 @@ export function DeviceGridDialog({
 
       <DialogContent className="!w-[min(92vw,72rem)] !max-w-none p-0 overflow-hidden flex flex-col h-[min(85vh,48rem)]">
         <DialogHeader className="p-6 pb-4">
-          <DialogTitle>Columns</DialogTitle>
+          <DialogTitle>{t('devices.dialog.columns')}</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] border-t flex-1 min-h-0">
           <div className="p-4 md:p-6 border-b md:border-b-0 md:border-r flex flex-col min-h-0">
             <div className="flex items-center justify-between gap-2">
-              <div className="text-sm font-semibold">Columns</div>
+              <div className="text-sm font-semibold">{t('devices.dialog.columns')}</div>
               <Badge variant="secondary" className="shrink-0">
                 {visibleCount}/{columns.length}
               </Badge>
@@ -113,7 +115,7 @@ export function DeviceGridDialog({
               <Input
                 value={columnQuery}
                 onChange={(e) => setColumnQuery(e.target.value)}
-                placeholder="Search columns…"
+                placeholder={t('devices.dialog.searchColumns')}
                 className="h-9"
               />
             </div>
@@ -163,8 +165,8 @@ export function DeviceGridDialog({
                           e.dataTransfer.effectAllowed = 'move';
                         }}
                         onClick={(e) => e.stopPropagation()}
-                        aria-label={dragEnabled ? 'Reorder column' : 'Reorder disabled while searching'}
-                        title={dragEnabled ? 'Drag to reorder' : 'Clear search to reorder'}
+                        aria-label={dragEnabled ? t('devices.dialog.dragToReorder') : t('devices.dialog.clearSearchToReorder')}
+                        title={dragEnabled ? t('devices.dialog.dragToReorder') : t('devices.dialog.clearSearchToReorder')}
                       >
                         <GripVertical className="h-4 w-4" />
                       </button>
@@ -173,7 +175,7 @@ export function DeviceGridDialog({
                         checked={checked}
                         onCheckedChange={() => onToggleColumn(colId)}
                         onClick={(e) => e.stopPropagation()}
-                        aria-label={checked ? 'Hide column' : 'Show column'}
+                        aria-label={checked ? t('devices.dialog.hideColumn') : t('devices.dialog.showColumn')}
                       />
                       <span className="truncate flex-1 min-w-0">{labelForColumn(c)}</span>
 
@@ -195,7 +197,7 @@ export function DeviceGridDialog({
                             <DropdownMenuItem
                               onSelect={() => onToggleColumn(colId)}
                             >
-                              {checked ? 'Hide column' : 'Show column'}
+                              {checked ? t('devices.dialog.hideColumn') : t('devices.dialog.showColumn')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="gap-2"
@@ -204,12 +206,12 @@ export function DeviceGridDialog({
                               {pin === 'start' ? (
                                 <>
                                   <PinOff className="h-4 w-4" />
-                                  Unpin
+                                  {t('devices.dialog.unpin')}
                                 </>
                               ) : (
                                 <>
                                   <Pin className="h-4 w-4" />
-                                  Pin left
+                                  {t('devices.dialog.pinLeft')}
                                 </>
                               )}
                             </DropdownMenuItem>
@@ -220,12 +222,12 @@ export function DeviceGridDialog({
                               {pin === 'end' ? (
                                 <>
                                   <PinOff className="h-4 w-4" />
-                                  Unpin
+                                  {t('devices.dialog.unpin')}
                                 </>
                               ) : (
                                 <>
                                   <Pin className="h-4 w-4" />
-                                  Pin right
+                                  {t('devices.dialog.pinRight')}
                                 </>
                               )}
                             </DropdownMenuItem>
@@ -244,7 +246,7 @@ export function DeviceGridDialog({
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-sm font-semibold">
                   <Layers className="h-4 w-4 text-muted-foreground" />
-                  Row Groups
+                  {t('devices.dialog.rowGroups')}
                 </div>
                 {rowGroupIds.length > 0 && (
                   <Badge variant="secondary" className="shrink-0">
@@ -256,7 +258,7 @@ export function DeviceGridDialog({
               <div className="rounded border bg-muted/30 p-3">
                 {rowGroupIds.length === 0 ? (
                   <div className="text-sm text-muted-foreground">
-                    Select a column to group
+                    {t('devices.dialog.selectColumnToGroup')}
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-2">
@@ -277,14 +279,14 @@ export function DeviceGridDialog({
                 <Input
                   value={groupQuery}
                   onChange={(e) => setGroupQuery(e.target.value)}
-                  placeholder="Search groupable columns…"
+                  placeholder={t('devices.dialog.searchGroupable')}
                   className="h-9"
                 />
                 <ScrollArea className="flex-1 min-h-0 pr-2">
                   <div className="grid gap-1">
                     {availableGroups.length === 0 ? (
                       <div className="text-sm text-muted-foreground px-2 py-1">
-                        No more groupable columns
+                        {t('devices.dialog.noMoreGroupable')}
                       </div>
                     ) : (
                       availableGroups.map((c) => (
@@ -308,7 +310,7 @@ export function DeviceGridDialog({
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-sm font-semibold">
                   <Sigma className="h-4 w-4 text-muted-foreground" />
-                  Aggregations
+                  {t('devices.dialog.aggregations')}
                 </div>
                 {Object.keys(aggModel).length > 0 && (
                   <Badge variant="secondary" className="shrink-0">
@@ -319,7 +321,7 @@ export function DeviceGridDialog({
 
               {!isAggEnabled && (
                 <div className="text-sm text-muted-foreground">
-                  Add a row group to enable aggregations.
+                  {t('devices.dialog.addRowGroupForAgg')}
                 </div>
               )}
 
@@ -327,7 +329,7 @@ export function DeviceGridDialog({
                 <Input
                   value={aggQuery}
                   onChange={(e) => setAggQuery(e.target.value)}
-                  placeholder="Search aggregations…"
+                  placeholder={t('devices.dialog.searchAggregations')}
                   className="h-9"
                   disabled={!isAggEnabled}
                 />
@@ -335,7 +337,7 @@ export function DeviceGridDialog({
                   <div className="grid gap-2">
                     {filteredAggColumns.length === 0 ? (
                       <div className="text-sm text-muted-foreground px-2 py-1">
-                        No aggregatable columns
+                        {t('devices.dialog.noAggregatable')}
                       </div>
                     ) : (
                       filteredAggColumns.map((c) => {

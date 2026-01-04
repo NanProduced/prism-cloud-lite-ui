@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import type {
   FilterDate,
   FilterDateOperator,
@@ -20,7 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { CountryPicker } from '@/components/ui/country-picker';
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
@@ -28,7 +28,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { Check, ChevronDown, Filter, X } from 'lucide-react';
+import { Calendar, Check, ChevronDown, Filter, X } from 'lucide-react';
 import { COUNTRIES, countryLabel } from '@/lib/countries';
 
 function optionSort(a: DeviceCustomFieldOption, b: DeviceCustomFieldOption): number {
@@ -76,15 +76,20 @@ function prefixToDateOperator(prefix?: string): FilterDateOperator {
 function filterItemToText(filter?: FilterModelItem<Device>): string {
   if (!filter) return '';
   if (filter.kind === 'func') {
-    const prismSelected = (filter as any).prismSelected as string[];
-    if (prismSelected) return prismSelected.join(', ');
+    const f = filter as any;
+    if (f.prismSelected) return f.prismSelected.join(', ');
+    if (f.prismDate) {
+      const { start, end } = f.prismDate;
+      if (start && end) return `${start} ~ ${end}`;
+      return start ? `Since ${start}` : end ? `Before ${end}` : 'Date Filter';
+    }
     return 'Active Filter';
   }
   if (filter.kind === 'string') return String(filter.value ?? '');
   if (filter.kind === 'number') {
-     const f = filter as FilterNumber<Device>;
-     const opMap: any = { equals: '=', not_equals: '!=', greater_than: '>', less_than: '<', greater_than_or_equals: '>=', less_than_or_equals: '<=' };
-     return `${opMap[f.operator] || ''}${f.value}`;
+    const f = filter as FilterNumber<Device>;
+    const opMap: any = { equals: '=', not_equals: '!=', greater_than: '>', less_than: '<', greater_than_or_equals: '>=', less_than_or_equals: '<=' };
+    return `${opMap[f.operator] || ''}${f.value}`;
   }
   if (filter.kind === 'date') return filter.value == null ? '' : String(filter.value);
   return '';
@@ -132,6 +137,7 @@ export function DeviceCustomFieldFloatingFilterCell({
   const fieldType = fieldDef.fieldType;
   const isEnum = ['SELECT', 'MULTI_SELECT', 'BOOLEAN', 'COUNTRY'].includes(fieldType);
   const isNumber = fieldType === 'NUMBER';
+  const isDateTime = fieldType === 'DATETIME';
 
   const value = filterItemToText(current);
 
@@ -166,10 +172,13 @@ export function DeviceCustomFieldFloatingFilterCell({
     });
   };
 
+  // Hide text input for enum types, numbers, and datetime (use popover filter instead)
+  const hideInput = isEnum || isNumber || isDateTime;
+
   return (
     <div className="flex items-center w-full h-full gap-1 px-1 transition-colors duration-200">
       <div className="relative flex-1 min-w-0">
-        {!isEnum && !isNumber ? (
+        {!hideInput ? (
           <Input
             value={value}
             onChange={(e) => handleTextChange(e.target.value)}
@@ -180,7 +189,7 @@ export function DeviceCustomFieldFloatingFilterCell({
             )}
           />
         ) : (
-          <div 
+          <div
             className={cn(
               "h-7 flex items-center px-2 text-[10px] font-medium truncate cursor-default rounded-md border border-transparent",
               current && "bg-primary/10 text-primary border-primary/20"
@@ -250,16 +259,23 @@ function CustomFieldFilterPopover({
   }, [fieldDef.options, type]);
 
   const [enumSelected, setEnumSelected] = useState<Set<string>>(new Set());
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
 
   // Default values
   const [operator, setOperator] = useState('contains');
   const [value, setValue] = useState('');
+  const filterDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  const isDateTime = type === 'DATETIME';
+  const isBoolean = type === 'BOOLEAN';
+  const isNumber = type === 'NUMBER';
 
   // Initialization ref to break loops
   const hasInitialized = useRef(false);
   useEffect(() => {
     if (open) {
       setEnumSelected(new Set(current?.prismSelected || []));
+      setDateRange(current?.prismDate || { start: '', end: '' });
       setOperator(current?.operator || (type === 'NUMBER' ? 'equals' : 'contains'));
       setValue(current?.value != null ? String(current.value) : '');
       hasInitialized.current = true;
@@ -267,6 +283,31 @@ function CustomFieldFilterPopover({
       hasInitialized.current = false;
     }
   }, [open, type]);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (filterDebounceRef.current) clearTimeout(filterDebounceRef.current);
+    };
+  }, []);
+
+  // Debounced text filter application for performance
+  const debouncedTextFilter = useCallback((v: string, op: string) => {
+    if (filterDebounceRef.current) clearTimeout(filterDebounceRef.current);
+    filterDebounceRef.current = setTimeout(() => {
+      const trimmed = v.trim();
+      if (!trimmed) {
+        onApply(undefined);
+      } else if (isNumber) {
+        const num = Number(trimmed);
+        if (!Number.isNaN(num)) {
+          onApply({ kind: 'number', operator: op as any, value: num } as any);
+        }
+      } else {
+        onApply({ kind: 'string', operator: op, value: trimmed } as any);
+      }
+    }, 150);
+  }, [onApply, isNumber]);
 
   const apply = () => {
     if (!hasInitialized.current) return;
@@ -312,19 +353,36 @@ function CustomFieldFilterPopover({
   const handleLiveChange = (updates: any) => {
     if (!hasInitialized.current) return;
     if (updates.enum) {
-       const selected = Array.from(updates.enum);
-       if (selected.length === 0) onApply(undefined);
-       else {
-          onApply({
-             kind: 'func', prismSelected: selected,
-             func: ({ data }: any) => {
-                const raw = data.customFieldValues?.[fieldDef.fieldKey];
-                if (type === 'MULTI_SELECT') return Array.isArray(raw) && selected.some(s => raw.includes(s));
-                if (type === 'BOOLEAN') return selected.includes(raw === true ? 'true' : raw === false ? 'false' : '');
-                return typeof raw === 'string' && selected.includes(raw);
-             }
-          } as any);
-       }
+      const selected = Array.from(updates.enum);
+      if (selected.length === 0) onApply(undefined);
+      else {
+        onApply({
+          kind: 'func', prismSelected: selected,
+          func: ({ data }: any) => {
+            const raw = data.customFieldValues?.[fieldDef.fieldKey];
+            if (type === 'MULTI_SELECT') return Array.isArray(raw) && selected.some(s => raw.includes(s));
+            if (type === 'BOOLEAN') return selected.includes(raw === true ? 'true' : raw === false ? 'false' : '');
+            return typeof raw === 'string' && selected.includes(raw);
+          }
+        } as any);
+      }
+    } else if (updates.date) {
+      const { start, end } = updates.date;
+      if (!start && !end) onApply(undefined);
+      else {
+        onApply({
+          kind: 'func', prismDate: updates.date,
+          func: ({ data }: any) => {
+            const raw = data.customFieldValues?.[fieldDef.fieldKey];
+            if (!raw || typeof raw !== 'string') return false;
+            const t = new Date(raw).getTime();
+            if (Number.isNaN(t)) return false;
+            if (start && t < new Date(start).getTime()) return false;
+            if (end && t > (new Date(end).getTime() + 86400000 - 1)) return false;
+            return true;
+          }
+        } as any);
+      }
     }
   };
 
@@ -353,7 +411,51 @@ function CustomFieldFilterPopover({
              {current && <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive" onClick={() => { onClear(); setOpen(false); }}>Reset</Button>}
           </header>
 
-          {options && (
+          {isBoolean && (
+            <div className="grid gap-1 py-1">
+              {[
+                { value: '', label: 'Any', description: 'Show all values' },
+                { value: 'true', label: 'True', description: 'Only true values' },
+                { value: 'false', label: 'False', description: 'Only false values' },
+              ].map((opt) => {
+                const selected = enumSelected.size === 0 ? opt.value === '' :
+                                 enumSelected.size === 1 && enumSelected.has(opt.value);
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={cn(
+                      "w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all hover:bg-muted/50",
+                      selected && "bg-primary/10 border border-primary/30"
+                    )}
+                    onClick={() => {
+                      if (opt.value === '') {
+                        setEnumSelected(new Set());
+                        handleLiveChange({ enum: new Set() });
+                      } else {
+                        const n = new Set([opt.value]);
+                        setEnumSelected(n);
+                        handleLiveChange({ enum: n });
+                      }
+                    }}
+                  >
+                    <div className={cn(
+                      "h-4 w-4 rounded-full border-2 flex items-center justify-center transition-colors",
+                      selected ? "border-primary bg-primary" : "border-muted-foreground/30"
+                    )}>
+                      {selected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                    </div>
+                    <div className="flex-1">
+                      <div className={cn("text-sm font-medium", selected && "text-primary")}>{opt.label}</div>
+                      <div className="text-[10px] text-muted-foreground">{opt.description}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {options && !isBoolean && (
             <div className="grid gap-2">
               <ScrollArea className="h-48 rounded-lg border bg-muted/20">
                 <div className="p-1.5 grid gap-1">
@@ -389,7 +491,46 @@ function CustomFieldFilterPopover({
             </div>
           )}
 
-          {!options && (
+          {isDateTime && (
+            <div className="space-y-4 py-1">
+              {(['start', 'end'] as const).map((key) => (
+                <div key={key} className="grid gap-2">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-3 w-3 text-muted-foreground" />
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
+                      {key === 'start' ? 'Start Date' : 'End Date'}
+                    </label>
+                  </div>
+                  <Input
+                    type="date"
+                    value={dateRange[key]}
+                    onChange={(e) => {
+                      const next = { ...dateRange, [key]: e.target.value };
+                      setDateRange(next);
+                      handleLiveChange({ date: next });
+                    }}
+                    className="h-9 text-sm"
+                  />
+                </div>
+              ))}
+              {(dateRange.start || dateRange.end) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full h-8 text-xs text-muted-foreground hover:text-destructive"
+                  onClick={() => {
+                    const empty = { start: '', end: '' };
+                    setDateRange(empty);
+                    handleLiveChange({ date: empty });
+                  }}
+                >
+                  Clear Dates
+                </Button>
+              )}
+            </div>
+          )}
+
+          {!options && !isDateTime && (
             <div className="grid gap-3">
               <OperatorSelect
                 value={operator}
@@ -411,16 +552,9 @@ function CustomFieldFilterPopover({
                 type={type === 'NUMBER' ? 'number' : 'text'}
                 value={value}
                 onChange={(e) => {
-                   const v = e.target.value; setValue(v);
-                   if (!v.trim()) onApply(undefined);
-                   else {
-                     if (type === 'NUMBER') {
-                       const num = Number(v);
-                       if (!Number.isNaN(num)) onApply({ kind: 'number', operator: operator as any, value: num });
-                     } else {
-                       onApply({ kind: (type === 'DATETIME' ? 'date' : 'string'), operator, value: v } as any);
-                     }
-                   }
+                  const v = e.target.value;
+                  setValue(v);
+                  debouncedTextFilter(v, operator);
                 }}
                 placeholder={type === 'NUMBER' ? "Enter number..." : "Search value..."}
                 className="h-9 text-sm"

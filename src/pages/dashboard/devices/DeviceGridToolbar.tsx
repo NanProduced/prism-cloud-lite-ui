@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { GROUP_COLUMN_PREFIX } from '@1771technologies/lytenyte-core';
 import type { AggModelFn, Column, Grid, RowLeaf } from '@1771technologies/lytenyte-core/types';
 import type { Device } from '@/types/device';
@@ -49,6 +50,7 @@ export function DeviceGridToolbar({
   onCustomFieldCreate,
   onCustomFieldDelete,
 }: DeviceGridToolbarProps) {
+  const { t } = useTranslation();
   const [quickSearch, setQuickSearch] = useState('');
 
   const columns = grid.state.columns.useValue();
@@ -249,7 +251,7 @@ export function DeviceGridToolbar({
         <div className="relative flex-1 min-w-[220px] max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Quick search…"
+            placeholder={t('devices.gridToolbar.quickSearch')}
             value={quickSearch}
             onChange={(e) => handleQuickSearchChange(e.target.value)}
             className="pl-9 h-9"
@@ -259,14 +261,14 @@ export function DeviceGridToolbar({
         <div className="flex items-center gap-2">
           {selectedCount > 0 && (
             <Badge variant="secondary" className="h-9 px-3 flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Selected</span>
+              <span className="text-xs text-muted-foreground">{t('devices.gridToolbar.selected')}</span>
               <span className="font-semibold">{selectedCount}</span>
               <button
                 type="button"
                 className="ml-1 text-xs text-muted-foreground hover:text-foreground"
                 onClick={() => grid.api.rowSelectAll({ deselect: true })}
               >
-                Clear
+                {t('devices.gridToolbar.clear')}
               </button>
             </Badge>
           )}
@@ -299,26 +301,26 @@ export function DeviceGridToolbar({
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2" disabled={selectedCount === 0}>
                 <Zap className="h-4 w-4" />
-                Actions
+                {t('devices.gridToolbar.actions')}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={onBatchCommand}>
                 <Zap className="h-4 w-4" />
-                Batch Command
+                {t('devices.gridToolbar.batchCommand')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled={selectedCount === 0} onSelect={() => runBulkAction('wake-sleep')}>
                 <Power className="h-4 w-4" />
-                Wake/Sleep
+                {t('devices.gridToolbar.wakeSleep')}
               </DropdownMenuItem>
               <DropdownMenuItem disabled={selectedCount === 0} onSelect={() => runBulkAction('reboot')}>
                 <RotateCcw className="h-4 w-4" />
-                Reboot
+                {t('devices.gridToolbar.reboot')}
               </DropdownMenuItem>
               <DropdownMenuItem disabled={selectedCount === 0} onSelect={() => runBulkAction('screenshot')}>
                 <Camera className="h-4 w-4" />
-                Screenshot
+                {t('devices.gridToolbar.screenshot')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -327,29 +329,29 @@ export function DeviceGridToolbar({
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2">
                 <Download className="h-4 w-4" />
-                Export
+                {t('devices.gridToolbar.export')}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
               <DropdownMenuLabel>CSV</DropdownMenuLabel>
               <DropdownMenuItem onSelect={() => handleExportCsv(false)}>
-                Export CSV
+                {t('devices.gridToolbar.exportCsv')}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => handleExportCsv(true)}>
-                Export CSV (With Headers)
+                {t('devices.gridToolbar.exportCsvHeaders')}
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
 
               <DropdownMenuLabel>Excel</DropdownMenuLabel>
               <DropdownMenuItem onSelect={handleExportExcel}>
-                Excel Export
+                {t('devices.gridToolbar.excelExport')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Button variant="outline" size="sm" className="gap-2" onClick={handleResetAll}>
             <RotateCcw className="h-4 w-4" />
-            Reset
+            {t('devices.gridToolbar.resetAll')}
           </Button>
         </div>
       </div>
@@ -358,7 +360,7 @@ export function DeviceGridToolbar({
         <div className="flex items-center gap-2 flex-wrap">
           <div className="text-xs text-muted-foreground flex items-center gap-1">
             <Layers className="h-3 w-3" />
-            Row Groups:
+            {t('devices.gridToolbar.rowGroups')}
           </div>
           {rowGroupIds.map((g) => {
             const col = baseColumns.find((c) => c.id === g);

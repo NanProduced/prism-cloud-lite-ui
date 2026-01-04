@@ -12,7 +12,8 @@ import type {
 } from '@1771technologies/lytenyte-core/types';
 import type { Device } from '@/types/device';
 import { resolveDeviceStatus } from '@/types/device';
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { resolveTagIcon, hexToRgba } from '@/components/devices/tagging';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,24 +42,25 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Metadata for Enumerated filters
-const STATUS_OPTIONS = [
-  { value: 'online', label: 'Online', color: 'text-emerald-500', icon: Circle },
-  { value: 'offline', label: 'Offline', color: 'text-muted-foreground', icon: Circle },
-  { value: 'pending', label: 'Pending', color: 'text-amber-500', icon: Circle },
-] as const;
+// Metadata for Enumerated filters - using translation keys
+const getStatusOptions = (t: (key: string) => string) => [
+  { value: 'online', label: t('devices.filter.status.online'), color: 'text-emerald-500', icon: Circle },
+  { value: 'offline', label: t('devices.filter.status.offline'), color: 'text-muted-foreground', icon: Circle },
+  { value: 'pending', label: t('devices.filter.status.pending'), color: 'text-amber-500', icon: Circle },
+];
 
-const NETWORK_OPTIONS = [
-  { value: 'WiFi', label: 'WiFi', icon: Wifi },
-  { value: '4G', label: '4G', icon: RadioTower },
-  { value: 'Ethernet', label: 'Ethernet', icon: EthernetPort },
-] as const;
+const getNetworkOptions = (t: (key: string) => string) => [
+  { value: 'WiFi', label: t('devices.filter.network.wifi'), icon: Wifi },
+  { value: '4G', label: t('devices.filter.network.4g'), icon: RadioTower },
+  { value: 'Ethernet', label: t('devices.filter.network.ethernet'), icon: EthernetPort },
+];
 
 export function DeviceGridFloatingFilterCell({
   grid,
   column,
   allTags,
 }: HeaderFloatingCellRendererParams<Device> & { allTags?: any[] }) {
+  const { t } = useTranslation();
   const filterModel = grid.state.filterModel.useValue();
   const current = filterModel[column.id] as (FilterModelItem<Device> & Record<string, any>) | undefined;
   
@@ -72,7 +74,7 @@ export function DeviceGridFloatingFilterCell({
   const isTime = column.id === 'lastReportTime';
 
   const hideInput = isStatus || isNetwork || isNumeric || isTime || isAutoEnum || isTags;
-  const value = filterItemToText(current, { isStatus, isNetwork, isTime, isNumeric, isTags });
+  const value = filterItemToText(current, { isStatus, isNetwork, isTime, isNumeric, isTags }, t);
 
   const handleChange = (raw: string) => {
     if (hideInput) return;
@@ -103,7 +105,7 @@ export function DeviceGridFloatingFilterCell({
           <Input
             value={value}
             onChange={(e) => handleChange(e.target.value)}
-            placeholder="Search…"
+            placeholder={t('devices.filter.search')}
             className={cn(
               "h-7 text-[11px] px-2 pr-6 flex-1 bg-background/50 border-transparent hover:border-muted-foreground/30 focus-visible:ring-1",
               current && "border-primary/40 bg-background shadow-inner"
@@ -142,6 +144,7 @@ export function DeviceGridFloatingFilterCell({
         hideInput={hideInput}
         grid={grid}
         current={current}
+        t={t}
         onApply={(next) => {
           grid.state.filterModel.set((prev) => {
             const updated = { ...prev };
@@ -156,11 +159,16 @@ export function DeviceGridFloatingFilterCell({
   );
 }
 
-function filterItemToText(filter?: FilterModelItem<Device>, opts?: any): string {
+function filterItemToText(filter?: FilterModelItem<Device>, opts?: any, t?: (key: string) => string): string {
   if (!filter) return '';
   if (filter.kind === 'func' || filter.kind === 'combination') {
     const f = filter as any;
-    if (f.prismSelected?.length > 0) return f.prismSelected.join(', ');
+    if (f.prismSelected?.length > 0) {
+      // Replace __NO_TAGS__ with a user-friendly label
+      const noTagsLabel = t ? t('devices.filter.noTags') : 'No Tags';
+      const displayLabels = f.prismSelected.map((s: string) => s === '__NO_TAGS__' ? noTagsLabel : s);
+      return displayLabels.join(', ');
+    }
     if (f.prismRange) return `${f.prismRange[0]} - ${f.prismRange[1]}${opts?.isNumeric ? '%' : ''}`;
     if (f.prismDate) {
       const { start, end } = f.prismDate;
@@ -203,10 +211,11 @@ function prefixToDateOperator(p?: string): FilterDateOperator {
 }
 
 function FilterPopover({
-  columnId, columnName, columnType, isStatus, isNetwork, isAutoEnum, isNumeric, isTags, isTime, allTags, grid, current, onApply, onClear
+  columnId, columnName, columnType, isStatus, isNetwork, isAutoEnum, isNumeric, isTags, isTime, allTags, grid, current, t, onApply, onClear
 }: any) {
   const [open, setOpen] = useState(false);
   const [internalSearch, setInternalSearch] = useState('');
+  const filterDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Rules of Hooks: Always call useValue at the top level
   const filterModel = grid?.state?.filterModel?.useValue() || {};
@@ -227,31 +236,46 @@ function FilterPopover({
   }, [rowDataSource]);
 
   const enumOptions = useMemo(() => {
-    if (isStatus) return STATUS_OPTIONS;
-    if (isNetwork) return NETWORK_OPTIONS;
+    if (isStatus) return getStatusOptions(t);
+    if (isNetwork) return getNetworkOptions(t);
     if (isTags && allTags) {
-       return allTags.map((t: any) => ({ 
-         value: t.tagName, 
-         label: t.tagName,
-         color: t.color,
-         icon: t.icon ? resolveTagIcon(t.icon) : null
+       const tagOptions = allTags.map((tag: any) => ({
+         value: tag.tagName,
+         label: tag.tagName,
+         color: tag.color,
+         icon: tag.icon ? resolveTagIcon(tag.icon) : null
        }));
+       // Add "No Tags" option at the beginning
+       return [
+         { value: '__NO_TAGS__', label: t('devices.filter.noTags'), color: null, icon: null, isSpecial: true },
+         ...tagOptions
+       ];
     }
     if ((isAutoEnum || isTags) && open) {
       const values = new Set<string>();
+
+      // Extract leaf data from grid rows state (LyteNyte format: { kind: 'leaf', data: {...} })
       const allLeafData: any[] = [];
-      if (grid.api && typeof (grid.api as any).forEachNode === 'function') {
-        (grid.api as any).forEachNode((node: any) => {
-          if (node.kind === 'leaf' && node.data) {
-            allLeafData.push(node.data);
-          }
-        });
+      if (rows && Array.isArray(rows)) {
+        const extractLeafData = (rowList: any[]) => {
+          rowList.forEach((row: any) => {
+            if (row?.kind === 'leaf' && row?.data) {
+              allLeafData.push(row.data);
+            } else if (row?.children && Array.isArray(row.children)) {
+              extractLeafData(row.children);
+            }
+          });
+        };
+        extractLeafData(rows);
       }
+
+      // Fallback to rawData if rows didn't yield results
       const sourceData = allLeafData.length > 0 ? allLeafData : rawData;
       if (sourceData.length === 0) return [];
+
       sourceData.forEach((item: any) => {
         if (!item) return;
-        
+
         if (isTags) {
           (item.tags || []).forEach((t: any) => {
             if (t?.tagName) values.add(t.tagName);
@@ -271,7 +295,7 @@ function FilterPopover({
       return Array.from(values).sort(collator.compare).map(v => ({ value: v, label: v }));
     }
     return (isAutoEnum || isTags) ? [] : null;
-  }, [open, rawData, columnId, isStatus, isNetwork, isAutoEnum, isTags, allTags, grid.api]);
+  }, [open, rows, rawData, columnId, isStatus, isNetwork, isAutoEnum, isTags, allTags]);
 
   const filteredOptions = useMemo(() => {
     if (!enumOptions || !internalSearch) return enumOptions;
@@ -299,6 +323,27 @@ function FilterPopover({
     }
   }, [open, isNumeric]);
 
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (filterDebounceRef.current) clearTimeout(filterDebounceRef.current);
+    };
+  }, []);
+
+  // Debounced text filter application (150ms delay for better performance)
+  const debouncedTextFilter = useCallback((v: string, op: string) => {
+    if (filterDebounceRef.current) clearTimeout(filterDebounceRef.current);
+    filterDebounceRef.current = setTimeout(() => {
+      if (!v.trim()) {
+        onApply(undefined);
+      } else if (isTags) {
+        onApply({ kind: 'func', func: ({ data }: any) => (data?.data || data).tags?.some((t: any) => t.tagName.toLowerCase().includes(v.toLowerCase())) });
+      } else {
+        onApply({ kind: isNumeric ? 'number' : 'string', operator: op, value: isNumeric ? Number(v) : v });
+      }
+    }, 150);
+  }, [onApply, isTags, isNumeric]);
+
   const handleLiveChange = (updates: any) => {
     if (!hasInitialized.current) return;
     if (updates.enum) {
@@ -312,6 +357,16 @@ function FilterPopover({
           
           if (isTags) {
             const deviceTags = (item.tags || []).map((t: any) => t.tagName);
+            // Handle "No Tags" special case
+            if (selected.includes('__NO_TAGS__')) {
+              if (deviceTags.length === 0) return true;
+              // Also check if any other selected tags match
+              const otherSelected = selected.filter(s => s !== '__NO_TAGS__');
+              if (otherSelected.length > 0) {
+                return otherSelected.some(s => deviceTags.includes(s));
+              }
+              return false;
+            }
             return selected.some(s => deviceTags.includes(s));
           }
 
@@ -356,7 +411,7 @@ function FilterPopover({
                 </div>
                 <h4 className="font-bold text-sm tracking-tight">{columnName}</h4>
              </div>
-             {current && <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] font-bold text-muted-foreground hover:text-destructive" onClick={() => { onClear(); setOpen(false); }}>Reset</Button>}
+             {current && <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] font-bold text-muted-foreground hover:text-destructive" onClick={() => { onClear(); setOpen(false); }}>{t('devices.filter.reset')}</Button>}
           </header>
           <div className="p-4 space-y-4">
             {enumOptions && (
@@ -364,7 +419,7 @@ function FilterPopover({
                 {(isAutoEnum || enumOptions.length > 6) && (
                    <div className="relative">
                       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input placeholder="Search options..." className="h-8 pl-8 text-xs bg-muted/20 border-transparent" value={internalSearch} onChange={e => setInternalSearch(e.target.value)} />
+                      <Input placeholder={t('devices.filter.searchOptions')} className="h-8 pl-8 text-xs bg-muted/20 border-transparent" value={internalSearch} onChange={e => setInternalSearch(e.target.value)} />
                    </div>
                 )}
                 <ScrollArea className="h-44 rounded-lg border bg-background/50">
@@ -379,11 +434,15 @@ function FilterPopover({
                           setEnumSelected(n); handleLiveChange({ enum: n });
                         }}>
                           <div className="flex items-center gap-2.5 min-w-0">
-                            {isTags && opt.color ? (
-                              <div 
+                            {isTags && opt.isSpecial ? (
+                              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-dashed border-muted-foreground/40 text-[10px] font-medium text-muted-foreground">
+                                <span className="truncate">{opt.label}</span>
+                              </div>
+                            ) : isTags && opt.color ? (
+                              <div
                                 className="flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[10px] font-bold"
-                                style={{ 
-                                  borderColor: opt.color, 
+                                style={{
+                                  borderColor: opt.color,
                                   color: opt.color,
                                   backgroundColor: hexToRgba(opt.color, 0.1)
                                 }}
@@ -401,12 +460,12 @@ function FilterPopover({
                           {checked && <Check className="h-3.5 w-3.5" />}
                         </button>
                       );
-                    }) : <div className="py-8 text-center text-[11px] text-muted-foreground">{enumOptions.length ? "No matches" : "Extracting..."}</div>}
+                    }) : <div className="py-8 text-center text-[11px] text-muted-foreground">{enumOptions.length ? t('devices.filter.noMatches') : t('devices.filter.extracting')}</div>}
                   </div>
                 </ScrollArea>
                 <div className="flex justify-between items-center px-1">
-                   <button className="text-[10px] text-primary hover:underline font-medium" onClick={() => { const a = new Set(enumOptions.map((o: any) => o.value)); setEnumSelected(a); handleLiveChange({ enum: a }); }}>Select All</button>
-                   <button className="text-[10px] text-muted-foreground hover:underline font-medium" onClick={() => { setEnumSelected(new Set()); handleLiveChange({ enum: new Set() }); }}>Deselect All</button>
+                   <button className="text-[10px] text-primary hover:underline font-medium" onClick={() => { const a = new Set(enumOptions.map((o: any) => o.value)); setEnumSelected(a); handleLiveChange({ enum: a }); }}>{t('devices.filter.selectAll')}</button>
+                   <button className="text-[10px] text-muted-foreground hover:underline font-medium" onClick={() => { setEnumSelected(new Set()); handleLiveChange({ enum: new Set() }); }}>{t('devices.filter.deselectAll')}</button>
                 </div>
               </div>
             )}
@@ -416,7 +475,7 @@ function FilterPopover({
                   <div key={key} className="grid gap-2">
                      <div className="flex items-center gap-2">
                         <Calendar className="h-3 w-3 text-muted-foreground" />
-                        <label className="text-[10px] font-bold text-muted-foreground">{key} date</label>
+                        <label className="text-[10px] font-bold text-muted-foreground">{key === 'start' ? t('devices.filter.startDate') : t('devices.filter.endDate')}</label>
                      </div>
                      <Input type="date" className="h-9 text-xs bg-muted/20 border-transparent" value={(dateRange as any)[key]} onChange={e => {
                         const n = { ...dateRange, [key]: e.target.value };
@@ -425,53 +484,52 @@ function FilterPopover({
                   </div>
                 ))}
                 <div className="pt-2 flex justify-end">
-                   <Button variant="link" className="h-auto p-0 text-[10px] text-muted-foreground" onClick={() => { const e = { start: '', end: '' }; setDateRange(e); handleLiveChange({ date: e }); }}>Clear dates</Button>
+                   <Button variant="link" className="h-auto p-0 text-[10px] text-muted-foreground" onClick={() => { const e = { start: '', end: '' }; setDateRange(e); handleLiveChange({ date: e }); }}>{t('devices.filter.clearDates')}</Button>
                 </div>
               </div>
             )}
             {!enumOptions && !isTime && (
               <div className="space-y-3">
-                <OperatorSelect 
-                  value={operator} 
-                  onValueChange={(v: any) => { 
-                    setOperator(v); 
-                    if(value) onApply({ kind: isNumeric ? 'number' : 'string', operator: v, value: isNumeric ? Number(value) : value } as any); 
-                  }} 
+                <OperatorSelect
+                  value={operator}
+                  onValueChange={(v: any) => {
+                    setOperator(v);
+                    if(value) onApply({ kind: isNumeric ? 'number' : 'string', operator: v, value: isNumeric ? Number(value) : value } as any);
+                  }}
                   options={isNumeric ? [
-                    { value: 'equals', label: 'Equals' }, 
-                    { value: 'not_equals', label: 'Not equals' }, 
-                    { value: 'greater_than', label: 'Greater than' }, 
-                    { value: 'less_than', label: 'Less than' },
-                    { value: 'greater_than_or_equals', label: 'Greater or equal' },
-                    { value: 'less_than_or_equals', label: 'Less or equal' }
+                    { value: 'equals', label: t('devices.filter.operators.equals') },
+                    { value: 'not_equals', label: t('devices.filter.operators.notEquals') },
+                    { value: 'greater_than', label: t('devices.filter.operators.greaterThan') },
+                    { value: 'less_than', label: t('devices.filter.operators.lessThan') },
+                    { value: 'greater_than_or_equals', label: t('devices.filter.operators.greaterOrEqual') },
+                    { value: 'less_than_or_equals', label: t('devices.filter.operators.lessOrEqual') }
                   ] : [
-                    { value: 'contains', label: 'Contains' }, 
-                    { value: 'not_contains', label: 'Not contains' }, 
-                    { value: 'equals', label: 'Equals' }, 
-                    { value: 'begins_with', label: 'Begins with' }
-                  ]} 
+                    { value: 'contains', label: t('devices.filter.operators.contains') },
+                    { value: 'not_contains', label: t('devices.filter.operators.notContains') },
+                    { value: 'equals', label: t('devices.filter.operators.equals') },
+                    { value: 'begins_with', label: t('devices.filter.operators.beginsWith') }
+                  ]}
                 />
                 <div className="relative">
                   {isTags && <TagIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />}
-                  <Input 
+                  <Input
                     type={isNumeric ? 'number' : 'text'}
-                    value={value} 
+                    value={value}
                     onChange={e => {
-                      const v = e.target.value; setValue(v);
-                      if (!v.trim()) onApply(undefined);
-                      else if (isTags) onApply({ kind: 'func', func: ({ data }: any) => (data?.data || data).tags?.some((t: any) => t.tagName.toLowerCase().includes(v.toLowerCase())) });
-                      else onApply({ kind: isNumeric ? 'number' : 'string', operator, value: isNumeric ? Number(v) : v });
-                    }} 
-                    placeholder={isTags ? "Filter by tag name..." : isNumeric ? "Enter number..." : "Enter text..."} 
-                    className={cn("h-9 text-xs", isTags && "pl-8")} 
-                    autoFocus 
+                      const v = e.target.value;
+                      setValue(v);
+                      debouncedTextFilter(v, operator);
+                    }}
+                    placeholder={isTags ? t('devices.filter.filterByTag') : isNumeric ? t('devices.filter.enterNumber') : t('devices.filter.enterText')}
+                    className={cn("h-9 text-xs", isTags && "pl-8")}
+                    autoFocus
                   />
                 </div>
               </div>
             )}
           </div>
           <footer className="px-4 py-3 bg-muted/10 border-t flex items-center justify-end">
-             <Button variant="outline" size="sm" className="h-8 rounded-lg font-bold" onClick={() => setOpen(false)}>Done</Button>
+             <Button variant="outline" size="sm" className="h-8 rounded-lg font-bold" onClick={() => setOpen(false)}>{t('devices.filter.done')}</Button>
           </footer>
         </div>
       </PopoverContent>
