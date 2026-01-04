@@ -13,6 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import type { OnlineTimeSummaryItem } from '@/services/telemetryApi';
 import type { Device } from '@/types/device';
 import { resolveDeviceStatus } from '@/types/device';
+import { useTranslation } from 'react-i18next';
 
 interface DeviceOnlineTableProps {
   data: OnlineTimeSummaryItem[];
@@ -29,6 +30,7 @@ export function DeviceOnlineTable({
   onSelectDevice,
   className,
 }: DeviceOnlineTableProps) {
+  const { t } = useTranslation();
   const formatDuration = (seconds: number) => {
     if (!Number.isFinite(seconds) || seconds <= 0) return '—';
     const hours = Math.floor(seconds / 3600);
@@ -42,19 +44,19 @@ export function DeviceOnlineTable({
       <Table>
         <TableHeader className="bg-muted/50 sticky top-0 z-10 shadow-sm">
           <TableRow>
-            <TableHead className="w-[220px] text-[10px] font-bold tracking-widest">Device</TableHead>
-            <TableHead className="text-[10px] font-bold tracking-widest">Status</TableHead>
-            <TableHead className="text-[10px] font-bold tracking-widest">Network</TableHead>
-            <TableHead className="text-[10px] font-bold tracking-widest text-right whitespace-nowrap">Total Online Time</TableHead>
+            <TableHead className="w-[220px] text-[10px] font-bold tracking-widest">{t('analytics.common.devices').replace(/台设备|Devices/g, t('nav.devices').includes('Device') ? 'Device' : '设备')}</TableHead>
+            <TableHead className="text-[10px] font-bold tracking-widest">{t('devices.table.columns.status')}</TableHead>
+            <TableHead className="text-[10px] font-bold tracking-widest">{t('analytics.common.network')}</TableHead>
+            <TableHead className="text-[10px] font-bold tracking-widest text-right whitespace-nowrap">{t('analytics.common.totalOnlineTime')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {data.map((item) => {
             const isSelected = item.deviceId === selectedDeviceId;
             const deviceObj = deviceMap ? deviceMap[item.deviceId] : undefined;
-            const name = deviceObj?.deviceName || 'Deleted Device';
+            const name = deviceObj?.deviceName || t('analytics.common.deletedDevice');
             const status = deviceObj ? resolveDeviceStatus(deviceObj) : 'offline';
-            const networkType = deviceObj?.networkType || 'Unknown';
+            const networkType = deviceObj?.networkType || t('common.notSet');
 
             return (
               <TableRow 
@@ -85,7 +87,7 @@ export function DeviceOnlineTable({
                     "text-[9px] font-bold tracking-widest h-5 px-2",
                     status === 'online' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-muted text-muted-foreground border-border"
                   )}>
-                    {status}
+                    {status === 'online' ? t('devices.filter.status.online') : t('devices.filter.status.offline')}
                   </Badge>
                 </TableCell>
                 <TableCell>

@@ -11,6 +11,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import type { DeviceSession } from '../types';
+import { useTranslation } from 'react-i18next';
 
 interface DeviceSessionsTableProps {
   data: DeviceSession[];
@@ -18,6 +19,7 @@ interface DeviceSessionsTableProps {
 }
 
 export function DeviceSessionsTable({ data, className }: DeviceSessionsTableProps) {
+  const { t } = useTranslation();
   const { formatDateTime } = useTimeFormatter();
 
   const formatDuration = (seconds: number) => {
@@ -27,9 +29,9 @@ export function DeviceSessionsTable({ data, className }: DeviceSessionsTableProp
     const secs = seconds % 60;
     
     let parts = [];
-    if (hours > 0) parts.push(`${hours}h`);
-    if (minutes > 0) parts.push(`${minutes}m`);
-    if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
+    if (hours > 0) parts.push(`${hours}${t('common.units.hour')}`);
+    if (minutes > 0) parts.push(`${minutes}${t('common.units.minute')}`);
+    if (secs > 0 || parts.length === 0) parts.push(`${secs}${t('common.units.second')}`);
     
     return parts.join(' ');
   };
@@ -39,8 +41,8 @@ export function DeviceSessionsTable({ data, className }: DeviceSessionsTableProp
       <Table>
         <TableHeader className="bg-muted/30 sticky top-0 z-10">
           <TableRow>
-            <TableHead className="text-[9px] font-bold tracking-widest">Started At</TableHead>
-            <TableHead className="text-[9px] font-bold tracking-widest text-right">Duration</TableHead>
+            <TableHead className="text-[9px] font-bold tracking-widest">{t('analytics.common.startedAt')}</TableHead>
+            <TableHead className="text-[9px] font-bold tracking-widest text-right">{t('analytics.common.duration')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -52,7 +54,7 @@ export function DeviceSessionsTable({ data, className }: DeviceSessionsTableProp
                     {formatDateTime(session.startedAt)}
                   </span>
                   <span className="text-[8px] text-muted-foreground opacity-60">
-                    {session.endedAt ? `End: ${formatDateTime(session.endedAt)}` : 'Still active'}
+                    {session.endedAt ? `${t('analytics.common.end')}: ${formatDateTime(session.endedAt)}` : t('analytics.common.stillActive')}
                   </span>
                 </div>
               </TableCell>
@@ -67,7 +69,7 @@ export function DeviceSessionsTable({ data, className }: DeviceSessionsTableProp
           {data.length === 0 && (
             <TableRow>
               <TableCell colSpan={2} className="h-24 text-center text-[10px] font-medium text-muted-foreground italic">
-                No session history recorded
+                {t('analytics.common.noSessionHistory')}
               </TableCell>
             </TableRow>
           )}

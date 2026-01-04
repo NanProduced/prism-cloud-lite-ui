@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Film, Monitor, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,6 +49,7 @@ export function MediaTab({
   onSelectMedia,
   className 
 }: MediaTabProps) {
+  const { t } = useTranslation();
   const { formatDateTime } = useTimeFormatter();
   const navigate = useNavigate();
   const masterTableHeight = 'h-[340px] sm:h-[420px] lg:h-[520px]';
@@ -112,26 +114,26 @@ export function MediaTab({
             <CardHeader className="p-4 pb-2 bg-muted/5 border-b flex flex-row items-center justify-between">
               <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-2 text-foreground/80">
                 <Film className="h-4 w-4 text-pink-500" />
-                Media Playback Summary
+                {t('analytics.media.summary')}
               </CardTitle>
               <div className="text-[10px] font-bold text-muted-foreground bg-muted/20 px-2 py-0.5 rounded-full tracking-tighter">
-                {mediaList.length} Items Tracked
+                {mediaList.length} {t('analytics.media.itemsTracked')}
               </div>
             </CardHeader>
             <CardContent className="p-0">
               {isSummaryLoading ? (
                 <div className={cn(masterTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20 italic')}>
-                  Loading...
+                  {t('analytics.common.loading')}
                 </div>
               ) : mediaList.length === 0 ? (
                 <div className={cn(masterTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8')}>
-                  No media playback data
+                  {t('analytics.media.noMediaData')}
                 </div>
               ) : (
                 <PlaybackTopTable
                   data={mediaList.map(m => ({
                     id: m.mediaId,
-                    name: m.mediaTitle || 'Unknown Media',
+                    name: m.mediaTitle || t('common.notSet'),
                     playCount: m.playCount,
                     playSeconds: m.playSeconds
                   }))}
@@ -160,7 +162,7 @@ export function MediaTab({
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-bold truncate max-w-[250px]">
-                          {selectedMedia.mediaTitle || 'Unknown Media'}
+                          {selectedMedia.mediaTitle || t('common.notSet')}
                         </p>
                         {selectedMedia.itemType && (
                           <div className="mt-1">
@@ -179,14 +181,14 @@ export function MediaTab({
                 <CardHeader className="p-4 pb-0">
                   <CardTitle className="text-[10px] font-bold tracking-widest text-muted-foreground flex items-center gap-2">
                     <TrendingUp className="h-3.5 w-3.5 text-pink-500" />
-                    Playback Trend
+                    {t('analytics.media.playTrend')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 pt-2">
                   <div className="h-[150px]">
                     {isTrendLoading ? (
                       <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
-                        Loading...
+                        {t('analytics.common.loading')}
                       </div>
                     ) : (
                       <ResponsiveContainer width="100%" height="100%">
@@ -216,7 +218,7 @@ export function MediaTab({
                             labelFormatter={(val) => formatDateTime(val)}
                             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold' }}
                           />
-                          <Area type="monotone" dataKey="playCount" name="Plays" stroke="#ec4899" strokeWidth={2} fill="url(#colorMediaTrend)" />
+                          <Area type="monotone" dataKey="playCount" name={t('analytics.media.plays')} stroke="#ec4899" strokeWidth={2} fill="url(#colorMediaTrend)" />
                         </AreaChart>
                       </ResponsiveContainer>
                     )}
@@ -228,13 +230,13 @@ export function MediaTab({
                 <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
                   <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-2 text-foreground/80">
                     <Monitor className="h-4 w-4 text-pink-500" />
-                    Device Distribution
+                    {t('analytics.media.details')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                   {isDevicesLoading ? (
                     <div className={cn(deviceTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20')}>
-                      Loading...
+                      {t('analytics.common.loading')}
                     </div>
                   ) : (
                     <AnalyticsDeviceTable
@@ -250,7 +252,7 @@ export function MediaTab({
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center opacity-30 border-2 border-dashed rounded-3xl p-8 bg-muted/5">
               <Film className="h-12 w-12 mb-3" />
-              <p className="text-xs font-bold tracking-widest">Select a Media Asset</p>
+              <p className="text-xs font-bold tracking-widest">{t('analytics.media.selectMedia')}</p>
             </div>
           )}
         </div>

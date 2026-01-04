@@ -1846,6 +1846,74 @@
       }
     }
   },
+  "analytics": {
+    "tabs": {
+      "onlineTime": "在线时长",
+      "programs": "节目统计",
+      "media": "素材统计"
+    },
+    "buckets": {
+      "HOUR": "按小时",
+      "DAY": "按天",
+      "WEEK": "按周",
+      "MONTH": "按月"
+    },
+    "common": {
+      "exportAll": "导出全部数据",
+      "exportSummary": "导出摘要",
+      "totalDevices": "设备总数",
+      "totalOnlineTime": "总在线时长",
+      "activeDevices": "活跃设备",
+      "globalActivity": "全网活跃趋势",
+      "onlineSummary": "设备在线摘要",
+      "devices": "台设备",
+      "noData": "当前时段无数据",
+      "loading": "正在加载...",
+      "network": "网络类型",
+      "periodOnlineTime": "时段在线时长",
+      "navigateToDevice": "跳转至设备详情",
+      "connectionHistory": "连接历史",
+      "noSessionHistory": "暂无会话记录",
+      "selectDevice": "请选择设备",
+      "selectDeviceDesc": "从列表中选择一台设备以查看详细遥测数据",
+      "deletedDevice": "已删除设备",
+      "performance": "播放表现",
+      "startedAt": "开始时间",
+      "duration": "持续时长",
+      "stillActive": "进行中",
+      "end": "结束",
+      "playsHeader": "播放次数",
+      "timeHeader": "播放时长",
+      "programHeader": "节目",
+      "assetHeader": "素材"
+    },
+    "programs": {
+      "totalPlays": "累计播放次数",
+      "totalPlayTime": "累计播放时长",
+      "avgPlayTime": "平均播放时长",
+      "playTrend": "播放趋势统计",
+      "plays": "次播放",
+      "summary": "节目播放摘要",
+      "details": "节目播放详情",
+      "noProgramData": "当前时段无节目播放数据",
+      "selectProgram": "请选择节目",
+      "selectProgramDesc": "从列表中选择一个节目以查看详细播放数据",
+      "itemsTracked": "个节目已统计"
+    },
+    "media": {
+      "totalPlays": "累计播放次数",
+      "totalPlayTime": "累计播放时长",
+      "avgPlayDuration": "平均播放时长",
+      "playTrend": "播放趋势统计",
+      "plays": "次播放",
+      "summary": "素材播放摘要",
+      "details": "素材播放详情",
+      "noMediaData": "当前时段无素材播放数据",
+      "selectMedia": "请选择素材",
+      "selectMediaDesc": "从列表中选择一个素材以查看详细播放数据",
+      "itemsTracked": "个素材已统计"
+    }
+  },
   "map": {
     "title": "地图监控",
     "views": {

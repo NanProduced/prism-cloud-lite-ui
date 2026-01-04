@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Wifi, Clock, TrendingUp, MonitorSmartphone } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,6 +51,7 @@ export function DeviceUptimeTab({
   onSelectDeviceId,
   className 
 }: DeviceUptimeTabProps) {
+  const { t } = useTranslation();
   const { formatDateTime } = useTimeFormatter();
   const navigate = useNavigate();
   const summaryTableHeight = 'h-[340px] sm:h-[420px] lg:h-[520px]';
@@ -128,8 +130,8 @@ export function DeviceUptimeTab({
   
   const selectedDeviceName = useMemo(() => {
     if (!selectedDeviceId || !deviceMap) return null;
-    return deviceMap[selectedDeviceId]?.deviceName || 'Deleted Device';
-  }, [selectedDeviceId, deviceMap]);
+    return deviceMap[selectedDeviceId]?.deviceName || t('analytics.common.deletedDevice');
+  }, [selectedDeviceId, deviceMap, t]);
 
   const canOpenDevice = Boolean(selectedDeviceId && deviceMap?.[selectedDeviceId]);
 
@@ -151,7 +153,7 @@ export function DeviceUptimeTab({
                   <MonitorSmartphone className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-muted-foreground tracking-[0.1em]">Total Devices</p>
+                  <p className="text-[10px] font-bold text-muted-foreground tracking-[0.1em]">{t('analytics.common.totalDevices')}</p>
                   <p className="text-2xl font-bold tracking-tighter tabular-nums">{kpis.totalDevices}</p>
                 </div>
               </div>
@@ -165,7 +167,7 @@ export function DeviceUptimeTab({
                   <Clock className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-muted-foreground tracking-[0.1em]">Total Online Time</p>
+                  <p className="text-[10px] font-bold text-muted-foreground tracking-[0.1em]">{t('analytics.common.totalOnlineTime')}</p>
                   <p className="text-2xl font-bold tracking-tighter tabular-nums text-sky-600">
                     {formatTotalTime(kpis.totalOnlineTime)}
                   </p>
@@ -179,12 +181,12 @@ export function DeviceUptimeTab({
           <CardHeader className="p-6 pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-[11px] font-bold tracking-tight text-muted-foreground/80 flex items-center gap-2.5">
               <TrendingUp className="h-4 w-4 text-primary" />
-              Global Device Activity
+              {t('analytics.common.globalActivity')}
             </CardTitle>
             <div className="flex items-center gap-4">
                <div className="flex items-center gap-1.5">
                   <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  <span className="text-[10px] font-bold text-muted-foreground tracking-tight">Active Devices</span>
+                  <span className="text-[10px] font-bold text-muted-foreground tracking-tight">{t('analytics.common.activeDevices')}</span>
                </div>
             </div>
           </CardHeader>
@@ -219,6 +221,7 @@ export function DeviceUptimeTab({
                   <Area
                     type="monotone"
                     dataKey="activeDevices"
+                    name={t('analytics.common.activeDevices')}
                     stroke="#6366f1"
                     strokeWidth={3}
                     fill="url(#colorActiveCount)"
@@ -237,20 +240,20 @@ export function DeviceUptimeTab({
             <CardHeader className="p-4 pb-2 bg-muted/5 border-b flex flex-row items-center justify-between">
               <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-2 text-foreground/80">
                 <Wifi className="h-3.5 w-3.5 text-primary" />
-                Device Online Summary
+                {t('analytics.common.onlineSummary')}
               </CardTitle>
               <div className="text-[10px] font-bold text-muted-foreground bg-muted/20 px-2 py-0.5 rounded-full tracking-tighter">
-                {summaryData.length} Devices
+                {summaryData.length} {t('analytics.common.devices')}
               </div>
             </CardHeader>
             <CardContent className="p-0">
               {isSummaryLoading ? (
                 <div className={cn(summaryTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20 italic')}>
-                  Loading...
+                  {t('analytics.common.loading')}
                 </div>
               ) : summaryData.length === 0 ? (
                 <div className={cn(summaryTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8')}>
-                  No online data in this period
+                  {t('analytics.common.noData')}
                 </div>
               ) : (
                 <DeviceOnlineTable
@@ -297,19 +300,19 @@ export function DeviceUptimeTab({
                             : 'bg-slate-500/5 text-slate-400 border-slate-200'
                         )}
                       >
-                        {(selectedDevice as any)?.status || 'Unknown'}
+                        {(selectedDevice as any)?.status || t('common.notSet')}
                       </Badge>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <div className="p-2 rounded-xl bg-background border border-muted/20">
-                        <p className="text-[9px] font-bold text-muted-foreground tracking-tighter">Network</p>
+                        <p className="text-[9px] font-bold text-muted-foreground tracking-tighter">{t('analytics.common.network')}</p>
                         <p className="text-xs font-bold text-primary">
                           {deviceMap?.[selectedDeviceId!]?.networkType || '—'}
                         </p>
                       </div>
                       <div className="p-2 rounded-xl bg-background border border-muted/20">
-                        <p className="text-[9px] font-bold text-muted-foreground tracking-tighter">Period Online Time</p>
+                        <p className="text-[9px] font-bold text-muted-foreground tracking-tighter">{t('analytics.common.periodOnlineTime')}</p>
                         <p className="text-xs font-bold text-emerald-500 tabular-nums">
                           {Math.floor(selectedDevice.onlineSeconds / 3600)}h {Math.floor((selectedDevice.onlineSeconds % 3600) / 60)}m
                         </p>
@@ -323,7 +326,7 @@ export function DeviceUptimeTab({
                         className="w-full h-8 text-[10px] font-bold tracking-widest"
                         onClick={() => navigate(`/dashboard/devices/${selectedDeviceId}`)}
                       >
-                        Navigate to Device
+                        {t('analytics.common.navigateToDevice')}
                       </Button>
                     )}
                   </div>
@@ -334,17 +337,17 @@ export function DeviceUptimeTab({
                 <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
                   <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-2 text-foreground/80">
                     <Clock className="h-3.5 w-3.5 text-primary" />
-                    Connection History
+                    {t('analytics.common.connectionHistory')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                   {isSessionsLoading ? (
                     <div className={cn(sessionsTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20 italic')}>
-                      Loading...
+                      {t('analytics.common.loading')}
                     </div>
                   ) : sessionsData.length === 0 ? (
                     <div className={cn(sessionsTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20')}>
-                      No session history
+                      {t('analytics.common.noSessionHistory')}
                     </div>
                   ) : (
                     <DeviceSessionsTable data={sessionsData} className={cn(sessionsTableHeight, 'border-0 rounded-none')} />
@@ -355,8 +358,8 @@ export function DeviceUptimeTab({
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center opacity-30 border-2 border-dashed rounded-3xl p-8 bg-muted/5">
               <MonitorSmartphone className="h-12 w-12 mb-3" />
-              <p className="text-xs font-bold tracking-widest">Select a Device</p>
-              <p className="text-[10px] mt-1">Choose from the summary list to view detailed telemetry</p>
+              <p className="text-xs font-bold tracking-widest">{t('analytics.common.selectDevice')}</p>
+              <p className="text-[10px] mt-1">{t('analytics.common.selectDeviceDesc')}</p>
             </div>
           )}
         </div>

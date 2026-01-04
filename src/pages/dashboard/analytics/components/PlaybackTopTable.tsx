@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
+import { useTranslation } from 'react-i18next';
 
 interface TopPlaybackItem {
   id: string;
@@ -34,12 +35,13 @@ export function PlaybackTopTable({
   onSelect,
   className,
 }: PlaybackTopTableProps) {
+  const { t } = useTranslation();
   
   const formatDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
+    if (hours > 0) return `${hours}${t('common.units.hour')} ${minutes}${t('common.units.minute')}`;
+    return `${minutes}${t('common.units.minute')}`;
   };
 
   const maxPlays = Math.max(...data.map(d => d.playCount), 1);
@@ -50,10 +52,10 @@ export function PlaybackTopTable({
         <TableHeader className="bg-muted/50 sticky top-0 z-10">
           <TableRow>
             <TableHead className="w-[300px] text-[10px] font-bold tracking-widest">
-              {type === 'program' ? 'Program' : 'Asset'}
+              {type === 'program' ? t('analytics.common.programHeader') : t('analytics.common.assetHeader')}
             </TableHead>
-            <TableHead className="text-[10px] font-bold tracking-widest text-right">Plays</TableHead>
-            <TableHead className="text-[10px] font-bold tracking-widest text-right">Time</TableHead>
+            <TableHead className="text-[10px] font-bold tracking-widest text-right">{t('analytics.common.playsHeader')}</TableHead>
+            <TableHead className="text-[10px] font-bold tracking-widest text-right">{t('analytics.common.timeHeader')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -88,7 +90,7 @@ export function PlaybackTopTable({
                     <div className="flex flex-col min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className={cn("text-xs font-bold truncate", isSelected && "text-primary")}>
-                          {item.name || 'Untitled'}
+                          {item.name || t('common.notSet')}
                         </span>
                         {item.version && (
                           <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground font-bold opacity-60">

@@ -868,9 +868,71 @@
     "loadSchemaFailed": "Failed to load export options."
   },
   "analytics": {
+    "tabs": {
+      "onlineTime": "Online Time",
+      "programs": "Programs",
+      "media": "Media"
+    },
+    "buckets": {
+      "HOUR": "Hourly",
+      "DAY": "Daily",
+      "WEEK": "Weekly",
+      "MONTH": "Monthly"
+    },
     "common": {
       "exportAll": "Export All Data",
-      "exportSummary": "Export Summary"
+      "exportSummary": "Export Summary",
+      "totalDevices": "Total Devices",
+      "totalOnlineTime": "Total Online Time",
+      "activeDevices": "Active Devices",
+      "globalActivity": "Global Device Activity",
+      "onlineSummary": "Device Online Summary",
+      "devices": "Devices",
+      "noData": "No data available in this period",
+      "loading": "Loading...",
+      "network": "Network",
+      "periodOnlineTime": "Period Online Time",
+      "navigateToDevice": "Navigate to Device",
+      "connectionHistory": "Connection History",
+      "noSessionHistory": "No session history recorded",
+      "selectDevice": "Select a Device",
+      "selectDeviceDesc": "Choose from the summary list to view detailed telemetry",
+      "deletedDevice": "Deleted Device",
+      "performance": "Performance",
+      "startedAt": "Started At",
+      "duration": "Duration",
+      "stillActive": "Still active",
+      "end": "End",
+      "playsHeader": "Plays",
+      "timeHeader": "Time",
+      "programHeader": "Program",
+      "assetHeader": "Asset"
+    },
+    "programs": {
+      "totalPlays": "Total Plays",
+      "totalPlayTime": "Total Play Time",
+      "avgPlayTime": "Avg Play Time",
+      "playTrend": "Playback Trend",
+      "plays": "Plays",
+      "summary": "Program Playback Summary",
+      "details": "Program Playback Details",
+      "noProgramData": "No program playback data",
+      "selectProgram": "Select a Program",
+      "selectProgramDesc": "Choose from the summary list to view detailed playback data",
+      "itemsTracked": "Programs Tracked"
+    },
+    "media": {
+      "totalPlays": "Total Plays",
+      "totalPlayTime": "Total Play Time",
+      "avgPlayDuration": "Avg Play Duration",
+      "playTrend": "Playback Trend",
+      "plays": "Plays",
+      "summary": "Media Playback Summary",
+      "details": "Media Playback Details",
+      "noMediaData": "No media playback data",
+      "selectMedia": "Select a Media Asset",
+      "selectMediaDesc": "Choose from the summary list to view detailed playback data",
+      "itemsTracked": "Items Tracked"
     }
   },
   "logs": {

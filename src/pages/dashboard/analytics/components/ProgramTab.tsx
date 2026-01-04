@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Layers, Monitor, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,6 +51,7 @@ export function ProgramTab({
   onSelectProgram,
   className 
 }: ProgramTabProps) {
+  const { t } = useTranslation();
   const { formatDateTime } = useTimeFormatter();
   const navigate = useNavigate();
   const masterTableHeight = 'h-[340px] sm:h-[420px] lg:h-[520px]';
@@ -154,20 +156,20 @@ export function ProgramTab({
             <CardHeader className="p-4 pb-2 bg-muted/5 border-b flex flex-row items-center justify-between">
               <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-2 text-foreground/80">
                 <Layers className="h-4 w-4 text-primary" />
-                Program Playback Summary
+                {t('analytics.programs.summary')}
               </CardTitle>
               <div className="text-[10px] font-bold text-muted-foreground bg-muted/20 px-2 py-0.5 rounded-full tracking-tighter">
-                {programs.length} Programs
+                {programs.length} {t('analytics.programs.itemsTracked')}
               </div>
             </CardHeader>
             <CardContent className="p-0">
               {isSummaryLoading ? (
                 <div className={cn(masterTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20 italic')}>
-                  Loading...
+                  {t('analytics.common.loading')}
                 </div>
               ) : programs.length === 0 ? (
                 <div className={cn(masterTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20 text-center px-8')}>
-                  No program playback data
+                  {t('analytics.programs.noProgramData')}
                 </div>
               ) : (
                 <PlaybackTopTable
@@ -220,14 +222,14 @@ export function ProgramTab({
                 <CardHeader className="p-4 pb-0">
                   <CardTitle className="text-[10px] font-bold tracking-widest text-muted-foreground flex items-center gap-2">
                     <TrendingUp className="h-3.5 w-3.5 text-primary" />
-                    Playback Trend
+                    {t('analytics.programs.playTrend')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 pt-2">
                   <div className="h-[150px]">
                     {isTrendLoading ? (
                       <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
-                        Loading...
+                        {t('analytics.common.loading')}
                       </div>
                     ) : (
                       <ResponsiveContainer width="100%" height="100%">
@@ -257,7 +259,7 @@ export function ProgramTab({
                             labelFormatter={(val) => formatDateTime(val)}
                             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold' }}
                           />
-                          <Area type="monotone" dataKey="playCount" name="Plays" stroke="#6366f1" strokeWidth={2} fill="url(#colorProgramTrend)" />
+                          <Area type="monotone" dataKey="playCount" name={t('analytics.programs.plays')} stroke="#6366f1" strokeWidth={2} fill="url(#colorProgramTrend)" />
                         </AreaChart>
                       </ResponsiveContainer>
                     )}
@@ -269,13 +271,13 @@ export function ProgramTab({
                 <CardHeader className="p-4 pb-2 bg-muted/5 border-b">
                   <CardTitle className="text-[10px] font-bold tracking-widest flex items-center gap-2 text-foreground/80">
                     <Monitor className="h-3.5 w-3.5 text-primary" />
-                    Device Distribution
+                    {t('analytics.programs.details')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                   {isDevicesLoading ? (
                     <div className={cn(deviceTableHeight, 'flex items-center justify-center text-[10px] font-bold opacity-20')}>
-                      Loading...
+                      {t('analytics.common.loading')}
                     </div>
                   ) : (
                     <AnalyticsDeviceTable
@@ -291,7 +293,7 @@ export function ProgramTab({
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center opacity-30 border-2 border-dashed rounded-3xl p-8 bg-muted/5">
               <Layers className="h-12 w-12 mb-3" />
-              <p className="text-xs font-bold tracking-widest">Select a Program</p>
+              <p className="text-xs font-bold tracking-widest">{t('analytics.programs.selectProgram')}</p>
             </div>
           )}
         </div>

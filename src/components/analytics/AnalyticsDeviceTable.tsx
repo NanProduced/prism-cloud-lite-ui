@@ -13,6 +13,7 @@ import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import type { Device } from '@/types/device';
 import { resolveDeviceStatus } from '@/types/device';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from 'react-i18next';
 
 interface AnalyticsDeviceItem {
   deviceId: string | number;
@@ -29,14 +30,15 @@ interface AnalyticsDeviceTableProps {
 }
 
 export function AnalyticsDeviceTable({ data, deviceMap, onOpenDevice, className }: AnalyticsDeviceTableProps) {
+  const { t } = useTranslation();
   const { formatDateTime } = useTimeFormatter();
 
   const formatDuration = (seconds: number) => {
     if (!Number.isFinite(seconds) || seconds <= 0) return '—';
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
+    if (hours > 0) return `${hours}${t('common.units.hour')} ${minutes}${t('common.units.minute')}`;
+    return `${minutes}${t('common.units.minute')}`;
   };
 
   return (
@@ -44,16 +46,16 @@ export function AnalyticsDeviceTable({ data, deviceMap, onOpenDevice, className 
       <Table>
         <TableHeader className="bg-muted/30 sticky top-0 z-10 shadow-sm">
           <TableRow>
-            <TableHead className="text-[9px] font-bold tracking-widest">Device</TableHead>
+            <TableHead className="text-[9px] font-bold tracking-widest">{t('nav.devices').replace(/管理|s/g, '')}</TableHead>
             <TableHead className="text-[9px] font-bold tracking-widest px-2">Res</TableHead>
-            <TableHead className="text-[9px] font-bold tracking-widest text-right whitespace-nowrap px-4">Performance</TableHead>
+            <TableHead className="text-[9px] font-bold tracking-widest text-right whitespace-nowrap px-4">{t('analytics.common.performance')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {data.map((item) => {
             const deviceIdStr = String(item.deviceId);
             const deviceObj = deviceMap ? deviceMap[deviceIdStr] : undefined;
-            const name = deviceObj?.deviceName || 'Deleted Device';
+            const name = deviceObj?.deviceName || t('analytics.common.deletedDevice');
             const status = deviceObj ? resolveDeviceStatus(deviceObj) : 'offline';
             const resolution = deviceObj ? (typeof deviceObj.resolution === 'string' ? deviceObj.resolution : `${deviceObj.resolution.width}x${deviceObj.resolution.height}`) : '—';
             const canOpen = Boolean(deviceMap?.[deviceIdStr]);
@@ -88,7 +90,7 @@ export function AnalyticsDeviceTable({ data, deviceMap, onOpenDevice, className 
                   <div className="flex flex-col items-end">
                     <div className="flex items-center gap-1.5">
                       <span className="text-[11px] font-bold tabular-nums">{item.playCount.toLocaleString()}</span>
-                      <span className="text-[9px] font-bold text-muted-foreground/40">Plays</span>
+                      <span className="text-[9px] font-bold text-muted-foreground/40">{t('analytics.programs.plays').replace(/次播放|s/g, t('analytics.programs.plays').includes('Plays') ? 'Plays' : '播放')}</span>
                     </div>
                     <span className="text-[9px] font-bold text-primary/80 tabular-nums">{formatDuration(item.playSeconds || 0)}</span>
                   </div>

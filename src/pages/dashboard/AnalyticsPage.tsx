@@ -21,19 +21,21 @@ import { DeviceUptimeTab, ProgramTab, MediaTab } from './analytics/components';
 
 // --- Constants ---
 
-const BUCKETS: { value: PlaybackBucket; label: string }[] = [
-  { value: 'HOUR', label: 'Hourly' },
-  { value: 'DAY', label: 'Daily' },
-  { value: 'WEEK', label: 'Weekly' },
-  { value: 'MONTH', label: 'Monthly' },
+const getBuckets = (t: any): { value: PlaybackBucket; label: string }[] => [
+  { value: 'HOUR', label: t('analytics.buckets.HOUR') },
+  { value: 'DAY', label: t('analytics.buckets.DAY') },
+  { value: 'WEEK', label: t('analytics.buckets.WEEK') },
+  { value: 'MONTH', label: t('analytics.buckets.MONTH') },
 ];
 
 // --- Internal Components ---
 
 function BucketSelector({ value, onChange }: { value: PlaybackBucket; onChange: (v: PlaybackBucket) => void }) {
+  const { t } = useTranslation();
+  const buckets = getBuckets(t);
   return (
     <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-lg border shadow-sm">
-      {BUCKETS.map((b) => (
+      {buckets.map((b) => (
         <Button
           key={b.value}
           variant={value === b.value ? 'secondary' : 'ghost'}
@@ -182,21 +184,21 @@ export default function AnalyticsPage() {
               className="rounded-md px-4 text-xs font-semibold data-[state=active]:bg-background gap-1.5 h-7"
             >
               <Wifi className="h-3.5 w-3.5" />
-              Online Time
+              {t('analytics.tabs.onlineTime')}
             </TabsTrigger>
             <TabsTrigger
               value="programs"
               className="rounded-md px-4 text-xs font-semibold data-[state=active]:bg-background gap-1.5 h-7"
             >
               <Layers className="h-3.5 w-3.5" />
-              Programs
+              {t('analytics.tabs.programs')}
             </TabsTrigger>
             <TabsTrigger
               value="media"
               className="rounded-md px-4 text-xs font-semibold data-[state=active]:bg-background gap-1.5 h-7"
             >
               <Film className="h-3.5 w-3.5" />
-              Media
+              {t('analytics.tabs.media')}
             </TabsTrigger>
           </TabsList>
 
