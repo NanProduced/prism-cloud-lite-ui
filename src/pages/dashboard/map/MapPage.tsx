@@ -37,6 +37,7 @@ import {
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/store/notificationStore";
+import { gatewayOrigin, joinUrl } from "@/config/runtime";
 
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
@@ -211,7 +212,7 @@ export default function MapPage() {
       return;
     }
 
-    const url = `/api/sse/monitoring/stream?deviceIds=${selectedDeviceId}`;
+    const url = joinUrl(gatewayOrigin, `/api/sse/monitoring/stream?deviceIds=${selectedDeviceId}`);
     const eventSource = new EventSource(url, { withCredentials: true });
 
     eventSource.addEventListener('prism', (event: any) => {
@@ -240,7 +241,7 @@ export default function MapPage() {
   useEffect(() => {
     if (!selectedDeviceId) return;
     
-    const url = `/api/sse/map/stream?deviceId=${selectedDeviceId}`;
+    const url = joinUrl(gatewayOrigin, `/api/sse/map/stream?deviceId=${selectedDeviceId}`);
     const eventSource = new EventSource(url, { withCredentials: true });
 
     eventSource.addEventListener('prism', (event: any) => {

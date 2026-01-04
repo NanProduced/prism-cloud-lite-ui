@@ -4,6 +4,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { renderMessage } from '@/lib/message-renderer';
 import type { MessageListItem, SSEEventEnvelope } from '@/types/message';
 import { defaultNotificationSettings } from '@/types/notificationSettings';
+import { gatewayOrigin, joinUrl } from '@/config/runtime';
 
 class SSEManager {
   private eventSource: EventSource | null = null;
@@ -17,7 +18,7 @@ class SSEManager {
     this.userId = userId;
     this.disconnect();
 
-    const url = '/api/sse/stream';
+    const url = joinUrl(gatewayOrigin, '/api/sse/stream');
     console.log('[SSE] Connecting to:', url);
 
     this.eventSource = new EventSource(url, { withCredentials: true });

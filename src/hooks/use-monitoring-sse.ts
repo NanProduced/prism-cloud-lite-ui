@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { TelemetryItem, RealtimeMetric, SSEState } from '@/pages/dashboard/monitoring/types';
 import { resolveSensorInfo } from '@/lib/telemetry';
 import { getSensorSeries, getReceiveCardSamples } from '@/services/telemetryApi';
+import { gatewayOrigin, joinUrl } from '@/config/runtime';
 
 const LRU_LIMIT = 500;
 const REFRESH_INTERVAL = 1000;
@@ -166,7 +167,7 @@ export function useMonitoringSSE(
     seedInitialData();
 
     // --- 2. Setup SSE Connection ---
-    const url = `/api/sse/monitoring/stream?deviceIds=${selectedDeviceId}`;
+    const url = joinUrl(gatewayOrigin, `/api/sse/monitoring/stream?deviceIds=${selectedDeviceId}`);
     const eventSource = new EventSource(url, { withCredentials: true });
 
     setSseState((prev) => ({ ...prev, status: 'connected' }));

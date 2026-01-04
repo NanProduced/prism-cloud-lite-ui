@@ -2,6 +2,7 @@ import axios, { AxiosError } from 'axios';
 import type { AxiosResponse } from 'axios';
 import apiClient from './apiClient';
 import { gatewayOrigin, joinUrl } from '@/config/runtime';
+import { sseManager } from '@/lib/sse-manager';
 import type {
   BffResponse,
   LoginRequest,
@@ -298,16 +299,29 @@ export function getErrorCode(response: BffResponse): string | undefined {
  */
 export function logout(): void {
   // 物理锁：防止并发调用导致重定向冲突（解决 500 页面问题）
-  if (sessionStorage.getItem('prism_logout_in_progress')) {
-    return;
+  const lockKey = 'prism_logout_in_progress';
+  const lockTtlMs = 30_000;
+  const lockValue = sessionStorage.getItem(lockKey);
+  if (lockValue) {
+    const ts = Number.parseInt(lockValue, 10);
+    if (Number.isFinite(ts) && Date.now() - ts < lockTtlMs) {
+      return;
+    }
   }
   
   console.log('[Auth] Global logout initiated. Locking state and redirecting...');
   
   // 设置双重标记
-  sessionStorage.setItem('prism_logout_in_progress', 'true');
+  sessionStorage.setItem(lockKey, String(Date.now()));
   sessionStorage.setItem('prism_just_logged_out', 'true');
+
+  // Close SSE to avoid keeping the session "busy" during redirect
+  try {
+    sseManager.disconnect();
+  } catch {
+    // ignore
+  }
   
   // 必须使用整页跳转，因为登出包含多次 302 重定向
-  window.location.assign('/logout');
+  window.location.assign(joinUrl(gatewayOrigin, '/logout'));
 }
