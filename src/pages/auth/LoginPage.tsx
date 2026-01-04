@@ -77,11 +77,10 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
     const input = (raw || "").trim();
     if (!input) return null;
 
-    const base = gatewayPublicOrigin || window.location.origin;
     const allowedOrigins = new Set([window.location.origin, gatewayPublicOrigin].filter(Boolean));
 
     try {
-      const u = new URL(input, base);
+      const u = new URL(input, window.location.origin);
 
       if (allowedOrigins.has(u.origin)) return u.toString();
 
@@ -129,8 +128,25 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
     }
 
     if (continueParam) {
-      setContinueUrl(continueParam);
-      sessionStorage.setItem(GOOGLE_CONTINUE_STORAGE_KEY, continueParam);
+      const safeContinueUrl = toBrowserRedirectUrl(continueParam);
+      if (!safeContinueUrl) {
+        toast.error(t('auth.errors.invalidRequest', 'Invalid continue URL, please retry login.'));
+        initiateSecureLogin();
+        return;
+      }
+
+      setContinueUrl(safeContinueUrl);
+      sessionStorage.setItem(GOOGLE_CONTINUE_STORAGE_KEY, safeContinueUrl);
+
+      if (safeContinueUrl !== continueParam) {
+        try {
+          const nextUrl = new URL(window.location.href);
+          nextUrl.searchParams.set('continue', safeContinueUrl);
+          window.history.replaceState(null, document.title, nextUrl.toString());
+        } catch {
+          // ignore
+        }
+      }
       if (isAuthenticated) clearAuth();
     } else if (isAuthenticated) {
       navigate('/dashboard');
@@ -177,8 +193,9 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
       // Prefer continueUrl already parsed from ?continue=..., otherwise recover from OAuth2 `state`.
       const storedContinueUrl = sessionStorage.getItem(GOOGLE_CONTINUE_STORAGE_KEY);
       const effectiveContinueUrl = continueUrl || stateContinueUrl || storedContinueUrl || null;
+      const safeContinueUrl = effectiveContinueUrl ? toBrowserRedirectUrl(effectiveContinueUrl) : null;
 
-      if (!effectiveContinueUrl) {
+      if (!safeContinueUrl) {
         clearHashWithoutLosingQuery();
         sessionStorage.removeItem(GOOGLE_CONTINUE_STORAGE_KEY);
         toast.error(t('auth.errors.invalidRequest', 'Missing continue URL, please retry login.'));
@@ -188,13 +205,13 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
 
       // Persist recovered continueUrl for later retries / other login methods.
       if (!continueUrl && stateContinueUrl) {
-        setContinueUrl(stateContinueUrl);
-        sessionStorage.setItem(GOOGLE_CONTINUE_STORAGE_KEY, stateContinueUrl);
+        setContinueUrl(safeContinueUrl);
+        sessionStorage.setItem(GOOGLE_CONTINUE_STORAGE_KEY, safeContinueUrl);
       }
 
       setIsLoading(true);
       try {
-        const response = await googleLogin({ idToken, continueUrl: effectiveContinueUrl, rememberMe });
+        const response = await googleLogin({ idToken, continueUrl: safeContinueUrl, rememberMe });
         if (response.success && response.data) {
           clearHashWithoutLosingQuery();
           sessionStorage.removeItem(GOOGLE_CONTINUE_STORAGE_KEY);
@@ -285,6 +302,12 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
       initiateSecureLogin();
       return;
     }
+    const safeContinueUrl = toBrowserRedirectUrl(continueUrl);
+    if (!safeContinueUrl) {
+      toast.error(t('auth.errors.invalidRequest', 'Invalid continue URL, please retry login.'));
+      initiateSecureLogin();
+      return;
+    }
     setIsLoading(true);
     try {
       const isEmailAuth = isEmail(identifier);
@@ -298,7 +321,7 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
         phone: !isEmailAuth ? identifier : undefined,
         password: loginMethod === "password" ? password : undefined,
         authCode: loginMethod === "code" ? code : undefined,
-        continueUrl,
+        continueUrl: safeContinueUrl,
         rememberMe,
       });
 
