@@ -2444,6 +2444,7 @@
         "desc": "连接您自己的 AI API 密钥以访问高级模型。",
         "provider": "供应商",
         "model": "模型名称",
+        "baseUrl": "接口地址 (Base URL)",
         "apiKey": "API 密钥 (仅限写入)",
         "apiKeyHint": "留空则保留现有密钥。",
         "defaultProvider": "设为默认供应商",

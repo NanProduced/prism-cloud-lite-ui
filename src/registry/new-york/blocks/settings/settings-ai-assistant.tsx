@@ -51,7 +51,8 @@ export default function SettingsAIAssistant() {
   
   // Form State
   const [provider, setProvider] = useState('openai');
-  const [model, setModel] = useState('gpt-4o-mini');
+  const [model, setModel] = useState('gpt-5-mini');
+  const [baseUrl, setBaseUrl] = useState('https://api.openai.com');
   const [apiKey, setApiKey] = useState('');
   const [enabled, setEnabled] = useState(true);
   const [makeDefault, setMakeDefault] = useState(false);
@@ -94,9 +95,16 @@ export default function SettingsAIAssistant() {
     },
   });
 
+  const providers = useMemo(() => [
+    { id: 'local-vllm', name: t('settings.aiAssistant.providers.localVllm'), models: ['default'], defaultBaseUrl: '' },
+    { id: 'openai', name: t('settings.aiAssistant.providers.openai'), models: ['gpt-5-mini', 'gpt-5.2'], defaultBaseUrl: 'https://api.openai.com' },
+    { id: 'gemini', name: t('settings.aiAssistant.providers.gemini'), models: ['gemini-3-flash-preview', 'gemini-2.5-flash'], defaultBaseUrl: 'https://generativelanguage.googleapis.com' },
+  ], [t]);
+
   const resetForm = () => {
     setProvider('openai');
-    setModel('gpt-4o-mini');
+    setModel('gpt-5-mini');
+    setBaseUrl('https://api.openai.com');
     setApiKey('');
     setEnabled(true);
     setMakeDefault(false);
@@ -105,17 +113,21 @@ export default function SettingsAIAssistant() {
   const handleEdit = (config: AIModelConfig) => {
     setProvider(config.provider);
     setModel(config.model);
+    setBaseUrl(config.baseUrl || '');
     setApiKey(''); // API Key is write-only
     setEnabled(config.enabled);
     setMakeDefault(config.isDefault);
     setIsDialogOpen(true);
   };
 
-  const providers = useMemo(() => [
-    { id: 'local-vllm', name: t('settings.aiAssistant.providers.localVllm'), models: ['default'] },
-    { id: 'openai', name: t('settings.aiAssistant.providers.openai'), models: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'] },
-    { id: 'gemini', name: t('settings.aiAssistant.providers.gemini'), models: ['gemini-1.5-pro', 'gemini-1.5-flash'] },
-  ], [t]);
+  const handleProviderChange = (newProvider: string) => {
+    setProvider(newProvider);
+    const p = providers.find(x => x.id === newProvider);
+    if (p) {
+      setModel(p.models[0]);
+      setBaseUrl(p.defaultBaseUrl);
+    }
+  };
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">{t('settings.aiAssistant.loading')}</div>;
 
@@ -146,7 +158,7 @@ export default function SettingsAIAssistant() {
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
                     <Label htmlFor="provider">{t('settings.aiAssistant.dialog.provider')}</Label>
-                    <Select value={provider} onValueChange={setProvider}>
+                    <Select value={provider} onValueChange={handleProviderChange}>
                       <SelectTrigger id="provider">
                         <SelectValue placeholder={t('settings.deviceDefaults.timezone.selectPlaceholder')} />
                       </SelectTrigger>
@@ -172,6 +184,15 @@ export default function SettingsAIAssistant() {
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="baseUrl">{t('settings.aiAssistant.dialog.baseUrl')}</Label>
+                        <Input 
+                          id="baseUrl" 
+                          placeholder="https://..." 
+                          value={baseUrl}
+                          onChange={(e) => setBaseUrl(e.target.value)}
+                        />
                       </div>
                       <div className="grid gap-2">
                         <Label htmlFor="apiKey">{t('settings.aiAssistant.dialog.apiKey')}</Label>
@@ -206,6 +227,7 @@ export default function SettingsAIAssistant() {
                     onClick={() => upsertMutation.mutate({
                       provider,
                       model,
+                      baseUrl: baseUrl || undefined,
                       apiKey: apiKey || undefined,
                       enabled,
                       makeDefault
@@ -252,6 +274,7 @@ export default function SettingsAIAssistant() {
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {t('programEditor.panels.inspector.program')}: <span className="font-mono">{config.model}</span>
+                          {config.baseUrl && <span className="ml-2 font-mono text-[10px] opacity-70">({config.baseUrl})</span>}
                           {config.hasApiKey && ` • Key ending in ${config.apiKeyLast4}`}
                         </p>
                       </div>

@@ -1279,6 +1279,7 @@
         "desc": "Connect your own AI API keys to access advanced models.",
         "provider": "Provider",
         "model": "Model Name",
+        "baseUrl": "API Base URL",
         "apiKey": "API Key (Write-only)",
         "apiKeyHint": "Leave empty to keep existing key if editing.",
         "defaultProvider": "Default Provider",

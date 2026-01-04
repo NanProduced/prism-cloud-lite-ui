@@ -4,6 +4,7 @@ import type { BffResponse } from '@/types/auth';
 export interface AIModelConfig {
   provider: 'openai' | 'gemini' | 'local-vllm';
   model: string;
+  baseUrl?: string;
   enabled: boolean;
   isDefault: boolean;
   hasApiKey: boolean;
@@ -13,6 +14,7 @@ export interface AIModelConfig {
 export interface UpsertAIModelConfigRequest {
   provider: string;
   model: string;
+  baseUrl?: string;
   enabled: boolean;
   makeDefault: boolean;
   apiKey?: string;

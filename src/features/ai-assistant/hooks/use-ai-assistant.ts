@@ -4,6 +4,7 @@ import { toast } from "@/store/notificationStore";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAIModelConfigs, setDefaultAIProvider } from "@/services/aiAssistantApi";
+import { gatewayOrigin, joinUrl } from "@/config/runtime";
 
 export interface Message {
   id: string;
@@ -138,7 +139,7 @@ export function useAIAssistant() {
         }
       };
 
-      const response = await fetch('/api/chat', {
+      const response = await fetch(joinUrl(gatewayOrigin, '/api/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
