@@ -8,6 +8,7 @@ import { login, requestEmailOtp, requestPhoneOtp, googleLogin, getErrorMessage, 
 import type { AuthType } from "../../types/auth";
 import { AuthErrorCode } from "../../types/auth";
 import { useAuthStore } from "../../store/authStore";
+import { gatewayOrigin } from "@/config/runtime";
 
 declare global {
   interface Window {
@@ -70,8 +71,41 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
   const googleCallbackHandledRef = useRef(false);
   const GOOGLE_CONTINUE_STORAGE_KEY = "prism_google_continue_url";
 
+  const gatewayPublicOrigin = (import.meta.env.VITE_GATEWAY_URL || gatewayOrigin || "").replace(/\/+$/, "");
+
+  const toBrowserRedirectUrl = (raw: string): string | null => {
+    const input = (raw || "").trim();
+    if (!input) return null;
+
+    const base = gatewayPublicOrigin || window.location.origin;
+    const allowedOrigins = new Set([window.location.origin, gatewayPublicOrigin].filter(Boolean));
+
+    try {
+      const u = new URL(input, base);
+
+      if (allowedOrigins.has(u.origin)) return u.toString();
+
+      const looksInternal =
+        u.hostname === "localhost" ||
+        u.hostname === "auth-service" ||
+        u.hostname === "gateway-service" ||
+        /^127\./.test(u.hostname) ||
+        /^10\./.test(u.hostname) ||
+        /^192\.168\./.test(u.hostname) ||
+        /^172\.(1[6-9]|2\d|3[01])\./.test(u.hostname);
+
+      if (looksInternal && gatewayPublicOrigin) {
+        return new URL(`${u.pathname}${u.search}${u.hash}`, gatewayPublicOrigin).toString();
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
   const initiateSecureLogin = () => {
-    const gatewayUrl = import.meta.env.VITE_GATEWAY_URL || "http://localhost:8082";
+    const gatewayUrl = gatewayPublicOrigin || "http://localhost:8082";
     const redirectUri = encodeURIComponent(`${window.location.origin}/dashboard`);
     const target = `${gatewayUrl}/oauth2/authorization/prism-gateway?redirect_uri=${redirectUri}`;
     window.location.href = target;
@@ -164,7 +198,13 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
         if (response.success && response.data) {
           clearHashWithoutLosingQuery();
           sessionStorage.removeItem(GOOGLE_CONTINUE_STORAGE_KEY);
-          window.location.href = response.data.redirectUrl;
+          const redirectUrl = toBrowserRedirectUrl(response.data.redirectUrl);
+          if (!redirectUrl) {
+            toast.error(t('auth.errors.invalidRequest', 'Invalid redirect URL, please retry login.'));
+            setIsLoading(false);
+            return;
+          }
+          window.location.href = redirectUrl;
           return;
         }
 
@@ -264,7 +304,13 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
 
       if (response.success && response.data) {
         sessionStorage.removeItem(GOOGLE_CONTINUE_STORAGE_KEY);
-        window.location.href = response.data.redirectUrl;
+        const redirectUrl = toBrowserRedirectUrl(response.data.redirectUrl);
+        if (!redirectUrl) {
+          toast.error(t('auth.errors.invalidRequest', 'Invalid redirect URL, please retry login.'));
+          setIsLoading(false);
+          return;
+        }
+        window.location.href = redirectUrl;
       } else {
         const errorCode = getErrorCode(response);
         if (errorCode === AuthErrorCode.INVALID_CONTINUE_URL) {
