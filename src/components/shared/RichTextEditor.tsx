@@ -49,7 +49,7 @@ export function RichTextEditor({
       }),
       Image.configure({
         HTMLAttributes: {
-          class: 'rounded-lg max-w-full border shadow-sm my-4',
+          class: 'rounded-md max-w-full border shadow-sm my-4',
         },
       }),
     ],
@@ -88,8 +88,8 @@ export function RichTextEditor({
   };
 
   return (
-    <div className={cn('flex flex-col rounded-[1.5rem] border bg-background/50 backdrop-blur-sm overflow-hidden transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/10', className)}>
-      <div className="flex flex-wrap items-center gap-1.5 border-b bg-muted/40 p-2">
+    <div className={cn('flex flex-col rounded-md border bg-background overflow-hidden transition-all', className)}>
+      <div className="flex flex-wrap items-center gap-1 border-b bg-muted/40 p-1.5">
         <MenuButton
           onClick={() => editor.chain().focus().toggleBold().run()}
           active={editor.isActive('bold')}
@@ -104,7 +104,7 @@ export function RichTextEditor({
         >
           <Italic className="h-4 w-4" />
         </MenuButton>
-        <div className="w-px h-5 bg-border/60 mx-1.5" />
+        <div className="w-px h-4 bg-border mx-1" />
         <MenuButton
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           active={editor.isActive('bulletList')}
@@ -126,7 +126,7 @@ export function RichTextEditor({
         >
           <Quote className="h-4 w-4" />
         </MenuButton>
-        <div className="w-px h-5 bg-border/60 mx-1.5" />
+        <div className="w-px h-4 bg-border mx-1" />
         <MenuButton
           onClick={setLink}
           active={editor.isActive('link')}
@@ -135,20 +135,20 @@ export function RichTextEditor({
           <LinkIcon className="h-4 w-4" />
         </MenuButton>
         <div className="flex-1" />
-        <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-0.5">
+        <div className="flex items-center gap-1">
           <MenuButton
             onClick={() => editor.chain().focus().undo().run()}
             disabled={!editor.can().undo()}
             title="Undo"
           >
-            <Undo className="h-3.5 w-3.5" />
+            <Undo className="h-4 w-4" />
           </MenuButton>
           <MenuButton
             onClick={() => editor.chain().focus().redo().run()}
             disabled={!editor.can().redo()}
             title="Redo"
           >
-            <Redo className="h-3.5 w-3.5" />
+            <Redo className="h-4 w-4" />
           </MenuButton>
         </div>
       </div>
@@ -164,7 +164,8 @@ export function RichTextEditor({
         }
         .tiptap ul { list-style-type: disc; padding-left: 1.5rem; }
         .tiptap ol { list-style-type: decimal; padding-left: 1.5rem; }
-        .tiptap blockquote { border-left: 4px solid #b6f09c; padding-left: 1.25rem; color: #64748b; font-style: italic; background: rgba(182, 240, 156, 0.05); padding-top: 0.5rem; padding-bottom: 0.5rem; border-radius: 0 0.5rem 0.5rem 0; }
+        .tiptap blockquote { border-left: 3px solid #b6f09c; padding-left: 1rem; color: #64748b; font-style: italic; margin: 0.5rem 0; }
+        .tiptap { outline: none !important; }
       `}} />
     </div>
   );
@@ -186,11 +187,11 @@ function MenuButton({
   return (
     <Button
       type="button"
-      variant="ghost"
+      variant={active ? 'secondary' : 'ghost'}
       size="icon"
       className={cn(
-        'h-9 w-9 rounded-xl transition-all duration-200',
-        active ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110 z-10' : 'text-muted-foreground/60 hover:text-primary hover:bg-primary/5'
+        'h-8 w-8 rounded-md transition-colors',
+        active && 'bg-secondary text-secondary-foreground shadow-sm'
       )}
       onClick={onClick}
       disabled={disabled}

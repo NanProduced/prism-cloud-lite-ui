@@ -23,7 +23,8 @@
     "notSet": "未设置",
     "search": "搜索",
     "toasts": {
-      "copied": "已复制到剪贴板"
+      "copied": "已复制到剪贴板",
+      "comingSoon": "该功能即将上线，敬请期待"
     },
     "states": {
       "loading": "正在加载..."
@@ -2083,6 +2084,26 @@
       ],
       "button": "联系销售"
     },
+    "help": {
+      "title": "套餐选择有疑问？",
+      "desc": "详细对比我们的功能差异，或咨询解决方案专家，为您的组织找到最合适的方案。",
+      "compare": "查看功能对比详情"
+    },
+    "demo": {
+      "title": "关于演示环境",
+      "desc": "当前处于演示环境，真实支付功能已禁用。您可以使用 PRDEMO30D 等演示兑换码来测试 Pro 版功能。",
+      "redeemNow": "立即兑换演示码"
+    },
+    "history": {
+      "title": "兑换与订阅记录",
+      "table": {
+        "type": "类型",
+        "code": "兑换码",
+        "date": "日期",
+        "status": "状态"
+      }
+    },
+    "popular": "最受欢迎",
     "redeem": {
       "title": "兑换码",
       "description": "输入您的 12 位 PRDEMO 兑换码以升级",
@@ -2143,6 +2164,13 @@
     "ui": {
       "title": "报告问题或建议",
       "subtitle": "您的反馈能帮助我们打造更好的 Prism Cloud。",
+      "selectType": "选择反馈类型",
+      "referenceCode": "参考编号",
+      "categories": {
+        "BUG": "缺陷报告",
+        "SUGGESTION": "功能建议",
+        "OTHER": "其他反馈"
+      },
       "fields": {
         "title": "简要标题",
         "content": "详细描述",

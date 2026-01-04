@@ -3216,6 +3216,13 @@
     "ui": {
       "title": "Report a Bug or Feedback",
       "subtitle": "Your feedback helps us make Prism Cloud better.",
+      "selectType": "Select Feedback Type",
+      "referenceCode": "Reference Code",
+      "categories": {
+        "BUG": "Bug Report",
+        "SUGGESTION": "Feature Idea",
+        "OTHER": "Other Feedback"
+      },
       "fields": {
         "title": "Brief Title",
         "content": "Detailed Description",
