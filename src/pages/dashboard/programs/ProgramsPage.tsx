@@ -38,17 +38,84 @@ import {
   renameProgram as renameProgramApi,
   deleteProgram as deleteProgramApi,
 } from '@/services/programApi';
+import { getErrorMessage } from '@/services/authApi';
 import type { ProgramListResp, ProgramTemplateResp, ProgramDetailResp } from '@/types/program';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { ProgramPublishDialog } from '@/features/programs/publishing/ProgramPublishDialog';
 import { useTranslation } from 'react-i18next';
 
 type ResolutionPreset = { label: string; width: number; height: number };
-// ...
+
+const RESOLUTION_PRESETS: ResolutionPreset[] = [
+  { label: '1920x1080 (Horizontal)', width: 1920, height: 1080 },
+  { label: '1080x1920 (Vertical)', width: 1080, height: 1920 },
+  { label: '1280x720', width: 1280, height: 720 },
+  { label: '720x1280', width: 720, height: 1280 },
+];
+
 export default function ProgramsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-// ...
+  const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get('tab') || 'all';
+  const [query, setQuery] = useState('');
+  
+  const { formatRelative } = useTimeFormatter();
+
+  const { data: programsRes, isLoading: isProgramsLoading } = useQuery({
+    queryKey: ['programs'],
+    queryFn: getPrograms,
+  });
+
+  const { data: templatesRes } = useQuery({
+    queryKey: ['programTemplates'],
+    queryFn: getProgramTemplates,
+  });
+
+  const programs = programsRes?.data || [];
+  const templates = templatesRes?.data || [];
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createName, setCreateName] = useState('New Program');
+  const [createMode, setCreateMode] = useState<'blank' | 'template'>('blank');
+  const [createTemplateId, setCreateTemplateId] = useState<string | null>(null);
+  const [createPresetIndex, setCreatePresetIndex] = useState(0);
+
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<ProgramListResp | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ProgramListResp | null>(null);
+
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [publishTarget, setPublishTarget] = useState<ProgramDetailResp | null>(null);
+  const [isPublishLoading, setIsPublishLoading] = useState(false);
+  const [publishInitialVersionMode, setPublishInitialVersionMode] = useState<'CREATE' | 'EXISTING' | null>(null);
+  const [publishInitialExistingVersion, setPublishInitialExistingVersion] = useState<number | null>(null);
+  const [publishLockVersionMode, setPublishLockVersionMode] = useState<'EXISTING' | null>(null);
+
+  const filteredPrograms = useMemo(() => {
+    return programs.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
+  }, [programs, query]);
+
+  const filteredTemplates = useMemo(() => {
+    return templates.filter(t => t.name.toLowerCase().includes(query.toLowerCase()));
+  }, [templates, query]);
+
+  const createProgramMutation = useMutation({
+    mutationFn: createProgramApi,
+    onSuccess: (res) => {
+      if (res.data) {
+        queryClient.invalidateQueries({ queryKey: ['programs'] });
+        navigate(`/dashboard/programs/${res.data.id}/edit`);
+        setCreateOpen(false);
+      }
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+
   const renameMutation = useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) => renameProgramApi(id, name),
     onSuccess: () => {
@@ -68,7 +135,7 @@ export default function ProgramsPage() {
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
-// ...
+
   const openDeployDialog = async (program: ProgramListResp) => {
     try {
       setIsPublishLoading(true);

@@ -661,6 +661,7 @@ function MediaNodeListRow({
   onOpenFolder: (id: string) => void;
   onAction: (action: string, node: MediaNode) => void;
 }) {
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const { formatRelative } = useTimeFormatter();
   const handleOpen = () => {
@@ -739,6 +740,7 @@ function MediaNodeActionsMenu({
   node: MediaNode;
   onAction: (action: string, node: MediaNode) => void;
 }) {
+  const { t } = useTranslation();
   const canPreview = supportsAssetPreview(node);
   const canTranscode = node.type === 'asset' && node.assetKind === 'video';
 
