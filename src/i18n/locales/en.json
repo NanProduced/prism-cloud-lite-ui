@@ -1352,11 +1352,63 @@
               "tags": "Tags"
             },
             "empty": "No devices found",
-            "groupCount": "{{count}} devices",
-            "waitingReport": "Waiting for first report..."
-          },
-          "dialogs": {
-            "add": {
+                    "groupCount": "{{count}} devices",
+                    "waitingReport": "Waiting for first report..."
+                  },
+                  "tags": {
+                    "title": "Tags",
+                    "searchPlaceholder": "Search tags…",
+                    "available": "Available",
+                    "createItem": "Create “{{name}}”",
+                    "createItemSubtitle": "Choose icon and color",
+                            "empty": "No tags found",
+                            "createTitle": "Create tag",
+                            "createSubtitle": "Use muted presets or a custom color",
+                            "createSuccess": "Tag created",
+                            "form": {                              "name": "Name",
+                              "namePlaceholder": "Tag name",
+                              "icon": "Icon",
+                              "noIcon": "No icon",
+                              "color": "Color",
+                              "custom": "Custom",
+                              "create": "Create"
+                            },
+                            "presets": {
+                              "colors": {
+                                "slate": "Slate",
+                                "stone": "Stone",
+                                "emerald": "Emerald",
+                                "sky": "Sky",
+                                "indigo": "Indigo",
+                                "violet": "Violet",
+                                "rose": "Rose",
+                                "amber": "Amber"
+                              },
+                              "icons": {
+                                "Location": "Location",
+                                "Store": "Store",
+                                "Building": "Building",
+                                "Home": "Home",
+                                "Person": "Person",
+                                "Users": "Users",
+                                "Price": "Price",
+                                "Billing": "Billing",
+                                "Calendar": "Calendar",
+                                "Globe": "Globe",
+                                "Work": "Work",
+                                "Outdoor": "Outdoor",
+                                "Ad": "Ad",
+                                "Menu": "Menu",
+                                "Info": "Info",
+                                "Alert": "Alert",
+                                "Check": "Check",
+                                "Verified": "Verified",
+                                "Shield": "Shield",
+                                "Test": "Test",
+                                "Tool": "Tool"
+                              }
+                            }
+                          },                  "dialogs": {            "add": {
               "title": "Add New Device",
               "description": "Register a new terminal device to your organization.",
               "displayName": "Display Name",

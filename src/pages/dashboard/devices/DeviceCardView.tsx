@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { TagChip } from '@/components/devices/TagChip';
 import { TagPicker } from '@/components/devices/TagPicker';
 import { DeviceStatusBadge } from '@/components/devices/DeviceStatusBadge';
+import { ProgramVersionDisplay } from '@/components/programs/ProgramVersionDisplay';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import {
   AlertTriangle,
@@ -102,6 +103,7 @@ function DeviceCard({
   formatRelative: (d: string) => string;
 }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const status = resolveDeviceStatus(device);
   
   const lastReportLabel = device.lastReportTime ? formatRelative(device.lastReportTime) : t('deviceDetails.header.never');
@@ -123,15 +125,17 @@ function DeviceCard({
   return (
     <Card 
       className={cn(
-        'group relative overflow-hidden transition-all hover:shadow-md',
+        'group relative overflow-hidden transition-all hover:shadow-md cursor-pointer',
         isSelected ? 'ring-2 ring-primary border-primary/20 bg-primary/5' : 'hover:border-primary/30',
         isPulsing && 'animate-pulse'
       )}
+      onClick={onNavigate}
     >
       <div className="relative aspect-video w-full overflow-hidden bg-muted/20">
         <DeviceScreenshot 
-          deviceId={String(device.deviceId)} 
-          className="h-full w-full object-cover transition-transform group-hover:scale-105"
+          src={device.lastScreenshotUrl}
+          deviceName={device.deviceName}
+          className="h-full w-full object-cover transition-transform group-hover:scale-105 border-none rounded-none"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
         
@@ -149,7 +153,7 @@ function DeviceCard({
         </div>
       </div>
 
-      <CardContent className="p-3 space-y-3" onClick={onNavigate}>
+      <CardContent className="p-3 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <h3 className="font-bold text-sm truncate leading-none mb-1 group-hover:text-primary transition-colors">
@@ -161,10 +165,21 @@ function DeviceCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-sm min-w-0 bg-muted/30 p-1.5 rounded-md">
+        <div 
+          className={cn(
+            "flex items-center gap-2 text-sm min-w-0 bg-muted/30 p-1.5 rounded-md transition-colors",
+            device.currentProgram?.id && "hover:bg-primary/5 hover:text-primary"
+          )}
+          onClick={(e) => {
+            if (device.currentProgram?.id) {
+              e.stopPropagation();
+              navigate(`/dashboard/programs/${device.currentProgram.id}`);
+            }
+          }}
+        >
           <Play className="h-3.5 w-3.5 text-primary shrink-0" />
           {device.playingProgram ? (
-            <span className="truncate text-xs font-medium">{device.playingProgram}</span>
+            <ProgramVersionDisplay name={device.playingProgram} variant="compact" />
           ) : (
             <span className="text-[10px] text-muted-foreground">{t('deviceDetails.cockpit.nowPlaying.none')}</span>
           )}

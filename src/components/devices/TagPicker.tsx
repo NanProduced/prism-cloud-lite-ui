@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Tag } from '@/types/device';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +32,7 @@ export function TagPicker({
   onCreateTag,
   children,
 }: TagPickerProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'select' | 'create'>('select');
   const [query, setQuery] = useState('');
@@ -102,7 +104,7 @@ export function TagPicker({
 
   const previewTag: Tag = {
     id: 'draft',
-    tagName: draftName.trim() || 'New tag',
+    tagName: draftName.trim() || t('devices.tags.createTitle'),
     tagSlug: '',
     color: draftColor,
     icon: draftIcon,
@@ -117,14 +119,14 @@ export function TagPicker({
         {mode === 'select' ? (
           <div className="flex flex-col">
             <div className="flex items-center justify-between px-3 py-2 border-b">
-              <div className="text-sm font-medium">Tags</div>
+              <div className="text-sm font-medium">{t('devices.tags.title')}</div>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => setOpen(false)}
-                aria-label="Close"
+                aria-label={t('common.actions.close')}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -132,12 +134,12 @@ export function TagPicker({
 
             <Command shouldFilter={false} className="rounded-none">
               <CommandInput
-                placeholder="Search tags…"
+                placeholder={t('devices.tags.searchPlaceholder')}
                 value={query}
                 onValueChange={setQuery}
               />
               <CommandList className="max-h-72">
-                <CommandGroup heading={(filteredTags?.length || 0) > 0 ? 'Available' : undefined}>
+                <CommandGroup heading={(filteredTags?.length || 0) > 0 ? t('devices.tags.available') : undefined}>
                   {canCreate && (
                     <CommandItem
                       value={`create-${normalizedQuery}`}
@@ -148,9 +150,9 @@ export function TagPicker({
                         <Plus className="h-3.5 w-3.5" />
                       </div>
                       <div className="flex flex-col min-w-0">
-                        <div className="text-sm truncate">Create “{query.trim()}”</div>
+                        <div className="text-sm truncate">{t('devices.tags.createItem', { name: query.trim() })}</div>
                         <div className="text-xs text-muted-foreground">
-                          Choose icon and color
+                          {t('devices.tags.createItemSubtitle')}
                         </div>
                       </div>
                     </CommandItem>
@@ -180,7 +182,7 @@ export function TagPicker({
 
                   {(filteredTags?.length || 0) === 0 && !canCreate && (
                     <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-                      No tags found
+                      {t('devices.tags.empty')}
                     </div>
                   )}
                 </CommandGroup>
@@ -196,14 +198,14 @@ export function TagPicker({
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => setMode('select')}
-                aria-label="Back"
+                aria-label={t('common.actions.back')}
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium truncate">Create tag</div>
+                <div className="text-sm font-medium truncate">{t('devices.tags.createTitle')}</div>
                 <div className="text-xs text-muted-foreground truncate">
-                  Use muted presets or a custom color
+                  {t('devices.tags.createSubtitle')}
                 </div>
               </div>
               <Button
@@ -212,7 +214,7 @@ export function TagPicker({
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => setOpen(false)}
-                aria-label="Close"
+                aria-label={t('common.actions.close')}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -220,17 +222,17 @@ export function TagPicker({
 
             <div className="p-3 space-y-4">
               <div className="space-y-1.5">
-                <div className="text-xs font-semibold text-muted-foreground">Name</div>
+                <div className="text-xs font-semibold text-muted-foreground">{t('devices.tags.form.name')}</div>
                 <Input
                   value={draftName}
                   onChange={(e) => setDraftName(e.target.value)}
-                  placeholder="Tag name"
+                  placeholder={t('devices.tags.form.namePlaceholder')}
                   autoFocus
                 />
               </div>
 
               <div className="space-y-2">
-                <div className="text-xs font-semibold text-muted-foreground">Icon</div>
+                <div className="text-xs font-semibold text-muted-foreground">{t('devices.tags.form.icon')}</div>
                 <div className="grid grid-cols-7 gap-2">
                   <Button
                     type="button"
@@ -238,7 +240,7 @@ export function TagPicker({
                     size="icon"
                     className="h-9 w-9"
                     onClick={() => setDraftIcon(undefined)}
-                    aria-label="No icon"
+                    aria-label={t('devices.tags.form.noIcon')}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -250,8 +252,8 @@ export function TagPicker({
                       size="icon"
                       className="h-9 w-9"
                       onClick={() => setDraftIcon(key)}
-                      aria-label={label}
-                      title={label}
+                      aria-label={t(`devices.tags.presets.icons.${label}`)}
+                      title={t(`devices.tags.presets.icons.${label}`)}
                     >
                       <Icon className="h-4 w-4" />
                     </Button>
@@ -260,7 +262,7 @@ export function TagPicker({
               </div>
 
               <div className="space-y-2">
-                <div className="text-xs font-semibold text-muted-foreground">Color</div>
+                <div className="text-xs font-semibold text-muted-foreground">{t('devices.tags.form.color')}</div>
                 <div className="flex items-center gap-2 flex-wrap">
                   {TAG_COLOR_PRESETS.map((preset) => (
                     <button
@@ -272,15 +274,15 @@ export function TagPicker({
                         draftColor === preset.key && 'ring-2 ring-ring ring-offset-2',
                       )}
                       onClick={() => setDraftColor(preset.key)}
-                      aria-label={preset.label}
-                      title={preset.label}
+                      aria-label={t(`devices.tags.presets.colors.${preset.key}`)}
+                      title={t(`devices.tags.presets.colors.${preset.key}`)}
                     />
                   ))}
 
                   <div className="flex items-center gap-2 ms-auto">
                     <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
                       <Palette className="h-3 w-3" />
-                      Custom
+                      {t('devices.tags.form.custom')}
                     </div>
                     <PopoverColorPicker
                       value={customColorValue}
@@ -293,8 +295,8 @@ export function TagPicker({
 
               <div className="flex items-center justify-between gap-3">
                 <TagChip tag={previewTag} className="max-w-[190px]" />
-                <Button type="button" onClick={commitCreate} disabled={!draftName.trim()}>
-                  Create
+                <Button type="button" onClick={commitCreate} disabled={!draftName.trim() || isCreating}>
+                  {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : t('devices.tags.form.create')}
                 </Button>
               </div>
             </div>
@@ -304,3 +306,4 @@ export function TagPicker({
     </Popover>
   );
 }
+

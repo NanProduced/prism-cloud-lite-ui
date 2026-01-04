@@ -84,11 +84,11 @@ export default function DevicesPage() {
     mutationFn: (def: Partial<DeviceCustomFieldDef>) => createCustomFieldDef(def),
     onSuccess: (res) => {
       if (!res.success) {
-        toast.error('Creation failed', { description: res.error?.displayMessage });
+        toast.error(t('common.errors.updateFailed'), { description: res.error?.displayMessage });
         return;
       }
       queryClient.invalidateQueries({ queryKey: ['device-custom-fields'] });
-      toast.success('Success', { description: 'Custom field created' });
+      toast.success(t('common.actions.confirm'), { description: t('devices.customFields.createSuccess') });
     }
   });
 
@@ -96,11 +96,11 @@ export default function DevicesPage() {
     mutationFn: (fieldId: number) => deleteCustomFieldDef(fieldId),
     onSuccess: (res) => {
       if (!res.success) {
-        toast.error('Deletion failed', { description: res.error?.displayMessage });
+        toast.error(t('common.errors.deleteFailed'), { description: res.error?.displayMessage });
         return;
       }
       queryClient.invalidateQueries({ queryKey: ['device-custom-fields'] });
-      toast.success('Success', { description: 'Custom field deleted' });
+      toast.success(t('common.actions.confirm'), { description: t('devices.customFields.deleteSuccess') });
     }
   });
 
@@ -116,7 +116,7 @@ export default function DevicesPage() {
     mutationFn: (draft: Partial<Tag>) => apiCreateTag(draft),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tags'] });
-      toast('Success', { description: 'Tag created' });
+      toast(t('common.actions.confirm'), { description: t('devices.tags.createSuccess', 'Tag created') });
     }
   });
 

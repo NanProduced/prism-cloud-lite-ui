@@ -2570,11 +2570,63 @@
               "tags": "标签"
             },
             "empty": "未找到设备",
-            "groupCount": "{{count}} 台设备",
-            "waitingReport": "等待首次上报..."
-          },
-          "dialogs": {
-            "add": {
+                    "groupCount": "{{count}} 台设备",
+                    "waitingReport": "等待首次上报..."
+                  },
+                  "tags": {
+                    "title": "标签",
+                    "searchPlaceholder": "搜索标签...",
+                    "available": "可用标签",
+                    "createItem": "创建 “{{name}}”",
+                    "createItemSubtitle": "选择图标和颜色",
+                            "empty": "未找到标签",
+                            "createTitle": "创建标签",
+                            "createSubtitle": "使用预设或自定义颜色",
+                            "createSuccess": "标签已创建",
+                            "form": {                              "name": "名称",
+                              "namePlaceholder": "标签名称",
+                              "icon": "图标",
+                              "noIcon": "无图标",
+                              "color": "颜色",
+                              "custom": "自定义",
+                              "create": "创建"
+                            },
+                            "presets": {
+                              "colors": {
+                                "slate": "石板灰",
+                                "stone": "石头灰",
+                                "emerald": "翡翠绿",
+                                "sky": "天空蓝",
+                                "indigo": "靛青",
+                                "violet": "紫罗兰",
+                                "rose": "玫瑰红",
+                                "amber": "琥珀黄"
+                              },
+                              "icons": {
+                                "Location": "位置",
+                                "Store": "商店",
+                                "Building": "建筑",
+                                "Home": "首页",
+                                "Person": "人员",
+                                "Users": "用户",
+                                "Price": "价格",
+                                "Billing": "账单",
+                                "Calendar": "日历",
+                                "Globe": "全球",
+                                "Work": "工作",
+                                "Outdoor": "户外",
+                                "Ad": "广告",
+                                "Menu": "菜单",
+                                "Info": "信息",
+                                "Alert": "警告",
+                                "Check": "检查",
+                                "Verified": "已验证",
+                                "Shield": "防护",
+                                "Test": "测试",
+                                "Tool": "工具"
+                              }
+                            }
+                          },                  "dialogs": {            "add": {
               "title": "添加新设备",
               "description": "为您的组织注册一个新的终端设备。",
               "displayName": "显示名称",
