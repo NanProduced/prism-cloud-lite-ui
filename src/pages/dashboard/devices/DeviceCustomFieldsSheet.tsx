@@ -311,7 +311,7 @@ export function DeviceCustomFieldsSheet({
     if (!id) return;
     const currentDef = customFieldDefs.find((d) => d.fieldId === id);
     if (currentDef?.planTierRequired && !isProActive) {
-      toast('Read-only custom field', { description: 'This field requires an active Pro subscription to edit.' });
+          toast.info('Read-only custom field', { description: 'This field requires an active Pro subscription to edit.' });
       setEditingFieldId(null);
       setEditingName('');
       return;
@@ -338,7 +338,7 @@ export function DeviceCustomFieldsSheet({
 
   const handleDelete = (fieldId: number) => {
     onCustomFieldDelete(fieldId);
-    toast(t('devices.customFields.deleteSuccess'));
+    toast.success(t('devices.customFields.deleteSuccess'));
   };
 
   return (
@@ -506,7 +506,7 @@ export function DeviceCustomFieldsSheet({
                     options: draft.options,
                   });
                   setActiveView('list');
-                  toast(t('devices.customFields.createSuccess'));
+                  toast.success(t('devices.customFields.createSuccess'));
                 }}
               />
             )}
@@ -566,7 +566,7 @@ function CreateFieldForm({
     const val = newOptionName.trim();
     if (!val) return;
     if (options.some(o => o.displayName.toLowerCase() === val.toLowerCase())) {
-      toast(t('devices.customFields.form.choiceAlreadyExists'));
+      toast.error(t('devices.customFields.form.choiceAlreadyExists'));
       return;
     }
     const next: DeviceCustomFieldOption = {
@@ -765,7 +765,7 @@ function OptionsEditor({
         <p className="text-xs font-bold text-muted-foreground italic">{t('devices.customFields.activeOptions', { count: drafts.length })}</p>
         <div className="flex gap-3">
           <Button variant="ghost" onClick={onClose} className="h-9 px-6 font-bold text-xs text-muted-foreground">{t('common.actions.cancel')}</Button>
-          <Button className="h-9 px-10 font-bold text-xs shadow-lg shadow-primary/10" onClick={() => { onOptionsChange(drafts.map((o, i) => ({ ...o, sequence: i + 1 }))); toast(t('devices.customFields.updateSuccess')); onClose(); }} disabled={locked}>{t('common.actions.save')}</Button>
+          <Button className="h-9 px-10 font-bold text-xs shadow-lg shadow-primary/10" onClick={() => { onOptionsChange(drafts.map((o, i) => ({ ...o, sequence: i + 1 }))); toast.success(t('devices.customFields.updateSuccess')); onClose(); }} disabled={locked}>{t('common.actions.save')}</Button>
         </div>
       </footer>
     </div>

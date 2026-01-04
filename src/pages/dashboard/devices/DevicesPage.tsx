@@ -116,7 +116,7 @@ export default function DevicesPage() {
     mutationFn: (draft: Partial<Tag>) => apiCreateTag(draft),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tags'] });
-      toast(t('common.actions.confirm'), { description: t('devices.tags.createSuccess', 'Tag created') });
+      toast.success(t('devices.tags.createSuccess', 'Tag created'));
     }
   });
 

@@ -1,35 +1,24 @@
 {
   "common": {
-    "actions": {
-      "back": "Back",
-      "cancel": "Cancel",
-      "confirm": "Confirm",
-      "delete": "Delete",
-      "save": "Save",
-      "edit": "Edit",
-      "view": "View",
-      "open": "Open",
-      "refresh": "Refresh",
-      "retry": "Retry",
-      "close": "Close"
-    },
-    "errors": {
-      "unknown": "An unknown error occurred",
-      "network": "Network connection error",
-      "updateFailed": "Update failed",
-      "deleteFailed": "Delete failed",
-      "loadFailed": "Load failed"
-    },
-    "notSet": "Not set",
     "search": "Search",
-    "toasts": {
-      "copied": "Copied to clipboard"
-    },
-    "units": {
-      "day": "d",
-      "hour": "h",
-      "minute": "m",
-      "second": "s"
+    "filter": "Filter",
+    "sort": "Sort",
+    "view": "View",
+    "all": "All",
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "create": "Create",
+      "upload": "Upload",
+      "refresh": "Refresh",
+      "back": "Back",
+      "open": "Open",
+      "close": "Close",
+      "rename": "Rename",
+      "move": "Move",
+      "preview": "Preview"
     }
   },
   "nav": {
@@ -431,26 +420,27 @@
     "titleHighlight": "Engineering Excellence",
     "description": "Explore our latest thoughts on the intersection of media distribution, cloud infrastructure, and artificial intelligence.",
     "readMore": "Read Article",
-          "posts": [
-            {
-              "title": "The Future of Visual Networks",
-              "desc": "How 5G and Edge Computing are transforming static displays into intelligent, interactive communication nodes.",
-              "tag": "Industry Trends",
-              "slug": "/blog/future-of-visual-networks"
-            },
-            {
-              "title": "AI in Digital Signage",
-              "desc": "Beyond automation: Using Large Language Models to manage and troubleshoot global terminal fleets via natural language.",
-              "tag": "Innovation",
-              "slug": "/blog/ai-in-digital-signage"
-            },
-            {
-              "title": "Optimizing Global Distribution",
-              "desc": "Deep dive into MD5 content addressing and cloud transcoding for seamless 24/7 high-fidelity playback.",
-              "tag": "Technical",
-              "slug": "/blog/optimizing-global-distribution"
-            }
-          ]  },
+    "posts": [
+      {
+        "title": "The Future of Visual Networks",
+        "desc": "How 5G and Edge Computing are transforming static displays into intelligent, interactive communication nodes.",
+        "tag": "Industry Trends",
+        "slug": "/blog/future-of-visual-networks"
+      },
+      {
+        "title": "AI in Digital Signage",
+        "desc": "Beyond automation: Using Large Language Models to manage and troubleshoot global terminal fleets via natural language.",
+        "tag": "Innovation",
+        "slug": "/blog/ai-in-digital-signage"
+      },
+      {
+        "title": "Optimizing Global Distribution",
+        "desc": "Deep dive into MD5 content addressing and cloud transcoding for seamless 24/7 high-fidelity playback.",
+        "tag": "Technical",
+        "slug": "/blog/optimizing-global-distribution"
+      }
+    ]
+  },
   "useCases": {
     "title": "Transforming spaces across sectors",
     "industries": "Industries",
@@ -757,156 +747,61 @@
         "date": "Nov 27, 2025",
         "title": "Genesis & Architecture",
         "description": "Established the high-performance base using React + Vite. Built the core Auth system (OIDC/OAuth2) and the foundational dashboard layouts.",
-        "features": ["Vite + React", "Tailwind CSS", "Auth System"],
+        "features": [
+          "Vite + React",
+          "Tailwind CSS",
+          "Auth System"
+        ],
         "status": "completed"
       },
       {
         "date": "Dec 5, 2025",
         "title": "Media & Studio Core",
         "description": "Launched the Media Library with MD5 deduplication and the Visual Editor. The Canvas-based engine allows for complex, multi-layer program design.",
-        "features": ["MD5 Deduplication", "Canvas Editor", "Multi-layer Studio"],
+        "features": [
+          "MD5 Deduplication",
+          "Canvas Editor",
+          "Multi-layer Studio"
+        ],
         "status": "completed"
       },
       {
         "date": "Dec 15, 2025",
         "title": "Fleet Command & Control",
         "description": "Implemented the resilient device communication protocol. Real-time command dispatching and delta-update publishing became a reality.",
-        "features": ["Command System", "Online Monitoring", "Delta Updates"],
+        "features": [
+          "Command System",
+          "Online Monitoring",
+          "Delta Updates"
+        ],
         "status": "completed"
       },
       {
         "date": "Dec 28, 2025",
         "title": "The AI Breakthrough",
         "description": "Integrated Spring AI and Function Calling. Prism AI became an autonomous agent capable of diagnosing offline devices and searching knowledge bases via RAG.",
-        "features": ["Spring AI", "Function Calling", "RAG Integration"],
+        "features": [
+          "Spring AI",
+          "Function Calling",
+          "RAG Integration"
+        ],
         "status": "completed"
       },
       {
         "date": "Jan 3, 2026",
         "title": "Polishing & Ecosystem",
         "description": "Refined the UX with multi-language support (EN/ZH) and advanced telemetry visualization. Finalizing the Landing experience for launch.",
-        "features": ["i18n Support", "Telemetry SSE", "Responsive Landing"],
+        "features": [
+          "i18n Support",
+          "Telemetry SSE",
+          "Responsive Landing"
+        ],
         "status": "in-progress"
       }
     ],
     "feedbackTitle": "Have a feature request?",
     "feedbackDesc": "We're always listening to our community. Tell us what you'd like to see next.",
     "feedbackBtn": "Share Feedback"
-  },
-  "billing": {
-    "title": "Subscription Plans",
-    "subtitle": "Choose the scale that fits your business needs",
-    "header": "Simple, Transparent Pricing",
-    "headerDesc": "Choose the plan that's right for your business. No hidden fees.",
-    "monthly": "Monthly",
-    "yearly": "Yearly",
-    "savePercent": "SAVE 20%",
-    "whatsIncluded": "What's included",
-    "compareFeatures": "Compare all features",
-    "faqTitle": "Frequently Asked Questions",
-    "customQuoteTitle": "Need a custom solution?",
-    "customQuoteDesc": "Have specific requirements or a large-scale deployment? Let's talk about a tailor-made plan for your organization.",
-    "getCustomQuote": "Get a Custom Quote",
-    "currentPlan": "Current Plan",
-    "expiresAt": "Expires on {{date}}",
-    "reloginNotice": "Subscription updated! Please re-login to activate all features.",
-    "free": {
-      "name": "Free",
-      "price": "$0",
-      "description": "Essential features for small setups",
-      "features": [
-        "20 Devices & 20 Programs",
-        "2GB Cloud Storage",
-        "AI Assistant: 10-msg context, 20k tokens/day",
-        "Exports: Standard (CSV/JSON), limited time-range",
-        "3 Custom device columns"
-      ]
-    },
-    "pro": {
-      "name": "Pro",
-      "price": "$29",
-      "priceYearly": "$23",
-      "period": "/mo",
-      "description": "Powerful tools for growing networks",
-      "features": [
-        "100 Devices & 200 Programs",
-        "50GB Cloud Storage",
-        "AI Assistant: 30-msg context, Unlimited tokens, BYOK",
-        "Exports: Full (XLSX/Parquet), priority processing",
-        "Exclusive API Access",
-        "20 Custom device columns"
-      ],
-      "button": "Upgrade with Code"
-    },
-    "ultra": {
-      "name": "Ultra",
-      "price": "Custom",
-      "description": "Tailored solutions for large enterprises",
-      "features": [
-        "Unlimited Devices & Programs",
-        "Enterprise Security (SSO)",
-        "AI Assistant: Custom fine-tuning & higher limits",
-        "Dedicated Account Manager",
-        "SLA Guarantee",
-        "Custom Feature Development"
-      ],
-      "button": "Contact Sales"
-    },
-    "redeem": {
-      "title": "Redeem Code",
-      "description": "Enter your 12-character PRDEMO code to upgrade",
-      "placeholder": "PRDEMO-XXXX-XXXX",
-      "button": "Verify & Activate",
-      "submitting": "Activating...",
-      "success": "Activation successful! Your plan is now Pro.",
-      "error": "Invalid or expired code"
-    },
-    "faqs": [
-      {
-        "q": "Can I change plans at any time?",
-        "a": "Yes, you can upgrade or downgrade your plan at any time from your dashboard."
-      },
-      {
-        "q": "Do you offer discounts for non-profits?",
-        "a": "We do! Please contact our sales team to discuss special pricing for NGOs and educational institutions."
-      },
-      {
-        "q": "What happens if I exceed my storage limit?",
-        "a": "We'll notify you when you reach 90% of your limit. You can always upgrade for more space."
-      }
-    ],
-    "aiComparison": {
-      "title": "AI Assistant Capability Comparison",
-      "subtitle": "Prism AI capabilities scale with your subscription and compute choices.",
-      "columns": {
-        "feature": "Capability",
-        "freeLocal": "Free (Local)",
-        "pro": "Pro / Ultra",
-        "freeByok": "Free (BYOK)"
-      },
-      "features": {
-        "memory": "Context Memory",
-        "memoryDesc": "Max history messages",
-        "rag": "Knowledge Base (RAG)",
-        "ragDesc": "Retrieved document sources",
-        "agent": "Agent Reasoning",
-        "agentDesc": "Tool calls & recursive rounds",
-        "quota": "Daily Token Quota",
-        "quotaDesc": "Local model compute limit"
-      },
-      "values": {
-        "msg10": "10 Messages",
-        "msg30": "30 Messages",
-        "rag4": "Top 4 Sources",
-        "rag8": "Top 8 Sources",
-        "basic": "Basic (1 round)",
-        "advanced": "Advanced (3 rounds)",
-        "limit20k": "20,000 / day",
-        "unlimited": "Unlimited",
-        "notApplicable": "N/A"
-      },
-      "byokNotice": "Bring Your Own Key: Use your OpenAI/Gemini API key on Free tier to unlock Pro-level AI context and reasoning limits."
-    }
   },
   "apiPage": {
     "title": "Developer First",
@@ -979,25 +874,43 @@
     }
   },
   "logs": {
-    "tabs": {
-      "deviceLogs": "Device Logs",
-      "commandLogs": "Command Logs"
-    },
-    "common": {
-      "all": "All",
-      "allDevices": "All Devices",
-      "filterDevice": "Filter Device",
-      "searchDevicePlaceholder": "Search device name...",
-      "noDeviceFound": "No device found.",
-      "export": "Export Data",
-      "period": "Log Period",
-      "copied": "Copied",
-      "close": "Close",
-      "done": "Done"
+    "command": {
+      "actionType": {
+        "BRIGHTNESS": "Brightness",
+        "POWER": "Power",
+        "COLOR_TEMP": "Color Temperature",
+        "VOLUME": "Volume",
+        "CLEAR_CACHE": "Clear Cache",
+        "INPUT_MODE": "Input Mode",
+        "TIMEZONE": "Timezone",
+        "LOCALE": "Locale",
+        "CONTENT_REPORT_SWITCH": "Content Report",
+        "SCREENSHOT": "Screenshot",
+        "SET_SENSOR_REPORT_TIME": "Telemetry Cycle",
+        "DELETE_DEVICE_VSN": "Delete Program",
+        "CLEAR_DEVICE_PROGRAM": "Clear All Programs",
+        "UNKNOWN": "Unknown Command"
+      },
+      "status": {
+        "PUBLISHED": "Published",
+        "CONFIRMED": "Confirmed",
+        "COMPLETED": "Completed",
+        "EXPIRED": "Expired",
+        "FAILED": "Failed"
+      },
+      "statusUi": {
+        "DONE": "Done",
+        "UNKNOWN": "Unknown"
+      },
+      "trackingLevel": {
+        "UPDATE_ONLY": "Update Only",
+        "ACK_ONLY": "Ack Only",
+        "PROPERTY_MATCH": "Property Match",
+        "EXPLICIT_RESULT": "Explicit Result",
+        "UNKNOWN": "Unknown"
+      }
     },
     "device": {
-      "operationType": "Operation Category",
-      "operation": "Operation",
       "loading": "Fetching Logs...",
       "loadFailed": "Failed to load logs",
       "empty": "No logs found for the selected criteria.",
@@ -1011,109 +924,9 @@
         "pagination": "Showing {{start}} to {{end}} of {{total}} entries",
         "paginationEmpty": "0 entries found"
       }
-    },
-    "command": {
-      "statusLabel": "Status filter",
-      "searchPlaceholder": "Search commands or operation ID...",
-      "loading": "Loading command logs...",
-      "loadFailed": "Failed to load command logs",
-      "empty": "No command logs found for the current filter.",
-      "accepted": {
-        "true": "Accepted",
-        "false": "Not accepted"
-      },
-      "covered": {
-        "true": "Covered",
-        "false": "Not covered"
-      },
-      "actionType": {
-        "UNKNOWN": "Unknown action",
-        "BRIGHTNESS": "Brightness",
-        "POWER": "Power (sleep/wake/reboot)",
-        "COLOR_TEMP": "Color temperature",
-        "VOLUME": "Volume",
-        "CLEAR_CACHE": "Clear cache",
-        "INPUT_MODE": "Input mode",
-        "TIMEZONE": "Timezone/time",
-        "LOCALE": "Locale/language",
-        "CONTENT_REPORT_SWITCH": "Content report switch",
-        "SCREENSHOT": "Screenshot",
-        "SET_SENSOR_REPORT_TIME": "Sensor report interval",
-        "DELETE_DEVICE_VSN": "Delete program on device",
-        "CLEAR_DEVICE_PROGRAM": "Clear device programs"
-      },
-      "trackingLevel": {
-        "UNKNOWN": "Unknown tracking",
-        "UPDATE_ONLY": "Update-only",
-        "ACK_ONLY": "Ack-only",
-        "PROPERTY_MATCH": "Property match",
-        "EXPLICIT_RESULT": "Explicit result"
-      },
-      "statusUi": {
-        "DONE": "Delivered",
-        "UNKNOWN": "Unknown",
-        "PROBLEMS": "Failed/Expired"
-      },
-      "status": {
-        "PUBLISHED": "Published",
-        "CONFIRMED": "Confirmed",
-        "COMPLETED": "Completed",
-        "EXPIRED": "Expired",
-        "FAILED": "Failed"
-      },
-      "table": {
-        "issuedAt": "Issued At",
-        "device": "Device",
-        "actionType": "Action",
-        "status": "Status",
-        "audit": "Accepted/Covered",
-        "sendMethod": "Send Method",
-        "details": "Details",
-        "total": "{{total}} total"
-      },
-      "detail": {
-        "title": "Command Log Details",
-        "subtitle": "Execution trail and raw payload (for troubleshooting)",
-        "loading": "Loading details...",
-        "loadFailed": "Failed to load details",
-        "debugTitle": "Debug details (internal)",
-        "operationId": "Operation ID",
-        "queuedId": "Queued ID",
-        "trackingLevel": "Tracking Level",
-        "sendMethod": "Send Method",
-        "ttlMinutes": "TTL (minutes)",
-        "createdAt": "Created At (UTC)",
-        "errorMessage": "Error Message",
-        "payload": "Payload (JSON)",
-        "copyPayload": "Copy JSON",
-        "noPayload": "No payload recorded"
-      }
-    }
-  },
-  "common": {
-    "search": "Search",
-    "filter": "Filter",
-    "sort": "Sort",
-    "view": "View",
-    "all": "All",
-    "actions": {
-      "save": "Save",
-      "cancel": "Cancel",
-      "delete": "Delete",
-      "edit": "Edit",
-      "create": "Create",
-      "upload": "Upload",
-      "refresh": "Refresh",
-      "back": "Back",
-      "open": "Open",
-      "close": "Close",
-      "rename": "Rename",
-      "move": "Move",
-      "preview": "Preview"
     }
   },
   "settings": {
-    "title": "Settings",
     "tabs": {
       "profile": "Profile",
       "preferences": "Preferences",
@@ -1123,23 +936,85 @@
       "apiKeys": "API Keys",
       "billing": "Billing"
     },
+    "profile": {
+      "title": "Public Profile",
+      "subtitle": "How others see you on the platform.",
+      "name": "Display Name",
+      "namePlaceholder": "Enter name...",
+      "email": "Email Address",
+      "avatar": "Avatar",
+      "phone": "Phone Number",
+      "phoneUnbound": "Not bound",
+      "bindPhone": "Bind Phone",
+      "changeAvatar": "Change Avatar",
+      "save": "Save Profile"
+    },
     "preferences": {
-      "theme": {
-        "label": "Theme",
-        "light": "Light",
-        "dark": "Dark",
-        "system": "System"
-      },
-      "language": {
-        "label": "Language",
-        "en": "English",
-        "zh": "Chinese"
-      },
+      "title": "Preferences",
+      "subtitle": "Customize your experience.",
+      "theme": "Theme",
+      "language": "Language",
       "timezone": "Timezone",
       "dateFormat": "Date Format",
-      "timeFormat": "Time Format",
-      "showSeconds": "Show Seconds",
-      "save": "Save Preferences"
+      "timeFormat": "Time Format"
+    },
+    "draftPolicy": {
+      "title": "Program draft saving",
+      "subtitle": "Controls what happens to unpublished changes when you leave the program editor.",
+      "label": "Draft save rule",
+      "options": {
+        "ask": {
+          "label": "Always ask (recommended)",
+          "desc": "Prompt when leaving the editor with unpublished changes."
+        },
+        "always": {
+          "label": "Always save draft",
+          "desc": "Keep a draft snapshot automatically when leaving or switching versions."
+        },
+        "never": {
+          "label": "Never save draft",
+          "desc": "Discard unpublished changes when leaving or switching versions."
+        }
+      },
+      "saveSuccess": "Draft save rule updated"
+    },
+    "deviceDefaults": {
+      "title": "Device Defaults",
+      "subtitle": "Defaults applied when you onboard new devices.",
+      "timezone": {
+        "title": "Timezone",
+        "label": "Default timezone for new devices",
+        "inherit": "Inherit from my profile",
+        "inheritDesc": "Use your account timezone by default.",
+        "fixed": "Use a fixed timezone",
+        "fixedDesc": "Override device timezone on creation.",
+        "select": "Default timezone",
+        "selectPlaceholder": "Select timezone",
+        "selectDesc": "Only used for newly created devices (existing devices are not changed)."
+      },
+      "alerts": {
+        "title": "Alerts",
+        "threshold": "Offline alert threshold (minutes)",
+        "thresholdDesc": "Device is considered offline if it stops reporting for this duration.",
+        "toast": "Toast when device goes offline",
+        "toastDesc": "Show an in-app toast for offline events."
+      },
+      "delivery": {
+        "title": "Delivery",
+        "autoReceive": "Auto receive latest program version",
+        "autoReceiveDesc": "Lite defaults to off. Enable only if you want auto-updates."
+      }
+    },
+    "toasts": {
+      "profileUpdated": "Profile updated",
+      "passwordUpdated": "Password updated",
+      "sessionRevoked": "Session revoked",
+      "allSessionsRevoked": "All sessions revoked",
+      "apiKeyCreated": "API key created",
+      "apiKeyRevoked": "API key revoked",
+      "apiKeyRegenerated": "API key regenerated",
+      "verificationSent": "Verification code sent to your phone",
+      "phoneBound": "Phone number bound successfully"
     }
   },
   "dashboard": {
@@ -1335,103 +1210,106 @@
       "confirmDesc": "Grid view loads all devices for advanced analysis, grouping, and aggregations. This may take a few seconds.",
       "dontShowAgain": "Don't show this again"
     },
-          "table": {
-            "columns": {
-              "deviceName": "Device Name",
-              "screenshot": "Screenshot",
-              "status": "Status",
-              "model": "Model",
-              "version": "Version",
-              "network": "Network",
-              "signal": "Signal",
-              "lastReport": "Last Report",
-              "resolution": "Resolution",
-              "brightness": "Brightness",
-              "storage": "Storage",
-              "program": "Program",
-              "tags": "Tags"
-            },
-            "empty": "No devices found",
-                    "groupCount": "{{count}} devices",
-                    "waitingReport": "Waiting for first report..."
-                  },
-                  "tags": {
-                    "title": "Tags",
-                    "searchPlaceholder": "Search tags…",
-                    "available": "Available",
-                    "createItem": "Create “{{name}}”",
-                    "createItemSubtitle": "Choose icon and color",
-                            "empty": "No tags found",
-                            "createTitle": "Create tag",
-                            "createSubtitle": "Use muted presets or a custom color",
-                            "createSuccess": "Tag created",
-                            "form": {                              "name": "Name",
-                              "namePlaceholder": "Tag name",
-                              "icon": "Icon",
-                              "noIcon": "No icon",
-                              "color": "Color",
-                              "custom": "Custom",
-                              "create": "Create"
-                            },
-                            "presets": {
-                              "colors": {
-                                "slate": "Slate",
-                                "stone": "Stone",
-                                "emerald": "Emerald",
-                                "sky": "Sky",
-                                "indigo": "Indigo",
-                                "violet": "Violet",
-                                "rose": "Rose",
-                                "amber": "Amber"
-                              },
-                              "icons": {
-                                "Location": "Location",
-                                "Store": "Store",
-                                "Building": "Building",
-                                "Home": "Home",
-                                "Person": "Person",
-                                "Users": "Users",
-                                "Price": "Price",
-                                "Billing": "Billing",
-                                "Calendar": "Calendar",
-                                "Globe": "Globe",
-                                "Work": "Work",
-                                "Outdoor": "Outdoor",
-                                "Ad": "Ad",
-                                "Menu": "Menu",
-                                "Info": "Info",
-                                "Alert": "Alert",
-                                "Check": "Check",
-                                "Verified": "Verified",
-                                "Shield": "Shield",
-                                "Test": "Test",
-                                "Tool": "Tool"
-                              }
-                            }
-                          },                  "dialogs": {            "add": {
-              "title": "Add New Device",
-              "description": "Register a new terminal device to your organization.",
-              "displayName": "Display Name",
-              "displayNamePlaceholder": "e.g. Lobby Screen 01",
-              "deviceAccount": "Device Account",
-              "deviceAccountPlaceholder": "device_admin",
-              "devicePassword": "Device Password",
-              "devicePasswordPlaceholder": "Min 12 chars",
-              "description": "Description (Optional)",
-              "descriptionPlaceholder": "Location, purpose, or other notes...",
-              "cancel": "Cancel",
-              "create": "Create Device",
-              "success": {
-                "title": "Registration Success",
-                "description": "Secure credentials have been generated. Copy them before closing.",
-                "account": "Terminal Account",
-                "password": "Access Password",
-                "warning": "Permanent Action: These credentials are encrypted at rest. We cannot recover this password if lost. Please store it in a secure password manager.",
-                "confirm": "I Have Saved the Credentials"
-              }
-            }
-          },
-          "filter": {      "search": "Search…",
+    "table": {
+      "columns": {
+        "deviceName": "Device Name",
+        "screenshot": "Screenshot",
+        "status": "Status",
+        "model": "Model",
+        "version": "Version",
+        "network": "Network",
+        "signal": "Signal",
+        "lastReport": "Last Report",
+        "resolution": "Resolution",
+        "brightness": "Brightness",
+        "storage": "Storage",
+        "program": "Program",
+        "tags": "Tags"
+      },
+      "empty": "No devices found",
+      "groupCount": "{{count}} devices",
+      "waitingReport": "Waiting for first report..."
+    },
+    "tags": {
+      "title": "Tags",
+      "searchPlaceholder": "Search tags…",
+      "available": "Available",
+      "createItem": "Create “{{name}}”",
+      "createItemSubtitle": "Choose icon and color",
+      "empty": "No tags found",
+      "createTitle": "Create tag",
+      "createSubtitle": "Use muted presets or a custom color",
+      "createSuccess": "Tag created",
+      "form": {
+        "name": "Name",
+        "namePlaceholder": "Tag name",
+        "icon": "Icon",
+        "noIcon": "No icon",
+        "color": "Color",
+        "custom": "Custom",
+        "create": "Create"
+      },
+      "presets": {
+        "colors": {
+          "slate": "Slate",
+          "stone": "Stone",
+          "emerald": "Emerald",
+          "sky": "Sky",
+          "indigo": "Indigo",
+          "violet": "Violet",
+          "rose": "Rose",
+          "amber": "Amber"
+        },
+        "icons": {
+          "Location": "Location",
+          "Store": "Store",
+          "Building": "Building",
+          "Home": "Home",
+          "Person": "Person",
+          "Users": "Users",
+          "Price": "Price",
+          "Billing": "Billing",
+          "Calendar": "Calendar",
+          "Globe": "Globe",
+          "Work": "Work",
+          "Outdoor": "Outdoor",
+          "Ad": "Ad",
+          "Menu": "Menu",
+          "Info": "Info",
+          "Alert": "Alert",
+          "Check": "Check",
+          "Verified": "Verified",
+          "Shield": "Shield",
+          "Test": "Test",
+          "Tool": "Tool"
+        }
+      }
+    },
+    "dialogs": {
+      "add": {
+        "title": "Add New Device",
+        "description": "Description (Optional)",
+        "displayName": "Display Name",
+        "displayNamePlaceholder": "e.g. Lobby Screen 01",
+        "deviceAccount": "Device Account",
+        "deviceAccountPlaceholder": "device_admin",
+        "devicePassword": "Device Password",
+        "devicePasswordPlaceholder": "Min 12 chars",
+        "descriptionPlaceholder": "Location, purpose, or other notes...",
+        "cancel": "Cancel",
+        "create": "Create Device",
+        "success": {
+          "title": "Registration Success",
+          "description": "Secure credentials have been generated. Copy them before closing.",
+          "account": "Terminal Account",
+          "password": "Access Password",
+          "warning": "Permanent Action: These credentials are encrypted at rest. We cannot recover this password if lost. Please store it in a secure password manager.",
+          "confirm": "I Have Saved the Credentials"
+        }
+      }
+    },
+    "filter": {
+      "search": "Search…",
       "searchOptions": "Search options...",
       "noMatches": "No matches",
       "extracting": "Extracting...",
@@ -1823,59 +1701,6 @@
       ]
     }
   },
-  "logs": {
-    "command": {
-      "actionType": {
-        "BRIGHTNESS": "Brightness",
-        "POWER": "Power",
-        "COLOR_TEMP": "Color Temperature",
-        "VOLUME": "Volume",
-        "CLEAR_CACHE": "Clear Cache",
-        "INPUT_MODE": "Input Mode",
-        "TIMEZONE": "Timezone",
-        "LOCALE": "Locale",
-        "CONTENT_REPORT_SWITCH": "Content Report",
-        "SCREENSHOT": "Screenshot",
-        "SET_SENSOR_REPORT_TIME": "Telemetry Cycle",
-        "DELETE_DEVICE_VSN": "Delete Program",
-        "CLEAR_DEVICE_PROGRAM": "Clear All Programs",
-        "UNKNOWN": "Unknown Command"
-      },
-      "status": {
-        "PUBLISHED": "Published",
-        "CONFIRMED": "Confirmed",
-        "COMPLETED": "Completed",
-        "EXPIRED": "Expired",
-        "FAILED": "Failed"
-      },
-      "statusUi": {
-        "DONE": "Done",
-        "UNKNOWN": "Unknown"
-      },
-      "trackingLevel": {
-        "UPDATE_ONLY": "Update Only",
-        "ACK_ONLY": "Ack Only",
-        "PROPERTY_MATCH": "Property Match",
-        "EXPLICIT_RESULT": "Explicit Result",
-        "UNKNOWN": "Unknown"
-      }
-    },
-    "device": {
-      "loading": "Fetching Logs...",
-      "loadFailed": "Failed to load logs",
-      "empty": "No logs found for the selected criteria.",
-      "reported": "Reported",
-      "table": {
-        "timestamp": "Log Timestamp",
-        "source": "Device Source",
-        "operation": "Operation",
-        "level": "Level",
-        "message": "Content Message",
-        "pagination": "Showing {{start}} to {{end}} of {{total}} entries",
-        "paginationEmpty": "0 entries found"
-      }
-    }
-  },
   "media": {
     "explorer": {
       "breadcrumbRoot": "Library",
@@ -2023,10 +1848,22 @@
       }
     },
     "presets": {
-      "mp4_1080p_h264": { "name": "Ultra HD", "desc": "1080p High Quality" },
-      "mp4_720p_h264": { "name": "Balanced", "desc": "720p Standard" },
-      "mp4_480p_h264": { "name": "Mobile", "desc": "480p Efficient" },
-      "mp4_h264": { "name": "Native", "desc": "Source Resolution" }
+      "mp4_1080p_h264": {
+        "name": "Ultra HD",
+        "desc": "1080p High Quality"
+      },
+      "mp4_720p_h264": {
+        "name": "Balanced",
+        "desc": "720p Standard"
+      },
+      "mp4_480p_h264": {
+        "name": "Mobile",
+        "desc": "480p Efficient"
+      },
+      "mp4_h264": {
+        "name": "Native",
+        "desc": "Source Resolution"
+      }
     }
   },
   "programs": {
@@ -2347,10 +2184,22 @@
       },
       "tips": {
         "title": "Tips",
-        "saveVsPush": { "label": "Save vs Push:", "desc": "Saving stores your changes on the server. Pushing notifies devices to download updates." },
-        "oneSchedule": { "label": "One schedule per device:", "desc": "A device can only be bound to one schedule. Binding to a new schedule removes the old binding." },
-        "timezone": { "label": "Timezone matters:", "desc": "Schedule times are in the device's local timezone, not your browser's timezone." },
-        "versionLock": { "label": "Version lock:", "desc": "The same program can only have one version per schedule. Changing version updates all rules using that program." }
+        "saveVsPush": {
+          "label": "Save vs Push:",
+          "desc": "Saving stores your changes on the server. Pushing notifies devices to download updates."
+        },
+        "oneSchedule": {
+          "label": "One schedule per device:",
+          "desc": "A device can only be bound to one schedule. Binding to a new schedule removes the old binding."
+        },
+        "timezone": {
+          "label": "Timezone matters:",
+          "desc": "Schedule times are in the device's local timezone, not your browser's timezone."
+        },
+        "versionLock": {
+          "label": "Version lock:",
+          "desc": "The same program can only have one version per schedule. Changing version updates all rules using that program."
+        }
       },
       "emptySchedule": {
         "title": "Add Rules to Get Started",
@@ -2364,10 +2213,9 @@
     "dialogs": {
       "create": {
         "title": "Create schedule",
-        "description": "Create an empty schedule, then configure rules and bind devices.",
+        "description": "Description",
         "name": "Name",
         "namePlaceholder": "e.g. Summer Campaign",
-        "description": "Description",
         "descriptionPlaceholder": "Optional description...",
         "enabled": "Enabled",
         "enabledDesc": "Disabled schedules do not take effect on devices.",
@@ -2383,210 +2231,230 @@
         "deleteAnyway": "Delete anyway"
       }
     },
-          "toasts": {
-          "createSuccess": "Schedule created",
-          "deleteSuccess": "Schedule deleted",
-          "publishSuccess": "Published",
-          "publishDesc": "Push command sent to bound devices",
-          "updateFailed": "Update failed",
-          "createFailed": "Create failed",
-          "deleteFailed": "Delete failed",
-          "publishFailed": "Publish failed"
+    "toasts": {
+      "createSuccess": "Schedule created",
+      "deleteSuccess": "Schedule deleted",
+      "publishSuccess": "Published",
+      "publishDesc": "Push command sent to bound devices",
+      "updateFailed": "Update failed",
+      "createFailed": "Create failed",
+      "deleteFailed": "Delete failed",
+      "publishFailed": "Publish failed"
+    },
+    "details": {
+      "tabs": {
+        "overview": "Overview",
+        "programs": "Programs",
+        "commands": "Commands"
+      },
+      "constraints": {
+        "none": "No constraints (always active)"
+      },
+      "bindings": {
+        "title": "Bindings",
+        "desc": "A device can bind to at most one schedule.",
+        "bindDevices": "Bind Devices",
+        "noDevices": "No devices bound",
+        "noDevicesDesc": "Bind devices to make this schedule take effect.",
+        "unbind": "Unbind"
+      },
+      "programRules": {
+        "title": "Program rules",
+        "desc": "Schedule contents rules (rotation/spot).",
+        "addRule": "Add rule",
+        "noRules": "No program rules",
+        "noRulesDesc": "Add rules to make devices play published programs by time/date/weekday.",
+        "spot": "Spot",
+        "rotation": "Rotation",
+        "priority": "Priority",
+        "noCover": "No Cover"
+      },
+      "commandRules": {
+        "title": "Command rules",
+        "desc": "Generated device protocol payload is stored by backend.",
+        "addRule": "Add rule",
+        "noRules": "No command rules",
+        "noRulesDesc": "Add actions like brightness/volume/sleep at specified times.",
+        "unparseableTitle": "Some command rules are not editable",
+        "unparseableDesc": "UI cannot reconstruct operation+opTime from payload. Command editing is disabled until those rules are removed.",
+        "readOnly": "read-only"
+      },
+      "pushResult": {
+        "title": "Push result",
+        "desc": "Devices will fetch the latest schedule after confirming the command.",
+        "accepted": "Accepted",
+        "noResult": "No push result",
+        "acceptedStatus": "accepted",
+        "rejectedStatus": "rejected"
+      },
+      "meta": {
+        "title": "Edit schedule",
+        "desc": "Update schedule metadata. Rules are managed in Programs / Commands tabs."
+      },
+      "bindDevices": {
+        "title": "Bind devices",
+        "description": "One device can only bind to one schedule. If a device is already bound to another schedule, it becomes a conflict unless you choose Replace.",
+        "searchPlaceholder": "Search devices...",
+        "replaceLabel": "Replace existing bindings",
+        "replaceDesc": "Default is safer: keep existing schedule bindings.",
+        "loading": "Loading devices...",
+        "noDevices": "No devices",
+        "alreadyBound": "Already bound",
+        "selected": "Selected",
+        "alreadyBoundToThis": "Already bound to this schedule",
+        "bind": "Bind",
+        "result": {
+          "title": "Result",
+          "total": "total",
+          "bound": "bound",
+          "conflicts": "conflicts",
+          "conflictStatus": "conflict (prev {{id}})"
         },
-        "details": {
-          "tabs": {
-            "overview": "Overview",
-            "programs": "Programs",
-            "commands": "Commands"
+        "toasts": {
+          "withConflicts": "Binding completed with conflicts",
+          "conflictsDesc": "Conflicts: {{count}}",
+          "success": "Devices bound",
+          "failed": "Bind failed"
+        }
+      },
+      "contentsRule": {
+        "editTitle": "Edit rule",
+        "addTitle": "Add rule",
+        "subtitle": "Configure what to play and when.",
+        "content": {
+          "title": "1. Content strategy",
+          "mode": "Mode",
+          "priority": "Priority",
+          "program": "Program",
+          "selectProgram": "Select program",
+          "version": "Version",
+          "selectVersion": "Select version",
+          "lockedDesc": "This program is already used by other rules in this schedule. Version is locked to {{version}}."
+        },
+        "constraints": {
+          "title": "2. Playback constraints",
+          "date": {
+            "title": "Valid date range",
+            "desc": "Schedule only triggers within this period.",
+            "start": "Start date",
+            "end": "End date"
           },
-          "constraints": {
-            "none": "No constraints (always active)"
+          "weekday": {
+            "title": "Weekly recurrence",
+            "desc": "Specify days of the week."
           },
-          "bindings": {
-            "title": "Bindings",
-            "desc": "A device can bind to at most one schedule.",
-            "bindDevices": "Bind Devices",
-            "noDevices": "No devices bound",
-            "noDevicesDesc": "Bind devices to make this schedule take effect.",
-            "unbind": "Unbind"
+          "time": {
+            "title": "Daily time range",
+            "desc": "Set active hours within each day.",
+            "start": "Start time",
+            "end": "End time"
+          }
+        },
+        "toasts": {
+          "priorityExists": "Priority already exists in this schedule",
+          "priorityInvalid": "Priority must be >= 0",
+          "selectVersion": "Please select a published program version",
+          "versionConflict": "This schedule can only use one version per program",
+          "setTime": "Please set start and end time",
+          "setDates": "Please select start and end dates",
+          "setWeekday": "Please select at least one weekday"
+        }
+      },
+      "commandRule": {
+        "editTitle": "Edit command rule",
+        "addTitle": "Add command rule",
+        "subtitle": "Schedule device actions like Power, Brightness, and Volume.",
+        "config": {
+          "title": "1. Action configuration",
+          "type": "Action type",
+          "brightness": "Brightness level",
+          "volume": "Volume level",
+          "power": "Power action",
+          "input": "Input source",
+          "colorTemp": "Color temperature",
+          "clearCache": "Clear cache",
+          "clearCacheDesc": "This action will clear all unused cached assets on the device at the scheduled time."
+        },
+        "execution": {
+          "title": "2. Execution time",
+          "add": "Add execution time"
+        },
+        "conditions": {
+          "title": "3. Conditions (Optional)",
+          "date": {
+            "title": "Valid date range",
+            "desc": "Action only triggers within this period."
           },
-          "programRules": {
-            "title": "Program rules",
-            "desc": "Schedule contents rules (rotation/spot).",
-            "addRule": "Add rule",
-            "noRules": "No program rules",
-            "noRulesDesc": "Add rules to make devices play published programs by time/date/weekday.",
-            "spot": "Spot",
-            "rotation": "Rotation",
-            "priority": "Priority",
-            "noCover": "No Cover"
-          },
-          "commandRules": {
-            "title": "Command rules",
-            "desc": "Generated device protocol payload is stored by backend.",
-            "addRule": "Add rule",
-            "noRules": "No command rules",
-            "noRulesDesc": "Add actions like brightness/volume/sleep at specified times.",
-            "unparseableTitle": "Some command rules are not editable",
-            "unparseableDesc": "UI cannot reconstruct operation+opTime from payload. Command editing is disabled until those rules are removed.",
-            "readOnly": "read-only"
-          },
-          "pushResult": {
-            "title": "Push result",
-            "desc": "Devices will fetch the latest schedule after confirming the command.",
-            "accepted": "Accepted",
-            "noResult": "No push result",
-            "acceptedStatus": "accepted",
-            "rejectedStatus": "rejected"
-          },
-                "meta": {
-                  "title": "Edit schedule",
-                  "desc": "Update schedule metadata. Rules are managed in Programs / Commands tabs."
-                },
-                      "bindDevices": {
-                        "title": "Bind devices",
-                        "description": "One device can only bind to one schedule. If a device is already bound to another schedule, it becomes a conflict unless you choose Replace.",
-                        "searchPlaceholder": "Search devices...",
-                        "replaceLabel": "Replace existing bindings",
-                        "replaceDesc": "Default is safer: keep existing schedule bindings.",
-                        "loading": "Loading devices...",
-                        "noDevices": "No devices",
-                        "alreadyBound": "Already bound",
-                        "selected": "Selected",
-                        "alreadyBoundToThis": "Already bound to this schedule",
-                        "bind": "Bind",
-                        "result": {
-                          "title": "Result",
-                          "total": "total",
-                          "bound": "bound",
-                          "conflicts": "conflicts",
-                          "conflictStatus": "conflict (prev {{id}})"
-                        },
-                        "toasts": {
-                          "withConflicts": "Binding completed with conflicts",
-                          "conflictsDesc": "Conflicts: {{count}}",
-                          "success": "Devices bound",
-                          "failed": "Bind failed"
-                        }
-                      },
-                            "contentsRule": {
-                              "editTitle": "Edit rule",
-                              "addTitle": "Add rule",
-                              "subtitle": "Configure what to play and when.",
-                              "content": {
-                                "title": "1. Content strategy",
-                                "mode": "Mode",
-                                "priority": "Priority",
-                                "program": "Program",
-                                "selectProgram": "Select program",
-                                "version": "Version",
-                                "selectVersion": "Select version",
-                                "lockedDesc": "This program is already used by other rules in this schedule. Version is locked to {{version}}."
-                              },
-                              "constraints": {
-                                "title": "2. Playback constraints",
-                                "date": {
-                                  "title": "Valid date range",
-                                  "desc": "Schedule only triggers within this period.",
-                                  "start": "Start date",
-                                  "end": "End date"
-                                },
-                                "weekday": {
-                                  "title": "Weekly recurrence",
-                                  "desc": "Specify days of the week."
-                                },
-                                "time": {
-                                  "title": "Daily time range",
-                                  "desc": "Set active hours within each day.",
-                                  "start": "Start time",
-                                  "end": "End time"
-                                }
-                              },
-                              "toasts": {
-                                "priorityExists": "Priority already exists in this schedule",
-                                "priorityInvalid": "Priority must be >= 0",
-                                "selectVersion": "Please select a published program version",
-                                "versionConflict": "This schedule can only use one version per program",
-                                "setTime": "Please set start and end time",
-                                "setDates": "Please select start and end dates",
-                                "setWeekday": "Please select at least one weekday"
-                              }
-                            },
-                                  "commandRule": {
-                                    "editTitle": "Edit command rule",
-                                    "addTitle": "Add command rule",
-                                    "subtitle": "Schedule device actions like Power, Brightness, and Volume.",
-                                    "config": {
-                                      "title": "1. Action configuration",
-                                      "type": "Action type",
-                                      "brightness": "Brightness level",
-                                      "volume": "Volume level",
-                                      "power": "Power action",
-                                      "input": "Input source",
-                                      "colorTemp": "Color temperature",
-                                      "clearCache": "Clear cache",
-                                      "clearCacheDesc": "This action will clear all unused cached assets on the device at the scheduled time."
-                                    },
-                                    "execution": {
-                                      "title": "2. Execution time",
-                                      "add": "Add execution time"
-                                    },
-                                    "conditions": {
-                                      "title": "3. Conditions (Optional)",
-                                      "date": {
-                                        "title": "Valid date range",
-                                        "desc": "Action only triggers within this period."
-                                      },
-                                      "weekday": {
-                                        "title": "Weekly recurrence",
-                                        "desc": "Specify days of the week."
-                                      }
-                                    },
-                                    "toasts": {
-                                      "timeRequired": "At least one execution time is required",
-                                      "datesRequired": "Start/End date required",
-                                      "weekdaysRequired": "Weekdays required"
-                                    }
-                                  },
-                                        "visualizer": {
-                                          "scheduleFor": "Schedule for {{date}}",
-                                          "activeItems": "{{count}} active item(s) on this day",
-                                          "list": "List",
-                                          "timeline": "Timeline",
-                                          "notActiveToday": "Not active today",
-                                          "noPrograms": "No programs scheduled for this day",
-                                          "allDay": "All day",
-                                          "command": "Command Rule",
-                                          "viewInCommands": "Click to view in Commands tab",
-                                          "days": {
-                                            "su": "Su", "mo": "Mo", "tu": "Tu", "we": "We", "th": "Th", "fr": "Fr", "sa": "Sa"
-                                          }
-                                        },
-                                              "weekdaySelector": {
-                                                "all": "All",
-                                                "workdays": "Workdays",
-                                                "weekend": "Weekend",
-                                                "everyDay": "Every day",
-                                                "monFri": "Mon - Fri",
-                                                "satSun": "Sat - Sun",
-                                                "clear": "Clear",
-                                                "short": {
-                                                  "0": "M", "1": "T", "2": "W", "3": "T", "4": "F", "5": "S", "6": "S"
-                                                },
-                                                "labels": {
-                                                  "0": "Mon", "1": "Tue", "2": "Wed", "3": "Thu", "4": "Fri", "5": "Sat", "6": "Sun"
-                                                }
-                                              },
-                                              "timeSlotBuilder": {
-                                                "noLimits": "No time limits (All day)",
-                                                "addSlot": "Add time slot",
-                                                "addAnother": "Add another slot"
-                                              },
-                                              "toasts": {                                    "unparseableEdit": "This schedule contains unparseable command rules; editing is disabled to avoid data loss.",
-                                    "pushQueued": "Push queued"
-                                  }
-                                }
-                              },  "programEditor": {
+          "weekday": {
+            "title": "Weekly recurrence",
+            "desc": "Specify days of the week."
+          }
+        },
+        "toasts": {
+          "timeRequired": "At least one execution time is required",
+          "datesRequired": "Start/End date required",
+          "weekdaysRequired": "Weekdays required"
+        }
+      },
+      "visualizer": {
+        "scheduleFor": "Schedule for {{date}}",
+        "activeItems": "{{count}} active item(s) on this day",
+        "list": "List",
+        "timeline": "Timeline",
+        "notActiveToday": "Not active today",
+        "noPrograms": "No programs scheduled for this day",
+        "allDay": "All day",
+        "command": "Command Rule",
+        "viewInCommands": "Click to view in Commands tab",
+        "days": {
+          "su": "Su",
+          "mo": "Mo",
+          "tu": "Tu",
+          "we": "We",
+          "th": "Th",
+          "fr": "Fr",
+          "sa": "Sa"
+        }
+      },
+      "weekdaySelector": {
+        "all": "All",
+        "workdays": "Workdays",
+        "weekend": "Weekend",
+        "everyDay": "Every day",
+        "monFri": "Mon - Fri",
+        "satSun": "Sat - Sun",
+        "clear": "Clear",
+        "short": {
+          "0": "M",
+          "1": "T",
+          "2": "W",
+          "3": "T",
+          "4": "F",
+          "5": "S",
+          "6": "S"
+        },
+        "labels": {
+          "0": "Mon",
+          "1": "Tue",
+          "2": "Wed",
+          "3": "Thu",
+          "4": "Fri",
+          "5": "Sat",
+          "6": "Sun"
+        }
+      },
+      "timeSlotBuilder": {
+        "noLimits": "No time limits (All day)",
+        "addSlot": "Add time slot",
+        "addAnother": "Add another slot"
+      },
+      "toasts": {
+        "unparseableEdit": "This schedule contains unparseable command rules; editing is disabled to avoid data loss.",
+        "pushQueued": "Push queued"
+      }
+    }
+  },
+  "programEditor": {
     "states": {
       "loading": "Booting Canvas Editor...",
       "notFound": "Program not found",
@@ -2731,41 +2599,141 @@
       "disconnected": "Disconnected"
     }
   },
+  "map": {
+    "title": "Map View",
+    "views": {
+      "devices": "Devices",
+      "tracks": "Tracks",
+      "heatmap": "Heatmap"
+    },
+    "toolbar": {
+      "timeRange": "Time Range",
+      "markers": "Markers",
+      "fitMap": "Fit Map",
+      "setLocation": "Set Location",
+      "basemap": "Basemap",
+      "hideSidebar": "Hide Sidebar",
+      "showSidebar": "Show Sidebar"
+    },
+    "sidebar": {
+      "searchPlaceholder": "Search devices...",
+      "status": "Status",
+      "allStatuses": "All Statuses",
+      "locationMode": "Mode",
+      "modes": {
+        "auto": "Auto",
+        "reported": "Reported",
+        "manual": "Manual",
+        "gps": "Live GPS"
+      },
+      "demoMap": "Demo Map",
+      "selectedCount": "Selected: {{count}}",
+      "selectAll": "Select All",
+      "clear": "Clear",
+      "noTags": "No tags",
+      "offGrid": "Off-Grid"
+    },
+    "popup": {
+      "noPreview": "No Preview",
+      "following": "Following",
+      "follow": "Follow",
+      "location": "Location",
+      "details": "Details",
+      "updated": "Updated {{time}}"
+    },
+    "dialogs": {
+      "location": {
+        "title": "Set Device Location",
+        "description": "Update coordinates manually or pick precisely from the map.",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "or": "OR",
+        "pickOnMap": "Pick Location on Map",
+        "pickingHint": "Click map to set location",
+        "cancel": "Cancel Action",
+        "apply": "Apply Changes"
+      }
+    },
+    "presets": {
+      "timeRange": {
+        "1h": "Last 1 hour",
+        "24h": "Last 24 hours",
+        "7d": "Last 7 days",
+        "30d": "Last 30 days"
+      },
+      "styles": {
+        "streets": "Streets",
+        "dark": "Dark View",
+        "satellite": "Satellite"
+      },
+      "basemapRequired": "MapTiler API Key required for advanced styles"
+    },
+    "toasts": {
+      "screenshotCaptured": "Screenshot captured",
+      "screenshotFailed": "Screenshot failed: {{status}}",
+      "locationUpdated": "Manual location updated",
+      "locationCleared": "Manual location cleared",
+      "captureSent": "Capture command sent",
+      "refreshFailed": "Failed to refresh screenshot",
+      "invalidCoordinates": "Invalid coordinates"
+    }
+  },
   "billing": {
-    "title": "Subscription & Billing",
-    "subtitle": "Manage your plan, redeem codes, and view history.",
+    "title": "Subscription Plans",
+    "subtitle": "Choose the scale that fits your business needs",
     "currentPlan": "Current Plan",
     "active": "Active",
     "expiresAt": "Expires on {{date}}",
-    "reloginNotice": "Your subscription has been updated. Please re-login to apply new limits.",
+    "reloginNotice": "Subscription updated! Please re-login to activate all features.",
     "redeem": {
-      "button": "Redeem Code",
-      "title": "Redeem Subscription",
-      "description": "Enter your promotional or purchase code to upgrade your account.",
-      "placeholder": "Enter code here...",
-      "submitting": "Redeeming...",
-      "success": "Code redeemed successfully",
-      "error": "Failed to redeem code. Please check and try again."
+      "title": "Redeem Code",
+      "description": "Enter your 12-character PRDEMO code to upgrade",
+      "placeholder": "PRDEMO-XXXX-XXXX",
+      "button": "Verify & Activate",
+      "submitting": "Activating...",
+      "success": "Activation successful! Your plan is now Pro.",
+      "error": "Invalid or expired code"
     },
     "free": {
-      "name": "Lite (Free)",
+      "name": "Free",
       "price": "$0",
-      "description": "Perfect for testing and small individual screens.",
-      "features": ["Up to 3 devices", "1GB Cloud Storage", "Basic Analytics", "Community Support"]
+      "description": "Essential features for small setups",
+      "features": [
+        "20 Devices & 20 Programs",
+        "2GB Cloud Storage",
+        "AI Assistant: 10-msg context, 20k tokens/day",
+        "Exports: Standard (CSV/JSON), limited time-range",
+        "3 Custom device columns"
+      ]
     },
     "pro": {
-      "name": "Professional",
-      "price": "$12",
+      "name": "Pro",
+      "price": "$29",
+      "priceYearly": "$23",
       "period": "/mo",
-      "description": "Advanced features for growing businesses.",
-      "features": ["Unlimited devices", "50GB Cloud Storage", "Advanced Timeline Editor", "High Priority Support"],
-      "button": "Upgrade to Pro"
+      "description": "Powerful tools for growing networks",
+      "features": [
+        "100 Devices & 200 Programs",
+        "50GB Cloud Storage",
+        "AI Assistant: 30-msg context, Unlimited tokens, BYOK",
+        "Exports: Full (XLSX/Parquet), priority processing",
+        "Exclusive API Access",
+        "20 Custom device columns"
+      ],
+      "button": "Upgrade with Code"
     },
     "ultra": {
-      "name": "Enterprise",
+      "name": "Ultra",
       "price": "Custom",
-      "description": "Tailored solutions for large-scale deployments.",
-      "features": ["White-label branding", "On-premise option", "Dedicated Account Manager", "Custom SLA"],
+      "description": "Tailored solutions for large enterprises",
+      "features": [
+        "Unlimited Devices & Programs",
+        "Enterprise Security (SSO)",
+        "AI Assistant: Custom fine-tuning & higher limits",
+        "Dedicated Account Manager",
+        "SLA Guarantee",
+        "Custom Feature Development"
+      ],
       "button": "Contact Sales"
     },
     "help": {
@@ -2787,7 +2755,64 @@
         "status": "Status"
       }
     },
-    "popular": "Most Popular"
+    "popular": "Most Popular",
+    "header": "Simple, Transparent Pricing",
+    "headerDesc": "Choose the plan that's right for your business. No hidden fees.",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "savePercent": "SAVE 20%",
+    "whatsIncluded": "What's included",
+    "compareFeatures": "Compare all features",
+    "faqTitle": "Frequently Asked Questions",
+    "customQuoteTitle": "Need a custom solution?",
+    "customQuoteDesc": "Have specific requirements or a large-scale deployment? Let's talk about a tailor-made plan for your organization.",
+    "getCustomQuote": "Get a Custom Quote",
+    "faqs": [
+      {
+        "q": "Can I change plans at any time?",
+        "a": "Yes, you can upgrade or downgrade your plan at any time from your dashboard."
+      },
+      {
+        "q": "Do you offer discounts for non-profits?",
+        "a": "We do! Please contact our sales team to discuss special pricing for NGOs and educational institutions."
+      },
+      {
+        "q": "What happens if I exceed my storage limit?",
+        "a": "We'll notify you when you reach 90% of your limit. You can always upgrade for more space."
+      }
+    ],
+    "aiComparison": {
+      "title": "AI Assistant Capability Comparison",
+      "subtitle": "Prism AI capabilities scale with your subscription and compute choices.",
+      "columns": {
+        "feature": "Capability",
+        "freeLocal": "Free (Local)",
+        "pro": "Pro / Ultra",
+        "freeByok": "Free (BYOK)"
+      },
+      "features": {
+        "memory": "Context Memory",
+        "memoryDesc": "Max history messages",
+        "rag": "Knowledge Base (RAG)",
+        "ragDesc": "Retrieved document sources",
+        "agent": "Agent Reasoning",
+        "agentDesc": "Tool calls & recursive rounds",
+        "quota": "Daily Token Quota",
+        "quotaDesc": "Local model compute limit"
+      },
+      "values": {
+        "msg10": "10 Messages",
+        "msg30": "30 Messages",
+        "rag4": "Top 4 Sources",
+        "rag8": "Top 8 Sources",
+        "basic": "Basic (1 round)",
+        "advanced": "Advanced (3 rounds)",
+        "limit20k": "20,000 / day",
+        "unlimited": "Unlimited",
+        "notApplicable": "N/A"
+      },
+      "byokNotice": "Bring Your Own Key: Use your OpenAI/Gemini API key on Free tier to unlock Pro-level AI context and reasoning limits."
+    }
   },
   "feedback": {
     "ui": {
@@ -2839,23 +2864,25 @@
       "autosizeAll": "Autosize All Columns",
       "autosizeAllHeaders": "Autosize All (Include Headers)",
       "hideColumn": "Hide Column",
-          "groupBy": "Group By",
-          "ungroup": "Ungroup",
-          "aggregate": "Aggregate",
-          "none": "None",
-          "custom": "Custom"
-        },
-        "sort": {      "title": "Sort",
+      "groupBy": "Group By",
+      "ungroup": "Ungroup",
+      "aggregate": "Aggregate",
+      "none": "None",
+      "custom": "Custom"
+    },
+    "sort": {
+      "title": "Sort",
       "column": "Column",
       "sortOn": "Sort On",
       "order": "Order",
-          "add": "Add Sort",
-          "clear": "Clear",
-          "apply": "Apply",
-          "select": "Select",
-          "ascending": "Asc",
-          "descending": "Desc",
-          "options": {        "default": "Default",
+      "add": "Add Sort",
+      "clear": "Clear",
+      "apply": "Apply",
+      "select": "Select",
+      "ascending": "Asc",
+      "descending": "Desc",
+      "options": {
+        "default": "Default",
         "value": "Value",
         "absoluteValue": "Absolute value",
         "dateOnly": "Date only",
@@ -2864,97 +2891,6 @@
         "trimWhitespace": "Trim whitespace",
         "ignorePunctuation": "Ignore punctuation"
       }
-    }
-  },
-  "settings": {
-    "tabs": {
-      "profile": "Profile",
-      "preferences": "Preferences",
-      "aiAssistant": "AI Assistant",
-      "notifications": "Notifications",
-      "security": "Security",
-      "apiKeys": "API Keys",
-      "billing": "Billing"
-    },
-    "profile": {
-      "title": "Public Profile",
-      "subtitle": "How others see you on the platform.",
-      "name": "Display Name",
-      "namePlaceholder": "Enter name...",
-      "email": "Email Address",
-      "avatar": "Avatar",
-      "phone": "Phone Number",
-      "phoneUnbound": "Not bound",
-      "bindPhone": "Bind Phone",
-      "changeAvatar": "Change Avatar",
-      "save": "Save Profile"
-    },
-    "preferences": {
-      "title": "Preferences",
-      "subtitle": "Customize your experience.",
-      "theme": "Theme",
-      "language": "Language",
-      "timezone": "Timezone",
-      "dateFormat": "Date Format",
-      "timeFormat": "Time Format"
-    },
-    "draftPolicy": {
-      "title": "Program draft saving",
-      "subtitle": "Controls what happens to unpublished changes when you leave the program editor.",
-      "label": "Draft save rule",
-      "options": {
-        "ask": {
-          "label": "Always ask (recommended)",
-          "desc": "Prompt when leaving the editor with unpublished changes."
-        },
-        "always": {
-          "label": "Always save draft",
-          "desc": "Keep a draft snapshot automatically when leaving or switching versions."
-        },
-        "never": {
-          "label": "Never save draft",
-          "desc": "Discard unpublished changes when leaving or switching versions."
-        }
-      },
-      "saveSuccess": "Draft save rule updated"
-    },
-    "deviceDefaults": {
-      "title": "Device Defaults",
-      "subtitle": "Defaults applied when you onboard new devices.",
-      "timezone": {
-        "title": "Timezone",
-        "label": "Default timezone for new devices",
-        "inherit": "Inherit from my profile",
-        "inheritDesc": "Use your account timezone by default.",
-        "fixed": "Use a fixed timezone",
-        "fixedDesc": "Override device timezone on creation.",
-        "select": "Default timezone",
-        "selectPlaceholder": "Select timezone",
-        "selectDesc": "Only used for newly created devices (existing devices are not changed)."
-      },
-      "alerts": {
-        "title": "Alerts",
-        "threshold": "Offline alert threshold (minutes)",
-        "thresholdDesc": "Device is considered offline if it stops reporting for this duration.",
-        "toast": "Toast when device goes offline",
-        "toastDesc": "Show an in-app toast for offline events."
-      },
-      "delivery": {
-        "title": "Delivery",
-        "autoReceive": "Auto receive latest program version",
-        "autoReceiveDesc": "Lite defaults to off. Enable only if you want auto-updates."
-      }
-    },
-    "toasts": {
-      "profileUpdated": "Profile updated",
-      "passwordUpdated": "Password updated",
-      "sessionRevoked": "Session revoked",
-      "allSessionsRevoked": "All sessions revoked",
-      "apiKeyCreated": "API key created",
-      "apiKeyRevoked": "API key revoked",
-      "apiKeyRegenerated": "API key regenerated",
-      "verificationSent": "Verification code sent to your phone",
-      "phoneBound": "Phone number bound successfully"
     }
   },
   "message": {

@@ -3,13 +3,21 @@ const MAP_STYLE_OVERRIDE = import.meta.env.VITE_MAP_STYLE_URL as string | undefi
 
 export const MAP_STYLE_FALLBACK = "https://demotiles.maplibre.org/style.json";
 
-export const MAP_STYLES = [
-  { id: "streets", label: "Streets", kind: "maptiler", styleId: "streets-v4" },
-  { id: "dark", label: "Dark View", kind: "maptiler", styleId: "dataviz-dark" },
-  { id: "satellite", label: "Satellite", kind: "maptiler", styleId: "hybrid" },
+export function getMapStyles(t: any) {
+  return [
+    { id: "streets", label: t('map.presets.styles.streets'), kind: "maptiler", styleId: "streets-v4" },
+    { id: "dark", label: t('map.presets.styles.dark'), kind: "maptiler", styleId: "dataviz-dark" },
+    { id: "satellite", label: t('map.presets.styles.satellite'), kind: "maptiler", styleId: "hybrid" },
+  ] as const;
+}
+
+export const MAP_STYLES_RAW = [
+  { id: "streets", kind: "maptiler", styleId: "streets-v4" },
+  { id: "dark", kind: "maptiler", styleId: "dataviz-dark" },
+  { id: "satellite", kind: "maptiler", styleId: "hybrid" },
 ] as const;
 
-export type MapStyleId = (typeof MAP_STYLES)[number]["id"];
+export type MapStyleId = (typeof MAP_STYLES_RAW)[number]["id"];
 
 export function hasBasemapConfig() {
   return Boolean(MAP_STYLE_OVERRIDE || MAPTILER_KEY);
@@ -17,8 +25,8 @@ export function hasBasemapConfig() {
 
 export function getMapStyleUrl(styleId: MapStyleId) {
   if (MAP_STYLE_OVERRIDE) return MAP_STYLE_OVERRIDE;
-  const style = MAP_STYLES.find((s) => s.id === styleId);
-  if (!style || style.kind === "demo") return MAP_STYLE_FALLBACK;
+  const style = MAP_STYLES_RAW.find((s) => s.id === styleId);
+  if (!style) return MAP_STYLE_FALLBACK;
   if (!MAPTILER_KEY) return MAP_STYLE_FALLBACK;
   return `https://api.maptiler.com/maps/${style.styleId}/style.json?key=${MAPTILER_KEY}`;
 }

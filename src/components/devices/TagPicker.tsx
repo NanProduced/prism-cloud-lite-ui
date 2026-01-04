@@ -8,7 +8,7 @@ import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from '@
 import { cn } from '@/lib/utils';
 import { TagChip } from './TagChip';
 import { TAG_COLOR_PRESETS, TAG_ICON_OPTIONS, isHexColor } from './tagging';
-import { ArrowLeft, Check, Palette, Plus, X } from 'lucide-react';
+import { ArrowLeft, Check, Palette, Plus, X, Loader2 } from 'lucide-react';
 import { PopoverColorPicker } from '@/components/ui/popover-color-picker';
 
 interface CreateTagDraft {

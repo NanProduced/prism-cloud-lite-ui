@@ -5,21 +5,23 @@ export const STATUS_ORDER: DeviceStatus[] = ["online", "offline", "pending"];
 
 export const INTERACTIVE_LAYER_IDS = ["device-points", "device-clusters"] as const;
 
-export const TIME_RANGE_PRESETS = [
-  { value: "1h", label: "Last 1 hour" },
-  { value: "24h", label: "Last 24 hours" },
-  { value: "7d", label: "Last 7 days" },
-  { value: "30d", label: "Last 30 days" },
-] as const;
+export function getTimeRangePresets(t: any) {
+  return [
+    { value: "1h", label: t('map.presets.timeRange.1h') },
+    { value: "24h", label: t('map.presets.timeRange.24h') },
+    { value: "7d", label: t('map.presets.timeRange.7d') },
+    { value: "30d", label: t('map.presets.timeRange.30d') },
+  ] as const;
+}
 
-export function getStatusLabel(status: DeviceStatus) {
+export function getStatusLabel(status: DeviceStatus, t: any) {
   switch (status) {
     case "online":
-      return "Online";
+      return t('devices.stats.online');
     case "offline":
-      return "Offline";
+      return t('devices.stats.offline');
     case "pending":
-      return "Pending";
+      return t('devices.stats.pending');
     default:
       return status;
   }

@@ -211,7 +211,7 @@ export function DeviceGridToolbar({
   const runBulkAction = (action: 'wake-sleep' | 'reboot' | 'screenshot') => {
     if (selectedCount === 0) return;
     const deviceIds = selectedLeafDevices.map((d) => d.id);
-    toast(`Bulk action: ${action}`, {
+    toast.info(`Bulk action: ${action}`, {
       description: `Selected ${deviceIds.length} devices (not wired yet).`,
     });
   };

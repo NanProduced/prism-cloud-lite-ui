@@ -431,26 +431,27 @@
     "titleHighlight": "卓越工程",
     "description": "探索我们关于媒体分发、云基础设施和人工智能交汇点的最新思考。",
     "readMore": "阅读文章",
-          "posts": [
-            {
-              "title": "视觉网络的未来",
-              "desc": "5G 和 边缘计算如何将静态显示屏转变为智能、互动的通信节点。",
-              "tag": "行业趋势",
-              "slug": "/blog/future-of-visual-networks"
-            },
-            {
-              "title": "数字标牌中的 AI",
-              "desc": "超越自动化：使用大语言模型通过自然语言管理全球终端集群并排查故障。",
-              "tag": "技术创新",
-              "slug": "/blog/ai-in-digital-signage"
-            },
-            {
-              "title": "优化全球分发",
-              "desc": "深入探讨 MD5 内容寻址和云转码，实现无缝的 24/7 高保真播放。",
-              "tag": "技术深挖",
-              "slug": "/blog/optimizing-global-distribution"
-            }
-          ]  },
+    "posts": [
+      {
+        "title": "视觉网络的未来",
+        "desc": "5G 和 边缘计算如何将静态显示屏转变为智能、互动的通信节点。",
+        "tag": "行业趋势",
+        "slug": "/blog/future-of-visual-networks"
+      },
+      {
+        "title": "数字标牌中的 AI",
+        "desc": "超越自动化：使用大语言模型通过自然语言管理全球终端集群并排查故障。",
+        "tag": "技术创新",
+        "slug": "/blog/ai-in-digital-signage"
+      },
+      {
+        "title": "优化全球分发",
+        "desc": "深入探讨 MD5 内容寻址和云转码，实现无缝的 24/7 高保真播放。",
+        "tag": "技术深挖",
+        "slug": "/blog/optimizing-global-distribution"
+      }
+    ]
+  },
   "useCases": {
     "title": "赋能各行业",
     "industries": "行业",
@@ -757,35 +758,55 @@
         "date": "2025.11.27",
         "title": "破土动工与架构确立",
         "description": "基于 React + Vite 确立了高性能底层架构。完成了核心认证系统 (OIDC/OAuth2) 以及基础仪表盘布局的搭建。",
-        "features": ["Vite + React", "Tailwind CSS", "认证系统"],
+        "features": [
+          "Vite + React",
+          "Tailwind CSS",
+          "认证系统"
+        ],
         "status": "completed"
       },
       {
         "date": "2025.12.05",
         "title": "素材库与创意中心",
         "description": "上线了支持 MD5 去重的素材库及可视化编辑器。基于 Canvas 的引擎支持复杂的多图层节目设计与渲染。",
-        "features": ["MD5 去重", "Canvas 编辑器", "多图层Studio"],
+        "features": [
+          "MD5 去重",
+          "Canvas 编辑器",
+          "多图层Studio"
+        ],
         "status": "completed"
       },
       {
         "date": "2025.12.15",
         "title": "集群控制与发布协议",
         "description": "实现了具备高弹性的设备通信协议。支持实时指令下发、增量更新发布以及全网设备在线状态监控。",
-        "features": ["指令系统", "在线监控", "增量发布"],
+        "features": [
+          "指令系统",
+          "在线监控",
+          "增量发布"
+        ],
         "status": "completed"
       },
       {
         "date": "2025.12.28",
         "title": "AI 助手的突破",
         "description": "深度集成 Spring AI 与 Function Calling。Prism AI 进化为能够自动诊断设备故障、检索知识库 (RAG) 的智能体。",
-        "features": ["Spring AI", "函数调用", "RAG 检索"],
+        "features": [
+          "Spring AI",
+          "函数调用",
+          "RAG 检索"
+        ],
         "status": "completed"
       },
       {
         "date": "2026.01.03",
         "title": "细节打磨与生态构建",
         "description": "完成了中英双语 (i18n) 适配及高级遥测可视化。目前正在完善 Landing 页面交互，准备正式发布。",
-        "features": ["多语言支持", "遥测可视化", "响应式 Landing"],
+        "features": [
+          "多语言支持",
+          "遥测可视化",
+          "响应式 Landing"
+        ],
         "status": "in-progress"
       }
     ],
@@ -1140,10 +1161,22 @@
       }
     },
     "presets": {
-      "mp4_1080p_h264": { "name": "超清", "desc": "1080p 高画质" },
-      "mp4_720p_h264": { "name": "均衡", "desc": "720p 标准" },
-      "mp4_480p_h264": { "name": "流畅", "desc": "480p 低带宽" },
-      "mp4_h264": { "name": "原生", "desc": "原始分辨率" }
+      "mp4_1080p_h264": {
+        "name": "超清",
+        "desc": "1080p 高画质"
+      },
+      "mp4_720p_h264": {
+        "name": "均衡",
+        "desc": "720p 标准"
+      },
+      "mp4_480p_h264": {
+        "name": "流畅",
+        "desc": "480p 低带宽"
+      },
+      "mp4_h264": {
+        "name": "原生",
+        "desc": "原始分辨率"
+      }
     }
   },
   "programs": {
@@ -1464,10 +1497,22 @@
       },
       "tips": {
         "title": "使用技巧",
-        "saveVsPush": { "label": "保存 vs 下发:", "desc": "保存仅将更改存储在服务器。下发才会通知设备下载并应用更新。" },
-        "oneSchedule": { "label": "一机一排程:", "desc": "每台设备只能绑定一个排程。绑定到新排程会自动解除旧排程。" },
-        "timezone": { "label": "时区说明:", "desc": "排程时间基于设备的本地时区，而非您浏览器的当前时区。" },
-        "versionLock": { "label": "版本锁定:", "desc": "同一个节目在排程中只能锁定一个版本。更新版本将同步更新所有使用该节目的规则。" }
+        "saveVsPush": {
+          "label": "保存 vs 下发:",
+          "desc": "保存仅将更改存储在服务器。下发才会通知设备下载并应用更新。"
+        },
+        "oneSchedule": {
+          "label": "一机一排程:",
+          "desc": "每台设备只能绑定一个排程。绑定到新排程会自动解除旧排程。"
+        },
+        "timezone": {
+          "label": "时区说明:",
+          "desc": "排程时间基于设备的本地时区，而非您浏览器的当前时区。"
+        },
+        "versionLock": {
+          "label": "版本锁定:",
+          "desc": "同一个节目在排程中只能锁定一个版本。更新版本将同步更新所有使用该节目的规则。"
+        }
       },
       "emptySchedule": {
         "title": "添加规则以开始",
@@ -1500,210 +1545,230 @@
         "deleteAnyway": "仍然删除"
       }
     },
-          "toasts": {
-          "createSuccess": "排程已创建",
-          "deleteSuccess": "排程已删除",
-          "publishSuccess": "已发布",
-          "publishDesc": "下发指令已发送至绑定设备",
-          "updateFailed": "更新失败",
-          "createFailed": "创建失败",
-          "deleteFailed": "删除失败",
-          "publishFailed": "发布失败"
+    "toasts": {
+      "createSuccess": "排程已创建",
+      "deleteSuccess": "排程已删除",
+      "publishSuccess": "已发布",
+      "publishDesc": "下发指令已发送至绑定设备",
+      "updateFailed": "更新失败",
+      "createFailed": "创建失败",
+      "deleteFailed": "删除失败",
+      "publishFailed": "发布失败"
+    },
+    "details": {
+      "tabs": {
+        "overview": "概览",
+        "programs": "节目规则",
+        "commands": "指令规则"
+      },
+      "constraints": {
+        "none": "无约束（全天候生效）"
+      },
+      "bindings": {
+        "title": "绑定设备",
+        "desc": "一台设备最多只能绑定到一个排程。",
+        "bindDevices": "绑定设备",
+        "noDevices": "未绑定设备",
+        "noDevicesDesc": "请先绑定设备，排程才能在硬件端生效。",
+        "unbind": "解绑"
+      },
+      "programRules": {
+        "title": "节目规则",
+        "desc": "编排节目内容的播放逻辑（轮播/插播）。",
+        "addRule": "添加规则",
+        "noRules": "暂无节目规则",
+        "noRulesDesc": "添加规则后，设备将根据时间/日期/周期播放指定的已发布节目。",
+        "spot": "插播",
+        "rotation": "轮播",
+        "priority": "优先级",
+        "noCover": "暂无封面"
+      },
+      "commandRules": {
+        "title": "指令规则",
+        "desc": "此处定义的设备协议负载由后端统一存储与分发。",
+        "addRule": "添加规则",
+        "noRules": "暂无指令规则",
+        "noRulesDesc": "在指定时间自动执行调节亮度、音量或休眠等动作。",
+        "unparseableTitle": "部分指令规则不可编辑",
+        "unparseableDesc": "UI 无法从负载中解析出具体动作。在移除这些规则前，指令编辑功能将处于禁用状态。",
+        "readOnly": "只读"
+      },
+      "pushResult": {
+        "title": "下发结果",
+        "desc": "设备在确认收到指令后将立即拉取最新的排程配置。",
+        "accepted": "已受理",
+        "noResult": "暂无下发记录",
+        "acceptedStatus": "已受理",
+        "rejectedStatus": "已拒绝"
+      },
+      "meta": {
+        "title": "编辑排程详情",
+        "desc": "更新排程的基础信息。具体的播放规则请在“节目规则”或“指令规则”标签页中管理。"
+      },
+      "bindDevices": {
+        "title": "绑定设备",
+        "description": "一台设备同时只能绑定到一个排程。如果设备已绑定到其他排程，除非勾选“替换”，否则将视为冲突。",
+        "searchPlaceholder": "搜索设备...",
+        "replaceLabel": "替换现有绑定",
+        "replaceDesc": "默认模式更安全：保留设备原有的排程绑定。",
+        "loading": "正在加载设备...",
+        "noDevices": "暂无设备",
+        "alreadyBound": "已绑定",
+        "selected": "已选择",
+        "alreadyBoundToThis": "已绑定到此排程",
+        "bind": "确认绑定",
+        "result": {
+          "title": "处理结果",
+          "total": "总计",
+          "bound": "已绑定",
+          "conflicts": "冲突数",
+          "conflictStatus": "冲突 (原排程 {{id}})"
         },
-        "details": {
-          "tabs": {
-            "overview": "概览",
-            "programs": "节目规则",
-            "commands": "指令规则"
+        "toasts": {
+          "withConflicts": "绑定完成，但存在冲突",
+          "conflictsDesc": "冲突数：{{count}}",
+          "success": "设备绑定成功",
+          "failed": "绑定失败"
+        }
+      },
+      "contentsRule": {
+        "editTitle": "编辑节目规则",
+        "addTitle": "添加节目规则",
+        "subtitle": "配置播放内容及生效时间。",
+        "content": {
+          "title": "1. 播放内容策略",
+          "mode": "播放模式",
+          "priority": "优先级",
+          "program": "关联节目",
+          "selectProgram": "选择节目",
+          "version": "节目版本",
+          "selectVersion": "选择版本",
+          "lockedDesc": "此节目已在该排程的其他规则中使用。版本已锁定为 {{version}}。"
+        },
+        "constraints": {
+          "title": "2. 播放时间约束",
+          "date": {
+            "title": "有效日期范围",
+            "desc": "排程仅在此日期区间内触发。",
+            "start": "开始日期",
+            "end": "结束日期"
           },
-          "constraints": {
-            "none": "无约束（全天候生效）"
+          "weekday": {
+            "title": "每周循环周期",
+            "desc": "指定在一周中的哪几天生效。"
           },
-          "bindings": {
-            "title": "绑定设备",
-            "desc": "一台设备最多只能绑定到一个排程。",
-            "bindDevices": "绑定设备",
-            "noDevices": "未绑定设备",
-            "noDevicesDesc": "请先绑定设备，排程才能在硬件端生效。",
-            "unbind": "解绑"
+          "time": {
+            "title": "每日时段约束",
+            "desc": "设置每天具体生效的小时分钟。",
+            "start": "开始时间",
+            "end": "结束时间"
+          }
+        },
+        "toasts": {
+          "priorityExists": "该优先级在此排程中已存在",
+          "priorityInvalid": "优先级必须大于或等于 0",
+          "selectVersion": "请选择一个已发布的节目版本",
+          "versionConflict": "同一排程内一个节目只能使用一个版本",
+          "setTime": "请设置完整的开始与结束时间",
+          "setDates": "请选择开始与结束日期",
+          "setWeekday": "请至少选择一个星期数"
+        }
+      },
+      "commandRule": {
+        "editTitle": "编辑指令规则",
+        "addTitle": "添加指令规则",
+        "subtitle": "编排设备的硬件动作，如开关机、亮度或音量调节。",
+        "config": {
+          "title": "1. 指令动作配置",
+          "type": "动作类型",
+          "brightness": "亮度值",
+          "volume": "音量值",
+          "power": "电源操作",
+          "input": "信号源",
+          "colorTemp": "色温",
+          "clearCache": "清除缓存",
+          "clearCacheDesc": "此动作将在排定的时间清除设备上所有未被使用的缓存素材。"
+        },
+        "execution": {
+          "title": "2. 执行时间点",
+          "add": "添加执行时间"
+        },
+        "conditions": {
+          "title": "3. 触发约束 (可选)",
+          "date": {
+            "title": "有效日期范围",
+            "desc": "动作仅在此日期区间内触发。"
           },
-          "programRules": {
-            "title": "节目规则",
-            "desc": "编排节目内容的播放逻辑（轮播/插播）。",
-            "addRule": "添加规则",
-            "noRules": "暂无节目规则",
-            "noRulesDesc": "添加规则后，设备将根据时间/日期/周期播放指定的已发布节目。",
-            "spot": "插播",
-            "rotation": "轮播",
-            "priority": "优先级",
-            "noCover": "暂无封面"
-          },
-          "commandRules": {
-            "title": "指令规则",
-            "desc": "此处定义的设备协议负载由后端统一存储与分发。",
-            "addRule": "添加规则",
-            "noRules": "暂无指令规则",
-            "noRulesDesc": "在指定时间自动执行调节亮度、音量或休眠等动作。",
-            "unparseableTitle": "部分指令规则不可编辑",
-            "unparseableDesc": "UI 无法从负载中解析出具体动作。在移除这些规则前，指令编辑功能将处于禁用状态。",
-            "readOnly": "只读"
-          },
-          "pushResult": {
-            "title": "下发结果",
-            "desc": "设备在确认收到指令后将立即拉取最新的排程配置。",
-            "accepted": "已受理",
-            "noResult": "暂无下发记录",
-            "acceptedStatus": "已受理",
-            "rejectedStatus": "已拒绝"
-          },
-                "meta": {
-                  "title": "编辑排程详情",
-                  "desc": "更新排程的基础信息。具体的播放规则请在“节目规则”或“指令规则”标签页中管理。"
-                },
-                      "bindDevices": {
-                        "title": "绑定设备",
-                        "description": "一台设备同时只能绑定到一个排程。如果设备已绑定到其他排程，除非勾选“替换”，否则将视为冲突。",
-                        "searchPlaceholder": "搜索设备...",
-                        "replaceLabel": "替换现有绑定",
-                        "replaceDesc": "默认模式更安全：保留设备原有的排程绑定。",
-                        "loading": "正在加载设备...",
-                        "noDevices": "暂无设备",
-                        "alreadyBound": "已绑定",
-                        "selected": "已选择",
-                        "alreadyBoundToThis": "已绑定到此排程",
-                        "bind": "确认绑定",
-                        "result": {
-                          "title": "处理结果",
-                          "total": "总计",
-                          "bound": "已绑定",
-                          "conflicts": "冲突数",
-                          "conflictStatus": "冲突 (原排程 {{id}})"
-                        },
-                        "toasts": {
-                          "withConflicts": "绑定完成，但存在冲突",
-                          "conflictsDesc": "冲突数：{{count}}",
-                          "success": "设备绑定成功",
-                          "failed": "绑定失败"
-                        }
-                      },
-                            "contentsRule": {
-                              "editTitle": "编辑节目规则",
-                              "addTitle": "添加节目规则",
-                              "subtitle": "配置播放内容及生效时间。",
-                              "content": {
-                                "title": "1. 播放内容策略",
-                                "mode": "播放模式",
-                                "priority": "优先级",
-                                "program": "关联节目",
-                                "selectProgram": "选择节目",
-                                "version": "节目版本",
-                                "selectVersion": "选择版本",
-                                "lockedDesc": "此节目已在该排程的其他规则中使用。版本已锁定为 {{version}}。"
-                              },
-                              "constraints": {
-                                "title": "2. 播放时间约束",
-                                "date": {
-                                  "title": "有效日期范围",
-                                  "desc": "排程仅在此日期区间内触发。",
-                                  "start": "开始日期",
-                                  "end": "结束日期"
-                                },
-                                "weekday": {
-                                  "title": "每周循环周期",
-                                  "desc": "指定在一周中的哪几天生效。"
-                                },
-                                "time": {
-                                  "title": "每日时段约束",
-                                  "desc": "设置每天具体生效的小时分钟。",
-                                  "start": "开始时间",
-                                  "end": "结束时间"
-                                }
-                              },
-                              "toasts": {
-                                "priorityExists": "该优先级在此排程中已存在",
-                                "priorityInvalid": "优先级必须大于或等于 0",
-                                "selectVersion": "请选择一个已发布的节目版本",
-                                "versionConflict": "同一排程内一个节目只能使用一个版本",
-                                "setTime": "请设置完整的开始与结束时间",
-                                "setDates": "请选择开始与结束日期",
-                                "setWeekday": "请至少选择一个星期数"
-                              }
-                            },
-                                  "commandRule": {
-                                    "editTitle": "编辑指令规则",
-                                    "addTitle": "添加指令规则",
-                                    "subtitle": "编排设备的硬件动作，如开关机、亮度或音量调节。",
-                                    "config": {
-                                      "title": "1. 指令动作配置",
-                                      "type": "动作类型",
-                                      "brightness": "亮度值",
-                                      "volume": "音量值",
-                                      "power": "电源操作",
-                                      "input": "信号源",
-                                      "colorTemp": "色温",
-                                      "clearCache": "清除缓存",
-                                      "clearCacheDesc": "此动作将在排定的时间清除设备上所有未被使用的缓存素材。"
-                                    },
-                                    "execution": {
-                                      "title": "2. 执行时间点",
-                                      "add": "添加执行时间"
-                                    },
-                                    "conditions": {
-                                      "title": "3. 触发约束 (可选)",
-                                      "date": {
-                                        "title": "有效日期范围",
-                                        "desc": "动作仅在此日期区间内触发。"
-                                      },
-                                      "weekday": {
-                                        "title": "每周循环周期",
-                                        "desc": "指定在一周中的哪几天执行。"
-                                      }
-                                    },
-                                    "toasts": {
-                                      "timeRequired": "请至少设置一个执行时间点",
-                                      "datesRequired": "请设置开始与结束日期",
-                                      "weekdaysRequired": "请至少选择一个星期数"
-                                    }
-                                  },
-                                        "visualizer": {
-                                          "scheduleFor": "{{date}} 的排程",
-                                          "activeItems": "当日共有 {{count}} 项活跃任务",
-                                          "list": "列表视图",
-                                          "timeline": "时间轴视图",
-                                          "notActiveToday": "今日不生效",
-                                          "noPrograms": "当日暂无节目排程",
-                                          "allDay": "全天",
-                                          "command": "指令规则",
-                                          "viewInCommands": "点击在“指令规则”标签页中查看",
-                                          "days": {
-                                            "su": "日", "mo": "一", "tu": "二", "we": "三", "th": "四", "fr": "五", "sa": "六"
-                                          }
-                                        },
-                                              "weekdaySelector": {
-                                                "all": "全选",
-                                                "workdays": "工作日",
-                                                "weekend": "周末",
-                                                "everyDay": "每天",
-                                                "monFri": "周一至周五",
-                                                "satSun": "周末",
-                                                "clear": "清空",
-                                                "short": {
-                                                  "0": "一", "1": "二", "2": "三", "3": "四", "4": "五", "5": "六", "6": "日"
-                                                },
-                                                "labels": {
-                                                  "0": "周一", "1": "周二", "2": "周三", "3": "周四", "4": "周五", "5": "周六", "6": "周日"
-                                                }
-                                              },
-                                              "timeSlotBuilder": {
-                                                "noLimits": "无时间限制（全天）",
-                                                "addSlot": "添加时间段",
-                                                "addAnother": "添加另一个时段"
-                                              },
-                                              "toasts": {                                    "unparseableEdit": "此排程包含无法解析的指令规则；为了避免数据丢失，编辑功能已禁用。",
-                                    "pushQueued": "下发已排队"
-                                  }
-                                }
-                              },  "monitoring": {
+          "weekday": {
+            "title": "每周循环周期",
+            "desc": "指定在一周中的哪几天执行。"
+          }
+        },
+        "toasts": {
+          "timeRequired": "请至少设置一个执行时间点",
+          "datesRequired": "请设置开始与结束日期",
+          "weekdaysRequired": "请至少选择一个星期数"
+        }
+      },
+      "visualizer": {
+        "scheduleFor": "{{date}} 的排程",
+        "activeItems": "当日共有 {{count}} 项活跃任务",
+        "list": "列表视图",
+        "timeline": "时间轴视图",
+        "notActiveToday": "今日不生效",
+        "noPrograms": "当日暂无节目排程",
+        "allDay": "全天",
+        "command": "指令规则",
+        "viewInCommands": "点击在“指令规则”标签页中查看",
+        "days": {
+          "su": "日",
+          "mo": "一",
+          "tu": "二",
+          "we": "三",
+          "th": "四",
+          "fr": "五",
+          "sa": "六"
+        }
+      },
+      "weekdaySelector": {
+        "all": "全选",
+        "workdays": "工作日",
+        "weekend": "周末",
+        "everyDay": "每天",
+        "monFri": "周一至周五",
+        "satSun": "周末",
+        "clear": "清空",
+        "short": {
+          "0": "一",
+          "1": "二",
+          "2": "三",
+          "3": "四",
+          "4": "五",
+          "5": "六",
+          "6": "日"
+        },
+        "labels": {
+          "0": "周一",
+          "1": "周二",
+          "2": "周三",
+          "3": "周四",
+          "4": "周五",
+          "5": "周六",
+          "6": "周日"
+        }
+      },
+      "timeSlotBuilder": {
+        "noLimits": "无时间限制（全天）",
+        "addSlot": "添加时间段",
+        "addAnother": "添加另一个时段"
+      },
+      "toasts": {
+        "unparseableEdit": "此排程包含无法解析的指令规则；为了避免数据丢失，编辑功能已禁用。",
+        "pushQueued": "下发已排队"
+      }
+    }
+  },
+  "monitoring": {
     "title": "实时遥测",
     "initializing": "正在初始化遥测系统...",
     "analysisPeriod": "分析时段",
@@ -1724,63 +1789,199 @@
       "disconnected": "已断开"
     }
   },
-  "billing": {
-    "title": "订阅与账单",
-    "subtitle": "管理您的套餐方案、兑换礼品码并查看历史记录。",
-    "currentPlan": "当前方案",
-    "active": "生效中",
-    "expiresAt": "有效期至 {{date}}",
-    "reloginNotice": "您的订阅信息已更新。请重新登录以应用新的额度限制。",
-    "redeem": {
-      "button": "兑换充值码",
-      "title": "兑换订阅时长",
-      "description": "输入您的优惠码或购买的充值码以升级您的账户。",
-      "placeholder": "请输入充值码...",
-      "submitting": "正在兑换...",
-      "success": "充值码兑换成功",
-      "error": "兑换失败。请检查充值码是否正确或已过期。"
+  "map": {
+    "title": "地图监控",
+    "views": {
+      "devices": "设备分布",
+      "tracks": "轨迹追踪",
+      "heatmap": "热力图"
     },
-    "free": {
-      "name": "Lite (免费版)",
-      "price": "¥0",
-      "description": "适合个人测试及少量个人屏幕使用。",
-      "features": ["最多 3 台终端", "1GB 云端素材空间", "基础日志统计", "社区支持"]
+    "toolbar": {
+      "timeRange": "时间范围",
+      "markers": "显示标记",
+      "fitMap": "缩放至全览",
+      "setLocation": "设置位置",
+      "basemap": "底图样式",
+      "hideSidebar": "隐藏侧边栏",
+      "showSidebar": "显示侧边栏"
     },
-    "pro": {
-      "name": "Professional (专业版)",
-      "price": "¥88",
-      "period": "/月",
-      "description": "为成长型业务提供的进阶功能。",
-      "features": ["不限终端数量", "50GB 云端素材空间", "高级时间轴编辑器", "高优先级技术支持"],
-      "button": "升级到专业版"
+    "sidebar": {
+      "searchPlaceholder": "搜索设备...",
+      "status": "在线状态",
+      "allStatuses": "所有状态",
+      "locationMode": "定位模式",
+      "modes": {
+        "auto": "自动 (推荐)",
+        "reported": "仅实时上报",
+        "manual": "仅手动设置",
+        "gps": "实时 GPS"
+      },
+      "demoMap": "演示地图",
+      "selectedCount": "已选择: {{count}}",
+      "selectAll": "全选",
+      "clear": "清空",
+      "noTags": "无标签",
+      "offGrid": "未定位"
     },
-    "ultra": {
-      "name": "Enterprise (企业版)",
-      "price": "定制",
-      "description": "为大规模部署量身定制的解决方案。",
-      "features": ["白标定制服务", "私有化部署选项", "专属大客户经理", "定制级 SLA 保障"],
-      "button": "联系商务"
+    "popup": {
+      "noPreview": "暂无预览",
+      "following": "追踪中",
+      "follow": "追踪轨迹",
+      "location": "修正坐标",
+      "details": "查看详情",
+      "updated": "更新于 {{time}}"
     },
-    "help": {
-      "title": "需要方案咨询？",
-      "desc": "详细对比我们的功能特性，或与方案专家沟通，为您的组织寻找最合适的选择。",
-      "compare": "查看功能对比表"
-    },
-    "demo": {
-      "title": "关于演示环境",
-      "desc": "这是一个演示环境，真实支付功能已禁用。请使用演示码 PRDEMO30D 来测试专业版功能。",
-      "redeemNow": "立即兑换演示码"
-    },
-    "history": {
-      "title": "兑换历史记录",
-      "table": {
-        "type": "类型",
-        "code": "充值码",
-        "date": "日期",
-        "status": "状态"
+    "dialogs": {
+      "location": {
+        "title": "设置设备位置",
+        "description": "您可以手动输入经纬度坐标，或在地图上直接选取。",
+        "latitude": "纬度 (Latitude)",
+        "longitude": "经度 (Longitude)",
+        "or": "或者",
+        "pickOnMap": "在地图上选取坐标",
+        "pickingHint": "请点击地图上的任意位置以设置坐标",
+        "cancel": "取消操作",
+        "apply": "保存更改"
       }
     },
-    "popular": "最受欢迎"
+    "presets": {
+      "timeRange": {
+        "1h": "最近 1 小时",
+        "24h": "最近 24 小时",
+        "7d": "最近 7 天",
+        "30d": "最近 30 天"
+      },
+      "styles": {
+        "streets": "标准街道",
+        "dark": "极简暗黑",
+        "satellite": "卫星影像"
+      },
+      "basemapRequired": "高级底图样式需要配置 MapTiler API Key"
+    },
+    "toasts": {
+      "screenshotCaptured": "截屏成功",
+      "screenshotFailed": "截屏失败: {{status}}",
+      "locationUpdated": "手动位置已更新",
+      "locationCleared": "手动位置已清除",
+      "captureSent": "抓拍指令已下发",
+      "refreshFailed": "刷新快照失败",
+      "invalidCoordinates": "经纬度格式不正确"
+    }
+  },
+  "billing": {
+    "title": "订阅与账单",
+    "subtitle": "选择适合您业务规模的套餐",
+    "header": "简单,透明的定价",
+    "headerDesc": "选择适合您业务的计划。无隐藏费用。",
+    "monthly": "月付",
+    "yearly": "年付",
+    "savePercent": "立省 20%",
+    "whatsIncluded": "包含内容",
+    "compareFeatures": "对比所有功能",
+    "faqTitle": "常见问题",
+    "customQuoteTitle": "需要定制解决方案？",
+    "customQuoteDesc": "有特殊需求或大规模部署？让我们为您量身定制计划。",
+    "getCustomQuote": "获取定制报价",
+    "currentPlan": "当前计划",
+    "expiresAt": "{{date}} 到期",
+    "reloginNotice": "权益已更新！请重新登录以激活所有配额。",
+    "free": {
+      "name": "免费版",
+      "price": "¥0",
+      "description": "适合初创及小型个人工作室",
+      "features": [
+        "20 台设备 & 20 个节目",
+        "2GB 云端存储空间",
+        "AI 助手: 10 条上下文, 2万 tokens/天",
+        "数据导出: 标准格式 (CSV/JSON), 时间跨度限制",
+        "3 个自定义设备列"
+      ]
+    },
+    "pro": {
+      "name": "专业版",
+      "price": "¥199",
+      "priceYearly": "¥159",
+      "period": "/月",
+      "description": "为成长型商业网络量身打造",
+      "features": [
+        "100 台设备 & 200 个节目",
+        "50GB 云端存储空间",
+        "AI 助手: 30 条上下文, 无限制 tokens, 支持 BYOK",
+        "数据导出: 全部格式 (XLSX/Parquet), 优先处理",
+        "专属 API 访问权限",
+        "20 个自定义设备列"
+      ],
+      "button": "使用兑换码升级"
+    },
+    "ultra": {
+      "name": "旗舰版",
+      "price": "定制",
+      "description": "面向大规模企业及行业解决方案",
+      "features": [
+        "无限制设备与节目数量",
+        "企业级安全集成 (SSO)",
+        "AI 助手: 私有化微调 & 更高配额",
+        "专属大客户经理",
+        "SLA 服务质量保证",
+        "定制化功能开发"
+      ],
+      "button": "联系销售"
+    },
+    "redeem": {
+      "title": "兑换码",
+      "description": "输入您的 12 位 PRDEMO 兑换码以升级",
+      "placeholder": "PRDEMO-XXXX-XXXX",
+      "button": "验证并激活",
+      "submitting": "正在激活...",
+      "success": "激活成功！您的方案已升级为 Pro。",
+      "error": "无效或已过期的兑换码"
+    },
+    "faqs": [
+      {
+        "q": "我可以随时更改计划吗？",
+        "a": "是的，您可以随时从控制面板升级或降级您的计划。"
+      },
+      {
+        "q": "你们为非营利组织提供折扣吗？",
+        "a": "是的！请联系我们的销售团队，讨论针对非政府组织和教育机构的特殊定价。"
+      },
+      {
+        "q": "如果我超过存储限制会怎样？",
+        "a": "当您达到限制的 90% 时，我们会通知您。您可以随时升级以获得更多空间。"
+      }
+    ],
+    "aiComparison": {
+      "title": "AI 助手功能差异对比",
+      "subtitle": "Prism AI 的能力会随着您的订阅等级和计算资源选择而自动扩展。",
+      "columns": {
+        "feature": "核心能力",
+        "freeLocal": "免费版 (本地)",
+        "pro": "专业版 / 旗舰版",
+        "freeByok": "免费版 (BYOK)"
+      },
+      "features": {
+        "memory": "上下文记忆",
+        "memoryDesc": "最大关联历史消息数",
+        "rag": "知识库召回 (RAG)",
+        "ragDesc": "检索文档来源参考数",
+        "agent": "智能体推理",
+        "agentDesc": "工具调用与递归推理轮数",
+        "quota": "每日 Token 额度",
+        "quotaDesc": "本地模型计算资源限制"
+      },
+      "values": {
+        "msg10": "10 条消息",
+        "msg30": "30 条消息",
+        "rag4": "前 4 个来源",
+        "rag8": "前 8 个来源",
+        "basic": "基础 (1 轮推理)",
+        "advanced": "高级 (3 轮推理)",
+        "limit20k": "2万 tokens / 天",
+        "unlimited": "无限制",
+        "notApplicable": "不适用"
+      },
+      "byokNotice": "BYOK 优势：在免费版绑定您自己的 OpenAI/Gemini API 密钥，即可解锁专业版的上下文长度与高级推理能力。"
+    }
   },
   "feedback": {
     "ui": {
@@ -1832,23 +2033,25 @@
       "autosizeAll": "调整所有列",
       "autosizeAllHeaders": "调整所有列 (含表头)",
       "hideColumn": "隐藏列",
-          "groupBy": "按此列分组",
-          "ungroup": "取消分组",
-          "aggregate": "聚合计算",
-          "none": "无",
-          "custom": "自定义"
-        },
-        "sort": {      "title": "多级排序",
+      "groupBy": "按此列分组",
+      "ungroup": "取消分组",
+      "aggregate": "聚合计算",
+      "none": "无",
+      "custom": "自定义"
+    },
+    "sort": {
+      "title": "多级排序",
       "column": "排序列",
       "sortOn": "排序依据",
       "order": "排序方向",
-          "add": "添加排序",
-          "clear": "清空",
-          "apply": "应用",
-          "select": "选择列",
-          "ascending": "升序",
-          "descending": "降序",
-          "options": {        "default": "默认",
+      "add": "添加排序",
+      "clear": "清空",
+      "apply": "应用",
+      "select": "选择列",
+      "ascending": "升序",
+      "descending": "降序",
+      "options": {
+        "default": "默认",
         "value": "数值",
         "absoluteValue": "绝对值",
         "dateOnly": "仅日期",
@@ -2203,121 +2406,6 @@
       "fixErrors": "在发布前请修正 {{count}} 个错误。"
     }
   },
-  "billing": {
-    "title": "订阅计划",
-    "subtitle": "选择适合您业务规模的套餐",
-    "header": "简单,透明的定价",
-    "headerDesc": "选择适合您业务的计划。无隐藏费用。",
-    "monthly": "月付",
-    "yearly": "年付",
-    "savePercent": "立省 20%",
-    "whatsIncluded": "包含内容",
-    "compareFeatures": "对比所有功能",
-    "faqTitle": "常见问题",
-    "customQuoteTitle": "需要定制解决方案？",
-    "customQuoteDesc": "有特殊需求或大规模部署？让我们为您量身定制计划。",
-    "getCustomQuote": "获取定制报价",
-    "currentPlan": "当前计划",
-    "expiresAt": "{{date}} 到期",
-    "reloginNotice": "权益已更新！请重新登录以激活所有配额。",
-    "free": {
-      "name": "免费版",
-      "price": "¥0",
-      "description": "适合初创及小型个人工作室",
-      "features": [
-        "20 台设备 & 20 个节目",
-        "2GB 云端存储空间",
-        "AI 助手: 10 条上下文, 2万 tokens/天",
-        "数据导出: 标准格式 (CSV/JSON), 时间跨度限制",
-        "3 个自定义设备列"
-      ]
-    },
-    "pro": {
-      "name": "专业版",
-      "price": "¥199",
-      "priceYearly": "¥159",
-      "period": "/月",
-      "description": "为成长型商业网络量身打造",
-      "features": [
-        "100 台设备 & 200 个节目",
-        "50GB 云端存储空间",
-        "AI 助手: 30 条上下文, 无限制 tokens, 支持 BYOK",
-        "数据导出: 全部格式 (XLSX/Parquet), 优先处理",
-        "专属 API 访问权限",
-        "20 个自定义设备列"
-      ],
-      "button": "使用兑换码升级"
-    },
-    "ultra": {
-      "name": "旗舰版",
-      "price": "定制",
-      "description": "面向大规模企业及行业解决方案",
-      "features": [
-        "无限制设备与节目数量",
-        "企业级安全集成 (SSO)",
-        "AI 助手: 私有化微调 & 更高配额",
-        "专属大客户经理",
-        "SLA 服务质量保证",
-        "定制化功能开发"
-      ],
-      "button": "联系销售"
-    },
-    "redeem": {
-      "title": "兑换码",
-      "description": "输入您的 12 位 PRDEMO 兑换码以升级",
-      "placeholder": "PRDEMO-XXXX-XXXX",
-      "button": "验证并激活",
-      "submitting": "正在激活...",
-      "success": "激活成功！您的方案已升级为 Pro。",
-      "error": "无效或已过期的兑换码"
-    },
-    "faqs": [
-      {
-        "q": "我可以随时更改计划吗？",
-        "a": "是的，您可以随时从控制面板升级或降级您的计划。"
-      },
-      {
-        "q": "你们为非营利组织提供折扣吗？",
-        "a": "是的！请联系我们的销售团队，讨论针对非政府组织和教育机构的特殊定价。"
-      },
-      {
-        "q": "如果我超过存储限制会怎样？",
-        "a": "当您达到限制的 90% 时，我们会通知您。您可以随时升级以获得更多空间。"
-      }
-    ],
-    "aiComparison": {
-      "title": "AI 助手功能差异对比",
-      "subtitle": "Prism AI 的能力会随着您的订阅等级和计算资源选择而自动扩展。",
-      "columns": {
-        "feature": "核心能力",
-        "freeLocal": "免费版 (本地)",
-        "pro": "专业版 / 旗舰版",
-        "freeByok": "免费版 (BYOK)"
-      },
-      "features": {
-        "memory": "上下文记忆",
-        "memoryDesc": "最大关联历史消息数",
-        "rag": "知识库召回 (RAG)",
-        "ragDesc": "检索文档来源参考数",
-        "agent": "智能体推理",
-        "agentDesc": "工具调用与递归推理轮数",
-        "quota": "每日 Token 额度",
-        "quotaDesc": "本地模型计算资源限制"
-      },
-      "values": {
-        "msg10": "10 条消息",
-        "msg30": "30 条消息",
-        "rag4": "前 4 个来源",
-        "rag8": "前 8 个来源",
-        "basic": "基础 (1 轮推理)",
-        "advanced": "高级 (3 轮推理)",
-        "limit20k": "2万 tokens / 天",
-        "unlimited": "无限制",
-        "notApplicable": "不适用"
-      },
-      "byokNotice": "BYOK 优势：在免费版绑定您自己的 OpenAI/Gemini API 密钥，即可解锁专业版的上下文长度与高级推理能力。"
-    }
-  },
   "apiPage": {
     "title": "开发者优先",
     "titleHighlight": "开放且强大的 REST API",
@@ -2553,103 +2641,106 @@
       "confirmDesc": "表格视图将加载所有设备以进行高级分析、分组和聚合。这可能需要几秒钟。",
       "dontShowAgain": "不再显示"
     },
-          "table": {
-            "columns": {
-              "deviceName": "设备名称",
-              "screenshot": "截图",
-              "status": "状态",
-              "model": "型号",
-              "version": "版本",
-              "network": "网络",
-              "signal": "信号",
-              "lastReport": "最后上报",
-              "resolution": "分辨率",
-              "brightness": "亮度",
-              "storage": "存储",
-              "program": "节目",
-              "tags": "标签"
-            },
-            "empty": "未找到设备",
-                    "groupCount": "{{count}} 台设备",
-                    "waitingReport": "等待首次上报..."
-                  },
-                  "tags": {
-                    "title": "标签",
-                    "searchPlaceholder": "搜索标签...",
-                    "available": "可用标签",
-                    "createItem": "创建 “{{name}}”",
-                    "createItemSubtitle": "选择图标和颜色",
-                            "empty": "未找到标签",
-                            "createTitle": "创建标签",
-                            "createSubtitle": "使用预设或自定义颜色",
-                            "createSuccess": "标签已创建",
-                            "form": {                              "name": "名称",
-                              "namePlaceholder": "标签名称",
-                              "icon": "图标",
-                              "noIcon": "无图标",
-                              "color": "颜色",
-                              "custom": "自定义",
-                              "create": "创建"
-                            },
-                            "presets": {
-                              "colors": {
-                                "slate": "石板灰",
-                                "stone": "石头灰",
-                                "emerald": "翡翠绿",
-                                "sky": "天空蓝",
-                                "indigo": "靛青",
-                                "violet": "紫罗兰",
-                                "rose": "玫瑰红",
-                                "amber": "琥珀黄"
-                              },
-                              "icons": {
-                                "Location": "位置",
-                                "Store": "商店",
-                                "Building": "建筑",
-                                "Home": "首页",
-                                "Person": "人员",
-                                "Users": "用户",
-                                "Price": "价格",
-                                "Billing": "账单",
-                                "Calendar": "日历",
-                                "Globe": "全球",
-                                "Work": "工作",
-                                "Outdoor": "户外",
-                                "Ad": "广告",
-                                "Menu": "菜单",
-                                "Info": "信息",
-                                "Alert": "警告",
-                                "Check": "检查",
-                                "Verified": "已验证",
-                                "Shield": "防护",
-                                "Test": "测试",
-                                "Tool": "工具"
-                              }
-                            }
-                          },                  "dialogs": {            "add": {
-              "title": "添加新设备",
-              "description": "为您的组织注册一个新的终端设备。",
-              "displayName": "显示名称",
-              "displayNamePlaceholder": "例如：大堂 1 号屏",
-              "deviceAccount": "设备账号",
-              "deviceAccountPlaceholder": "device_admin",
-              "devicePassword": "设备密码",
-              "devicePasswordPlaceholder": "至少 12 位",
-              "description": "描述 (可选)",
-              "descriptionPlaceholder": "位置、用途或其他备注...",
-              "cancel": "取消",
-              "create": "创建设备",
-              "success": {
-                "title": "注册成功",
-                "description": "安全凭证已生成。请在关闭前复制它们。",
-                "account": "终端账号",
-                "password": "访问密码",
-                "warning": "永久操作：这些凭证已加密。如果丢失，我们将无法找回此密码。请将其保存在安全的密码管理器中。",
-                "confirm": "我已保存凭证"
-              }
-            }
-          },
-          "filter": {      "search": "搜索…",
+    "table": {
+      "columns": {
+        "deviceName": "设备名称",
+        "screenshot": "截图",
+        "status": "状态",
+        "model": "型号",
+        "version": "版本",
+        "network": "网络",
+        "signal": "信号",
+        "lastReport": "最后上报",
+        "resolution": "分辨率",
+        "brightness": "亮度",
+        "storage": "存储",
+        "program": "节目",
+        "tags": "标签"
+      },
+      "empty": "未找到设备",
+      "groupCount": "{{count}} 台设备",
+      "waitingReport": "等待首次上报..."
+    },
+    "tags": {
+      "title": "标签",
+      "searchPlaceholder": "搜索标签...",
+      "available": "可用标签",
+      "createItem": "创建 “{{name}}”",
+      "createItemSubtitle": "选择图标和颜色",
+      "empty": "未找到标签",
+      "createTitle": "创建标签",
+      "createSubtitle": "使用预设或自定义颜色",
+      "createSuccess": "标签已创建",
+      "form": {
+        "name": "名称",
+        "namePlaceholder": "标签名称",
+        "icon": "图标",
+        "noIcon": "无图标",
+        "color": "颜色",
+        "custom": "自定义",
+        "create": "创建"
+      },
+      "presets": {
+        "colors": {
+          "slate": "石板灰",
+          "stone": "石头灰",
+          "emerald": "翡翠绿",
+          "sky": "天空蓝",
+          "indigo": "靛青",
+          "violet": "紫罗兰",
+          "rose": "玫瑰红",
+          "amber": "琥珀黄"
+        },
+        "icons": {
+          "Location": "位置",
+          "Store": "商店",
+          "Building": "建筑",
+          "Home": "首页",
+          "Person": "人员",
+          "Users": "用户",
+          "Price": "价格",
+          "Billing": "账单",
+          "Calendar": "日历",
+          "Globe": "全球",
+          "Work": "工作",
+          "Outdoor": "户外",
+          "Ad": "广告",
+          "Menu": "菜单",
+          "Info": "信息",
+          "Alert": "警告",
+          "Check": "检查",
+          "Verified": "已验证",
+          "Shield": "防护",
+          "Test": "测试",
+          "Tool": "工具"
+        }
+      }
+    },
+    "dialogs": {
+      "add": {
+        "title": "添加新设备",
+        "description": "描述 (可选)",
+        "displayName": "显示名称",
+        "displayNamePlaceholder": "例如：大堂 1 号屏",
+        "deviceAccount": "设备账号",
+        "deviceAccountPlaceholder": "device_admin",
+        "devicePassword": "设备密码",
+        "devicePasswordPlaceholder": "至少 12 位",
+        "descriptionPlaceholder": "位置、用途或其他备注...",
+        "cancel": "取消",
+        "create": "创建设备",
+        "success": {
+          "title": "注册成功",
+          "description": "安全凭证已生成。请在关闭前复制它们。",
+          "account": "终端账号",
+          "password": "访问密码",
+          "warning": "永久操作：这些凭证已加密。如果丢失，我们将无法找回此密码。请将其保存在安全的密码管理器中。",
+          "confirm": "我已保存凭证"
+        }
+      }
+    },
+    "filter": {
+      "search": "搜索…",
       "searchOptions": "搜索选项...",
       "noMatches": "无匹配项",
       "extracting": "提取中...",

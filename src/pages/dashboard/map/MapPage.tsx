@@ -38,6 +38,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/store/notificationStore";
 
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -58,7 +59,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter
 } from "@/components/ui/dialog";
 import { DeviceStatusBadge } from "@/components/devices/DeviceStatusBadge";
 import { TagChip } from "@/components/devices/TagChip";
@@ -73,7 +73,7 @@ import { reverseGeocode, type ResolvedAddress } from "@/lib/maptiler";
 
 import { getDeviceLayers, HEATMAP_LAYER, TRACKS_LAYER } from "./mapLayers";
 import { buildHeatmapPoints, buildTracks } from "./mapMockData";
-import { canUseMapTiler, getMapStyleUrl, MAP_STYLES, type MapStyleId } from "./mapStyles";
+import { canUseMapTiler, getMapStyleUrl, getMapStyles, type MapStyleId } from "./mapStyles";
 import type { DeviceFeatureCollection, LocationMode, MapView, TimeRangePreset } from "./mapTypes";
 import {
   formatLocation,
@@ -81,16 +81,10 @@ import {
   getDefaultCenter,
   getStatusBadgeClassName,
   getStatusLabel,
+  getTimeRangePresets,
   resolveDeviceLocation,
   STATUS_ORDER,
-  TIME_RANGE_PRESETS,
 } from "./mapUtils";
-
-const VIEW_ITEMS: Array<{ value: MapView; label: string; icon?: ReactNode }> = [
-  { value: "devices", label: "Devices", icon: <MapPin className="h-4 w-4" /> },
-  { value: "tracks", label: "Tracks", icon: <Route className="h-4 w-4" /> },
-  { value: "heatmap", label: "Heatmap", icon: <Flame className="h-4 w-4" /> },
-];
 
 const TIME_RANGE_DEFAULT: TimeRangePreset = "24h";
 
@@ -101,11 +95,21 @@ function safeLower(value: string | undefined) {
 }
 
 export default function MapPage() {
+  const { t } = useTranslation();
   const mapRef = useRef<MapRef | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { formatDateTime } = useTimeFormatter();
   const { preferences } = useSettingsStore();
+
+  const VIEW_ITEMS: Array<{ value: MapView; label: string; icon?: ReactNode }> = useMemo(() => [
+    { value: "devices", label: t('map.views.devices'), icon: <MapPin className="h-4 w-4" /> },
+    { value: "tracks", label: t('map.views.tracks'), icon: <Route className="h-4 w-4" /> },
+    { value: "heatmap", label: t('map.views.heatmap'), icon: <Flame className="h-4 w-4" /> },
+  ], [t]);
+
+  const TIME_RANGE_PRESETS = useMemo(() => getTimeRangePresets(t), [t]);
+  const MAP_STYLES = useMemo(() => getMapStyles(t), [t]);
 
   const { data: devicesRes } = useQuery({
     queryKey: ['devices'],
@@ -140,11 +144,11 @@ export default function MapPage() {
       const { scope, data } = event.detail;
       if (activeScreenshotOpId && scope.operationId === activeScreenshotOpId) {
         if (data.status === 'CONFIRMED' || data.status === 'COMPLETED') {
-          toast.success('Screenshot captured');
+          toast.success(t('map.toasts.screenshotCaptured'));
           setActiveScreenshotOpId(null);
           queryClient.invalidateQueries({ queryKey: ['devices'] });
         } else if (data.status === 'FAILED' || data.status === 'EXPIRED') {
-          toast.error(`Screenshot failed: ${data.status}`);
+          toast.error(t('map.toasts.screenshotFailed', { status: data.status }));
           setActiveScreenshotOpId(null);
         }
       }
@@ -425,10 +429,10 @@ export default function MapPage() {
       setGpsOverride(args.deviceId, args.lat, args.lng),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["telemetry", "gps", "latest"] });
-      toast.success("Manual location updated");
+      toast.success(t('map.toasts.locationUpdated'));
     },
     onError: (err: any) => {
-      toast.error("Failed to update location: " + (err.message || "Unknown error"));
+      toast.error(t('common.errors.updateFailed') + ": " + (err.message || t('common.errors.unknown')));
     }
   });
 
@@ -436,7 +440,7 @@ export default function MapPage() {
     mutationFn: (deviceId: string) => deleteGpsOverride(deviceId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["telemetry", "gps", "latest"] });
-      toast.success("Manual location cleared");
+      toast.success(t('map.toasts.locationCleared'));
     },
   });
 
@@ -542,7 +546,7 @@ export default function MapPage() {
           {view !== "devices" && (
             <Select value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRangePreset)}>
               <SelectTrigger className="h-9 w-40 rounded-xl font-semibold text-[11px] tracking-tight border-2">
-                <SelectValue placeholder="Time Range" />
+                <SelectValue placeholder={t('map.toolbar.timeRange')} />
               </SelectTrigger>
               <SelectContent>
                 {TIME_RANGE_PRESETS.map((p) => (
@@ -555,13 +559,13 @@ export default function MapPage() {
           {(view === "heatmap" || view === "tracks") && (
             <label className="flex items-center gap-2 rounded-xl border-2 bg-background px-4 h-9 text-[11px] font-semibold tracking-tight cursor-pointer hover:bg-muted/50 transition-colors">
               <Checkbox checked={showMarkers} onCheckedChange={(v) => setShowMarkers(Boolean(v))} />
-              Markers
+              {t('map.toolbar.markers')}
             </label>
           )}
 
           <Button variant="outline" size="sm" className="h-9 rounded-xl font-semibold text-[11px] tracking-tight gap-2 border-2" onClick={fitToVisible}>
             <Maximize2 className="h-3.5 w-3.5" />
-            Fit Map
+            {t('map.toolbar.fitMap')}
           </Button>
 
           {selectedDeviceId && (
@@ -580,7 +584,7 @@ export default function MapPage() {
                }}
              >
                <MapPin className="h-3.5 w-3.5" />
-               Set Location
+               {t('map.toolbar.setLocation')}
              </Button>
           )}
         </div>
@@ -591,16 +595,14 @@ export default function MapPage() {
             value={basemap} 
             onValueChange={(v) => {
               if (!canUseMapTiler() && v !== 'demo') {
-                toast.error("MapTiler API Key required for advanced styles", {
-                  description: "Please configure VITE_MAPTILER_KEY in your .env file."
-                });
+                toast.error(t('map.presets.basemapRequired'));
                 return;
               }
               setBasemap(v as MapStyleId);
             }}
           >
             <SelectTrigger className="h-9 w-36 rounded-xl font-semibold text-[11px] tracking-tight border-2">
-              <SelectValue placeholder="Basemap" />
+              <SelectValue placeholder={t('map.toolbar.basemap')} />
             </SelectTrigger>
             <SelectContent align="end">
                {MAP_STYLES.map((s) => (
@@ -611,13 +613,13 @@ export default function MapPage() {
 
           {!canUseMapTiler() && (
             <Badge variant="outline" className="h-9 rounded-xl border-dashed px-3 text-[10px] font-medium text-muted-foreground hidden lg:flex">
-               Demo Map
+               {t('map.sidebar.demoMap')}
             </Badge>
           )}
 
           <Button variant="outline" size="sm" className="h-9 rounded-xl font-semibold text-[11px] tracking-tight gap-2 px-4 border-2" onClick={() => setShowSidebar((v) => !v)}>
             {showSidebar ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
-            {showSidebar ? 'Hide' : 'Show'} Sidebar
+            {showSidebar ? t('map.toolbar.hideSidebar') : t('map.toolbar.showSidebar')}
           </Button>
         </div>
       </div>
@@ -628,41 +630,41 @@ export default function MapPage() {
             <div className="p-5 space-y-4 border-b bg-muted/5">
               <div className="relative group">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50 transition-colors group-focus-within:text-primary" />
-                <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search devices..." className="pl-9 h-10 bg-background border-muted/50 text-sm font-medium" />
+                <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('map.sidebar.searchPlaceholder')} className="pl-9 h-10 bg-background border-muted/50 text-sm font-medium" />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <Select value={status} onValueChange={(v) => setStatus(v as any)}>
                   <SelectTrigger className="h-8 rounded-lg font-semibold text-[10px] border">
-                    <SelectValue placeholder="Status" />
+                    <SelectValue placeholder={t('map.sidebar.status')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all" className="text-[10px]">All Statuses</SelectItem>
+                    <SelectItem value="all" className="text-[10px]">{t('map.sidebar.allStatuses')}</SelectItem>
                     {STATUS_ORDER.map((s) => (
-                      <SelectItem key={s} value={s} className="text-[10px]">{getStatusLabel(s)}</SelectItem>
+                      <SelectItem key={s} value={s} className="text-[10px]">{getStatusLabel(s, t)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
 
                 <Select value={locationMode} onValueChange={(v) => setLocationMode(v as any)}>
                   <SelectTrigger className="h-8 rounded-lg font-semibold text-[10px] border">
-                    <SelectValue placeholder="Mode" />
+                    <SelectValue placeholder={t('map.sidebar.locationMode')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="auto" className="text-[10px]">Auto</SelectItem>
-                    <SelectItem value="reported" className="text-[10px]">Reported</SelectItem>
-                    <SelectItem value="manual" className="text-[10px]">Manual</SelectItem>
+                    <SelectItem value="auto" className="text-[10px]">{t('map.sidebar.modes.auto')}</SelectItem>
+                    <SelectItem value="reported" className="text-[10px]">{t('map.sidebar.modes.reported')}</SelectItem>
+                    <SelectItem value="manual" className="text-[10px]">{t('map.sidebar.modes.manual')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {view === "tracks" && (
                 <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-bold text-muted-foreground px-1">
-                  <span>Selected: <span className="text-foreground">{selectedTrackIds.length}</span></span>
+                  <span>{t('map.sidebar.selectedCount', { count: selectedTrackIds.length })}</span>
                   <div className="flex items-center gap-2">
-                    <button className="hover:text-primary transition-colors" onClick={() => setSelectedTrackIds(visibleDevicesWithLocation.map((d) => d.id))}>Select All</button>
+                    <button className="hover:text-primary transition-colors" onClick={() => setSelectedTrackIds(visibleDevicesWithLocation.map((d) => d.id))}>{t('map.sidebar.selectAll')}</button>
                     <div className="h-1 w-1 rounded-full bg-muted" />
-                    <button className="hover:text-primary transition-colors" onClick={() => setSelectedTrackIds([])}>Clear</button>
+                    <button className="hover:text-primary transition-colors" onClick={() => setSelectedTrackIds([])}>{t('map.sidebar.clear')}</button>
                   </div>
                 </div>
               )}
@@ -751,7 +753,7 @@ export default function MapPage() {
                              />
                            ))
                         ) : (
-                          <span className="text-[10px] text-muted-foreground/40 italic pl-1">No tags</span>
+                          <span className="text-[10px] text-muted-foreground/40 italic pl-1">{t('map.sidebar.noTags')}</span>
                         )}
                         {device.tags && device.tags.length > 3 && (
                           <Badge variant="outline" className="h-5 px-1.5 text-[10px] text-muted-foreground/60">+{device.tags.length - 3}</Badge>
@@ -767,7 +769,7 @@ export default function MapPage() {
                         ) : (
                           <div className="flex items-center gap-1.5">
                             <MapPinOff className="h-3 w-3 text-amber-500/40" />
-                            <span className="text-amber-600/70 font-black uppercase tracking-tighter">Off-Grid</span>
+                            <span className="text-amber-600/70 font-black uppercase tracking-tighter">{t('map.sidebar.offGrid')}</span>
                           </div>
                         )}
                       </div>
@@ -843,7 +845,7 @@ export default function MapPage() {
                     ) : (
                       <div className="h-full w-full flex flex-col items-center justify-center gap-2 text-zinc-500 bg-zinc-900/50">
                         <Monitor className="h-8 w-8 opacity-20" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">No Preview</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">{t('map.popup.noPreview')}</span>
                       </div>
                     )}
                     
@@ -861,7 +863,7 @@ export default function MapPage() {
                              onClick={() => setFollowEnabled(!followEnabled)}
                           >
                              <Navigation className={cn("h-3 w-3 mr-1", followEnabled && "fill-white animate-pulse")} />
-                             {followEnabled ? 'Following' : 'Follow'}
+                             {followEnabled ? t('map.popup.following') : t('map.popup.follow')}
                           </Button>
                        </div>
                        <Button 
@@ -887,9 +889,9 @@ export default function MapPage() {
                             try {
                               const res = await executeDeviceAction(selectedDevice.id, { type: 'SCREENSHOT', body: {} });
                               if (res.data?.operationId) setActiveScreenshotOpId(res.data.operationId);
-                              toast.info("Capture command sent");
+                              toast.info(t('map.toasts.captureSent'));
                             } catch (err) {
-                              toast.error("Failed to refresh screenshot");
+                              toast.error(t('map.toasts.refreshFailed'));
                             } finally {
                               setIsCapturing(false);
                             }
@@ -942,7 +944,7 @@ export default function MapPage() {
                         <MapPin className="h-4 w-4 text-primary shrink-0" />
                         <div className="min-w-0 flex-1">
                            <p className="text-[11px] font-bold text-foreground/70 uppercase tracking-widest leading-none mb-1.5">
-                             {selectedLocation.source === 'manual' ? 'Manual Override' : 'GPS'}
+                             {selectedLocation.source === 'manual' ? t('map.sidebar.modes.manual') : t('map.sidebar.modes.gps')}
                            </p>
                            <p className="text-xs font-medium text-muted-foreground leading-tight tracking-tight">
                               {resolvedAddress || formatLocation(selectedLocation)}
@@ -971,7 +973,7 @@ export default function MapPage() {
                         }}
                       >
                         <Crosshair className="h-3.5 w-3.5" />
-                        Location
+                        {t('map.popup.location')}
                       </Button>
                       <Button 
                         variant="default" 
@@ -979,7 +981,7 @@ export default function MapPage() {
                         className="h-10 text-xs font-bold gap-2 rounded-xl shadow-lg shadow-primary/20"
                         onClick={() => navigate(`/dashboard/devices/${selectedDevice?.id}`)}
                       >
-                        Details
+                        {t('map.popup.details')}
                         <ExternalLink className="h-3.5 w-3.5" />
                       </Button>
                     </div>
@@ -987,7 +989,7 @@ export default function MapPage() {
                     {selectedLocation.timestamp && (
                       <p className="text-[10px] text-muted-foreground/50 text-center font-medium tabular-nums pt-1 flex items-center justify-center gap-1.5">
                         <RefreshCw className="h-2.5 w-2.5" />
-                        Updated {formatDateTime(selectedLocation.timestamp)}
+                        {t('map.popup.updated', { time: formatDateTime(selectedLocation.timestamp) })}
                       </p>
                     )}
                   </div>
@@ -1005,10 +1007,10 @@ export default function MapPage() {
                     <Crosshair className="h-4 w-4" />
                   </div>
                   <div className="text-sm font-medium">
-                    Click map to set location
+                    {t('map.dialogs.location.pickingHint')}
                   </div>
                 </div>
-                <Button size="sm" variant="ghost" className="h-8 rounded-full px-3 hover:bg-muted" onClick={() => setPickingLocationFor(null)}>Cancel</Button>
+                <Button size="sm" variant="ghost" className="h-8 rounded-full px-3 hover:bg-muted" onClick={() => setPickingLocationFor(null)}>{t('common.actions.cancel')}</Button>
               </div>
             </div>
           )}
@@ -1024,10 +1026,10 @@ export default function MapPage() {
                 <div className="p-2 bg-white/10 rounded-lg">
                   <MapPin className="h-5 w-5" />
                 </div>
-                <DialogTitle className="text-xl text-white">Set Device Location</DialogTitle>
+                <DialogTitle className="text-xl text-white">{t('map.dialogs.location.title')}</DialogTitle>
               </div>
               <DialogDescription className="text-primary-foreground/70">
-                Update coordinates manually or pick precisely from the map.
+                {t('map.dialogs.location.description')}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -1035,7 +1037,7 @@ export default function MapPage() {
           <div className="p-6 space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Latitude</label>
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">{t('map.dialogs.location.latitude')}</label>
                 <div className="relative group">
                   <Input 
                     placeholder="e.g. 39.9042" 
@@ -1047,7 +1049,7 @@ export default function MapPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Longitude</label>
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">{t('map.dialogs.location.longitude')}</label>
                 <div className="relative group">
                   <Input 
                     placeholder="e.g. 116.4074" 
@@ -1062,7 +1064,7 @@ export default function MapPage() {
 
             <div className="relative flex items-center gap-4 py-2">
               <Separator className="flex-1" />
-              <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]">OR</span>
+              <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]">{t('map.dialogs.location.or')}</span>
               <Separator className="flex-1" />
             </div>
 
@@ -1075,19 +1077,19 @@ export default function MapPage() {
               }}
             >
               <Crosshair className="h-4 w-4 text-primary group-hover:rotate-90 transition-transform duration-500" />
-              Pick Location on Map
+              {t('map.dialogs.location.pickOnMap')}
             </Button>
           </div>
 
           <div className="p-4 bg-muted/30 border-t flex items-center justify-between gap-3 font-semibold">
-             <Button variant="ghost" className="font-semibold text-xs" onClick={() => setShowLocationDialog(false)}>Cancel Action</Button>
+             <Button variant="ghost" className="font-semibold text-xs" onClick={() => setShowLocationDialog(false)}>{t('map.dialogs.location.cancel')}</Button>
              <Button 
                className="px-8 font-bold text-xs uppercase tracking-wider h-11 shadow-lg shadow-primary/20"
                onClick={() => {
                  const lat = parseFloat(manualInput.lat);
                  const lng = parseFloat(manualInput.lng);
                  if (isNaN(lat) || isNaN(lng)) {
-                   toast.error("Invalid coordinates");
+                   toast.error(t('map.toasts.invalidCoordinates'));
                    return;
                  }
                  if (selectedDeviceId) {
@@ -1096,7 +1098,7 @@ export default function MapPage() {
                  }
                }}
              >
-               Apply Changes
+               {t('map.dialogs.location.apply')}
              </Button>
           </div>
         </DialogContent>

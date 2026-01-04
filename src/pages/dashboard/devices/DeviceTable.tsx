@@ -1018,7 +1018,7 @@ export function DeviceTable({
       if (!meta) return;
       if (!meta.locked) return;
       preventDefault();
-      toast('Read-only custom field', {
+      toast.info('Read-only custom field', {
         description: 'This field requires an active Pro subscription to edit.',
       });
     });
