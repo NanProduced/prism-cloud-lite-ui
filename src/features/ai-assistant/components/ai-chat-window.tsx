@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Bot, User, RotateCcw, Maximize2, Minimize2, Sparkles, ChevronDown, Cpu } from 'lucide-react';
+import { User, RotateCcw, Maximize2, Minimize2, Sparkles, ChevronDown, Cpu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -18,7 +18,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { useAIAssistant } from '../hooks/use-ai-assistant';
-import { AIToolInvocation, AISourceList, type AISource, AIPromptInput } from './ai-assistant-ui';
+import { AIToolInvocation, AISourceList, type AISource, AIPromptInput, Thinking } from './ai-assistant-ui';
 import { useAuthStore } from '@/store/authStore';
 import { getAvatarById } from '@/lib/avatars';
 
@@ -77,45 +77,48 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
         <Card className="flex-1 flex flex-col overflow-hidden border-primary/10 bg-background/95 backdrop-blur-md">
           <CardHeader className="p-4 border-b bg-muted/30 flex flex-row items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                <Bot className="h-5 w-5 text-primary-foreground" />
-              </div>
+              <Avatar className="h-9 w-9 border shadow-sm ring-2 ring-primary/5">
+                <AvatarImage src="/images/ai-assistant.jpg" alt="AI" />
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  AI
+                </AvatarFallback>
+              </Avatar>
               <div className="flex flex-col">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  Prism AI Assistant
-                  <Badge variant="secondary" className="text-[10px] px-1 h-4">Beta</Badge>
+                <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground/90">
+                  Prism AI 助手
+                  <Badge variant="secondary" className="text-[10px] px-1.5 h-4 bg-primary/10 text-primary border-none font-medium">Beta</Badge>
                 </CardTitle>
                 
                 {/* Model Selector Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors outline-none group">
+                    <button className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors outline-none group">
                       <Cpu className="h-3 w-3" />
-                      <span className="capitalize">{currentProvider?.provider === 'local-vllm' ? 'Local Engine' : currentProvider?.provider || 'Select Model'}</span>
-                      <ChevronDown className="h-2 w-2 opacity-50 group-hover:opacity-100" />
+                      <span className="capitalize">{currentProvider?.provider === 'local-vllm' ? '本地引擎' : currentProvider?.provider || '选择模型'}</span>
+                      <ChevronDown className="h-2.5 w-2.5 opacity-50 group-hover:opacity-100" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-48">
-                    <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Select AI Engine</DropdownMenuLabel>
+                  <DropdownMenuContent align="start" className="w-48 shadow-xl border-primary/5">
+                    <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 px-2 py-1.5">选择 AI 引擎</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     {configs.map((config: any) => (
                       <DropdownMenuItem 
                         key={config.provider}
                         onClick={() => switchProvider(config.provider)}
-                        className="flex items-center justify-between py-2 cursor-pointer"
+                        className="flex items-center justify-between py-2 px-3 cursor-pointer focus:bg-primary/5"
                       >
-                        <div className="flex flex-col">
-                          <span className="text-xs font-medium capitalize">
-                            {config.provider === 'local-vllm' ? 'Prism Local' : config.provider}
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs font-semibold capitalize">
+                            {config.provider === 'local-vllm' ? 'Prism 本地' : config.provider}
                           </span>
-                          <span className="text-[9px] text-muted-foreground">{config.model}</span>
+                          <span className="text-[9px] text-muted-foreground line-clamp-1">{config.model}</span>
                         </div>
                         {config.isDefault && <CheckIcon className="h-3.5 w-3.5 text-primary" />}
                       </DropdownMenuItem>
                     ))}
                     {configs.length === 0 && (
                       <DropdownMenuItem className="text-[10px] text-muted-foreground italic py-4 justify-center">
-                        No BYOK configured
+                        未配置自定义模型
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
@@ -153,8 +156,8 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                   )}
                 >
                   <Avatar className={cn(
-                    "h-8 w-8 border shrink-0",
-                    m.role === 'user' ? "bg-background" : "bg-primary"
+                    "h-8 w-8 shrink-0 border",
+                    m.role === 'user' ? "bg-background" : "bg-muted shadow-sm"
                   )}>
                     {m.role === 'user' ? (
                       <>
@@ -166,7 +169,10 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                         </AvatarFallback>
                       </>
                     ) : (
-                      <Bot className="h-4 w-4 text-primary-foreground" />
+                      <>
+                        <AvatarImage src="/images/ai-assistant.jpg" alt="AI" />
+                        <AvatarFallback className="bg-primary text-primary-foreground text-[10px]">AI</AvatarFallback>
+                      </>
                     )}
                   </Avatar>
                   <div className={cn(
@@ -175,66 +181,57 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                       ? "bg-primary text-primary-foreground rounded-tr-none" 
                       : "bg-muted/50 border text-foreground rounded-tl-none"
                   )}>
-                    {m.content && (
-                      <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                        {isLoading && streamingAssistantId === m.id ? (
-                          <div className="whitespace-pre-wrap">{m.content}</div>
-                        ) : (
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {m.content}
-                          </ReactMarkdown>
+                    {m.role === 'assistant' && !m.content && (!m.toolInvocations || m.toolInvocations.length === 0) && isLoading ? (
+                      <Thinking />
+                    ) : (
+                      <>
+                        {m.content && (
+                          <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {m.content}
+                            </ReactMarkdown>
+                            {isLoading && streamingAssistantId === m.id && (
+                              <span className="inline-block w-1.5 h-4 ml-1 bg-primary/50 animate-pulse align-middle" />
+                            )}
+                          </div>
                         )}
-                      </div>
-                    )}
 
-                    {m.role === 'assistant' && m.reasoning?.trim() ? (
-                      <details className="mt-2">
-                        <summary className="cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
-                          推理过程
-                        </summary>
-                        <div className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground/80">
-                          {m.reasoning}
-                        </div>
-                      </details>
-                    ) : null}
+                        {m.role === 'assistant' && m.reasoning?.trim() ? (
+                          <details className="mt-2">
+                            <summary className="cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
+                              推理过程
+                            </summary>
+                            <div className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground/80">
+                              {m.reasoning}
+                            </div>
+                          </details>
+                        ) : null}
 
-                    {/* Render tool calls */}
-                    {m.toolInvocations && m.toolInvocations.length > 0 && (
-                      <div className="mt-2 space-y-1">
-                        {m.toolInvocations.map((toolInvocation: any) => (
-                          <AIToolInvocation 
-                            key={toolInvocation.toolCallId} 
-                            toolInvocation={toolInvocation} 
-                          />
-                        ))}
-                      </div>
-                    )}
+                        {/* Render tool calls */}
+                        {m.toolInvocations && m.toolInvocations.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {m.toolInvocations.map((toolInvocation: any) => (
+                              <AIToolInvocation 
+                                key={toolInvocation.toolCallId} 
+                                toolInvocation={toolInvocation} 
+                              />
+                            ))}
+                          </div>
+                        )}
 
-                    {/* Render sources for the last assistant message */}
-                    {m.role === 'assistant' && index === messages.length - 1 && sources.length > 0 && (
-                      <AISourceList sources={sources} />
+                        {/* Render sources for the last assistant message */}
+                        {m.role === 'assistant' && index === messages.length - 1 && sources.length > 0 && (
+                          <AISourceList sources={sources} />
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
               ))}
-              {isLoading && !messages.some((m: any) => m.role === 'assistant' && !m.content && m.toolInvocations) && (
-                <div className="flex items-start gap-3">
-                  <Avatar className="h-8 w-8 bg-primary animate-pulse shrink-0">
-                    <Bot className="h-4 w-4 text-primary-foreground" />
-                  </Avatar>
-                  <div className="bg-muted/50 border rounded-2xl rounded-tl-none p-3 shadow-sm">
-                    <div className="flex gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-foreground/30 animate-bounce [animation-delay:-0.3s]" />
-                      <span className="h-1.5 w-1.5 rounded-full bg-foreground/30 animate-bounce [animation-delay:-0.15s]" />
-                      <span className="h-1.5 w-1.5 rounded-full bg-foreground/30 animate-bounce" />
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </ScrollArea>
 
-          <CardFooter className="p-4 border-t bg-muted/10">
+          <CardFooter className="p-4 border-t bg-muted/5">
             <AIPromptInput 
               value={input}
               onChange={handleInputChange}
@@ -242,10 +239,10 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
               isLoading={isLoading}
             />
           </CardFooter>
-          <div className="px-4 pb-2 text-center">
-            <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
-              <Sparkles className="h-3 w-3" />
-              AI may provide inaccurate info. Check important details.
+          <div className="px-4 pb-3 text-center">
+            <p className="text-[10px] text-muted-foreground/60 flex items-center justify-center gap-1.5">
+              <Sparkles className="h-2.5 w-2.5 text-primary/40" />
+              AI 助手可能会生成不准确的信息，请核实重要细节。
             </p>
           </div>
         </Card>

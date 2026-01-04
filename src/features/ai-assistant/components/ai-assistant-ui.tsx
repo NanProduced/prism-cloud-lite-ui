@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, CheckCircle2, CircleDashed, AlertCircle, Info, Send, Paperclip } from 'lucide-react';
+import { ExternalLink, CheckCircle2, CircleDashed, AlertCircle, Info, Send, Paperclip, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,82 @@ import {
   HoverCardTrigger,
 } from '@/components/ui/hover-card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { motion } from 'framer-motion';
+
+import { Skeleton } from "@/components/ui/skeleton";
+
+export function Thinking() {
+  return (
+    <div className="flex flex-col gap-3 py-1.5 min-w-[240px]">
+      <div className="flex items-center gap-2 text-[11px] text-primary/70 font-bold uppercase tracking-wider">
+        <Sparkles className="h-3 w-3 animate-pulse" />
+        助手正在思考
+      </div>
+      
+      <div className="space-y-2.5">
+        <div className="relative overflow-hidden">
+          <Skeleton className="h-2.5 w-full bg-primary/5 rounded-full" />
+          <motion.div
+            className="absolute inset-0 z-10 bg-gradient-to-r from-transparent via-primary/10 to-transparent"
+            initial={{ x: "-100%" }}
+            animate={{ x: "100%" }}
+            transition={{
+              repeat: Infinity,
+              duration: 1.2,
+              ease: "easeInOut",
+            }}
+          />
+        </div>
+        <div className="relative overflow-hidden">
+          <Skeleton className="h-2.5 w-[90%] bg-primary/5 rounded-full" />
+          <motion.div
+            className="absolute inset-0 z-10 bg-gradient-to-r from-transparent via-primary/10 to-transparent"
+            initial={{ x: "-100%" }}
+            animate={{ x: "100%" }}
+            transition={{
+              repeat: Infinity,
+              duration: 1.2,
+              ease: "easeInOut",
+              delay: 0.1,
+            }}
+          />
+        </div>
+        <div className="relative overflow-hidden">
+          <Skeleton className="h-2.5 w-[75%] bg-primary/5 rounded-full" />
+          <motion.div
+            className="absolute inset-0 z-10 bg-gradient-to-r from-transparent via-primary/10 to-transparent"
+            initial={{ x: "-100%" }}
+            animate={{ x: "100%" }}
+            transition={{
+              repeat: Infinity,
+              duration: 1.2,
+              ease: "easeInOut",
+              delay: 0.2,
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1 mt-1">
+        <motion.div
+          animate={{ scale: [1, 1.2, 1], opacity: [0.4, 1, 0.4] }}
+          transition={{ duration: 1, repeat: Infinity, delay: 0 }}
+          className="h-1.5 w-1.5 rounded-full bg-primary/40"
+        />
+        <motion.div
+          animate={{ scale: [1, 1.2, 1], opacity: [0.4, 1, 0.4] }}
+          transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
+          className="h-1.5 w-1.5 rounded-full bg-primary/40"
+        />
+        <motion.div
+          animate={{ scale: [1, 1.2, 1], opacity: [0.4, 1, 0.4] }}
+          transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
+          className="h-1.5 w-1.5 rounded-full bg-primary/40"
+        />
+      </div>
+    </div>
+  );
+}
 
 // Types for AI SDK tool invocations
 export interface ToolInvocation {
@@ -28,9 +104,9 @@ export function AIToolInvocation({ toolInvocation }: { toolInvocation: ToolInvoc
       <Badge 
         variant="outline" 
         className={cn(
-          "flex items-center gap-2 py-1.5 px-3 font-medium transition-all",
-          isCompleted ? "bg-emerald-500/10 text-emerald-600 border-emerald-200" : "bg-blue-500/10 text-blue-600 border-blue-200 animate-pulse",
-          hasError && "bg-red-500/10 text-red-600 border-red-200"
+          "flex items-center gap-2 py-1.5 px-3 font-medium transition-all shadow-sm",
+          isCompleted ? "bg-emerald-500/5 text-emerald-600 border-emerald-200/50" : "bg-blue-500/5 text-blue-600 border-blue-200/50 animate-pulse",
+          hasError && "bg-red-500/5 text-red-600 border-red-200/50"
         )}
       >
         {isCompleted ? (
@@ -39,8 +115,8 @@ export function AIToolInvocation({ toolInvocation }: { toolInvocation: ToolInvoc
           <CircleDashed className="h-3.5 w-3.5 animate-spin" />
         )}
         <span className="text-xs">
-          {toolInvocation.toolName} 
-          {isCompleted ? (hasError ? ' Failed' : ' Completed') : ' Running...'}
+          {toolInvocation.toolName === 'navigateToPage' ? '页面跳转' : toolInvocation.toolName} 
+          {isCompleted ? (hasError ? ' 失败' : ' 已完成') : ' 正在处理...'}
         </span>
       </Badge>
     </div>
@@ -59,35 +135,33 @@ export function AISourceList({ sources }: { sources: AISource[] }) {
   return (
     <div className="mt-3 pt-3 border-t border-muted-foreground/10">
       <div className="flex items-center gap-1.5 mb-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-        <Info className="h-3 w-3" />
-        Reference Materials
+        <Info className="h-3 w-3 text-primary/60" />
+        参考资料
       </div>
       <div className="flex flex-wrap gap-2">
         {sources.map((source) => (
-          <HoverCard key={source.sourceId}>
+          <HoverCard key={source.sourceId} openDelay={200}>
             <HoverCardTrigger asChild>
               <a
                 href={source.url}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-1.5 text-xs py-1 px-2 rounded-md bg-muted hover:bg-muted-foreground/10 transition-colors border border-transparent hover:border-muted-foreground/20"
+                className="flex items-center gap-1.5 text-xs py-1 px-2.5 rounded-full bg-muted/50 hover:bg-primary/10 hover:text-primary transition-all border border-transparent hover:border-primary/20"
               >
                 <ExternalLink className="h-3 w-3" />
                 <span className="truncate max-w-[150px]">{source.title}</span>
               </a>
             </HoverCardTrigger>
-            <HoverCardContent className="w-80">
-              <div className="flex justify-between space-x-4">
+            <HoverCardContent className="w-80 p-3 shadow-xl">
+              <div className="flex flex-col gap-2">
                 <div className="space-y-1">
-                  <h4 className="text-sm font-semibold">{source.title}</h4>
-                  <p className="text-xs text-muted-foreground">
-                    Source ID: {source.sourceId}
+                  <h4 className="text-sm font-bold leading-none text-primary">{source.title}</h4>
+                  <p className="text-[10px] text-muted-foreground font-mono">
+                    ID: {source.sourceId}
                   </p>
-                  <div className="flex items-center pt-2">
-                    <span className="text-[10px] text-muted-foreground underline">
-                      {source.url}
-                    </span>
-                  </div>
+                </div>
+                <div className="text-[11px] text-muted-foreground break-all bg-muted/30 p-1.5 rounded border border-dashed">
+                  {source.url}
                 </div>
               </div>
             </HoverCardContent>
@@ -103,7 +177,7 @@ export function AIPromptInput({
   onChange,
   onSubmit,
   isLoading,
-  placeholder = "Ask Prism AI..."
+  placeholder = "问问 Prism AI..."
 }: {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -118,11 +192,11 @@ export function AIPromptInput({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground" type="button">
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors" type="button">
                   <Paperclip className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Attach files (Coming soon)</TooltipContent>
+              <TooltipContent side="top">上传附件（即将推出）</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
@@ -131,7 +205,7 @@ export function AIPromptInput({
           onChange={onChange}
           placeholder={placeholder}
           disabled={isLoading}
-          className="w-full pl-11 pr-12 h-12 bg-background border border-muted-foreground/20 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-sm transition-all outline-none disabled:opacity-50"
+          className="w-full pl-11 pr-12 h-12 bg-muted/30 border border-muted-foreground/10 focus:border-primary/30 focus:ring-4 focus:ring-primary/5 rounded-2xl text-sm transition-all outline-none disabled:opacity-50 placeholder:text-muted-foreground/50"
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
@@ -139,14 +213,17 @@ export function AIPromptInput({
             }
           }}
         />
-        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+        <div className="absolute right-2 top-1/2 -translate-y-1/2">
           <Button 
             type="submit" 
             size="icon" 
-            className="h-8 w-8 rounded-lg shadow-md transition-transform active:scale-95" 
+            className={cn(
+              "h-8 w-8 rounded-xl shadow-lg transition-all active:scale-90",
+              isLoading ? "bg-muted text-muted-foreground shadow-none" : "bg-primary hover:bg-primary/90"
+            )}
             disabled={isLoading || !value?.trim()}
           >
-            <Send className="h-4 w-4" />
+            <Send className={cn("h-4 w-4", !isLoading && "animate-in slide-in-from-left-1 duration-300")} />
           </Button>
         </div>
       </div>

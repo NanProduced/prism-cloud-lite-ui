@@ -43,10 +43,10 @@ export function useAIAssistant() {
     mutationFn: setDefaultAIProvider,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-assistant', 'configs'] });
-      toast.success("AI Provider switched successfully");
+      toast.success("AI 引擎切换成功");
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to switch provider");
+      toast.error(err.message || "切换引擎失败");
     }
   });
 
@@ -100,22 +100,30 @@ export function useAIAssistant() {
       let typingRaf: number | null = null;
       let visibleText = '';
       let reasoningText = '';
+      let receivedDone = false;
 
       const flushTyping = () => {
         typingRaf = null;
-        if (!typingPending) return;
+        if (!typingPending && receivedDone) return;
 
         // Typewriter effect: reveal a small slice per frame.
-        const step = Math.max(8, Math.min(64, Math.ceil(typingPending.length / 16)));
+        // During streaming, we keep it slow and steady. 
+        // After stream ends, we speed up slightly to finish the buffer.
+        const step = receivedDone 
+          ? Math.max(3, Math.ceil(typingPending.length / 10)) 
+          : Math.max(1, Math.min(3, Math.ceil(typingPending.length / 30)));
+          
         const slice = typingPending.slice(0, step);
         typingPending = typingPending.slice(step);
         visibleText += slice;
 
-        setMessages(prev => prev.map(m =>
-          m.id === assistantMsgId ? { ...m, content: visibleText } : m
-        ));
+        if (slice || (receivedDone && typingPending.length === 0)) {
+          setMessages(prev => prev.map(m =>
+            m.id === assistantMsgId ? { ...m, content: visibleText } : m
+          ));
+        }
 
-        if (typingPending) {
+        if (typingPending || !receivedDone) {
           typingRaf = requestAnimationFrame(flushTyping);
         }
       };
@@ -145,7 +153,6 @@ export function useAIAssistant() {
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
-      let receivedDone = false;
 
       if (reader) {
         while (true) {
@@ -169,88 +176,100 @@ export function useAIAssistant() {
             try {
               const chunk = JSON.parse(dataStr);
               
-              if (chunk.type === 'text-delta' && chunk.delta) {
-                enqueueDelta(String(chunk.delta));
-              } 
-              else if (chunk.type === 'tool-input-available') {
-                setMessages(prev => prev.map(m => 
-                  m.id === assistantMsgId ? {
-                    ...m, 
-                    toolInvocations: [
-                      ...(m.toolInvocations || []),
-                      {
-                        toolCallId: chunk.toolCallId,
-                        toolName: chunk.toolName,
-                        args: chunk.input,
-                        state: 'call'
-                      }
-                    ]
-                  } : m
-                ));
+              switch (chunk.type) {
+                case 'text-delta':
+                  if (chunk.delta) {
+                    enqueueDelta(String(chunk.delta));
+                  }
+                  break;
                 
-                // Handle client-side navigation tool
-                if (chunk.toolName === 'navigateToPage' && chunk.input?.path) {
-                  navigate(chunk.input.path);
-                  toast.success(`已为你跳转到 ${chunk.input.label || chunk.input.path}`);
-                }
-              }
-              else if (chunk.type === 'tool-output-available') {
-                setMessages(prev => prev.map(m => 
-                  m.id === assistantMsgId ? {
-                    ...m, 
-                    toolInvocations: (m.toolInvocations || []).map((ti: any) => 
-                      ti.toolCallId === chunk.toolCallId ? { ...ti, state: 'result', result: chunk.output } : ti
-                    )
-                  } : m
-                ));
-              }
-              else if (chunk.type === 'source-url') {
-                setData(prev => [...prev, chunk]);
-              }
-              else if (chunk.type === 'error') {
-                toast.error(chunk.errorText || "AI 出错啦");
-              }
-              else if (chunk.type === 'finish' && chunk.quota) {
-                setData(prev => [...prev, chunk]);
+                case 'tool-input-available':
+                  setMessages(prev => prev.map(m => 
+                    m.id === assistantMsgId ? {
+                      ...m, 
+                      toolInvocations: [
+                        ...(m.toolInvocations || []),
+                        {
+                          toolCallId: chunk.toolCallId,
+                          toolName: chunk.toolName,
+                          args: chunk.input,
+                          state: 'call'
+                        }
+                      ]
+                    } : m
+                  ));
+                  
+                  if (chunk.toolName === 'navigateToPage' && chunk.input?.path) {
+                    navigate(chunk.input.path);
+                    toast.success(`已为你跳转到 ${chunk.input.label || chunk.input.path}`);
+                  }
+                  break;
+
+                case 'tool-output-available':
+                  setMessages(prev => prev.map(m => 
+                    m.id === assistantMsgId ? {
+                      ...m, 
+                      toolInvocations: (m.toolInvocations || []).map((ti: any) => 
+                        ti.toolCallId === chunk.toolCallId ? { ...ti, state: 'result', result: chunk.output } : ti
+                      )
+                    } : m
+                  ));
+                  break;
+
+                case 'source-url':
+                  setData(prev => [...prev, chunk]);
+                  break;
+
+                case 'error':
+                  toast.error(chunk.errorText || "AI 出错啦");
+                  break;
+
+                case 'finish':
+                  if (chunk.quota) {
+                    setData(prev => [...prev, chunk]);
+                  }
+                  break;
               }
             } catch (e) {
               console.error("Parse error", e);
             }
           }
 
-          if (receivedDone) {
-            break;
-          }
+          if (receivedDone) break;
         }
       }
 
-      // Flush remaining buffered text and strip any incomplete tag fragments.
+      // Signal end of stream to flushTyping and finalize reasoning
+      receivedDone = true;
       const tail = outputFilter.flush();
       if (tail.reasoning) reasoningText += tail.reasoning;
       if (tail.text) typingPending += tail.text;
-
-      if (typingRaf != null) {
-        cancelAnimationFrame(typingRaf);
-        typingRaf = null;
-      }
-      if (typingPending) {
-        visibleText += typingPending;
-        setMessages(prev => prev.map(m => (m.id === assistantMsgId ? { ...m, content: visibleText } : m)));
+      
+      if (typingRaf === null) {
+        typingRaf = requestAnimationFrame(flushTyping);
       }
 
-      const finalReasoning = reasoningText.trim();
-      const finalContent = visibleText.trim();
-      if (finalReasoning) {
-        setMessages(prev => prev.map(m => (
-          m.id === assistantMsgId
-            ? {
-                ...m,
-                reasoning: finalReasoning,
-                content: finalContent ? m.content : "（模型返回了思考内容，但没有给出最终回答）"
-              }
-            : m
-        )));
-      }
+      // Ensure final state is correctly resolved after typing finishes
+      const finalizeMessage = () => {
+        if (typingPending.length > 0) {
+          setTimeout(finalizeMessage, 100);
+          return;
+        }
+        
+        const finalReasoning = reasoningText.trim();
+        if (finalReasoning) {
+          setMessages(prev => prev.map(m => (
+            m.id === assistantMsgId
+              ? {
+                  ...m,
+                  reasoning: finalReasoning,
+                  content: visibleText.trim() ? m.content : "（模型返回了思考内容，但没有给出最终回答）"
+                }
+              : m
+          )));
+        }
+      };
+      finalizeMessage();
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
         console.error("Chat error:", err);
@@ -320,8 +339,10 @@ function createAssistantOutputFilter() {
       if (!text) return { text: '', reasoning: '' };
       let outText = '';
       let outReasoning = '';
+      
       for (let i = 0; i < text.length; i++) {
         const ch = text[i];
+        
         if (!inTag) {
           if (ch === '<') {
             inTag = true;
@@ -330,27 +351,27 @@ function createAssistantOutputFilter() {
             if (inThink) outReasoning += ch;
             else outText += ch;
           }
-          continue;
-        }
-
-        tagBuffer += ch;
-        if (ch === '>') {
-          if (isThinkStart(tagBuffer)) {
-            inThink = true;
-          } else if (isThinkEnd(tagBuffer)) {
-            inThink = false;
-          } else if (!isFinalTag(tagBuffer)) {
+        } else {
+          tagBuffer += ch;
+          if (ch === '>') {
+            if (isThinkStart(tagBuffer)) {
+              inThink = true;
+            } else if (isThinkEnd(tagBuffer)) {
+              inThink = false;
+            } else if (!isFinalTag(tagBuffer)) {
+              // If it's not a recognized control tag, treat it as normal text/reasoning
+              if (inThink) outReasoning += tagBuffer;
+              else outText += tagBuffer;
+            }
+            inTag = false;
+            tagBuffer = '';
+          } else if (tagBuffer.length > 128) {
+            // Safety fallback for malformed tags or very long unexpected < sequences
             if (inThink) outReasoning += tagBuffer;
             else outText += tagBuffer;
+            inTag = false;
+            tagBuffer = '';
           }
-          inTag = false;
-          tagBuffer = '';
-        } else if (tagBuffer.length > 64) {
-          // Safety fallback for malformed tags.
-          if (inThink) outReasoning += tagBuffer;
-          else outText += tagBuffer;
-          inTag = false;
-          tagBuffer = '';
         }
       }
       return { text: outText, reasoning: outReasoning };
@@ -358,13 +379,22 @@ function createAssistantOutputFilter() {
     flush() {
       if (!inTag || !tagBuffer) return { text: '', reasoning: '' };
       const tailTag = tagBuffer;
-      const normalized = normalizeTag(tailTag);
-      if (normalized === '<think>') inThink = true;
-      if (normalized === '</think>') inThink = false;
-      const shouldDrop = isThinkStart(tailTag) || isThinkEnd(tailTag) || isFinalTag(tailTag);
       inTag = false;
       tagBuffer = '';
-      if (shouldDrop) return { text: '', reasoning: '' };
+      
+      // If we were in the middle of a tag when flushed, check if it was a control tag
+      if (isThinkStart(tailTag)) {
+        inThink = true;
+        return { text: '', reasoning: '' };
+      }
+      if (isThinkEnd(tailTag)) {
+        inThink = false;
+        return { text: '', reasoning: '' };
+      }
+      if (isFinalTag(tailTag)) {
+        return { text: '', reasoning: '' };
+      }
+      
       return inThink ? { text: '', reasoning: tailTag } : { text: tailTag, reasoning: '' };
     },
   };

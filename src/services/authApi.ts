@@ -1,6 +1,7 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosResponse } from 'axios';
 import apiClient from './apiClient';
+import { gatewayOrigin, joinUrl } from '@/config/runtime';
 import type {
   BffResponse,
   LoginRequest,
@@ -17,7 +18,7 @@ import type {
 
 // API base URL - defaults to auth service directly in development
 // In production, requests should go through the gateway
-const API_BASE_URL = '/auth';
+const API_BASE_URL = joinUrl(gatewayOrigin, '/auth');
 
 const authApiClient = axios.create({
   baseURL: API_BASE_URL,

@@ -39,6 +39,7 @@ import { getUploadUrls } from '@/services/mediaApi';
 import { getErrorMessage } from '@/services/authApi';
 import { cn } from '@/lib/utils';
 import type { UserBugReportCreateRequest } from '@/types/feedback';
+import { gatewayOrigin, joinUrl } from '@/config/runtime';
 
 const DRAFT_KEY = 'prism.feedback.draft';
 
@@ -129,7 +130,7 @@ export function FeedbackDialog({
           headers: result.headers,
         });
 
-        const baseUrl = import.meta.env.VITE_PUBLIC_ASSET_BASE_URL || window.location.origin + '/api';
+        const baseUrl = import.meta.env.VITE_PUBLIC_ASSET_BASE_URL || joinUrl(gatewayOrigin, '/api');
         const key = result.file.objectInfo.key;
         const absoluteUrl = `${baseUrl.replace(/\/$/, '')}/${key.replace(/^\//, '')}`;
 

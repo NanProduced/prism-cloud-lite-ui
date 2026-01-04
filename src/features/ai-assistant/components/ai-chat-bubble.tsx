@@ -1,7 +1,8 @@
 import React from 'react';
-import { Bot, X, Sparkles } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 interface AIChatBubbleProps {
   isOpen: boolean;
@@ -22,12 +23,15 @@ export function AIChatBubble({ isOpen, onClick }: AIChatBubbleProps) {
           >
             <Button
               size="icon"
-              className="h-14 w-14 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-all duration-300 group"
+              className="h-14 w-14 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-all duration-300 group border-none p-0 overflow-hidden"
               onClick={onClick}
             >
-              <div className="relative">
-                <Bot className="h-7 w-7 text-primary-foreground group-hover:rotate-12 transition-transform" />
-                <Sparkles className="h-3 w-3 text-yellow-300 absolute -top-1 -right-1 animate-pulse" />
+              <div className="relative h-full w-full">
+                <Avatar className="h-full w-full rounded-none">
+                  <AvatarImage src="/images/ai-assistant.jpg" alt="AI" className="object-cover" />
+                  <AvatarFallback className="rounded-none bg-primary text-primary-foreground">AI</AvatarFallback>
+                </Avatar>
+                <Sparkles className="h-4 w-4 text-yellow-300 absolute -top-1 -right-1 animate-pulse z-10" />
               </div>
             </Button>
           </motion.div>

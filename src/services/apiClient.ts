@@ -1,10 +1,11 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosResponse } from 'axios';
 import type { BffResponse } from '@/types/auth';
+import { gatewayOrigin, joinUrl } from '@/config/runtime';
 
 // API base URL for core business logic
 // Proximity through Vite proxy to http://localhost:8082
-const API_BASE_URL = '/api/v1';
+const API_BASE_URL = joinUrl(gatewayOrigin, '/api/v1');
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

@@ -1,5 +1,6 @@
 import apiClient, { handleRequest } from './apiClient';
 import type { BffResponse } from '@/types/auth';
+import { gatewayOrigin, joinUrl } from '@/config/runtime';
 import type { 
   MediaNode, 
   MediaLibraryUsageResponse, 
@@ -153,7 +154,7 @@ export async function getUploadUrls(data: {
   metadata?: any;
 }) {
   const response = await apiClient.post('/upload', data, {
-    baseURL: '/api', // Override base URL
+    baseURL: joinUrl(gatewayOrigin, '/api'), // Override base URL (upload is not under /api/v1)
   });
   return response.data;
 }
