@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Folder, ChevronRight, Check, Library } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -26,6 +27,7 @@ export function MoveNodesDialog({
   currentParentId,
   onConfirm,
 }: MoveNodesDialogProps) {
+  const { t } = useTranslation();
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(currentParentId);
 
   const { data: foldersData, isLoading } = useQuery({
@@ -70,9 +72,9 @@ export function MoveNodesDialog({
         <div className="flex flex-col">
           <div className="px-8 py-6 border-b bg-muted/10">
             <DialogHeader className="space-y-1.5 mb-0">
-              <DialogTitle className="text-xl font-bold tracking-tight">Move Items</DialogTitle>
+              <DialogTitle className="text-xl font-bold tracking-tight">{t('media.dialogs.move.title')}</DialogTitle>
               <DialogDescription className="text-sm">
-                Moving {nodeNames.length} {nodeNames.length === 1 ? 'item' : 'items'}: {nodeNames.join(', ')}
+                {t('media.dialogs.move.desc', { count: nodeNames.length, names: nodeNames.join(', ') })}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -81,7 +83,7 @@ export function MoveNodesDialog({
             <ScrollArea className="h-[300px] px-4 py-4">
               <div className="space-y-1">
                 <FolderItem
-                  name="Library (Root)"
+                  name={t('media.dialogs.move.root')}
                   id={null}
                   isSelected={selectedFolderId === null}
                   onSelect={() => setSelectedFolderId(null)}
@@ -89,9 +91,9 @@ export function MoveNodesDialog({
                 />
                 <div className="pl-4 space-y-1 border-l ml-4 mt-1">
                   {isLoading ? (
-                    <p className="text-xs text-muted-foreground p-4">Loading folders...</p>
+                    <p className="text-xs text-muted-foreground p-4">{t('media.dialogs.move.loadingFolders')}</p>
                   ) : folderTree.length === 0 ? (
-                    <p className="text-xs text-muted-foreground p-4 text-center">No subfolders found</p>
+                    <p className="text-xs text-muted-foreground p-4 text-center">{t('media.dialogs.move.noSubfolders')}</p>
                   ) : (
                     folderTree.map(item => (
                       <RecursiveFolderItem
@@ -110,14 +112,14 @@ export function MoveNodesDialog({
 
           <div className="px-8 py-4 bg-muted/5 border-t flex items-center justify-end gap-3">
             <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl">
-              Cancel
+              {t('common.actions.cancel')}
             </Button>
             <Button 
               onClick={handleConfirm} 
               disabled={isMovingToSame || isTargetIllegal}
               className="rounded-xl px-8 bg-zinc-900 text-white hover:bg-zinc-800"
             >
-              Move Here
+              {t('media.dialogs.move.moveHere')}
             </Button>
           </div>
         </div>
@@ -198,6 +200,7 @@ function FolderItem({
   disabled?: boolean;
   isRoot?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <button
       onClick={onSelect}
@@ -211,7 +214,7 @@ function FolderItem({
       {isRoot ? <Library className="h-4 w-4 shrink-0" /> : <Folder className={cn("h-4 w-4 shrink-0", isSelected ? "fill-primary/20" : "fill-muted-foreground/10")} />}
       <span className="truncate flex-1">{name}</span>
       {isSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
-      {disabled && <span className="text-[10px] font-bold uppercase opacity-50">Current / Sub</span>}
+      {disabled && <span className="text-[10px] font-bold uppercase opacity-50">{t('media.dialogs.move.currentOrSub')}</span>}
     </button>
   );
 }

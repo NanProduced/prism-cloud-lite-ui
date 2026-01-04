@@ -1,7 +1,7 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { BACKEND_WEEKDAY_LABELS } from "@/lib/schedule/weekdayUtils"
+import { useTranslation } from "react-i18next"
 
 export interface WeekdaySelectorProps {
   /**
@@ -13,16 +13,9 @@ export interface WeekdaySelectorProps {
   disabled?: boolean
 }
 
-/**
- * Weekdays using backend convention:
- * index 0 = Monday, index 6 = Sunday
- */
-const WEEKDAYS = BACKEND_WEEKDAY_LABELS.map((label, index) => ({
-  label,
-  value: index,
-}))
-
 export function WeekdaySelector({ value, onChange, disabled }: WeekdaySelectorProps) {
+  const { t } = useTranslation();
+  
   const toggleDay = (dayIndex: number) => {
     if (value.includes(dayIndex)) {
       onChange(value.filter((d) => d !== dayIndex).sort())
@@ -41,14 +34,14 @@ export function WeekdaySelector({ value, onChange, disabled }: WeekdaySelectorPr
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
-        {WEEKDAYS.map((day) => {
-          const isSelected = value.includes(day.value)
+        {[0, 1, 2, 3, 4, 5, 6].map((dayValue) => {
+          const isSelected = value.includes(dayValue)
           return (
             <button
-              key={day.value}
+              key={dayValue}
               type="button"
               disabled={disabled}
-              onClick={() => toggleDay(day.value)}
+              onClick={() => toggleDay(dayValue)}
               className={cn(
                 "h-10 w-10 rounded-full border text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
                 isSelected
@@ -56,23 +49,23 @@ export function WeekdaySelector({ value, onChange, disabled }: WeekdaySelectorPr
                   : "border-input bg-background hover:bg-accent hover:text-accent-foreground"
               )}
             >
-              {day.label.charAt(0)}
+              {t(`schedules.weekdaySelector.short.${dayValue}`)}
             </button>
           )
         })}
       </div>
       <div className="flex flex-wrap gap-2 text-xs">
         <Button variant="outline" size="sm" onClick={selectAll} disabled={disabled} className="h-7">
-          All
+          {t('schedules.weekdaySelector.all')}
         </Button>
         <Button variant="outline" size="sm" onClick={selectWorkdays} disabled={disabled} className="h-7">
-          Workdays
+          {t('schedules.weekdaySelector.workdays')}
         </Button>
         <Button variant="outline" size="sm" onClick={selectWeekend} disabled={disabled} className="h-7">
-          Weekend
+          {t('schedules.weekdaySelector.weekend')}
         </Button>
         <Button variant="ghost" size="sm" onClick={clear} disabled={disabled} className="h-7">
-          Clear
+          {t('schedules.weekdaySelector.clear')}
         </Button>
       </div>
     </div>

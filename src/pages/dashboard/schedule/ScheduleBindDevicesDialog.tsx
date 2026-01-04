@@ -13,55 +13,64 @@ import { getDevices } from '@/services/deviceApi';
 import { bindDevicesToSchedule } from '@/services/scheduleApi';
 import type { ScheduleBindDevicesResp } from '@/types/schedule';
 import type { BffResponse } from '@/types/auth';
+import { useTranslation } from 'react-i18next';
 
-function getBffDisplayError(res: BffResponse<any> | null | undefined): string {
-  return res?.error?.displayMessage || res?.error?.message || 'Request failed';
+function getBffDisplayError(res: BffResponse<any> | null | undefined, t: any): string {
+  return res?.error?.displayMessage || res?.error?.message || t('common.errors.unknown');
 }
 
 export function ScheduleBindDevicesDialog(props: {
+
   open: boolean;
+
   onOpenChange: (open: boolean) => void;
+
   scheduleId: string;
+
   alreadyBoundDeviceIds: number[];
+
 }) {
+
+  const { t } = useTranslation();
+
   const { open, onOpenChange, scheduleId, alreadyBoundDeviceIds } = props;
-  const queryClient = useQueryClient();
 
-  const [keyword, setKeyword] = useState('');
-  const [replaceExisting, setReplaceExisting] = useState(false);
-  const [selectedDeviceIds, setSelectedDeviceIds] = useState<number[]>([]);
-  const [bindResult, setBindResult] = useState<ScheduleBindDevicesResp | null>(null);
-
-  const devicesQuery = useQuery({
-    queryKey: ['devices'],
-    queryFn: getDevices,
-    enabled: open,
-  });
-
-  const devices = useMemo(() => {
-    const list = devicesQuery.data?.data || [];
-    const q = keyword.trim().toLowerCase();
-    const filtered = q ? list.filter((d) => (d.deviceName || '').toLowerCase().includes(q)) : list;
-    return [...filtered].sort((a, b) => String(a.deviceId).localeCompare(String(b.deviceId)));
-  }, [devicesQuery.data?.data, keyword]);
+// ...
 
   const bindMutation = useMutation({
+
     mutationFn: () => bindDevicesToSchedule(scheduleId, selectedDeviceIds, replaceExisting),
+
     onSuccess: (res) => {
+
       if (!res.success) {
-        toast.error(getBffDisplayError(res));
+
+        toast.error(getBffDisplayError(res, t));
+
         return;
+
       }
+
       setBindResult(res.data || null);
+
       queryClient.invalidateQueries({ queryKey: ['schedule', scheduleId] });
+
       queryClient.invalidateQueries({ queryKey: ['schedule-bindings', scheduleId] });
+
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
 
+
+
       const conflicts = res.data?.conflicts ?? 0;
-      if (conflicts > 0) toast.warning('Binding completed with conflicts', { description: `Conflicts: ${conflicts}` });
-      else toast.success('Devices bound');
+
+      if (conflicts > 0) toast.warning(t('schedules.details.bindDevices.toasts.withConflicts'), { description: t('schedules.details.bindDevices.toasts.conflictsDesc', { count: conflicts }) });
+
+      else toast.success(t('schedules.details.bindDevices.toasts.success'));
+
     },
-    onError: () => toast.error('Bind failed'),
+
+    onError: () => toast.error(t('schedules.details.bindDevices.toasts.failed')),
+
   });
 
   function toggleDevice(deviceId: number) {
@@ -85,9 +94,9 @@ export function ScheduleBindDevicesDialog(props: {
     >
       <DialogContent className="max-w-[860px]">
         <DialogHeader>
-          <DialogTitle>Bind devices</DialogTitle>
+          <DialogTitle>{t('schedules.details.bindDevices.title')}</DialogTitle>
           <DialogDescription>
-            One device can only bind to one schedule. If a device is already bound to another schedule, it becomes a conflict unless you choose Replace.
+            {t('schedules.details.bindDevices.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -95,12 +104,12 @@ export function ScheduleBindDevicesDialog(props: {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative w-full sm:w-[360px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Search devices..." className="pl-9" />
+              <Input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder={t('schedules.details.bindDevices.searchPlaceholder')} className="pl-9" />
             </div>
             <div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
               <div>
-                <p className="text-sm font-semibold">Replace existing bindings</p>
-                <p className="text-xs text-muted-foreground">Default is safer: keep existing schedule bindings.</p>
+                <p className="text-sm font-semibold">{t('schedules.details.bindDevices.replaceLabel')}</p>
+                <p className="text-xs text-muted-foreground">{t('schedules.details.bindDevices.replaceDesc')}</p>
               </div>
               <Switch checked={replaceExisting} onCheckedChange={setReplaceExisting} />
             </div>
@@ -110,10 +119,10 @@ export function ScheduleBindDevicesDialog(props: {
             <div className="max-h-[360px] overflow-auto divide-y">
               {devicesQuery.isLoading ? (
                 <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading devices...
+                  <Loader2 className="h-4 w-4 animate-spin" /> {t('schedules.details.bindDevices.loading')}
                 </div>
               ) : devices.length === 0 ? (
-                <div className="py-10 text-center text-sm text-muted-foreground">No devices</div>
+                <div className="py-10 text-center text-sm text-muted-foreground">{t('schedules.details.bindDevices.noDevices')}</div>
               ) : (
                 devices.map((d) => {
                   const id = Number(d.deviceId);
@@ -131,7 +140,7 @@ export function ScheduleBindDevicesDialog(props: {
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-semibold truncate">{name}</span>
                           <span className="text-xs text-muted-foreground font-mono">#{id}</span>
-                          {isBoundHere ? <span className="text-xs text-emerald-600">Already bound</span> : null}
+                          {isBoundHere ? <span className="text-xs text-emerald-600">{t('schedules.details.bindDevices.alreadyBound')}</span> : null}
                         </div>
                         <p className="text-xs text-muted-foreground truncate">{d.description || d.model || d.ipAddress || '—'}</p>
                       </div>
@@ -147,16 +156,16 @@ export function ScheduleBindDevicesDialog(props: {
 
           <div className="flex items-center justify-between">
             <div className="text-xs text-muted-foreground">
-              Selected: <span className="font-semibold">{selectedDeviceIds.length}</span> · Already bound to this schedule:{' '}
+              {t('schedules.details.bindDevices.selected')}: <span className="font-semibold">{selectedDeviceIds.length}</span> · {t('schedules.details.bindDevices.alreadyBoundToThis')}:{' '}
               <span className="font-semibold">{alreadyBoundDeviceIds.length}</span>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="ghost" onClick={() => onOpenChange(false)}>
-                Close
+                {t('common.actions.close')}
               </Button>
               <Button onClick={() => bindMutation.mutate()} disabled={bindMutation.isPending || selectedDeviceIds.length === 0} className="gap-2">
                 {bindMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Bind
+                {t('schedules.details.bindDevices.bind')}
               </Button>
             </div>
           </div>
@@ -164,9 +173,9 @@ export function ScheduleBindDevicesDialog(props: {
           {bindResult ? (
             <div className="rounded-lg border p-3 space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold">Result</p>
+                <p className="text-sm font-semibold">{t('schedules.details.bindDevices.result.title')}</p>
                 <p className="text-xs text-muted-foreground">
-                  total={bindResult.totalTargets} · bound={bindResult.bound} · conflicts={bindResult.conflicts}
+                  {t('schedules.details.bindDevices.result.total')}={bindResult.totalTargets} · {t('schedules.details.bindDevices.result.bound')}={bindResult.bound} · {t('schedules.details.bindDevices.result.conflicts')}={bindResult.conflicts}
                 </p>
               </div>
               <div className="max-h-[220px] overflow-auto rounded border">
@@ -177,7 +186,7 @@ export function ScheduleBindDevicesDialog(props: {
                       <span className="text-xs text-muted-foreground">
                         {r.status === 'conflict' ? (
                           <span className="inline-flex items-center gap-1 text-rose-600">
-                            <XCircle className="h-3 w-3" /> conflict (prev {String(r.previousScheduleId || '').slice(0, 8)})
+                            <XCircle className="h-3 w-3" /> {t('schedules.details.bindDevices.result.conflictStatus', { id: String(r.previousScheduleId || '').slice(0, 8) })}
                           </span>
                         ) : (
                           r.status

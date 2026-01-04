@@ -123,7 +123,7 @@ export default function SettingsPage() {
       });
 
       window.dispatchEvent(new Event('prism-profile-updated')); // Notify other components if needed
-      toast.success('Profile updated');
+      toast.success(t('settings.toasts.profileUpdated'));
     },
     onError: (error: any) => {
       toast.error(getErrorMessage(error));
@@ -133,7 +133,7 @@ export default function SettingsPage() {
   const changePasswordMutation = useMutation({
     mutationFn: changePassword,
     onSuccess: () => {
-      toast.success('Password updated');
+      toast.success(t('settings.toasts.passwordUpdated'));
     },
     onError: (error: any) => {
       toast.error(getErrorMessage(error));
@@ -144,7 +144,7 @@ export default function SettingsPage() {
     mutationFn: revokeSession,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user', 'sessions'] });
-      toast.success('Session revoked');
+      toast.success(t('settings.toasts.sessionRevoked'));
     },
     onError: (error: any) => {
       toast.error(getErrorMessage(error));
@@ -155,7 +155,7 @@ export default function SettingsPage() {
     mutationFn: revokeAllSessions,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user', 'sessions'] });
-      toast.success('All sessions revoked');
+      toast.success(t('settings.toasts.allSessionsRevoked'));
     },
     onError: (error: any) => {
       toast.error(getErrorMessage(error));
@@ -166,7 +166,7 @@ export default function SettingsPage() {
     mutationFn: createApiKey,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user', 'api-keys'] });
-      toast.success('API key created');
+      toast.success(t('settings.toasts.apiKeyCreated'));
     },
     onError: (error: any) => {
       toast.error(getErrorMessage(error));
@@ -177,7 +177,7 @@ export default function SettingsPage() {
     mutationFn: revokeApiKey,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user', 'api-keys'] });
-      toast.success('API key revoked');
+      toast.success(t('settings.toasts.apiKeyRevoked'));
     },
     onError: (error: any) => {
       toast.error(getErrorMessage(error));
@@ -188,7 +188,7 @@ export default function SettingsPage() {
     mutationFn: regenerateApiKey,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user', 'api-keys'] });
-      toast.success('API key regenerated');
+      toast.success(t('settings.toasts.apiKeyRegenerated'));
     },
     onError: (error: any) => {
       toast.error(getErrorMessage(error));
@@ -198,7 +198,7 @@ export default function SettingsPage() {
   const bindPhoneRequestMutation = useMutation({
     mutationFn: bindPhoneRequest,
     onSuccess: () => {
-      toast.info('Verification code sent to your phone');
+      toast.info(t('settings.toasts.verificationSent'));
     },
     onError: (error: any) => {
       toast.error(getErrorMessage(error));
@@ -209,7 +209,7 @@ export default function SettingsPage() {
     mutationFn: bindPhoneConfirm,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user', 'profile'] });
-      toast.success('Phone number bound successfully');
+      toast.success(t('settings.toasts.phoneBound'));
     },
     onError: (error: any) => {
       toast.error(getErrorMessage(error));
@@ -219,7 +219,7 @@ export default function SettingsPage() {
   // --- Data Mapping ---
 
   const userProfile: ProfileData = {
-    name: profileData?.data?.displayName || 'User',
+    name: profileData?.data?.displayName || t('common.user'),
     email: profileData?.data?.email || '',
     avatarPreset: profileData?.data?.avatarId || 'm-1',
     phone: profileData?.data?.phone,
@@ -291,7 +291,7 @@ export default function SettingsPage() {
   }));
 
   if (isProfileLoading && !profileData) {
-    return <div className="flex justify-center p-12">Loading settings...</div>;
+    return <div className="flex justify-center p-12 text-sm text-muted-foreground">{t('programEditor.states.loading')}</div>;
   }
 
   return (
@@ -345,7 +345,7 @@ export default function SettingsPage() {
               onChange={(next) => {
                 setProgramDraftSavePolicy(next);
                 setProgramDraftPolicyState(next);
-                toast.success('Draft save rule updated');
+                toast.success(t('settings.draftPolicy.saveSuccess'));
               }}
             />
           </div>

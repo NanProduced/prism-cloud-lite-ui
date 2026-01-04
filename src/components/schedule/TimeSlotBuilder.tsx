@@ -2,7 +2,7 @@ import * as React from "react"
 import { Plus, Trash2, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
+import { useTranslation } from "react-i18next"
 
 export interface TimeSlot {
   start: string // "HH:mm:ss"
@@ -16,6 +16,7 @@ export interface TimeSlotBuilderProps {
 }
 
 export function TimeSlotBuilder({ value, onChange, disabled }: TimeSlotBuilderProps) {
+  const { t } = useTranslation();
   const addSlot = () => {
     onChange([...value, { start: "08:00:00", end: "18:00:00" }])
   }
@@ -36,9 +37,9 @@ export function TimeSlotBuilder({ value, onChange, disabled }: TimeSlotBuilderPr
     <div className="space-y-3">
       {value.length === 0 ? (
         <div className="flex h-20 flex-col items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground">
-          <p>No time limits (All day)</p>
+          <p>{t('schedules.details.timeSlotBuilder.noLimits')}</p>
           <Button variant="link" onClick={addSlot} disabled={disabled} className="h-auto p-0 text-xs">
-            Add time slot
+            {t('schedules.details.timeSlotBuilder.addSlot')}
           </Button>
         </div>
       ) : (
@@ -80,7 +81,7 @@ export function TimeSlotBuilder({ value, onChange, disabled }: TimeSlotBuilderPr
             </div>
           ))}
           <Button variant="outline" size="sm" onClick={addSlot} disabled={disabled} className="w-full gap-2 border-dashed">
-            <Plus className="h-4 w-4" /> Add another slot
+            <Plus className="h-4 w-4" /> {t('schedules.details.timeSlotBuilder.addAnother')}
           </Button>
         </div>
       )}

@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Clock, FilePlus2, Image as ImageIcon, Layers, Plus, Trash2, Type as TypeIcon, Video as VideoIcon } from 'lucide-react';
+import { FilePlus2, Image as ImageIcon, Layers, Plus, Trash2, Type as TypeIcon, Video as VideoIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -186,8 +186,8 @@ export function EditorLeftPanel({
           </div>
           <div className="flex items-center gap-1">
             <FilterPill active={mediaFilter === 'all'} onClick={() => setMediaFilter('all')}>{t('common.all')}</FilterPill>
-            <FilterPill active={mediaFilter === 'image'} onClick={() => setMediaFilter('image')}>Images</FilterPill>
-            <FilterPill active={mediaFilter === 'video'} onClick={() => setMediaFilter('video')}>Videos</FilterPill>
+            <FilterPill active={mediaFilter === 'image'} onClick={() => setMediaFilter('image')}>{t('programEditor.items.image')}</FilterPill>
+            <FilterPill active={mediaFilter === 'video'} onClick={() => setMediaFilter('video')}>{t('programEditor.items.video')}</FilterPill>
           </div>
         </div>
 
@@ -234,7 +234,7 @@ export function EditorLeftPanel({
                   <div className="min-w-0 flex-1 flex flex-col justify-center">
                     <p className="truncate text-xs font-bold text-foreground/90 leading-tight mb-0.5">{m.name}</p>
                     <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground/60 font-medium">
-                      <span className="capitalize">{m.kind}</span>
+                      <span>{m.kind === 'video' ? t('programEditor.items.video') : t('programEditor.items.image')}</span>
                       {m.width && m.height && (
                         <>
                           <span>·</span>

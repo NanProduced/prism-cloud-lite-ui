@@ -10,6 +10,7 @@
       "view": "View",
       "open": "Open",
       "refresh": "Refresh",
+      "retry": "Retry",
       "close": "Close"
     },
     "errors": {
@@ -976,11 +977,25 @@
       "done": "Done"
     },
     "device": {
-      "operationType": "Operation Type"
+      "operationType": "Operation Category",
+      "operation": "Operation",
+      "loading": "Fetching Logs...",
+      "loadFailed": "Failed to load logs",
+      "empty": "No logs found for the selected criteria.",
+      "reported": "Reported",
+      "table": {
+        "timestamp": "Log Timestamp",
+        "source": "Device Source",
+        "operation": "Operation",
+        "level": "Level",
+        "message": "Content Message",
+        "pagination": "Showing {{start}} to {{end}} of {{total}} entries",
+        "paginationEmpty": "0 entries found"
+      }
     },
     "command": {
-      "statusLabel": "Status",
-      "searchPlaceholder": "Search (device/action/status/ID)",
+      "statusLabel": "Status filter",
+      "searchPlaceholder": "Search commands or operation ID...",
       "loading": "Loading command logs...",
       "loadFailed": "Failed to load command logs",
       "empty": "No command logs found for the current filter.",
@@ -1628,6 +1643,341 @@
         "EXPLICIT_RESULT": "Explicit Result",
         "UNKNOWN": "Unknown"
       }
+    },
+    "device": {
+      "loading": "Fetching Logs...",
+      "loadFailed": "Failed to load logs",
+      "empty": "No logs found for the selected criteria.",
+      "reported": "Reported",
+      "table": {
+        "timestamp": "Log Timestamp",
+        "source": "Device Source",
+        "operation": "Operation",
+        "level": "Level",
+        "message": "Content Message",
+        "pagination": "Showing {{start}} to {{end}} of {{total}} entries",
+        "paginationEmpty": "0 entries found"
+      }
+    }
+  },
+  "media": {
+    "explorer": {
+      "breadcrumbRoot": "Library",
+      "filter": {
+        "label": "Filter",
+        "all": "All Assets",
+        "folders": "Folders",
+        "image": "Images",
+        "video": "Videos",
+        "document": "Documents",
+        "other": "Other"
+      },
+      "sort": {
+        "label": "Sort",
+        "updatedAt": "Recently Updated",
+        "name": "Name (A → Z)",
+        "size": "Size (Largest)"
+      },
+      "view": {
+        "label": "View",
+        "thumbnails": "Thumbnails",
+        "list": "List"
+      },
+      "actions": {
+        "newFolder": "New Folder",
+        "upload": "Upload",
+        "loadMore": "Load More",
+        "preview": "Preview",
+        "rename": "Rename",
+        "move": "Move to",
+        "transcode": "Transcode",
+        "delete": "Delete Permanently"
+      },
+      "empty": {
+        "title": "This folder is empty",
+        "description": "Upload new assets or create a folder to get started."
+      },
+      "states": {
+        "loading": "Loading media library...",
+        "searching": "Searching..."
+      },
+      "toasts": {
+        "createSuccess": "Created successfully",
+        "deleteSuccess": "Deleted successfully",
+        "renameSuccess": "Renamed successfully",
+        "moveSuccess": "Items moved successfully",
+        "previewNotAvailable": "Preview is not available for this file type yet",
+        "previewUnavailable": "Preview unavailable",
+        "previewUnavailableDescImage": "No image source URL is available for this asset.",
+        "previewUnavailableDescVideo": "No video source URL is available for this asset.",
+        "previewUnavailableDescDoc": "Document preview is not supported yet."
+      }
+    },
+    "upload": {
+      "title": "Library Storage",
+      "activity": "Upload Activity",
+      "active": "active",
+      "recent": "recent",
+      "noUploads": "No uploads yet",
+      "viewAll": "View All",
+      "storageTight": "Storage is getting tight — consider cleaning up unused assets.",
+      "categories": {
+        "image": "Images",
+        "video": "Videos",
+        "document": "Docs",
+        "other": "Other"
+      },
+      "drawer": {
+        "title": "Uploads",
+        "cancelAll": "Cancel All",
+        "retryFailed": "Retry Failed",
+        "clearFinished": "Clear Finished",
+        "empty": "No uploads in this session."
+      },
+      "taskStatus": {
+        "verifying": "Verifying (MD5)",
+        "checking": "Checking duplicates",
+        "uploading": "Uploading",
+        "finalizing": "Finalizing",
+        "done": "Completed",
+        "error": "Upload failed",
+        "canceled": "Canceled"
+      },
+      "settings": {
+        "title": "Upload Settings",
+        "description": "Review file titles and choose a destination folder for {{count}} item(s).",
+        "addMore": "Add More Files",
+        "destination": "Destination",
+        "collapseAll": "Collapse All",
+        "assetTitle": "Asset Title",
+        "titlePlaceholder": "Enter display title...",
+        "selectedDestination": "Selected Destination",
+        "confirm": "Confirm & Start Upload"
+      },
+      "toasts": {
+        "clipboardNotSupported": "Clipboard paste is not supported in this browser.",
+        "clipboardNoImage": "Clipboard does not contain an image.",
+        "noFilesSelected": "No files selected."
+      }
+    },
+    "dialogs": {
+      "createFolder": {
+        "title": "New Folder",
+        "desc": "Create a new folder.",
+        "descIn": "Create a new folder in {{parent}}.",
+        "label": "Folder name",
+        "placeholder": "e.g. Campaign creatives"
+      },
+      "rename": {
+        "title": "Rename Item",
+        "desc": "Enter a new name for this {{type}}.",
+        "folder": "folder",
+        "asset": "asset",
+        "label": "New Name"
+      },
+      "delete": {
+        "title": "Delete Permanently?",
+        "desc": "This action cannot be undone. You are about to permanently delete:",
+        "descNote": "Removing this will free up space but it cannot be recovered."
+      },
+      "move": {
+        "title": "Move Items",
+        "desc": "Moving {{count}} items: {{names}}",
+        "root": "Library (Root)",
+        "loadingFolders": "Loading folders...",
+        "noSubfolders": "No subfolders found",
+        "moveHere": "Move Here",
+        "currentOrSub": "Current / Sub"
+      },
+      "transcode": {
+        "title": "Transcode Video",
+        "description": "Optimize \"{{name}}\" for standardized playback.",
+        "pipeline": "Processing Pipeline",
+        "targetPreset": "Target Preset",
+        "advancedOptions": "Advanced Options",
+        "bitrate": "Bitrate (Kbps)",
+        "quality": "Quality (CRF)",
+        "faststart": "Faststart",
+        "faststartDesc": "Optimize for streaming",
+        "startTask": "Start Task",
+        "toasts": {
+          "success": "Transcoding started. Track progress in Messages.",
+          "failed": "Failed to start transcoding"
+        }
+      }
+    },
+    "presets": {
+      "mp4_1080p_h264": { "name": "Ultra HD", "desc": "1080p High Quality" },
+      "mp4_720p_h264": { "name": "Balanced", "desc": "720p Standard" },
+      "mp4_480p_h264": { "name": "Mobile", "desc": "480p Efficient" },
+      "mp4_h264": { "name": "Native", "desc": "Source Resolution" }
+    }
+  },
+  "programs": {
+    "list": {
+      "tabs": {
+        "all": "All programs",
+        "templates": "Templates"
+      },
+      "search": {
+        "programs": "Search programs...",
+        "templates": "Search templates..."
+      },
+      "actions": {
+        "create": "Create",
+        "edit": "Edit",
+        "deploy": "Deploy",
+        "publishV1": "Publish v1",
+        "loading": "Loading...",
+        "viewStatus": "View Status & History",
+        "rename": "Rename",
+        "delete": "Delete program",
+        "useTemplate": "Use",
+        "browsePrograms": "Browse programs",
+        "exploreTemplates": "Explore templates"
+      },
+      "status": {
+        "live": "Live v{{version}}",
+        "notPublished": "Not published",
+        "unpublished": "Unpublished",
+        "version": "Version",
+        "draft": "Draft",
+        "updated": "Updated {{time}}"
+      },
+      "empty": {
+        "templates": {
+          "title": "No templates yet",
+          "description": "Create a template from any program, then reuse it to start new programs faster."
+        },
+        "programs": {
+          "title": "Create your first program",
+          "description": "Programs are where you design your content. Combine media and text in a custom canvas, then publish to your devices in minutes."
+        }
+      },
+      "counts": {
+        "templates": "{{count}} template(s)",
+        "programs": "{{count}} program(s)",
+        "total": "{{total}} total"
+      }
+    },
+    "dialogs": {
+      "create": {
+        "title": "Create Program",
+        "description": "Initialize a new program workspace.",
+        "nameLabel": "Program Name",
+        "sourceLabel": "Source",
+        "resolutionLabel": "Resolution",
+        "blankCanvas": "Blank Canvas",
+        "fromTemplate": "From Template",
+        "untitled": "Untitled Program"
+      },
+      "rename": {
+        "title": "Rename Program",
+        "description": "Enter a new name for your program.",
+        "label": "Program Name"
+      },
+      "delete": {
+        "title": "Delete Program",
+        "description": "This action cannot be undone. You are about to permanently delete:",
+        "descriptionNote": "This will delete the program and all its versions from our system."
+      }
+    },
+    "toasts": {
+      "renameSuccess": "Program renamed",
+      "deleteSuccess": "Program deleted",
+      "loadDetailsFailed": "Failed to load program details"
+    },
+    "details": {
+      "header": {
+        "modified": "Modified {{time}}",
+        "editWorkspace": "Edit Workspace",
+        "publishNew": "Publish New",
+        "exportVsn": "Export VSN Bundle",
+        "undeployAll": "Undeploy All",
+        "deleteProgram": "Delete Program"
+      },
+      "tabs": {
+        "devices": "Running Devices",
+        "releases": "Releases",
+        "drafts": "Drafts",
+        "history": "Audit Trail"
+      },
+      "distribution": {
+        "title": "Device Distribution",
+        "description": "Live deployment status across all devices.",
+        "searchPlaceholder": "Filter devices...",
+        "active": "Active",
+        "offline": "Offline",
+        "status": "Status",
+        "running": "Running",
+        "noDeployments": "No Active Deployments",
+        "startFirst": "Start First Deployment"
+      },
+      "audit": {
+        "title": "Audit Records",
+        "description": "Immutable history of all operations for this program.",
+        "empty": "No audit logs found for this program.",
+        "actions": {
+          "publish": "published",
+          "create": "created",
+          "delete": "deleted",
+          "rename": "renamed to",
+          "update": "updated",
+          "perform": "performed",
+          "to": "to",
+          "resolution": "resolution",
+          "target": "target version"
+        }
+      },
+      "releases": {
+        "title": "Published Releases",
+        "description": "Versions (vN) are immutable snapshots that can be deployed to devices.",
+        "noSnapshot": "No snapshot name",
+        "openBaseline": "Open baseline",
+        "deploy": "Deploy",
+        "noReleases": "No Releases Yet",
+        "publishV1": "Publish v1"
+      },
+      "drafts": {
+        "title": "Draft Snapshots",
+        "description": "Drafts are editable snapshots, unique per baseVersion (Blank or vN).",
+        "baseVersion": "base v{{version}}",
+        "baseBlank": "base Blank",
+        "updated": "updated {{time}}",
+        "openDraft": "Open draft",
+        "publish": "Publish",
+        "noDrafts": "No Drafts Yet",
+        "openEditor": "Open editor"
+      },
+      "info": {
+        "overview": "Overview",
+        "totalDevices": "Total Devices",
+        "maxVersion": "Max Version",
+        "resolution": "Resolution",
+        "syncIntegrity": "Sync Integrity",
+        "verified": "Verified",
+        "latestRelease": "Latest Release (v{{version}})",
+        "noRelease": "No releases yet",
+        "previewDesc": "Preview of the most recently published snapshot.",
+        "publishToCreate": "Publish to create your first release (v1)."
+      },
+      "dialogs": {
+        "delete": {
+          "title": "Delete Program Permanently?",
+          "desc": "This action cannot be undone. You are about to permanently delete:",
+          "note": "This will delete the program and all its versions from our system."
+        },
+        "undeploy": {
+          "title": "Undeploy from All Devices?",
+          "desc": "This will stop the program on all currently assigned devices."
+        }
+      },
+      "toasts": {
+        "unpublishSuccess": "Unpublished from all devices",
+        "draftDeleted": "Draft deleted",
+        "programNotFound": "Program not found",
+        "backToLibrary": "Back to Library"
+      }
     }
   },
   "program": {
@@ -1638,13 +1988,33 @@
         "strategy": "Strategy",
         "manifest": "Manifest"
       },
+      "stepOf": "Step {{current}} of {{total}}",
+      "actions": {
+        "previous": "Previous Step",
+        "continue": "Continue",
+        "finalize": "Finalize & Deploy",
+        "processing": "Processing...",
+        "selectVisible": "Select Visible",
+        "deselectAll": "Deselect All"
+      },
       "filter": {
         "title": "Quick Filters",
         "onlineOnly": "Online Only",
         "matchResolution": "Match {{width}}x{{height}}",
-        "reset": "Reset All Filters"
+        "reset": "Reset All Filters",
+        "searchPlaceholder": "Search nodes by name, ID or IP...",
+        "any": "ANY",
+        "all": "ALL"
       },
       "strategy": {
+        "lifecycle": "Lifecycle Control",
+        "traffic": "Traffic Distribution",
+        "endpoint": "Endpoint Selection",
+        "override": "Override Protocol",
+        "queue": "Queue",
+        "active": "Active",
+        "append": "Append",
+        "overwrite": "Overwrite",
         "createTitle": "Create New Version",
         "createDesc": "Snapshot current draft as v{{version}} and deploy. This becomes the new baseline.",
         "existingTitle": "Deploy Existing Version",
@@ -1652,10 +2022,781 @@
         "currentLive": "Current Live Release",
         "legacyArchive": "Legacy Archive",
         "modeAppend": "Incremental: Skip nodes already running this program.",
-        "modeOverwrite": "Global Push: Force sync all targeted nodes to selected version."
+        "modeOverwrite": "Global Push: Force sync all targeted nodes to selected version.",
+        "selectVersion": "Select version",
+        "release": "Release",
+        "requiresDraft": "Requires draft"
+      },
+      "sidebar": {
+        "plan": "Execution Plan",
+        "targets": "Targets",
+        "release": "Release",
+        "queue": "Device Queue",
+        "initialize": "Initialize queue\nto continue"
+      },
+      "review": {
+        "activePush": "Active Push",
+        "nodesUpdating": "Nodes updating",
+        "targetState": "Target State",
+        "productionRev": "Production Rev",
+        "asyncSync": "Async Sync",
+        "pendingRecon": "Pending Recon",
+        "device": "Hardware Device",
+        "transition": "Version Transition",
+        "status": "Status",
+        "synced": "Synced"
       },
       "noNodes": "No Nodes Found",
-      "noNodesDesc": "No devices matching your current filters."
+      "noNodesDesc": "No devices matching your current filters.",
+      "toasts": {
+        "published": "Published to {{count}} devices",
+        "pendingSync": ". {{count}} devices will sync when online.",
+        "noDraft": "No draft snapshot found. Please save a draft in the editor first."
+      }
+    }
+  },
+  "schedules": {
+    "list": {
+      "title": "Schedules",
+      "subtitle": "Bind devices, then push updates to take effect.",
+      "searchPlaceholder": "Search schedules...",
+      "actions": {
+        "new": "New",
+        "createFirst": "Create your first schedule",
+        "publish": "Publish",
+        "open": "Open",
+        "delete": "Delete schedule"
+      },
+      "empty": {
+        "title": "No matching schedules",
+        "description": "Try a different search term."
+      },
+      "table": {
+        "title": "All schedules",
+        "boundDevices": "Bound devices",
+        "programs": "Programs",
+        "commands": "Commands",
+        "updated": "Updated",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      },
+      "tooltips": {
+        "noBoundDevices": "No bound devices",
+        "pushToBound": "Push to bound devices"
+      }
+    },
+    "onboarding": {
+      "welcome": "Welcome to Schedules",
+      "subtitle": "Schedules let you control what content plays on your devices and when. Follow the workflow below to get started.",
+      "workflow": {
+        "create": {
+          "title": "Create a Schedule",
+          "desc": "A schedule is a container for program rules and command rules that can be assigned to devices."
+        },
+        "program": {
+          "title": "Add Program Rules",
+          "desc": "Add rotation or spot programs with time/date/weekday constraints. Higher priority rules take precedence."
+        },
+        "command": {
+          "title": "Add Command Rules",
+          "desc": "Schedule device actions like brightness, volume, power on/off at specific times."
+        },
+        "bind": {
+          "title": "Bind Devices",
+          "desc": "Assign devices to this schedule. Each device can only be bound to one schedule at a time."
+        },
+        "push": {
+          "title": "Push to Devices",
+          "desc": "After saving changes, push to notify bound devices to fetch and apply the latest configuration."
+        }
+      },
+      "concepts": {
+        "title": "Key Concepts",
+        "rotation": {
+          "term": "Rotation",
+          "desc": "Content that plays in a loop. Lower priority than Spot. Usually used for general advertising or information."
+        },
+        "spot": {
+          "term": "Spot",
+          "desc": "Time-sensitive content with higher priority. Interrupts rotation playback during its scheduled time window."
+        },
+        "priority": {
+          "term": "Priority",
+          "desc": "Lower number = higher priority. When multiple rules apply, the highest priority (lowest number) wins."
+        },
+        "constraints": {
+          "term": "Constraints",
+          "desc": "Rules can be limited by time range, date range, and/or weekdays. Rules without constraints apply 24/7."
+        }
+      },
+      "tips": {
+        "title": "Tips",
+        "saveVsPush": { "label": "Save vs Push:", "desc": "Saving stores your changes on the server. Pushing notifies devices to download updates." },
+        "oneSchedule": { "label": "One schedule per device:", "desc": "A device can only be bound to one schedule. Binding to a new schedule removes the old binding." },
+        "timezone": { "label": "Timezone matters:", "desc": "Schedule times are in the device's local timezone, not your browser's timezone." },
+        "versionLock": { "label": "Version lock:", "desc": "The same program can only have one version per schedule. Changing version updates all rules using that program." }
+      },
+      "emptySchedule": {
+        "title": "Add Rules to Get Started",
+        "desc": "This schedule is empty. Add program rules (rotation/spot) or command rules (brightness, power, etc.) to define what happens on your devices.",
+        "programRules": "Program Rules",
+        "programRulesDesc": "Schedule content playback with rotation or spot programs. Set time, date, and weekday constraints.",
+        "commandRules": "Command Rules",
+        "commandRulesDesc": "Schedule device actions like brightness, volume, power on/off, input switching at specific times."
+      }
+    },
+    "dialogs": {
+      "create": {
+        "title": "Create schedule",
+        "description": "Create an empty schedule, then configure rules and bind devices.",
+        "name": "Name",
+        "namePlaceholder": "e.g. Summer Campaign",
+        "description": "Description",
+        "descriptionPlaceholder": "Optional description...",
+        "enabled": "Enabled",
+        "enabledDesc": "Disabled schedules do not take effect on devices.",
+        "untitled": "Untitled Schedule"
+      },
+      "delete": {
+        "title": "Delete schedule?",
+        "hasBound": "This schedule has {{count}} bound device(s).",
+        "hasBoundDesc": "Deleting it will require you to manually unbind all devices and push updates again. This may cause content playback interruptions.",
+        "recommendation": "Recommended action:",
+        "recommendationDesc": "First unbind devices from this schedule, then delete it to avoid disruption.",
+        "noBound": "This schedule has no bound devices and can be safely deleted.",
+        "deleteAnyway": "Delete anyway"
+      }
+    },
+          "toasts": {
+          "createSuccess": "Schedule created",
+          "deleteSuccess": "Schedule deleted",
+          "publishSuccess": "Published",
+          "publishDesc": "Push command sent to bound devices",
+          "updateFailed": "Update failed",
+          "createFailed": "Create failed",
+          "deleteFailed": "Delete failed",
+          "publishFailed": "Publish failed"
+        },
+        "details": {
+          "tabs": {
+            "overview": "Overview",
+            "programs": "Programs",
+            "commands": "Commands"
+          },
+          "constraints": {
+            "none": "No constraints (always active)"
+          },
+          "bindings": {
+            "title": "Bindings",
+            "desc": "A device can bind to at most one schedule.",
+            "bindDevices": "Bind Devices",
+            "noDevices": "No devices bound",
+            "noDevicesDesc": "Bind devices to make this schedule take effect.",
+            "unbind": "Unbind"
+          },
+          "programRules": {
+            "title": "Program rules",
+            "desc": "Schedule contents rules (rotation/spot).",
+            "addRule": "Add rule",
+            "noRules": "No program rules",
+            "noRulesDesc": "Add rules to make devices play published programs by time/date/weekday.",
+            "spot": "Spot",
+            "rotation": "Rotation",
+            "priority": "Priority",
+            "noCover": "No Cover"
+          },
+          "commandRules": {
+            "title": "Command rules",
+            "desc": "Generated device protocol payload is stored by backend.",
+            "addRule": "Add rule",
+            "noRules": "No command rules",
+            "noRulesDesc": "Add actions like brightness/volume/sleep at specified times.",
+            "unparseableTitle": "Some command rules are not editable",
+            "unparseableDesc": "UI cannot reconstruct operation+opTime from payload. Command editing is disabled until those rules are removed.",
+            "readOnly": "read-only"
+          },
+          "pushResult": {
+            "title": "Push result",
+            "desc": "Devices will fetch the latest schedule after confirming the command.",
+            "accepted": "Accepted",
+            "noResult": "No push result",
+            "acceptedStatus": "accepted",
+            "rejectedStatus": "rejected"
+          },
+                "meta": {
+                  "title": "Edit schedule",
+                  "desc": "Update schedule metadata. Rules are managed in Programs / Commands tabs."
+                },
+                      "bindDevices": {
+                        "title": "Bind devices",
+                        "description": "One device can only bind to one schedule. If a device is already bound to another schedule, it becomes a conflict unless you choose Replace.",
+                        "searchPlaceholder": "Search devices...",
+                        "replaceLabel": "Replace existing bindings",
+                        "replaceDesc": "Default is safer: keep existing schedule bindings.",
+                        "loading": "Loading devices...",
+                        "noDevices": "No devices",
+                        "alreadyBound": "Already bound",
+                        "selected": "Selected",
+                        "alreadyBoundToThis": "Already bound to this schedule",
+                        "bind": "Bind",
+                        "result": {
+                          "title": "Result",
+                          "total": "total",
+                          "bound": "bound",
+                          "conflicts": "conflicts",
+                          "conflictStatus": "conflict (prev {{id}})"
+                        },
+                        "toasts": {
+                          "withConflicts": "Binding completed with conflicts",
+                          "conflictsDesc": "Conflicts: {{count}}",
+                          "success": "Devices bound",
+                          "failed": "Bind failed"
+                        }
+                      },
+                            "contentsRule": {
+                              "editTitle": "Edit rule",
+                              "addTitle": "Add rule",
+                              "subtitle": "Configure what to play and when.",
+                              "content": {
+                                "title": "1. Content strategy",
+                                "mode": "Mode",
+                                "priority": "Priority",
+                                "program": "Program",
+                                "selectProgram": "Select program",
+                                "version": "Version",
+                                "selectVersion": "Select version",
+                                "lockedDesc": "This program is already used by other rules in this schedule. Version is locked to {{version}}."
+                              },
+                              "constraints": {
+                                "title": "2. Playback constraints",
+                                "date": {
+                                  "title": "Valid date range",
+                                  "desc": "Schedule only triggers within this period.",
+                                  "start": "Start date",
+                                  "end": "End date"
+                                },
+                                "weekday": {
+                                  "title": "Weekly recurrence",
+                                  "desc": "Specify days of the week."
+                                },
+                                "time": {
+                                  "title": "Daily time range",
+                                  "desc": "Set active hours within each day.",
+                                  "start": "Start time",
+                                  "end": "End time"
+                                }
+                              },
+                              "toasts": {
+                                "priorityExists": "Priority already exists in this schedule",
+                                "priorityInvalid": "Priority must be >= 0",
+                                "selectVersion": "Please select a published program version",
+                                "versionConflict": "This schedule can only use one version per program",
+                                "setTime": "Please set start and end time",
+                                "setDates": "Please select start and end dates",
+                                "setWeekday": "Please select at least one weekday"
+                              }
+                            },
+                                  "commandRule": {
+                                    "editTitle": "Edit command rule",
+                                    "addTitle": "Add command rule",
+                                    "subtitle": "Schedule device actions like Power, Brightness, and Volume.",
+                                    "config": {
+                                      "title": "1. Action configuration",
+                                      "type": "Action type",
+                                      "brightness": "Brightness level",
+                                      "volume": "Volume level",
+                                      "power": "Power action",
+                                      "input": "Input source",
+                                      "colorTemp": "Color temperature",
+                                      "clearCache": "Clear cache",
+                                      "clearCacheDesc": "This action will clear all unused cached assets on the device at the scheduled time."
+                                    },
+                                    "execution": {
+                                      "title": "2. Execution time",
+                                      "add": "Add execution time"
+                                    },
+                                    "conditions": {
+                                      "title": "3. Conditions (Optional)",
+                                      "date": {
+                                        "title": "Valid date range",
+                                        "desc": "Action only triggers within this period."
+                                      },
+                                      "weekday": {
+                                        "title": "Weekly recurrence",
+                                        "desc": "Specify days of the week."
+                                      }
+                                    },
+                                    "toasts": {
+                                      "timeRequired": "At least one execution time is required",
+                                      "datesRequired": "Start/End date required",
+                                      "weekdaysRequired": "Weekdays required"
+                                    }
+                                  },
+                                        "visualizer": {
+                                          "scheduleFor": "Schedule for {{date}}",
+                                          "activeItems": "{{count}} active item(s) on this day",
+                                          "list": "List",
+                                          "timeline": "Timeline",
+                                          "notActiveToday": "Not active today",
+                                          "noPrograms": "No programs scheduled for this day",
+                                          "allDay": "All day",
+                                          "command": "Command Rule",
+                                          "viewInCommands": "Click to view in Commands tab",
+                                          "days": {
+                                            "su": "Su", "mo": "Mo", "tu": "Tu", "we": "We", "th": "Th", "fr": "Fr", "sa": "Sa"
+                                          }
+                                        },
+                                              "weekdaySelector": {
+                                                "all": "All",
+                                                "workdays": "Workdays",
+                                                "weekend": "Weekend",
+                                                "everyDay": "Every day",
+                                                "monFri": "Mon - Fri",
+                                                "satSun": "Sat - Sun",
+                                                "clear": "Clear",
+                                                "short": {
+                                                  "0": "M", "1": "T", "2": "W", "3": "T", "4": "F", "5": "S", "6": "S"
+                                                },
+                                                "labels": {
+                                                  "0": "Mon", "1": "Tue", "2": "Wed", "3": "Thu", "4": "Fri", "5": "Sat", "6": "Sun"
+                                                }
+                                              },
+                                              "timeSlotBuilder": {
+                                                "noLimits": "No time limits (All day)",
+                                                "addSlot": "Add time slot",
+                                                "addAnother": "Add another slot"
+                                              },
+                                              "toasts": {                                    "unparseableEdit": "This schedule contains unparseable command rules; editing is disabled to avoid data loss.",
+                                    "pushQueued": "Push queued"
+                                  }
+                                }
+                              },  "programEditor": {
+    "states": {
+      "loading": "Booting Canvas Editor...",
+      "notFound": "Program not found",
+      "notFoundDesc": "The program may have been deleted or the URL is incorrect."
+    },
+    "header": {
+      "blank": "Blank Canvas",
+      "saveStatus": {
+        "saving": "Saving...",
+        "unsaved": "Unsaved",
+        "autosavePending": "Autosave pending",
+        "saved": "Saved",
+        "savedAt": "Saved {{time}}"
+      }
+    },
+    "toolbar": {
+      "undo": "Undo",
+      "redo": "Redo",
+      "save": "Save Draft",
+      "preview": "Preview",
+      "publish": "Publish"
+    },
+    "panels": {
+      "left": {
+        "pages": "Pages",
+        "regions": "Layers/Regions",
+        "materials": "Assets",
+        "searchMaterials": "Search assets...",
+        "addPage": "New Page",
+        "addRegion": "New Region",
+        "addText": "Add Text"
+      },
+      "timeline": {
+        "title": "Timeline",
+        "speed": "Playback Speed"
+      },
+      "inspector": {
+        "title": "Inspector",
+        "program": "Program Settings",
+        "page": "Page Properties",
+        "region": "Region Properties",
+        "item": "Item Details",
+        "rename": "Rename Program",
+        "resolution": "Canvas Resolution",
+        "targetDevice": "Target Reference",
+        "noDoc": "No document loaded.",
+        "resolutionPicker": {
+          "selectDevice": "Select device...",
+          "searchPlaceholder": "Search devices...",
+          "custom": "Custom Resolution",
+          "customDesc": "Set width/height manually",
+          "unknown": "Resolution unknown"
+        },
+        "labels": {
+          "programName": "Program Name",
+          "targetDevice": "Reference Device (for resolution)",
+          "canvasResolution": "Canvas Resolution",
+          "width": "Width",
+          "height": "Height",
+          "apply": "Apply",
+          "loopType": "Loop Type",
+          "autoDuration": "Auto Duration",
+          "fixedDuration": "Fixed Page Duration",
+          "appointDuration": "Appoint Duration (ms)",
+          "background": "Page Background",
+          "title": "Display Title",
+          "windowType": "Window Mode",
+          "normal": "Standard",
+          "sync": "Sync Group",
+          "ticker": "Ticker",
+          "isSchedule": "Is Schedule Window",
+          "layer": "Layer",
+          "rect": "Position & Size",
+          "borderWidth": "Border Width",
+          "borderColor": "Border Color",
+          "backColor": "Background Color (Optional)",
+          "duration": "Duration (ms)",
+          "repeat": "Repeat Count",
+          "opacity": "Opacity",
+          "fit": "Fit Mode",
+          "fill": "Stretch to Fill",
+          "contain": "Contain",
+          "transition": "Transition",
+          "transitionTime": "Transition Time (ms)",
+          "volume": "Volume (0..1)",
+          "textMode": "Text Mode",
+          "text": "Text Content",
+          "textColor": "Text Color",
+          "font": "Font Settings",
+          "italic": "Italic",
+          "underline": "Underline",
+          "yes": "Yes",
+          "no": "No"
+        }
+      },
+      "problems": {
+        "title": "Problems",
+        "empty": "No issues found"
+      },
+      "items": {
+        "image": "Image",
+        "video": "Video",
+        "text": "Text",
+        "gif": "GIF",
+        "unsupported": "Unsupported content"
+      }
+    },
+    "dialogs": {
+      "unsaved": {
+        "title": "Unsaved Changes",
+        "desc": "Workspace has been modified. How would you like to proceed before leaving?",
+        "discard": "Discard Changes",
+        "saveAndContinue": "Save & Continue"
+      }
+    },
+    "toasts": {
+      "parseFailed": "Failed to parse program content",
+      "initFailed": "Failed to initialize editor",
+      "draftSaved": "Draft saved",
+      "savingWait": "Saving draft, please wait...",
+      "fixErrors": "Fix {{count}} error(s) before publishing."
+    }
+  },
+  "monitoring": {
+    "title": "Real-time Telemetry",
+    "initializing": "Initializing Device Monitoring...",
+    "analysisPeriod": "Analysis period",
+    "searchPlaceholder": "Search by name, network or tags...",
+    "fleet": "Devices",
+    "noDeviceSelected": "No Device Selected",
+    "noDeviceSelectedDesc": "Select a device from the fleet list to start receiving real-time telemetry.",
+    "tabs": {
+      "receiveCard": "Receive Cards",
+      "deviceSensor": "Device Sensors",
+      "m2Sensor": "M2 External"
+    },
+    "status": {
+      "realtimeActive": "Real-time feed active",
+      "connected": "Connected",
+      "reconnecting": "Reconnecting",
+      "error": "Error",
+      "disconnected": "Disconnected"
+    }
+  },
+  "billing": {
+    "title": "Subscription & Billing",
+    "subtitle": "Manage your plan, redeem codes, and view history.",
+    "currentPlan": "Current Plan",
+    "active": "Active",
+    "expiresAt": "Expires on {{date}}",
+    "reloginNotice": "Your subscription has been updated. Please re-login to apply new limits.",
+    "redeem": {
+      "button": "Redeem Code",
+      "title": "Redeem Subscription",
+      "description": "Enter your promotional or purchase code to upgrade your account.",
+      "placeholder": "Enter code here...",
+      "submitting": "Redeeming...",
+      "success": "Code redeemed successfully",
+      "error": "Failed to redeem code. Please check and try again."
+    },
+    "free": {
+      "name": "Lite (Free)",
+      "price": "$0",
+      "description": "Perfect for testing and small individual screens.",
+      "features": ["Up to 3 devices", "1GB Cloud Storage", "Basic Analytics", "Community Support"]
+    },
+    "pro": {
+      "name": "Professional",
+      "price": "$12",
+      "period": "/mo",
+      "description": "Advanced features for growing businesses.",
+      "features": ["Unlimited devices", "50GB Cloud Storage", "Advanced Timeline Editor", "High Priority Support"],
+      "button": "Upgrade to Pro"
+    },
+    "ultra": {
+      "name": "Enterprise",
+      "price": "Custom",
+      "description": "Tailored solutions for large-scale deployments.",
+      "features": ["White-label branding", "On-premise option", "Dedicated Account Manager", "Custom SLA"],
+      "button": "Contact Sales"
+    },
+    "help": {
+      "title": "Need help with plans?",
+      "desc": "Compare our features in detail or speak with a solution expert to find the right fit for your organization.",
+      "compare": "View Feature Comparison"
+    },
+    "demo": {
+      "title": "About Demo Environment",
+      "desc": "This is a demonstration environment. Real payments are disabled. Use demo codes like PRDEMO30D to test Pro features.",
+      "redeemNow": "Redeem a code now"
+    },
+    "history": {
+      "title": "Redemption History",
+      "table": {
+        "type": "Type",
+        "code": "Code",
+        "date": "Date",
+        "status": "Status"
+      }
+    },
+    "popular": "Most Popular"
+  },
+  "settings": {
+    "tabs": {
+      "profile": "Profile",
+      "preferences": "Preferences",
+      "aiAssistant": "AI Assistant",
+      "notifications": "Notifications",
+      "security": "Security",
+      "apiKeys": "API Keys",
+      "billing": "Billing"
+    },
+    "profile": {
+      "title": "Public Profile",
+      "subtitle": "How others see you on the platform.",
+      "name": "Display Name",
+      "namePlaceholder": "Enter name...",
+      "email": "Email Address",
+      "avatar": "Avatar",
+      "phone": "Phone Number",
+      "phoneUnbound": "Not bound",
+      "bindPhone": "Bind Phone",
+      "changeAvatar": "Change Avatar",
+      "save": "Save Profile"
+    },
+    "preferences": {
+      "title": "Preferences",
+      "subtitle": "Customize your experience.",
+      "theme": "Theme",
+      "language": "Language",
+      "timezone": "Timezone",
+      "dateFormat": "Date Format",
+      "timeFormat": "Time Format"
+    },
+    "draftPolicy": {
+      "title": "Program draft saving",
+      "subtitle": "Controls what happens to unpublished changes when you leave the program editor.",
+      "label": "Draft save rule",
+      "options": {
+        "ask": {
+          "label": "Always ask (recommended)",
+          "desc": "Prompt when leaving the editor with unpublished changes."
+        },
+        "always": {
+          "label": "Always save draft",
+          "desc": "Keep a draft snapshot automatically when leaving or switching versions."
+        },
+        "never": {
+          "label": "Never save draft",
+          "desc": "Discard unpublished changes when leaving or switching versions."
+        }
+      },
+      "saveSuccess": "Draft save rule updated"
+    },
+    "deviceDefaults": {
+      "title": "Device Defaults",
+      "subtitle": "Defaults applied when you onboard new devices.",
+      "timezone": {
+        "title": "Timezone",
+        "label": "Default timezone for new devices",
+        "inherit": "Inherit from my profile",
+        "inheritDesc": "Use your account timezone by default.",
+        "fixed": "Use a fixed timezone",
+        "fixedDesc": "Override device timezone on creation.",
+        "select": "Default timezone",
+        "selectPlaceholder": "Select timezone",
+        "selectDesc": "Only used for newly created devices (existing devices are not changed)."
+      },
+      "alerts": {
+        "title": "Alerts",
+        "threshold": "Offline alert threshold (minutes)",
+        "thresholdDesc": "Device is considered offline if it stops reporting for this duration.",
+        "toast": "Toast when device goes offline",
+        "toastDesc": "Show an in-app toast for offline events."
+      },
+      "delivery": {
+        "title": "Delivery",
+        "autoReceive": "Auto receive latest program version",
+        "autoReceiveDesc": "Lite defaults to off. Enable only if you want auto-updates."
+      }
+    },
+    "toasts": {
+      "profileUpdated": "Profile updated",
+      "passwordUpdated": "Password updated",
+      "sessionRevoked": "Session revoked",
+      "allSessionsRevoked": "All sessions revoked",
+      "apiKeyCreated": "API key created",
+      "apiKeyRevoked": "API key revoked",
+      "apiKeyRegenerated": "API key regenerated",
+      "verificationSent": "Verification code sent to your phone",
+      "phoneBound": "Phone number bound successfully"
+    }
+  },
+  "message": {
+    "type": {
+      "device": {
+        "command": {
+          "finished": {
+            "title": "Command Execution {{status}}",
+            "summary": "Performed {{actionType}} on {{target}}"
+          },
+          "batch": {
+            "finished": {
+              "title": "Batch Execution Completed",
+              "summary": "Success {{success}}/{{total}}, Failed {{failed}}"
+            }
+          }
+        },
+        "status": {
+          "online": {
+            "title": "Device Online",
+            "summary": "{{target}} has reconnected"
+          },
+          "offline": {
+            "title": "Device Offline",
+            "summary": "{{target}} has disconnected"
+          }
+        }
+      },
+      "program": {
+        "publish": {
+          "finished": {
+            "title": "Program Published",
+            "summary": "{{target}} is now live"
+          }
+        }
+      },
+      "media": {
+        "transcode": {
+          "finished": {
+            "title": "Transcoding {{status}}",
+            "summary": "Output: {{target}}"
+          }
+        }
+      },
+      "export": {
+        "finished": {
+          "title": "Data Export {{status}}",
+          "summary": "File: {{target}}"
+        }
+      }
+    },
+    "kind": {
+      "NOTIFICATION": "Notification",
+      "TASK": "Task"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "RUNNING": "Running",
+      "SUCCESS": "Success",
+      "FAILED": "Failed"
+    },
+    "unknown": {
+      "title": "New Message",
+      "summary": "You have a new {{kind}}"
+    },
+    "ui": {
+      "loading": "Loading message...",
+      "loadFailedTitle": "Unable to load this message",
+      "loadFailedHint": "Please try again later.",
+      "close": "Close",
+      "summary": "Message Summary",
+      "debugTitle": "Debug Information (Internal Fields)",
+      "payload": "Raw Payload (JSON)",
+      "copyPayload": "Copy JSON",
+      "dismiss": "Dismiss",
+      "inbox": "Inbox",
+      "notifications": "Notifications",
+      "tasks": "Tasks",
+      "markRead": "Mark All Read",
+      "empty": {
+        "title": "Inbox is empty",
+        "desc": "No new messages. You'll be notified here when system updates, device events or background tasks complete."
+      },
+      "fields": {
+        "id": "Message ID",
+        "type": "Message Type",
+        "operationId": "Operation ID",
+        "taskId": "Task ID"
+      },
+      "period": "Message period",
+      "readStatus": "Read status",
+      "allMessages": "All Messages",
+      "unreadOnly": "Unread Only",
+      "readOnly": "Read Only",
+      "allStatus": "All Status",
+      "searchPlaceholder": "Search messages...",
+      "unreadCount": "{{count}} unread",
+      "syncing": "Syncing messages...",
+      "showing": "Showing {{start}} to {{end}} of {{total}} messages",
+      "device": "Device",
+      "program": "Program",
+      "mediaAsset": "Media asset",
+      "mediaResource": "Media Resource",
+      "mediaFile": "Media file",
+      "task": {
+        "export": {
+          "title": "Export Task Details",
+          "rows": "rows",
+          "download": "Download File",
+          "querying": "Querying data",
+          "uploading": "Uploading result",
+          "deleted": "Deleted",
+          "working": "Working",
+          "deleteSuccess": "File deleted and quota released",
+          "deletedDesc": "File has been removed to free up storage space."
+        },
+        "transcode": {
+          "title": "Media Transcoding Task",
+          "progress": "Processing Progress",
+          "liveUpdates": "Live updates unavailable, refreshing periodically.",
+          "openMedia": "Open Media Library",
+          "retry": "Retry Task",
+          "queued": "Queued",
+          "preparing": "Preparing source",
+          "transcoding": "Transcoding",
+          "uploading": "Uploading output",
+          "finalizing": "Saving to library",
+          "working": "Working",
+          "failed": "Failed"
+        }
+      },
+      "toasts": {
+        "markReadSuccess": "Marked current page as read",
+        "retryTranscode": "Retrying transcoding task"
+      }
     }
   }
 }

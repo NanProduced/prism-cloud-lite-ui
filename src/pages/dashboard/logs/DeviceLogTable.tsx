@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import type { DeviceLogFilterParams, DeviceLogType } from '@/types/log';
+import { useTranslation } from 'react-i18next';
 
 interface DeviceLogTableProps {
   filters: DeviceLogFilterParams;
@@ -26,6 +27,7 @@ interface DeviceLogTableProps {
 }
 
 export function DeviceLogTable({ filters, logTypes }: DeviceLogTableProps) {
+  const { t } = useTranslation();
   const { formatDateTime } = useTimeFormatter();
   const [page, setPage] = useState(0);
   const pageSize = 50;
@@ -63,7 +65,7 @@ export function DeviceLogTable({ filters, logTypes }: DeviceLogTableProps) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary/40" />
-        <p className="text-[10px] font-bold  tracking-widest text-muted-foreground/60">Fetching Logs...</p>
+        <p className="text-[10px] font-bold  tracking-widest text-muted-foreground/60">{t('logs.device.loading')}</p>
       </div>
     );
   }
@@ -72,7 +74,7 @@ export function DeviceLogTable({ filters, logTypes }: DeviceLogTableProps) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4 text-destructive">
         <AlertCircle className="h-8 w-8" />
-        <p className="text-sm font-bold">Failed to load logs</p>
+        <p className="text-sm font-bold">{t('logs.device.loadFailed')}</p>
       </div>
     );
   }
@@ -83,11 +85,11 @@ export function DeviceLogTable({ filters, logTypes }: DeviceLogTableProps) {
         <table className="w-full text-left border-collapse min-w-[800px]">
           <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
             <tr className="border-b">
-              <th className="px-6 py-4 text-[10px] font-bold  tracking-widest text-muted-foreground">Log Timestamp</th>
-              <th className="px-6 py-4 text-[10px] font-bold  tracking-widest text-muted-foreground">Device Source</th>
-              <th className="px-6 py-4 text-[10px] font-bold  tracking-widest text-muted-foreground">Operation</th>
-              <th className="px-6 py-4 text-[10px] font-bold  tracking-widest text-muted-foreground">Level</th>
-              <th className="px-6 py-4 text-[10px] font-bold  tracking-widest text-muted-foreground">Content Message</th>
+              <th className="px-6 py-4 text-[10px] font-bold  tracking-widest text-muted-foreground">{t('logs.device.table.timestamp')}</th>
+              <th className="px-6 py-4 text-[10px] font-bold  tracking-widest text-muted-foreground">{t('logs.device.table.source')}</th>
+              <th className="px-6 py-4 text-[10px] font-bold  tracking-widest text-muted-foreground">{t('logs.device.table.operation')}</th>
+              <th className="px-6 py-4 text-[10px] font-bold  tracking-widest text-muted-foreground">{t('logs.device.table.level')}</th>
+              <th className="px-6 py-4 text-[10px] font-bold  tracking-widest text-muted-foreground">{t('logs.device.table.message')}</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -96,7 +98,7 @@ export function DeviceLogTable({ filters, logTypes }: DeviceLogTableProps) {
                 <td colSpan={5} className="px-6 py-20 text-center text-muted-foreground italic text-sm">    
                   <div className="flex flex-col items-center gap-2 opacity-40">
                     <Search className="h-8 w-8" />
-                    <p>No logs found for the selected criteria.</p>
+                    <p>{t('logs.device.empty')}</p>
                   </div>
                 </td>
               </tr>
@@ -109,7 +111,7 @@ export function DeviceLogTable({ filters, logTypes }: DeviceLogTableProps) {
                       {log.reportTime && (
                         <div className="flex items-center gap-1 text-[9px] text-muted-foreground/60 font-medium">
                           <Cpu className="h-2.5 w-2.5" />
-                          <span>Reported: {formatDateTime(log.reportTime)}</span>
+                          <span>{t('logs.device.reported')}: {formatDateTime(log.reportTime)}</span>
                         </div>
                       )}
                     </div>
@@ -155,9 +157,9 @@ export function DeviceLogTable({ filters, logTypes }: DeviceLogTableProps) {
       <div className="px-6 py-3 border-t bg-muted/5 flex items-center justify-between">
         <p className="text-[10px] text-muted-foreground font-bold  tracking-widest">
           {total > 0 ? (
-            <>Showing {page * pageSize + 1} to {Math.min((page + 1) * pageSize, total)} of {total} entries</>
+            t('logs.device.table.pagination', { start: page * pageSize + 1, end: Math.min((page + 1) * pageSize, total), total })
           ) : (
-            <>0 entries found</>
+            t('logs.device.table.paginationEmpty')
           )}
         </p>
         {totalPages > 1 && (

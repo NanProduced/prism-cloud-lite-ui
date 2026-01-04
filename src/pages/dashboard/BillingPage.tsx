@@ -150,7 +150,7 @@ export default function BillingPage() {
                 <div className="flex items-center gap-2">
                   <h2 className="text-2xl font-bold">{subscription?.tier || 'FREE'}</h2>
                   {subscription?.proActive && (
-                    <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-none">Active</Badge>
+                    <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-none">{t('billing.active')}</Badge>
                   )}
                 </div>
                 {subscription?.endAt && (
@@ -199,7 +199,7 @@ export default function BillingPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-              <Button variant="outline" onClick={() => toast.info("Coming Soon")}>
+              <Button variant="outline" onClick={() => toast.info(t('common.toasts.comingSoon'))}>
                 {t('footer.contact')}
               </Button>
             </div>
@@ -224,7 +224,7 @@ export default function BillingPage() {
               {tier.popular && (
                 <div className="absolute top-0 right-0">
                   <div className="bg-primary text-primary-foreground text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-wider">
-                    Most Popular
+                    {t('billing.popular')}
                   </div>
                 </div>
               )}
@@ -259,7 +259,7 @@ export default function BillingPage() {
                   onClick={() => {
                     if (tier.id === 'PRO') setIsRedeemOpen(true);
                     else if (tier.id === 'ULTRA') window.open("mailto:sales@prismcloud.dev");
-                    else toast.info("You are already on this plan");
+                    else toast.info(t('billing.currentPlan'));
                   }}
                 >
                   {subscription?.tier === tier.id ? t('billing.currentPlan') : tier.buttonText}
@@ -276,15 +276,15 @@ export default function BillingPage() {
           <CardHeader>
             <div className="flex items-center gap-3">
               <HelpCircle className="w-5 h-5 text-primary" />
-              <CardTitle className="text-lg">Need help with plans?</CardTitle>
+              <CardTitle className="text-lg">{t('billing.help.title')}</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Compare our features in detail or speak with a solution expert to find the right fit for your organization.
+              {t('billing.help.desc')}
             </p>
             <Button variant="link" className="p-0 h-auto gap-2 text-primary font-semibold">
-              View Feature Comparison <ArrowRight className="w-4 h-4" />
+              {t('billing.help.compare')} <ArrowRight className="w-4 h-4" />
             </Button>
           </CardContent>
         </Card>
@@ -293,15 +293,15 @@ export default function BillingPage() {
           <CardHeader>
             <div className="flex items-center gap-3">
               <AlertCircle className="w-5 h-5 text-amber-500" />
-              <CardTitle className="text-lg">About Demo Environment</CardTitle>
+              <CardTitle className="text-lg">{t('billing.demo.title')}</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              This is a demonstration environment. Real payments are disabled. Use demo codes like <strong>PRDEMO30D</strong> to test Pro features.
+              {t('billing.demo.desc')}
             </p>
             <Button variant="link" className="p-0 h-auto gap-2 text-amber-600 font-semibold" onClick={() => setIsRedeemOpen(true)}>
-              Redeem a code now <Zap className="w-4 h-4" />
+              {t('billing.demo.redeemNow')} <Zap className="w-4 h-4" />
             </Button>
           </CardContent>
         </Card>
@@ -313,17 +313,17 @@ export default function BillingPage() {
           <div className="flex items-center justify-between">
             <h3 className="text-xl font-bold flex items-center gap-2">
               <History className="w-5 h-5" />
-              Redemption History
+              {t('billing.history.title')}
             </h3>
           </div>
           <div className="rounded-xl border bg-card overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 border-b">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Type</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Code</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Status</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('billing.history.table.type')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('billing.history.table.code')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('billing.history.table.date')}</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t('billing.history.table.status')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -336,9 +336,9 @@ export default function BillingPage() {
                     </td>
                     <td className="px-4 py-4 text-right">
                       {item.success ? (
-                        <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100">Success</Badge>
+                        <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100">{t('common.status.SUCCESS')}</Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-rose-50 text-rose-600 border-rose-100">Failed</Badge>
+                        <Badge variant="outline" className="bg-rose-50 text-rose-600 border-rose-100">{t('common.status.FAILED')}</Badge>
                       )}
                     </td>
                   </tr>

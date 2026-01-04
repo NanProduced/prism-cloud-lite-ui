@@ -17,12 +17,13 @@ import type { MediaAssetKind, MediaNode } from '@/types/media-library';
 import { UploadSettingsDialog } from './UploadSettingsDialog';
 import type { PendingUploadFile, UploadTask, UploadTaskStatus } from './uploadModels';
 
-import { 
-  duplicateCheck, 
-  batchFinalize, 
-  getUploadUrls 
+import {
+  duplicateCheck,
+  batchFinalize,
+  getUploadUrls
 } from '@/services/mediaApi';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 export type MediaUploadPanelHandle = {
   openFilePicker: () => void;
@@ -48,6 +49,7 @@ export const MediaUploadPanel = forwardRef<
     };
   }
 >(function MediaUploadPanel({ defaultFolderId, folderNodes, onRequestCreateFolder, stats }, ref) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const md5ControllersRef = useRef<Map<string, AbortController>>(new Map());
@@ -67,22 +69,21 @@ export const MediaUploadPanel = forwardRef<
 
   const storageBreakdown = useMemo(() => {
     const categories = [
-      { name: 'Images', sizeBytes: stats.bytesByKind.image, color: 'bg-indigo-500' },
-      { name: 'Videos', sizeBytes: stats.bytesByKind.video, color: 'bg-emerald-500' },
-      { name: 'Docs', sizeBytes: stats.bytesByKind.document, color: 'bg-sky-500' },
-      { name: 'Other', sizeBytes: stats.bytesByKind.other, color: 'bg-slate-400' },
+      { name: t('media.upload.categories.image'), sizeBytes: stats.bytesByKind.image, color: 'bg-indigo-500' },
+      { name: t('media.upload.categories.video'), sizeBytes: stats.bytesByKind.video, color: 'bg-emerald-500' },
+      { name: t('media.upload.categories.document'), sizeBytes: stats.bytesByKind.document, color: 'bg-sky-500' },
+      { name: t('media.upload.categories.other'), sizeBytes: stats.bytesByKind.other, color: 'bg-slate-400' },
     ];
 
     const applications = [
-      { name: `Images (${stats.counts.image})`, sizeBytes: stats.bytesByKind.image, icon: <ImageIcon className="h-5 w-5 text-muted-foreground" /> },
-      { name: `Videos (${stats.counts.video})`, sizeBytes: stats.bytesByKind.video, icon: <Video className="h-5 w-5 text-muted-foreground" /> },
-      { name: `Docs (${stats.counts.document})`, sizeBytes: stats.bytesByKind.document, icon: <FileText className="h-5 w-5 text-muted-foreground" /> },
-      { name: `Other (${stats.counts.other})`, sizeBytes: stats.bytesByKind.other, icon: <FileText className="h-5 w-5 text-muted-foreground" /> },
+      { name: `${t('media.upload.categories.image')} (${stats.counts.image})`, sizeBytes: stats.bytesByKind.image, icon: <ImageIcon className="h-5 w-5 text-muted-foreground" /> },
+      { name: `${t('media.upload.categories.video')} (${stats.counts.video})`, sizeBytes: stats.bytesByKind.video, icon: <Video className="h-5 w-5 text-muted-foreground" /> },
+      { name: `${t('media.upload.categories.document')} (${stats.counts.document})`, sizeBytes: stats.bytesByKind.document, icon: <FileText className="h-5 w-5 text-muted-foreground" /> },
+      { name: `${t('media.upload.categories.other')} (${stats.counts.other})`, sizeBytes: stats.bytesByKind.other, icon: <FileText className="h-5 w-5 text-muted-foreground" /> },
     ];
 
     return { categories, applications };
-  }, [stats.bytesByKind, stats.counts.document, stats.counts.image, stats.counts.other, stats.counts.video]);
-
+  }, [stats.bytesByKind, stats.counts.document, stats.counts.image, stats.counts.other, stats.counts.video, t]);
   const openFilePicker = () => fileInputRef.current?.click();
 
   useImperativeHandle(
@@ -447,7 +448,7 @@ export const MediaUploadPanel = forwardRef<
         md5ControllersRef.current.delete(task.groupId);
         clearThroughput(task.groupId);
 
-        const message = error.error?.displayMessage || error.response?.data?.error?.displayMessage || error.message || 'Upload failed.';
+        const message = error.error?.displayMessage || error.response?.data?.error?.displayMessage || error.message || t('media.upload.taskStatus.error');
         const canceled = message.toLowerCase().includes('cancel') || axios.isCancel(error);
 
         setUploadTasks((prev) =>
@@ -523,7 +524,7 @@ export const MediaUploadPanel = forwardRef<
       // Refresh list and usage
       queryClient.invalidateQueries({ queryKey: ['media'] });
     } catch (error: any) {
-      const message = error.error?.displayMessage || error.response?.data?.error?.displayMessage || error.message || 'Finalize failed.';
+      const message = error.error?.displayMessage || error.response?.data?.error?.displayMessage || error.message || t('media.upload.taskStatus.error');
       setUploadTasks((prev) =>
         prev.map((t) => (t.groupId === task.groupId ? { ...t, status: 'error', error: message } : t))
       );
@@ -567,7 +568,7 @@ export const MediaUploadPanel = forwardRef<
     try {
       const clipboard = navigator.clipboard as unknown as { read?: () => Promise<ClipboardItem[]> };
       if (!clipboard?.read) {
-        toast.error('Clipboard paste is not supported in this browser.');
+        toast.error(t('media.upload.toasts.clipboardNotSupported'));
         return;
       }
 
@@ -583,20 +584,20 @@ export const MediaUploadPanel = forwardRef<
       }
 
       if (files.length === 0) {
-        toast.message('Clipboard does not contain an image.');
+        toast.message(t('media.upload.toasts.clipboardNoImage'));
         return;
       }
 
       beginUploadFlow(files);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to paste from clipboard.';
+      const message = error instanceof Error ? error.message : t('common.errors.unknown');
       toast.error(message);
     }
   };
 
   const handleUploadConfirm = () => {
     if (pendingFiles.length === 0) {
-      toast.error('No files selected.');
+      toast.error(t('media.upload.toasts.noFilesSelected'));
       return;
     }
 
@@ -645,10 +646,10 @@ export const MediaUploadPanel = forwardRef<
       ['verifying', 'checking', 'uploading', 'finalizing'].includes(t.status),
     ).length;
     const finished = uploadTasks.length - active;
-    if (uploadTasks.length === 0) return 'No uploads yet';
-    if (active > 0) return `${active} active · ${finished} recent`;
-    return `${finished} recent uploads`;
-  }, [uploadTasks]);
+    if (uploadTasks.length === 0) return t('media.upload.noUploads');
+    if (active > 0) return `${active} ${t('media.upload.active')} · ${finished} ${t('media.upload.recent')}`;
+    return `${finished} ${t('media.upload.recent')}`;
+  }, [uploadTasks, t]);
 
   const hasFinishedTasks = uploadTasks.some((task) => ['done', 'canceled'].includes(task.status));
   const hasFailedTasks = uploadTasks.some((task) => task.status === 'error');
@@ -728,26 +729,26 @@ export const MediaUploadPanel = forwardRef<
       <Sheet open={uploadsDrawerOpen} onOpenChange={setUploadsDrawerOpen}>
         <SheetContent side="right" className="flex w-full flex-col sm:max-w-lg">
           <SheetHeader>
-            <SheetTitle>Uploads</SheetTitle>
+            <SheetTitle>{t('media.upload.drawer.title')}</SheetTitle>
             <SheetDescription>{recentCountLabel}</SheetDescription>
           </SheetHeader>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Button type="button" variant="outline" size="sm" onClick={cancelAll} disabled={!hasActiveTasks}>
-              Cancel all
+              {t('media.upload.drawer.cancelAll')}
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={retryAllFailed} disabled={!hasFailedTasks}>
-              Retry all failed
+              {t('media.upload.drawer.retryFailed')}
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={clearFinished} disabled={!hasFinishedTasks}>
-              Clear finished
+              {t('media.upload.drawer.clearFinished')}
             </Button>
           </div>
 
           <ScrollArea className="mt-4 flex-1 pr-4">
             {uploadTasks.length === 0 ? (
               <div className="flex h-full items-center justify-center rounded-lg border border-dashed bg-muted/20 px-6 py-10 text-center">
-                <p className="text-sm text-muted-foreground">No uploads in this session.</p>
+                <p className="text-sm text-muted-foreground">{t('media.upload.drawer.empty')}</p>
               </div>
             ) : (
               <div className="space-y-3 pb-6">
@@ -820,7 +821,7 @@ function UploadTaskMiniRow({
           <div className="flex items-center gap-1">
             {task.status === 'error' && (
               <Button variant="outline" size="sm" className="h-8" onClick={onRetry}>
-                Retry
+                {t('common.actions.refresh')}
               </Button>
             )}
             {['verifying', 'checking', 'uploading', 'finalizing'].includes(task.status) && (
@@ -884,7 +885,7 @@ function UploadTaskRow({
           <div className="flex items-center gap-1">
             {task.status === 'error' && (
               <Button variant="outline" size="sm" className="h-8" onClick={onRetry}>
-                Retry
+                {t('common.actions.refresh')}
               </Button>
             )}
             {['verifying', 'checking', 'uploading', 'finalizing'].includes(task.status) && (
@@ -911,22 +912,22 @@ function UploadTaskRow({
   );
 }
 
-function formatTaskStatus(status: UploadTaskStatus): string {
+function formatTaskStatus(status: UploadTaskStatus, t: TFunction): string {
   switch (status) {
     case 'verifying':
-      return 'Verifying (MD5)';
+      return t('media.upload.taskStatus.verifying');
     case 'checking':
-      return 'Checking duplicates';
+      return t('media.upload.taskStatus.checking');
     case 'uploading':
-      return 'Uploading';
+      return t('media.upload.taskStatus.uploading');
     case 'finalizing':
-      return 'Finalizing';
+      return t('media.upload.taskStatus.finalizing');
     case 'done':
-      return 'Completed';
+      return t('media.upload.taskStatus.done');
     case 'error':
-      return 'Failed';
+      return t('media.upload.taskStatus.error');
     case 'canceled':
-      return 'Canceled';
+      return t('media.upload.taskStatus.canceled');
     default:
       return status;
   }

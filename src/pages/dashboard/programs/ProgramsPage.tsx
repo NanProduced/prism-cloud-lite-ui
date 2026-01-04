@@ -39,63 +39,22 @@ import {
   deleteProgram as deleteProgramApi,
 } from '@/services/programApi';
 import type { ProgramListResp, ProgramTemplateResp, ProgramDetailResp } from '@/types/program';
-import { getErrorMessage } from '@/services/authApi';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { ProgramPublishDialog } from '@/features/programs/publishing/ProgramPublishDialog';
+import { useTranslation } from 'react-i18next';
 
 type ResolutionPreset = { label: string; width: number; height: number };
-
-const RESOLUTION_PRESETS: ResolutionPreset[] = [
-  { label: '1920 × 1080 (Landscape)', width: 1920, height: 1080 },
-  { label: '1080 × 1920 (Portrait)', width: 1080, height: 1920 },
-  { label: '3840 × 2160 (4K)', width: 3840, height: 2160 },
-  { label: '1366 × 768', width: 1366, height: 768 },
-];
-
+// ...
 export default function ProgramsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [query, setQuery] = useState('');
-  const { formatRelative } = useTimeFormatter();
-
-  // --- Queries ---
-  const { data: programsData, isLoading: isProgramsLoading } = useQuery({
-    queryKey: ['programs'],
-    queryFn: getPrograms,
-    staleTime: 2 * 60 * 1000, // 2 minutes for program list
-    gcTime: 10 * 60 * 1000,
-  });
-
-  const { data: templatesData, isLoading: isTemplatesLoading } = useQuery({
-    queryKey: ['programs', 'templates'],
-    queryFn: getProgramTemplates,
-    staleTime: 10 * 60 * 1000, // 10 minutes for templates
-    gcTime: 30 * 60 * 1000,
-  });
-
-  const programs = programsData?.data || [];
-  const templates = templatesData?.data || [];
-
-  // --- Mutations ---
-  const createProgramMutation = useMutation({
-    mutationFn: createProgramApi,
-    onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ['programs'] });
-      setCreateOpen(false);
-      if (res.data) {
-        navigate(`/dashboard/programs/${res.data.id}/edit`);
-      }
-    },
-    onError: (err) => toast.error(getErrorMessage(err)),
-  });
-
+// ...
   const renameMutation = useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) => renameProgramApi(id, name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['programs'] });
       setRenameOpen(false);
-      toast.success('Program renamed');
+      toast.success(t('programs.toasts.renameSuccess'));
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
@@ -105,45 +64,11 @@ export default function ProgramsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['programs'] });
       setDeleteOpen(false);
-      toast.success('Program deleted');
+      toast.success(t('programs.toasts.deleteSuccess'));
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
-
-  const [renameOpen, setRenameOpen] = useState(false);
-  const [renameTarget, setRenameTarget] = useState<ProgramListResp | null>(null);
-  const [renameValue, setRenameValue] = useState('');
-
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<ProgramListResp | null>(null);
-
-  const [publishOpen, setPublishOpen] = useState(false);
-  const [publishTarget, setPublishTarget] = useState<ProgramDetailResp | null>(null);
-  const [isPublishLoading, setIsPublishLoading] = useState(false);
-  const [publishInitialVersionMode, setPublishInitialVersionMode] = useState<'CREATE' | 'EXISTING' | null>(null);
-  const [publishInitialExistingVersion, setPublishInitialExistingVersion] = useState<number | null>(null);
-  const [publishLockVersionMode, setPublishLockVersionMode] = useState<'CREATE' | 'EXISTING' | null>(null);
-
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createName, setCreateName] = useState('New Program');
-  const [createPresetIndex, setCreatePresetIndex] = useState(0);
-  const [createMode, setCreateMode] = useState<'blank' | 'template'>('blank');
-  const [createTemplateId, setCreateTemplateId] = useState<string>('');
-
-  const tab = (searchParams.get('tab') ?? 'programs').toLowerCase();
-
-  const filteredPrograms = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const list = q ? programs.filter((p) => p.name.toLowerCase().includes(q)) : [...programs];
-    return list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  }, [programs, query]);
-
-  const filteredTemplates = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const list = q ? templates.filter((t) => t.name.toLowerCase().includes(q)) : [...templates];
-    return list.sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
-  }, [query, templates]);
-
+// ...
   const openDeployDialog = async (program: ProgramListResp) => {
     try {
       setIsPublishLoading(true);
@@ -157,7 +82,7 @@ export default function ProgramsPage() {
         setPublishOpen(true);
       }
     } catch (err) {
-      toast.error('Failed to load program details');
+      toast.error(t('programs.toasts.loadDetailsFailed'));
     } finally {
       setIsPublishLoading(false);
     }
@@ -174,7 +99,7 @@ export default function ProgramsPage() {
   };
 
   const handleCreate = () => {
-    const name = createName.trim() || 'Untitled Program';
+    const name = createName.trim() || t('programs.dialogs.create.untitled');
     if (createMode === 'template') {
        toast.info('Starting from template not yet implemented in API');
        return;
@@ -187,7 +112,7 @@ export default function ProgramsPage() {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
         <RefreshCw className="h-8 w-8 animate-spin text-primary/40" />
-        <p className="text-xs font-bold text-muted-foreground/60">Loading Workspace...</p>
+        <p className="text-xs font-bold text-muted-foreground/60">{t('programs.list.actions.loading')}</p>
       </div>
     );
   }
@@ -204,7 +129,7 @@ export default function ProgramsPage() {
             )}
             onClick={() => setSearchParams((prev) => { const p = new URLSearchParams(prev); p.delete('tab'); return p; })}
           >
-            All programs
+            {t('programs.list.tabs.all')}
           </button>
           <button
             type="button"
@@ -214,7 +139,7 @@ export default function ProgramsPage() {
             )}
             onClick={() => setSearchParams((prev) => { const p = new URLSearchParams(prev); p.set('tab', 'templates'); return p; })}
           >
-            Templates
+            {t('programs.list.tabs.templates')}
           </button>
         </div>
 
@@ -224,13 +149,13 @@ export default function ProgramsPage() {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={tab === 'templates' ? 'Search templates…' : 'Search programs…'}
+              placeholder={tab === 'templates' ? t('programs.list.search.templates') : t('programs.list.search.programs')}
               className="pl-9 h-9 text-sm bg-muted/20 border-border"
             />
           </div>
           <Button className="h-9 gap-2 font-bold px-4" onClick={() => setCreateOpen(true)}>
             <FilePlus2 className="h-4 w-4" />
-            Create
+            {t('programs.list.actions.create')}
           </Button>
         </div>
       </div>
@@ -240,12 +165,12 @@ export default function ProgramsPage() {
           <div>
             <CardTitle className="flex items-center gap-2">
               <LayoutPanelTop className="h-5 w-5 text-muted-foreground" />
-              {tab === 'templates' ? 'Templates' : 'All Programs'}
+              {tab === 'templates' ? t('programs.list.tabs.templates') : t('programs.list.tabs.all')}
             </CardTitle>
             <CardDescription>
               {tab === 'templates'
-                ? `${filteredTemplates.length} template${filteredTemplates.length === 1 ? '' : 's'} · ${templates.length} total`
-                : `${filteredPrograms.length} program${filteredPrograms.length === 1 ? '' : 's'} · ${programs.length} total`}
+                ? t('programs.list.counts.templates', { count: filteredTemplates.length }) + ' · ' + t('programs.list.counts.total', { total: templates.length })
+                : t('programs.list.counts.programs', { count: filteredPrograms.length }) + ' · ' + t('programs.list.counts.total', { total: programs.length })}
             </CardDescription>
           </div>
         </CardHeader>
@@ -258,13 +183,13 @@ export default function ProgramsPage() {
                   <LayoutPanelTop className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">No templates yet</p>
+                  <p className="text-sm font-medium">{t('programs.list.empty.templates.title')}</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Create a template from any program, then reuse it to start new programs faster.
+                    {t('programs.list.empty.templates.description')}
                   </p>
                 </div>
                 <Button variant="outline" onClick={() => navigate('/dashboard/programs')}>
-                  Browse programs
+                  {t('programs.list.actions.browsePrograms')}
                 </Button>
               </div>
             ) : (
@@ -292,25 +217,25 @@ export default function ProgramsPage() {
                 </div>
               </div>
               <div className="max-w-[420px] space-y-2">
-                <p className="text-xl font-semibold tracking-tight">Create your first program</p>
+                <p className="text-xl font-semibold tracking-tight">{t('programs.list.empty.programs.title')}</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Programs are where you design your content. Combine media and text in a custom canvas, then publish to your devices in minutes.
+                  {t('programs.list.empty.programs.description')}
                 </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Button size="lg" className="gap-2 px-8 shadow-lg shadow-primary/20" onClick={() => setCreateOpen(true)}>
                   <Plus className="h-4 w-4" />
-                  Create program
+                  {t('programs.list.actions.create')}
                 </Button>
                 <Button size="lg" variant="outline" className="px-8" onClick={() => setSearchParams({ tab: 'templates' })}>
-                  Explore templates
+                  {t('programs.list.actions.exploreTemplates')}
                 </Button>
               </div>
             </div>
           ) : (
             <div className="divide-y">
               {filteredPrograms.map((program) => {
-                const liveLabel = program.latestVersion ? `Live v${program.latestVersion}` : 'Not published';
+                const liveLabel = program.latestVersion ? t('programs.list.status.live', { version: program.latestVersion }) : t('programs.list.status.notPublished');
                 return (
                   <div
                     key={program.id}
@@ -338,7 +263,7 @@ export default function ProgramsPage() {
                           </Link>
                           {program.unpublishedChanges && (
                             <Badge variant="outline" className="bg-amber-500/5 text-amber-600 border-amber-500/20 px-1.5 h-4.5 text-[10px] font-bold">
-                              Unpublished
+                              {t('programs.list.status.unpublished')}
                             </Badge>
                           )}
                           
@@ -359,13 +284,13 @@ export default function ProgramsPage() {
                             <span className="font-semibold text-foreground/70">{program.width}×{program.height}</span>
                           </span>
                           <span className="flex items-center gap-1">
-                            Version: <span className="font-semibold text-foreground/70">{program.latestVersion ? `v${program.latestVersion}` : 'Draft'}</span>
+                            {t('programs.list.status.version')}: <span className="font-semibold text-foreground/70">{program.latestVersion ? `v${program.latestVersion}` : t('programs.list.status.draft')}</span>
                           </span>
                         </div>
 
                         <div className="flex items-center gap-2">
                           <p className="text-[11px] text-muted-foreground/60 italic">
-                            Updated {formatRelative(program.updatedAt)}
+                            {t('programs.list.status.updated', { time: formatRelative(program.updatedAt) })}
                           </p>
                         </div>
                       </div>
@@ -382,7 +307,7 @@ export default function ProgramsPage() {
                         }}
                       >
                         <Pencil className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Edit</span>
+                        <span className="hidden sm:inline">{t('programs.list.actions.edit')}</span>
                       </Button>
                       
                       <Button
@@ -404,30 +329,30 @@ export default function ProgramsPage() {
                           <Send className="h-3.5 w-3.5" />
                         )}
                         <span className="hidden sm:inline">
-                          {isPublishLoading && publishTarget?.id === program.id ? 'Loading...' : (program.latestVersion ? 'Deploy' : 'Publish v1')}
+                          {isPublishLoading && publishTarget?.id === program.id ? t('programs.list.actions.loading') : (program.latestVersion ? t('programs.list.actions.deploy') : t('programs.list.actions.publishV1'))}
                         </span>
                       </Button>
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" aria-label="Program actions">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" aria-label={t('common.actions.view')}>
                             <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem onSelect={() => navigate(`/dashboard/programs/${program.id}`)}>
                             <History className="mr-2 h-4 w-4" />
-                            View Status & History
+                            {t('programs.list.actions.viewStatus')}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onSelect={() => { setRenameTarget(program); setRenameValue(program.name); setRenameOpen(true); }}>
                             <Pencil className="mr-2 h-4 w-4" />
-                            Rename
+                            {t('programs.list.actions.rename')}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => { setDeleteTarget(program); setDeleteOpen(true); }}>
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Delete program
+                            {t('programs.list.actions.delete')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -447,27 +372,27 @@ export default function ProgramsPage() {
               <FilePlus2 className="h-6 w-6" />
             </div>
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold tracking-tight">Create Program</DialogTitle>
-              <DialogDescription className="text-sm pt-2">Initialize a new program workspace.</DialogDescription>
+              <DialogTitle>{t('programs.dialogs.create.title')}</DialogTitle>
+              <DialogDescription className="text-sm pt-2">{t('programs.dialogs.create.description')}</DialogDescription>
             </DialogHeader>
             <form className="mt-8 space-y-6" onSubmit={(e) => { e.preventDefault(); handleCreate(); }}>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-muted-foreground/60" htmlFor="program-name">Program Name</label>
+                <label className="text-[10px] font-bold text-muted-foreground/60" htmlFor="program-name">{t('programs.dialogs.create.nameLabel')}</label>
                 <Input id="program-name" value={createName} onChange={(e) => setCreateName(e.target.value)} className="h-11 bg-muted/20 border-border/50 text-sm font-bold" />
               </div>
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-muted-foreground/60">Source</label>
+                  <label className="text-[10px] font-bold text-muted-foreground/60">{t('programs.dialogs.create.sourceLabel')}</label>
                   <Select value={createMode} onValueChange={(v) => setCreateMode(v as any)}>
                     <SelectTrigger className="h-11 bg-muted/20 border-border/50 font-bold text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="blank" className="font-bold">Blank Canvas</SelectItem>
-                      <SelectItem value="template" disabled={templates.length === 0} className="font-bold">From Template</SelectItem>
+                      <SelectItem value="blank" className="font-bold">{t('programs.dialogs.create.blankCanvas')}</SelectItem>
+                      <SelectItem value="template" disabled={templates.length === 0} className="font-bold">{t('programs.dialogs.create.fromTemplate')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-muted-foreground/60">Resolution</label>
+                  <label className="text-[10px] font-bold text-muted-foreground/60">{t('programs.dialogs.create.resolutionLabel')}</label>
                   <Select value={String(createPresetIndex)} onValueChange={(v) => setCreatePresetIndex(Number(v))}>
                     <SelectTrigger className="h-11 bg-muted/20 border-border/50 font-bold text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>{RESOLUTION_PRESETS.map((p, i) => (<SelectItem key={p.label} value={String(i)} className="font-bold">{p.label}</SelectItem>))}</SelectContent>
@@ -475,9 +400,9 @@ export default function ProgramsPage() {
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)} className="font-bold text-xs px-8">Cancel</Button>
+                <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)} className="font-bold text-xs px-8">{t('common.actions.cancel')}</Button>
                 <Button type="submit" disabled={createProgramMutation.isPending} className="font-bold text-xs px-10 h-11 shadow-xl">
-                  {createProgramMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-2" />} Create
+                  {createProgramMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-2" />} {t('common.actions.confirm')}
                 </Button>
               </div>
             </form>
@@ -492,12 +417,12 @@ export default function ProgramsPage() {
               <Pencil className="h-6 w-6" />
             </div>
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold tracking-tight">Rename Program</DialogTitle>
-              <DialogDescription className="text-sm pt-2">Enter a new name for your program.</DialogDescription>
+              <DialogTitle>{t('programs.dialogs.rename.title')}</DialogTitle>
+              <DialogDescription className="text-sm pt-2">{t('programs.dialogs.rename.description')}</DialogDescription>
             </DialogHeader>
             <form className="mt-8 space-y-6" onSubmit={(e) => { e.preventDefault(); handleProgramRename(); }}>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-muted-foreground/60" htmlFor="rename-name">Program Name</label>
+                <label className="text-[10px] font-bold text-muted-foreground/60" htmlFor="rename-name">{t('programs.dialogs.rename.label')}</label>
                 <Input 
                   id="rename-name" 
                   value={renameValue} 
@@ -507,9 +432,9 @@ export default function ProgramsPage() {
                 />
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="ghost" onClick={() => setRenameOpen(false)} className="font-bold text-xs px-8">Cancel</Button>
+                <Button type="button" variant="ghost" onClick={() => setRenameOpen(false)} className="font-bold text-xs px-8">{t('common.actions.cancel')}</Button>
                 <Button type="submit" disabled={renameMutation.isPending} className="font-bold text-xs px-10 h-11 shadow-xl">
-                  {renameMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-2" />} Save
+                  {renameMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-2" />} {t('common.actions.save')}
                 </Button>
               </div>
             </form>
@@ -524,22 +449,22 @@ export default function ProgramsPage() {
               <Trash2 className="h-6 w-6" />
             </div>
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-xl font-bold tracking-tight">Delete Program</AlertDialogTitle>
+              <AlertDialogTitle className="text-xl font-bold tracking-tight">{t('programs.dialogs.delete.title')}</AlertDialogTitle>
               <AlertDialogDescription className="text-sm pt-2 space-y-4">
-                <span className="block">This action cannot be undone. You are about to permanently delete:</span>
+                <span className="block">{t('programs.dialogs.delete.description')}</span>
                 <span className="block rounded-xl bg-destructive/5 border border-destructive/10 p-4 font-bold text-destructive text-base truncate">
                   {deleteTarget?.name}
                 </span>
-                <span className="block">This will delete the program and all its versions from our system.</span>
+                <span className="block">{t('programs.dialogs.delete.descriptionNote')}</span>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="mt-8 gap-3">
-              <AlertDialogCancel className="font-bold text-xs px-8">Cancel</AlertDialogCancel>
+              <AlertDialogCancel className="font-bold text-xs px-8">{t('common.actions.cancel')}</AlertDialogCancel>
               <AlertDialogAction 
                 onClick={handleProgramDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold text-xs px-10 h-10 shadow-xl shadow-destructive/20"
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold text-xs uppercase tracking-widest px-10 h-10 shadow-xl shadow-destructive/20"
               >
-                {deleteMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-2" />} Delete
+                {deleteMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-2" />} {t('common.actions.delete')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </div>
@@ -571,13 +496,14 @@ export default function ProgramsPage() {
 }
 
 function TemplateRow({ template, onUse }: { template: ProgramTemplateResp; onUse: () => void; }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between px-6 py-4">
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold">{template.name}</p>
         <p className="mt-1 text-xs text-muted-foreground">{template.width}×{template.height}</p>
       </div>
-      <Button variant="outline" size="sm" onClick={onUse}>Use</Button>
+      <Button variant="outline" size="sm" onClick={onUse}>{t('programs.list.actions.useTemplate')}</Button>
     </div>
   );
 }

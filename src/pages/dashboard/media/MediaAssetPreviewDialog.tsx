@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { formatBytes } from '@better-upload/client/helpers';
 import { ExternalLink, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -15,6 +16,7 @@ export function MediaAssetPreviewDialog({
   onOpenChange: (open: boolean) => void;
   asset: MediaAssetNode | null;
 }) {
+  const { t } = useTranslation();
   useEffect(() => {
     if (!open) return;
     const handler = (event: KeyboardEvent) => {
@@ -63,11 +65,11 @@ export function MediaAssetPreviewDialog({
                 onClick={() => window.open(previewUrl, '_blank', 'noopener,noreferrer')}
               >
                 <ExternalLink className="h-4 w-4" />
-                Open
+                {t('common.actions.open')}
               </Button>
             ) : null}
 
-            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => onOpenChange(false)} aria-label="Close">
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => onOpenChange(false)} aria-label={t('common.actions.close')}>
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -83,7 +85,7 @@ export function MediaAssetPreviewDialog({
                   className="max-h-[calc(90vh-8rem)] w-auto max-w-full rounded-md object-contain"
                 />
               ) : (
-                <FallbackMessage title="Preview unavailable" desc="No image source URL is available for this asset." />
+                <FallbackMessage title={t('media.explorer.toasts.previewUnavailable')} desc={t('media.explorer.toasts.previewUnavailableDescImage')} />
               )
             ) : isVideo ? (
               previewUrl ? (
@@ -96,10 +98,10 @@ export function MediaAssetPreviewDialog({
                   className="max-h-[calc(90vh-8rem)] w-full max-w-4xl rounded-md bg-black"
                 />
               ) : (
-                <FallbackMessage title="Preview unavailable" desc="No video source URL is available for this asset." />
+                <FallbackMessage title={t('media.explorer.toasts.previewUnavailable')} desc={t('media.explorer.toasts.previewUnavailableDescVideo')} />
               )
             ) : (
-              <FallbackMessage title="Preview unavailable" desc="Document preview is not supported yet." />
+              <FallbackMessage title={t('media.explorer.toasts.previewUnavailable')} desc={t('media.explorer.toasts.previewUnavailableDescDoc')} />
             )}
           </div>
         </div>

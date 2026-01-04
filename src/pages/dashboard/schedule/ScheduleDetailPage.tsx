@@ -60,9 +60,10 @@ import { ScheduleOnboarding } from '@/components/schedule/ScheduleOnboarding';
 import { useBreadcrumbStore } from '@/store/breadcrumbStore';
 import type { BffResponse } from '@/types/auth';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
+import { useTranslation } from 'react-i18next';
 
-function getBffDisplayError(res: BffResponse<any> | null | undefined): string {
-  return res?.error?.displayMessage || res?.error?.message || 'Request failed';
+function getBffDisplayError(res: BffResponse<any> | null | undefined, t: any): string {
+  return res?.error?.displayMessage || res?.error?.message || t('common.errors.unknown');
 }
 
 interface RuleSummaryParts {
@@ -71,7 +72,7 @@ interface RuleSummaryParts {
   weekday?: string;
 }
 
-function summarizeLimits(rule: ScheduleContentsRuleResp): RuleSummaryParts {
+function summarizeLimits(rule: ScheduleContentsRuleResp, t: any): RuleSummaryParts {
   const parts: RuleSummaryParts = {};
 
   // Time formatting
@@ -98,14 +99,14 @@ function summarizeLimits(rule: ScheduleContentsRuleResp): RuleSummaryParts {
   if (rule.ifLimitWeekday && rule.limitWeekday) {
     const indices = weekdayBooleanToIndices(rule.limitWeekday as boolean[]);
     if (indices.length > 0) {
-      parts.weekday = formatWeekdaySelection(indices);
+      parts.weekday = formatWeekdaySelection(indices, t);
     }
   }
 
   return parts;
 }
 
-function renderConstraintBadges(parts: RuleSummaryParts): React.ReactNode {
+function renderConstraintBadges(parts: RuleSummaryParts, t: any): React.ReactNode {
   const badges: React.ReactNode[] = [];
 
   if (parts.time) {
@@ -133,7 +134,7 @@ function renderConstraintBadges(parts: RuleSummaryParts): React.ReactNode {
   }
 
   if (badges.length === 0) {
-    return <span className="text-xs text-muted-foreground">No constraints (always active)</span>;
+    return <span className="text-xs text-muted-foreground">{t('schedules.details.constraints.none')}</span>;
   }
 
   return <div className="flex flex-wrap items-center gap-1.5">{badges}</div>;
@@ -164,7 +165,7 @@ function getCommandValueDescription(parsed: UpsertScheduleCommandRuleReq | null)
   }
 }
 
-function summarizeCommandLimits(parsed: UpsertScheduleCommandRuleReq | null): RuleSummaryParts {
+function summarizeCommandLimits(parsed: UpsertScheduleCommandRuleReq | null, t: any): RuleSummaryParts {
   if (!parsed) return {};
   const parts: RuleSummaryParts = {};
 
@@ -179,7 +180,7 @@ function summarizeCommandLimits(parsed: UpsertScheduleCommandRuleReq | null): Ru
   if (parsed.ifLimitWeekday && parsed.limitWeekday) {
     const indices = weekdayBooleanToIndices(parsed.limitWeekday as boolean[]);
     if (indices.length > 0) {
-      parts.weekday = formatWeekdaySelection(indices);
+      parts.weekday = formatWeekdaySelection(indices, t);
     }
   }
 
@@ -218,6 +219,7 @@ function parseCommandRules(
 }
 
 export default function ScheduleDetailPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -305,56 +307,56 @@ export default function ScheduleDetailPage() {
     mutationFn: (data: any) => updateSchedule(scheduleId, data),
     onSuccess: (res) => {
       if (!res.success) {
-        toast.error(getBffDisplayError(res));
+        toast.error(getBffDisplayError(res, t));
         return;
       }
       queryClient.invalidateQueries({ queryKey: ['schedule', scheduleId] });
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
-      toast.success('Schedule updated');
+      toast.success(t('schedules.toasts.publishSuccess'));
     },
-    onError: () => toast.error('Update failed'),
+    onError: () => toast.error(t('schedules.toasts.updateFailed')),
   });
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteSchedule(scheduleId),
     onSuccess: (res) => {
       if (!res.success) {
-        toast.error(getBffDisplayError(res));
+        toast.error(getBffDisplayError(res, t));
         return;
       }
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
-      toast.success('Schedule deleted');
+      toast.success(t('schedules.toasts.deleteSuccess'));
       navigate('/dashboard/schedule');
     },
-    onError: () => toast.error('Delete failed'),
+    onError: () => toast.error(t('schedules.toasts.deleteFailed')),
   });
 
   const unbindMutation = useMutation({
     mutationFn: (deviceId: number) => unbindDeviceFromSchedule(scheduleId, deviceId),
     onSuccess: (res) => {
       if (!res.success) {
-        toast.error(getBffDisplayError(res));
+        toast.error(getBffDisplayError(res, t));
         return;
       }
       queryClient.invalidateQueries({ queryKey: ['schedule', scheduleId] });
       queryClient.invalidateQueries({ queryKey: ['schedule-bindings', scheduleId] });
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
-      toast.success('Device unbound');
+      toast.success(t('deviceDetails.toasts.unpublishSuccess'));
     },
-    onError: () => toast.error('Unbind failed'),
+    onError: () => toast.error(getErrorMessage(null) || t('common.errors.unknown')),
   });
 
   const pushMutation = useMutation({
     mutationFn: () => pushScheduleToDevices(scheduleId, null),
     onSuccess: (res) => {
       if (!res.success) {
-        toast.error(getBffDisplayError(res));
+        toast.error(getBffDisplayError(res, t));
         return;
       }
-      toast.success('Push queued', { description: `Accepted: ${res.data?.accepted ?? 0}/${res.data?.totalTargets ?? 0}` });
+      toast.success(t('schedules.details.toasts.pushQueued'), { description: `${t('schedules.details.pushResult.accepted')}: ${res.data?.accepted ?? 0}/${res.data?.totalTargets ?? 0}` });
       setPushOpen(true);
     },
-    onError: () => toast.error('Push failed'),
+    onError: () => toast.error(t('schedules.toasts.publishFailed')),
   });
 
   const [metaName, setMetaName] = useState('');
@@ -373,7 +375,7 @@ export default function ScheduleDetailPage() {
 
   function saveMeta() {
     updateMutation.mutate({
-      name: metaName.trim() || 'Untitled Schedule',
+      name: metaName.trim() || t('schedules.dialogs.create.untitled'),
       description: metaDescription.trim() || null,
       enabled: metaEnabled,
     });
@@ -401,7 +403,7 @@ export default function ScheduleDetailPage() {
 
   function saveCommandRule(req: UpsertScheduleCommandRuleReq) {
     if (unparseableCommandRules.length > 0) {
-      toast.error('This schedule contains unparseable command rules; editing is disabled to avoid data loss.');
+      toast.error(t('schedules.details.toasts.unparseableEdit'));
       return;
     }
     const next = [...commandUpserts];
@@ -430,7 +432,7 @@ export default function ScheduleDetailPage() {
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <Button variant="ghost" className="gap-2" onClick={() => navigate('/dashboard/schedule')}>
-            <ArrowLeft className="h-4 w-4" /> Back
+            <ArrowLeft className="h-4 w-4" /> {t('common.actions.back')}
           </Button>
           <div className="h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
             <CalendarDays className="h-5 w-5" />
@@ -441,9 +443,9 @@ export default function ScheduleDetailPage() {
                 type="button"
                 onClick={openMetaDialog}
                 className="text-xl font-bold tracking-tight truncate hover:text-primary transition-colors cursor-pointer"
-                title="Click to edit"
+                title={t('common.actions.edit')}
               >
-                {schedule?.name || 'Schedule'}
+                {schedule?.name || t('schedules.list.title')}
               </button>
               <span className="inline-flex items-center rounded-md bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
                 P:{schedule?.contentsRules?.length ?? 0}
@@ -453,19 +455,19 @@ export default function ScheduleDetailPage() {
               </span>
             </div>
             <p className="text-xs text-muted-foreground truncate">
-              Updated {formatDateTime(schedule?.updatedAt)}
+              {t('schedules.list.table.updated')} {formatDateTime(schedule?.updatedAt)}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 mr-2 pr-2 border-r">
             <Switch checked={Boolean(schedule?.enabled)} onCheckedChange={(next) => updateMutation.mutate({ enabled: next })} disabled={!schedule} />
-            <span className="text-sm font-medium">{schedule?.enabled ? 'Enabled' : 'Disabled'}</span>
+            <span className="text-sm font-medium">{schedule?.enabled ? t('schedules.list.table.enabled') : t('schedules.list.table.disabled')}</span>
           </div>
-          <Button variant="outline" size="icon" onClick={() => scheduleQuery.refetch()} title="Refresh">
+          <Button variant="outline" size="icon" onClick={() => scheduleQuery.refetch()} title={t('common.actions.refresh')}>
             <RefreshCw className={cn('h-4 w-4', scheduleQuery.isFetching ? 'animate-spin' : '')} />
           </Button>
-          <Button variant="outline" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteConfirmOpen(true)} disabled={!schedule} title="Delete schedule">
+          <Button variant="outline" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteConfirmOpen(true)} disabled={!schedule} title={t('schedules.list.actions.delete')}>
             <Trash2 className="h-4 w-4" />
           </Button>
           <Tooltip>
@@ -476,13 +478,13 @@ export default function ScheduleDetailPage() {
                 disabled={!schedule || pushMutation.isPending || (schedule?.boundDeviceIds?.length ?? 0) === 0}
               >
                 {pushMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                Push
+                {t('schedules.list.actions.publish')}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="max-w-xs">
-              <p className="font-semibold">Notify devices to fetch updates</p>
+              <p className="font-semibold">{t('program.publish.strategy.traffic')}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Push sends a command to all bound devices to download the latest schedule configuration.
+                {t('schedules.details.pushResult.desc')}
               </p>
             </TooltipContent>
           </Tooltip>
@@ -491,9 +493,9 @@ export default function ScheduleDetailPage() {
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="programs">Programs</TabsTrigger>
-          <TabsTrigger value="commands">Commands</TabsTrigger>
+          <TabsTrigger value="overview">{t('schedules.details.tabs.overview')}</TabsTrigger>
+          <TabsTrigger value="programs">{t('schedules.details.tabs.programs')}</TabsTrigger>
+          <TabsTrigger value="commands">{t('schedules.details.tabs.commands')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -513,22 +515,22 @@ export default function ScheduleDetailPage() {
           <Card className="border-0 ring-1 ring-foreground/5 shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/10 border-b flex flex-row items-center justify-between gap-3">
               <div>
-                <CardTitle className="text-sm font-bold">Bindings</CardTitle>
-                <CardDescription className="text-xs">A device can bind to at most one schedule.</CardDescription>
+                <CardTitle className="text-sm font-bold">{t('schedules.details.bindings.title')}</CardTitle>
+                <CardDescription className="text-xs">{t('schedules.details.bindings.desc')}</CardDescription>
               </div>
               <Button onClick={() => setBindOpen(true)} disabled={!schedule} className="gap-2">
-                <Plus className="h-4 w-4" /> Bind Devices
+                <Plus className="h-4 w-4" /> {t('schedules.details.bindings.bindDevices')}
               </Button>
             </CardHeader>
             <CardContent className="p-0">
               {isLoading ? (
                 <div className="flex items-center justify-center gap-3 py-14 text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin" /> Loading...
+                  <Loader2 className="h-5 w-5 animate-spin" /> {t('programs.list.actions.loading')}
                 </div>
               ) : bindings.length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground">
-                  <p className="text-sm font-semibold">No devices bound</p>
-                  <p className="text-xs mt-1">Bind devices to make this schedule take effect.</p>
+                  <p className="text-sm font-semibold">{t('schedules.details.bindings.noDevices')}</p>
+                  <p className="text-xs mt-1">{t('schedules.details.bindings.noDevicesDesc')}</p>
                 </div>
               ) : (
                 <div className="divide-y">
@@ -544,7 +546,7 @@ export default function ScheduleDetailPage() {
                         </div>
                         <div className="mt-1 flex items-center gap-3">
                            <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                             {d.networkType || 'Unknown'}
+                             {d.networkType || t('common.errors.unknown')}
                            </span>
                            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
                              <RefreshCw className="h-3 w-3 opacity-70" /> {d.brightness}%
@@ -556,7 +558,7 @@ export default function ScheduleDetailPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => navigate(`/dashboard/devices/${d.deviceId}`, { state: { returnTo: location.pathname } })}>
-                          Open
+                          {t('common.actions.open')}
                         </Button>
                         <Button
                           variant="ghost"
@@ -564,7 +566,7 @@ export default function ScheduleDetailPage() {
                           className="text-destructive hover:text-destructive gap-2"
                           onClick={() => unbindMutation.mutate(d.deviceId)}
                         >
-                          <Unlink2 className="h-4 w-4" /> Unbind
+                          <Unlink2 className="h-4 w-4" /> {t('schedules.details.bindings.unbind')}
                         </Button>
                       </div>
                     </div>
@@ -580,8 +582,8 @@ export default function ScheduleDetailPage() {
           <Card className="border-0 ring-1 ring-foreground/5 shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/10 border-b flex flex-row items-center justify-between gap-3">
               <div>
-                <CardTitle className="text-sm font-bold">Program rules</CardTitle>
-                <CardDescription className="text-xs">Schedule contents rules (rotation/spot).</CardDescription>
+                <CardTitle className="text-sm font-bold">{t('schedules.details.programRules.title')}</CardTitle>
+                <CardDescription className="text-xs">{t('schedules.details.programRules.desc')}</CardDescription>
               </div>
               <Button
                 onClick={() => {
@@ -591,14 +593,14 @@ export default function ScheduleDetailPage() {
                 disabled={!schedule}
                 className="gap-2"
               >
-                <Plus className="h-4 w-4" /> Add rule
+                <Plus className="h-4 w-4" /> {t('schedules.details.programRules.addRule')}
               </Button>
             </CardHeader>
             <CardContent className="p-0">
               {(schedule?.contentsRules?.length || 0) === 0 ? (
                 <div className="py-12 text-center text-muted-foreground">
-                  <p className="text-sm font-semibold">No program rules</p>
-                  <p className="text-xs mt-1">Add rules to make devices play published programs by time/date/weekday.</p>
+                  <p className="text-sm font-semibold">{t('schedules.details.programRules.noRules')}</p>
+                  <p className="text-xs mt-1">{t('schedules.details.programRules.noRulesDesc')}</p>
                 </div>
               ) : (
                 <div className="divide-y">
@@ -607,7 +609,7 @@ export default function ScheduleDetailPage() {
                     .sort((a, b) => a.priority - b.priority)
                     .map((r) => {
                       const programInfo = r.programId ? programsMap[r.programId] : null;
-                      const displayName = programInfo?.name || r.deviceTitleSnapshot || 'Untitled Program';
+                      const displayName = programInfo?.name || r.deviceTitleSnapshot || t('schedules.dialogs.create.untitled');
                       
                       return (
                         <div key={r.id} className="flex flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center">
@@ -621,7 +623,7 @@ export default function ScheduleDetailPage() {
                               />
                             ) : (
                               <div className="h-16 w-24 rounded-md border bg-muted flex items-center justify-center text-[10px] text-muted-foreground uppercase font-bold">
-                                No Cover
+                                {t('schedules.details.programRules.noCover')}
                               </div>
                             )}
                           </div>
@@ -631,9 +633,9 @@ export default function ScheduleDetailPage() {
                                 "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium",
                                 r.type === 'spot' ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
                               )}>
-                                {r.type === 'spot' ? 'Spot' : 'Rotation'}
+                                {r.type === 'spot' ? t('schedules.details.programRules.spot') : t('schedules.details.programRules.rotation')}
                               </span>
-                              <span className="text-xs text-muted-foreground">Priority {r.priority}</span>
+                              <span className="text-xs text-muted-foreground">{t('schedules.details.programRules.priority')} {r.priority}</span>
                               {r.releaseVersion != null && (
                                 <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">v{r.releaseVersion}</span>
                               )}
@@ -655,7 +657,7 @@ export default function ScheduleDetailPage() {
                               </p>
                             </div>
                             <div className="mt-1.5">
-                              {renderConstraintBadges(summarizeLimits(r))}
+                              {renderConstraintBadges(summarizeLimits(r, t), t)}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -667,7 +669,7 @@ export default function ScheduleDetailPage() {
                                 setContentsDialogOpen(true);
                               }}
                             >
-                              Edit
+                              {t('common.actions.edit')}
                             </Button>
                             <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => deleteContentsRule(r.id)}>
                               <Trash2 className="h-4 w-4" />
@@ -686,8 +688,8 @@ export default function ScheduleDetailPage() {
           <Card className="border-0 ring-1 ring-foreground/5 shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/10 border-b flex flex-row items-center justify-between gap-3">
               <div>
-                <CardTitle className="text-sm font-bold">Command rules</CardTitle>
-                <CardDescription className="text-xs">Generated device protocol payload is stored by backend.</CardDescription>
+                <CardTitle className="text-sm font-bold">{t('schedules.details.commandRules.title')}</CardTitle>
+                <CardDescription className="text-xs">{t('schedules.details.commandRules.desc')}</CardDescription>
               </div>
               <Button
                 onClick={() => {
@@ -697,7 +699,7 @@ export default function ScheduleDetailPage() {
                 disabled={!schedule || unparseableCommandRules.length > 0}
                 className="gap-2"
               >
-                <Plus className="h-4 w-4" /> Add rule
+                <Plus className="h-4 w-4" /> {t('schedules.details.commandRules.addRule')}
               </Button>
             </CardHeader>
             {unparseableCommandRules.length > 0 && (
@@ -705,9 +707,9 @@ export default function ScheduleDetailPage() {
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="font-semibold">Some command rules are not editable</p>
+                    <p className="font-semibold">{t('schedules.details.commandRules.unparseableTitle')}</p>
                     <p className="mt-1 text-yellow-800 dark:text-yellow-300">
-                      UI cannot reconstruct operation+opTime from payload. Command editing is disabled until those rules are removed.
+                      {t('schedules.details.commandRules.unparseableDesc')}
                     </p>
                   </div>
                 </div>
@@ -716,8 +718,8 @@ export default function ScheduleDetailPage() {
             <CardContent className="p-0">
               {(schedule?.commandRules?.length || 0) === 0 ? (
                 <div className="py-12 text-center text-muted-foreground">
-                  <p className="text-sm font-semibold">No command rules</p>
-                  <p className="text-xs mt-1">Add actions like brightness/volume/sleep at specified times.</p>
+                  <p className="text-sm font-semibold">{t('schedules.details.commandRules.noRules')}</p>
+                  <p className="text-xs mt-1">{t('schedules.details.commandRules.noRulesDesc')}</p>
                 </div>
               ) : (
                 <div className="divide-y">
@@ -727,7 +729,7 @@ export default function ScheduleDetailPage() {
                     const typeInfo = COMMAND_TYPE_CONFIG[parsed?.operation.type || ''] || DEFAULT_COMMAND_TYPE_INFO;
                     const IconComponent = typeInfo.icon;
                     const valueDesc = getCommandValueDescription(parsed);
-                    const cmdConstraints = summarizeCommandLimits(parsed);
+                    const cmdConstraints = summarizeCommandLimits(parsed, t);
                     return (
                       <div key={r.id} className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0 flex-1">
@@ -740,7 +742,7 @@ export default function ScheduleDetailPage() {
                             )}
                             {!editable && (
                               <span className="text-xs text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 px-1.5 py-0.5 rounded">
-                                read-only
+                                {t('schedules.details.commandRules.readOnly')}
                               </span>
                             )}
                           </div>
@@ -770,7 +772,7 @@ export default function ScheduleDetailPage() {
                             }}
                             disabled={!parsed || unparseableCommandRules.length > 0}
                           >
-                            Edit
+                            {t('common.actions.edit')}
                           </Button>
                           <Button
                             variant="ghost"
@@ -798,34 +800,34 @@ export default function ScheduleDetailPage() {
               {schedule && schedule.boundDeviceIds.length > 0 && (
                 <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs font-bold">!</span>
               )}
-              Delete schedule?
+              {t('schedules.dialogs.delete.title')}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 {schedule && schedule.boundDeviceIds.length > 0 ? (
                   <>
                     <p className="text-destructive font-medium flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4" /> This schedule has {schedule.boundDeviceIds.length} bound device{schedule.boundDeviceIds.length > 1 ? 's' : ''}.
+                      <AlertTriangle className="h-4 w-4" /> {t('schedules.dialogs.delete.hasBound', { count: schedule.boundDeviceIds.length })}
                     </p>
                     <p>
-                      Deleting it will require you to manually unbind all devices and push updates again. This may cause content playback interruptions.
+                      {t('schedules.dialogs.delete.hasBoundDesc')}
                     </p>
                     <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
-                      <p className="font-medium text-destructive">Recommended action:</p>
-                      <p className="mt-1 text-muted-foreground">First unbind devices from this schedule, then delete it to avoid disruption.</p>
+                      <p className="font-medium text-destructive">{t('schedules.dialogs.delete.recommendation')}</p>
+                      <p className="mt-1 text-muted-foreground">{t('schedules.dialogs.delete.recommendationDesc')}</p>
                     </div>
                   </>
                 ) : (
-                  <p>This schedule has no bound devices and can be safely deleted.</p>
+                  <p>{t('schedules.dialogs.delete.noBound')}</p>
                 )}
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.actions.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={() => deleteMutation.mutate()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {schedule && schedule.boundDeviceIds.length > 0 ? 'Delete anyway' : 'Delete'}
+              {schedule && schedule.boundDeviceIds.length > 0 ? t('schedules.dialogs.delete.deleteAnyway') : t('common.actions.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -858,30 +860,30 @@ export default function ScheduleDetailPage() {
       <Dialog open={metaOpen} onOpenChange={setMetaOpen}>
         <DialogContent className="max-w-[640px]">
           <DialogHeader>
-            <DialogTitle>Edit schedule</DialogTitle>
-            <DialogDescription>Update schedule metadata. Rules are managed in Programs / Commands tabs.</DialogDescription>
+            <DialogTitle>{t('schedules.details.meta.title')}</DialogTitle>
+            <DialogDescription>{t('schedules.details.meta.desc')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-xs font-semibold">Name</label>
+              <label className="text-xs font-semibold">{t('schedules.dialogs.create.name')}</label>
               <Input value={metaName} onChange={(e) => setMetaName(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold">Description</label>
+              <label className="text-xs font-semibold">{t('schedules.dialogs.create.description')}</label>
               <Textarea value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} />
             </div>
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
-                <p className="text-sm font-semibold">Enabled</p>
-                <p className="text-xs text-muted-foreground">Disabled schedules do not take effect on devices.</p>
+                <p className="text-sm font-semibold">{t('schedules.dialogs.create.enabled')}</p>
+                <p className="text-xs text-muted-foreground">{t('schedules.dialogs.create.enabledDesc')}</p>
               </div>
               <Switch checked={metaEnabled} onCheckedChange={setMetaEnabled} />
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setMetaOpen(false)}>
-                Cancel
+                {t('common.actions.cancel')}
               </Button>
-              <Button onClick={saveMeta}>Save</Button>
+              <Button onClick={saveMeta}>{t('common.actions.save')}</Button>
             </div>
           </div>
         </DialogContent>
@@ -890,13 +892,13 @@ export default function ScheduleDetailPage() {
       <Dialog open={pushOpen} onOpenChange={setPushOpen}>
         <DialogContent className="max-w-[760px]">
           <DialogHeader>
-            <DialogTitle>Push result</DialogTitle>
-            <DialogDescription>Devices will fetch the latest schedule after confirming the command.</DialogDescription>
+            <DialogTitle>{t('schedules.details.pushResult.title')}</DialogTitle>
+            <DialogDescription>{t('schedules.details.pushResult.desc')}</DialogDescription>
           </DialogHeader>
           {pushResult ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Accepted</span>
+                <span className="text-muted-foreground">{t('schedules.details.pushResult.accepted')}</span>
                 <span className="font-semibold">
                   {pushResult.accepted}/{pushResult.totalTargets}
                 </span>
@@ -907,7 +909,7 @@ export default function ScheduleDetailPage() {
                     <div key={r.deviceId} className="px-4 py-3 text-sm flex items-center justify-between">
                       <span className="font-mono text-xs">#{r.deviceId}</span>
                       <span className={cn('text-xs', r.accepted ? 'text-emerald-600' : 'text-rose-600')}>
-                        {r.accepted ? 'accepted' : r.errorMessage || 'rejected'}
+                        {r.accepted ? t('schedules.details.pushResult.acceptedStatus') : r.errorMessage || t('schedules.details.pushResult.rejectedStatus')}
                       </span>
                     </div>
                   ))}
@@ -915,10 +917,10 @@ export default function ScheduleDetailPage() {
               </div>
             </div>
           ) : (
-            <div className="text-sm text-muted-foreground">No push result</div>
+            <div className="text-sm text-muted-foreground">{t('schedules.details.pushResult.noResult')}</div>
           )}
           <div className="flex justify-end">
-            <Button onClick={() => setPushOpen(false)}>Close</Button>
+            <Button onClick={() => setPushOpen(false)}>{t('common.actions.close')}</Button>
           </div>
         </DialogContent>
       </Dialog>

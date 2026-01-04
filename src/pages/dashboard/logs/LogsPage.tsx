@@ -242,7 +242,7 @@ export default function LogsPage() {
           <DateRangePicker 
             value={dateRange}
             onChange={setDateRange}
-            label={t('logs.common.period') || 'Log period'}
+            label={t('logs.common.period')}
             className="!h-11"
           />
         </div>
@@ -326,7 +326,7 @@ export default function LogsPage() {
                 <span className="text-[10px] font-black tracking-widest text-primary/40 leading-none mb-1.5">{t('logs.device.operationType')}</span>
                 <Select value={selectedType} onValueChange={(val) => { setSelectedType(val); setSelectedOperationId('all'); }}>
                   <SelectTrigger className="h-5 border-none bg-transparent font-bold text-[13px] p-0 focus:ring-0 shadow-none">
-                    <SelectValue placeholder="Category" />
+                    <SelectValue placeholder={t('logs.common.all')} />
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl border-none shadow-2xl">
                     <SelectItem value="all" className="font-bold">{t('logs.common.all')}</SelectItem>
@@ -343,10 +343,10 @@ export default function LogsPage() {
               <div className="flex items-center gap-4 bg-muted/40 px-5 py-2 rounded-2xl border-2 border-primary/20 bg-primary/[0.02] transition-all min-w-[180px] animate-in slide-in-from-left-2 duration-300">
                 <Layers className="h-5 w-5 text-primary/60 shrink-0" />
                 <div className="flex flex-col flex-1 min-w-0">
-                  <span className="text-[10px] font-black tracking-widest text-primary/40 leading-none mb-1.5">Operation</span>
+                  <span className="text-[10px] font-black tracking-widest text-primary/40 leading-none mb-1.5">{t('logs.device.operation')}</span>
                   <Select value={selectedOperationId} onValueChange={setSelectedOperationId}>
                     <SelectTrigger className="h-5 border-none bg-transparent font-bold text-[13px] p-0 focus:ring-0 shadow-none">
-                      <SelectValue placeholder="Operation" />
+                      <SelectValue placeholder={t('logs.device.operation')} />
                     </SelectTrigger>
                     <SelectContent className="rounded-2xl border-none shadow-2xl max-h-[400px]">
                       <SelectItem value="all" className="font-bold">{t('logs.common.all')}</SelectItem>
@@ -367,7 +367,7 @@ export default function LogsPage() {
                 <span className="text-[10px] font-black tracking-widest text-primary/40 leading-none mb-1.5">{t('logs.command.statusLabel')}</span>
                 <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                   <SelectTrigger className="h-5 border-none bg-transparent font-bold text-[13px] p-0 focus:ring-0 shadow-none">
-                    <SelectValue placeholder="Status" />
+                    <SelectValue placeholder={t('logs.command.statusLabel')} />
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl border-none shadow-2xl">
                     <SelectItem value="all" className="font-bold">{t('logs.common.all')}</SelectItem>

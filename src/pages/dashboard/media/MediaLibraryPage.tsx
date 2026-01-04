@@ -10,12 +10,14 @@ import {
 } from '@/services/mediaApi';
 import { getErrorMessage } from '@/services/authApi';
 import type { MediaNode } from '@/types/media-library';
+import { useTranslation } from 'react-i18next';
 
 import { CreateFolderDialog } from './CreateFolderDialog';
 import { MediaExplorer } from './MediaExplorer';
 import { MediaUploadPanel, type MediaUploadPanelHandle } from './MediaUploadPanel';
 
 export default function MediaLibraryPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const uploadPanelRef = useRef<MediaUploadPanelHandle | null>(null);
@@ -83,7 +85,7 @@ export default function MediaLibraryPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['media', 'nodes'] });
       queryClient.invalidateQueries({ queryKey: ['media', 'folders'] });
-      toast.success('Folder created');
+      toast.success(t('media.explorer.toasts.createSuccess'));
       setCreateFolderOpen(false);
     },
     onError: (error) => {
@@ -112,10 +114,10 @@ export default function MediaLibraryPage() {
   }, [usageData]);
 
   const createFolderParentLabel = useMemo(() => {
-    if (!createFolderParentId) return 'Library';
+    if (!createFolderParentId) return t('media.explorer.breadcrumbRoot');
     const match = folderNodes.find((n) => n.id === createFolderParentId);
-    return match?.name ?? 'Library';
-  }, [createFolderParentId, folderNodes]);
+    return match?.name ?? t('media.explorer.breadcrumbRoot');
+  }, [createFolderParentId, folderNodes, t]);
 
   // --- Handlers ---
 
@@ -158,7 +160,7 @@ export default function MediaLibraryPage() {
   }, [queryClient]);
 
   if (isNodesLoading && nodes.length === 0) {
-    return <div className="flex justify-center p-12 text-muted-foreground">Loading media library...</div>;
+    return <div className="flex justify-center p-12 text-muted-foreground">{t('media.explorer.states.loading')}</div>;
   }
 
   return (

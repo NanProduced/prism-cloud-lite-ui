@@ -41,8 +41,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { getDevices } from '@/services/deviceApi';
 import { ProgramPublishDialog } from '@/features/programs/publishing/ProgramPublishDialog';
+import { useTranslation } from 'react-i18next';
 
 export default function ProgramDetailsPage() {
+  const { t } = useTranslation();
   const { programId } = useParams<{ programId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -102,7 +104,7 @@ export default function ProgramDetailsPage() {
   const deleteMutation = useMutation({
     mutationFn: () => deleteProgramApi(programId!),
     onSuccess: () => {
-      toast.success('Program deleted');
+      toast.success(t('programs.toasts.deleteSuccess'));
       navigate('/dashboard/programs');
     },
     onError: (err) => toast.error(getErrorMessage(err)),
@@ -112,7 +114,7 @@ export default function ProgramDetailsPage() {
     mutationFn: () => unpublishProgram(programId!, { scope: 'RUNNING' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['programs', programId] });
-      toast.success('Unpublished from all devices');
+      toast.success(t('programs.details.toasts.unpublishSuccess'));
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
@@ -121,7 +123,7 @@ export default function ProgramDetailsPage() {
     mutationFn: (draftId: string) => deleteProgramDraftApi(programId!, draftId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['programs', programId] });
-      toast.success('Draft deleted');
+      toast.success(t('programs.details.toasts.draftDeleted'));
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
@@ -150,7 +152,7 @@ export default function ProgramDetailsPage() {
   if (isProgramLoading) {
     return <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
       <RefreshCw className="h-8 w-8 animate-spin text-primary/40" />
-      <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">Loading Workspace Details...</p>
+      <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">{t('programs.list.actions.loading')}</p>
     </div>;
   }
 
@@ -158,8 +160,8 @@ export default function ProgramDetailsPage() {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
         <AlertCircle className="h-12 w-12 text-destructive/50" />
-        <p className="text-sm font-bold uppercase tracking-widest">Program not found</p>
-        <Button variant="outline" onClick={() => navigate('/dashboard/programs')}>Back to Library</Button>
+        <p className="text-sm font-bold uppercase tracking-widest">{t('programs.details.toasts.programNotFound')}</p>
+        <Button variant="outline" onClick={() => navigate('/dashboard/programs')}>{t('programs.details.toasts.backToLibrary')}</Button>
       </div>
     );
   }
@@ -180,7 +182,7 @@ export default function ProgramDetailsPage() {
             <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground font-medium">
                <span>{program.width}×{program.height}</span>
                <span className="opacity-30">•</span>
-               <span>Modified {formatDateTime(program.updatedAt)}</span>
+               <span>{t('programs.details.header.modified', { time: formatDateTime(program.updatedAt) })}</span>
             </div>
           </div>
         </div>
@@ -190,10 +192,10 @@ export default function ProgramDetailsPage() {
              const base = (program.defaultVersion ?? maxVersion ?? 0) || 0;
              navigate(`/dashboard/programs/${programId}/edit${base > 0 ? `?base=${base}` : ''}`);
            }}>
-             <Pencil className="h-3.5 w-3.5" /> Edit Workspace
+             <Pencil className="h-3.5 w-3.5" /> {t('programs.details.header.editWorkspace')}
            </Button>
            <Button size="sm" className="font-bold gap-2 shadow-lg shadow-primary/20" onClick={() => setPublishOpen(true)}>
-              <Send className="h-3.5 w-3.5" /> Publish New
+              <Send className="h-3.5 w-3.5" /> {t('programs.details.header.publishNew')}
            </Button>
            <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -203,20 +205,20 @@ export default function ProgramDetailsPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                  <DropdownMenuItem onClick={() => toast.info('Export logic here')}>
-                    <Database className="mr-2 h-4 w-4" /> Export VSN Bundle
+                    <Database className="mr-2 h-4 w-4" /> {t('programs.details.header.exportVsn')}
                  </DropdownMenuItem>
                  <DropdownMenuSeparator />
                  <DropdownMenuItem 
                     className="text-destructive" 
                     onClick={() => setUnpublishConfirmOpen(true)}
                  >
-                    <XCircle className="mr-2 h-4 w-4" /> Undeploy All
+                    <XCircle className="mr-2 h-4 w-4" /> {t('programs.details.header.undeployAll')}
                  </DropdownMenuItem>
                  <DropdownMenuItem 
                     className="text-destructive" 
                     onClick={() => setDeleteConfirmOpen(true)}
                  >
-                    <AlertCircle className="mr-2 h-4 w-4" /> Delete Program
+                    <AlertCircle className="mr-2 h-4 w-4" /> {t('programs.details.header.deleteProgram')}
                  </DropdownMenuItem>
               </DropdownMenuContent>
            </DropdownMenu>
@@ -229,16 +231,16 @@ export default function ProgramDetailsPage() {
            <Tabs defaultValue="devices" className="w-full">
               <TabsList className="bg-muted/40 p-1 rounded-xl w-fit">
                  <TabsTrigger value="devices" className="px-6 rounded-lg gap-2 font-bold text-xs data-[state=active]:shadow-sm">
-                    <Monitor className="h-3.5 w-3.5" /> Running Devices
+                    <Monitor className="h-3.5 w-3.5" /> {t('programs.details.tabs.devices')}
                  </TabsTrigger>
                  <TabsTrigger value="releases" className="px-6 rounded-lg gap-2 font-bold text-xs data-[state=active]:shadow-sm">
-                    <Database className="h-3.5 w-3.5" /> Releases
+                    <Database className="h-3.5 w-3.5" /> {t('programs.details.tabs.releases')}
                  </TabsTrigger>
                  <TabsTrigger value="drafts" className="px-6 rounded-lg gap-2 font-bold text-xs data-[state=active]:shadow-sm">
-                    <Layers className="h-3.5 w-3.5" /> Drafts
+                    <Layers className="h-3.5 w-3.5" /> {t('programs.details.tabs.drafts')}
                  </TabsTrigger>
                  <TabsTrigger value="history" className="px-6 rounded-lg gap-2 font-bold text-xs data-[state=active]:shadow-sm">
-                    <HistoryIcon className="h-3.5 w-3.5" /> Audit Trail
+                    <HistoryIcon className="h-3.5 w-3.5" /> {t('programs.details.tabs.history')}
                  </TabsTrigger>
               </TabsList>
 
@@ -247,13 +249,13 @@ export default function ProgramDetailsPage() {
                     <CardHeader className="bg-muted/10 border-b">
                        <div className="flex items-center justify-between">
                           <div>
-                             <CardTitle className="text-sm font-bold">Device Distribution</CardTitle>
-                             <CardDescription className="text-xs">Live deployment status across all devices.</CardDescription>
+                             <CardTitle className="text-sm font-bold">{t('programs.details.distribution.title')}</CardTitle>
+                             <CardDescription className="text-xs">{t('programs.details.distribution.description')}</CardDescription>
                           </div>
                           <div className="relative w-64">
                              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                              <Input 
-                                placeholder="Filter devices..." 
+                                placeholder={t('programs.details.distribution.searchPlaceholder')} 
                                 value={deviceQuery} 
                                 onChange={e => setDeviceQuery(e.target.value)}
                                 className="h-8 pl-8 text-xs bg-background" 
@@ -272,21 +274,21 @@ export default function ProgramDetailsPage() {
                                 return (
                                    <div key={d.deviceId} className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-muted/5 cursor-pointer" onClick={() => navigate(`/dashboard/devices/${d.deviceId}`)}>
                                       <div className="min-w-0 flex-1">
-                                         <p className="text-sm font-bold truncate leading-tight">{device?.alias || device?.deviceName || d.deviceName || 'Device'}</p>
+                                         <p className="text-sm font-bold truncate leading-tight">{device?.alias || device?.deviceName || d.deviceName || t('deviceDetails.info.network.title')}</p>
                                          <p className="text-[10px] text-muted-foreground font-medium mt-1 opacity-60">
-                                            {isOnline ? 'Active' : 'Offline'} · {device?.resolution || 'Unknown Res'}
+                                            {isOnline ? t('programs.details.distribution.active') : t('programs.details.distribution.offline')} · {device?.resolution || 'Unknown Res'}
                                          </p>
                                       </div>
                                       <div className="flex items-center gap-6">
                                          <div className="text-right">
-                                            <p className="text-[9px] font-bold text-muted-foreground opacity-40 mb-1">Status</p>
+                                            <p className="text-[9px] font-bold text-muted-foreground opacity-40 mb-1">{t('programs.details.distribution.status')}</p>
                                             <div className="flex items-center gap-1.5 justify-end">
                                                <div className={cn("w-1.5 h-1.5 rounded-full", isOnline ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" : "bg-zinc-300")} />
-                                               <span className={cn("text-[10px] font-bold", isOnline ? "text-foreground" : "text-muted-foreground")}>{isOnline ? 'Online' : 'Offline'}</span>
+                                               <span className={cn("text-[10px] font-bold", isOnline ? "text-foreground" : "text-muted-foreground")}>{isOnline ? t('deviceDetails.info.network.connected') : t('deviceDetails.info.network.disconnected')}</span>
                                             </div>
                                          </div>
                                          <div className="text-right min-w-[80px]">
-                                            <p className="text-[9px] font-bold text-muted-foreground opacity-40 mb-1">Running</p>
+                                            <p className="text-[9px] font-bold text-muted-foreground opacity-40 mb-1">{t('programs.details.distribution.running')}</p>
                                             <Badge variant="outline" className="font-mono text-[10px] h-5 px-1.5 font-black border-primary/20 text-primary bg-primary/5">v{d.releaseVersion}</Badge>
                                          </div>
                                       </div>
@@ -296,8 +298,8 @@ export default function ProgramDetailsPage() {
                              {deployments.length === 0 && (
                                 <div className="py-20 text-center flex flex-col items-center gap-3 opacity-20">
                                    <Monitor className="h-12 w-12" />
-                                   <p className="text-sm font-bold leading-tight">No Active Deployments</p>
-                                   <Button size="sm" variant="outline" className="mt-2" onClick={() => setPublishOpen(true)}>Start First Deployment</Button>
+                                   <p className="text-sm font-bold leading-tight">{t('programs.details.distribution.noDeployments')}</p>
+                                   <Button size="sm" variant="outline" className="mt-2" onClick={() => setPublishOpen(true)}>{t('programs.details.distribution.startFirst')}</Button>
                                 </div>
                              )}
                           </div>
@@ -309,8 +311,8 @@ export default function ProgramDetailsPage() {
               <TabsContent value="history" className="mt-6">
                  <Card className="border-0 shadow-sm ring-1 ring-foreground/5">
                     <CardHeader className="bg-muted/10 border-b">
-                       <CardTitle className="text-sm font-bold">Audit Records</CardTitle>
-                       <CardDescription className="text-xs">Immutable history of all operations for this program.</CardDescription>
+                       <CardTitle className="text-sm font-bold">{t('programs.details.audit.title')}</CardTitle>
+                       <CardDescription className="text-xs">{t('programs.details.audit.description')}</CardDescription>
                     </CardHeader>
                     <CardContent className="p-8">
                        <div className="relative space-y-8 before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-muted before:to-transparent">
@@ -332,23 +334,23 @@ export default function ProgramDetailsPage() {
                                      <div className="text-sm font-medium text-muted-foreground/80 leading-relaxed">
                                         <span className="text-foreground font-bold">{log.operatorName}</span>
                                         <span className="mx-1">{
-                                           log.action.includes('PUBLISH') ? 'published' : 
-                                           log.action.includes('CREATE') ? 'created' : 
-                                           log.action.includes('DELETE') ? 'deleted' : 
-                                           log.action.includes('RENAME') ? 'renamed' : 
-                                           log.action.includes('UPDATE') ? 'updated' : 'performed'
+                                           log.action.includes('PUBLISH') ? t('programs.details.audit.actions.publish') : 
+                                           log.action.includes('CREATE') ? t('programs.details.audit.actions.create') : 
+                                           log.action.includes('DELETE') ? t('programs.details.audit.actions.delete') : 
+                                           log.action.includes('RENAME') ? t('programs.details.audit.actions.rename') : 
+                                           log.action.includes('UPDATE') ? t('programs.details.audit.actions.update') : t('programs.details.audit.actions.perform')
                                         }</span>
                                         {log.version && <Badge variant="outline" className="h-4.5 px-1 text-[10px] font-bold">v{log.version}</Badge>}
-                                        {metadata?.deviceName && <span className="text-foreground font-semibold"> to {metadata.deviceName}</span>}
-                                        {metadata?.width && metadata?.height && <span className="text-muted-foreground italic"> (resolution: {metadata.width}x{metadata.height})</span>}
-                                        {metadata?.newName && <span className="text-foreground font-semibold"> to "{metadata.newName}"</span>}
-                                        {metadata?.targetVersion && <span className="opacity-60 text-xs"> (target v{metadata.targetVersion})</span>}
+                                        {metadata?.deviceName && <span className="text-foreground font-semibold"> {t('programs.details.audit.actions.to')} {metadata.deviceName}</span>}
+                                        {metadata?.width && metadata?.height && <span className="text-muted-foreground italic"> ({t('programs.details.audit.actions.resolution')}: {metadata.width}x{metadata.height})</span>}
+                                        {metadata?.newName && <span className="text-foreground font-semibold"> {t('programs.details.audit.actions.to')} "{metadata.newName}"</span>}
+                                        {metadata?.targetVersion && <span className="opacity-60 text-xs"> ({t('programs.details.audit.actions.target')} v{metadata.targetVersion})</span>}
                                      </div>
                                   </div>
                                </div>
                              );
                           }) : (
-                             <div className="py-10 text-center opacity-30 italic text-xs">No audit logs found for this program.</div>
+                             <div className="py-10 text-center opacity-30 italic text-xs">{t('programs.details.audit.empty')}</div>
                           )}
                        </div>
                     </CardContent>
@@ -358,8 +360,8 @@ export default function ProgramDetailsPage() {
               <TabsContent value="releases" className="mt-6 space-y-4">
                  <Card className="border-0 shadow-sm ring-1 ring-foreground/5 overflow-hidden">
                     <CardHeader className="bg-muted/10 border-b">
-                       <CardTitle className="text-sm font-bold">Published Releases</CardTitle>
-                       <CardDescription className="text-xs">Versions (vN) are immutable snapshots that can be deployed to devices.</CardDescription>
+                       <CardTitle className="text-sm font-bold">{t('programs.details.releases.title')}</CardTitle>
+                       <CardDescription className="text-xs">{t('programs.details.releases.description')}</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
                        {program.versions?.length ? (
@@ -373,7 +375,7 @@ export default function ProgramDetailsPage() {
                                         <span className="text-[10px] text-muted-foreground/60">· {formatDateTime(v.createdAt)}</span>
                                      </div>
                                      <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[10px] text-muted-foreground/70">
-                                        {v.deviceTitleSnapshot ? <span className="truncate max-w-[420px] font-medium italic">"{v.deviceTitleSnapshot}"</span> : <span className="opacity-40 italic">No snapshot name</span>}
+                                        {v.deviceTitleSnapshot ? <span className="truncate max-w-[420px] font-medium italic">"{v.deviceTitleSnapshot}"</span> : <span className="opacity-40 italic">{t('programs.details.releases.noSnapshot')}</span>}
                                      </div>
                                   </div>
                                   <div className="flex shrink-0 items-center gap-2">
@@ -384,7 +386,7 @@ export default function ProgramDetailsPage() {
                                          navigate(`/dashboard/programs/${programId}/edit?base=${v.version}`);
                                        }}
                                      >
-                                       Open baseline
+                                       {t('programs.details.releases.openBaseline')}
                                      </Button>
                                      <Button
                                        size="sm"
@@ -395,7 +397,7 @@ export default function ProgramDetailsPage() {
                                          setPublishOpen(true);
                                        }}
                                      >
-                                       Deploy
+                                       {t('programs.details.releases.deploy')}
                                      </Button>
                                   </div>
                                 </div>
@@ -405,8 +407,8 @@ export default function ProgramDetailsPage() {
                        ) : (
                          <div className="py-20 text-center flex flex-col items-center gap-3 opacity-40">
                            <Database className="h-12 w-12" />
-                           <p className="text-sm font-bold leading-tight">No Releases Yet</p>
-                            <Button size="sm" className="mt-2" onClick={() => { navigate(`/dashboard/programs/${programId}/edit`); }}>Publish v1</Button>
+                           <p className="text-sm font-bold leading-tight">{t('programs.details.releases.noReleases')}</p>
+                            <Button size="sm" className="mt-2" onClick={() => { navigate(`/dashboard/programs/${programId}/edit`); }}>{t('programs.details.releases.publishV1')}</Button>
                           </div>
                         )}
                      </CardContent>
@@ -416,8 +418,8 @@ export default function ProgramDetailsPage() {
               <TabsContent value="drafts" className="mt-6 space-y-4">
                  <Card className="border-0 shadow-sm ring-1 ring-foreground/5 overflow-hidden">
                     <CardHeader className="bg-muted/10 border-b">
-                       <CardTitle className="text-sm font-bold">Draft Snapshots</CardTitle>
-                       <CardDescription className="text-xs">Drafts are editable snapshots, unique per baseVersion (Blank or vN).</CardDescription>
+                       <CardTitle className="text-sm font-bold">{t('programs.details.drafts.title')}</CardTitle>
+                       <CardDescription className="text-xs">{t('programs.details.drafts.description')}</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
                        {draftsSorted.length ? (
@@ -428,9 +430,9 @@ export default function ProgramDetailsPage() {
                                   <div className="min-w-0 flex-1">
                                      <div className="flex items-center gap-2">
                                         <Badge variant="outline" className="font-mono text-[10px] h-5 px-1.5 font-black border-amber-500/30 text-amber-700 bg-amber-500/5">
-                                          {d.baseVersion > 0 ? `base v${d.baseVersion}` : 'base Blank'}
+                                          {d.baseVersion > 0 ? t('programs.details.drafts.baseVersion', { version: d.baseVersion }) : t('programs.details.drafts.baseBlank')}
                                         </Badge>
-                                        <span className="text-[10px] text-muted-foreground/60">· updated {formatDateTime(d.updatedAt)}</span>
+                                        <span className="text-[10px] text-muted-foreground/60">· {t('programs.details.drafts.updated', { time: formatDateTime(d.updatedAt) })}</span>
                                      </div>
                                   </div>
                                   <div className="flex shrink-0 items-center gap-2">
@@ -442,7 +444,7 @@ export default function ProgramDetailsPage() {
                                          navigate(`/dashboard/programs/${programId}/edit${base}`);
                                        }}
                                      >
-                                       Open draft
+                                       {t('programs.details.drafts.openDraft')}
                                      </Button>
                                      <Button
                                        size="sm"
@@ -453,7 +455,7 @@ export default function ProgramDetailsPage() {
                                          setPublishOpen(true);
                                        }}
                                      >
-                                       Publish
+                                       {t('programs.details.drafts.publish')}
                                      </Button>
                                      <Button
                                        size="sm"
@@ -461,7 +463,7 @@ export default function ProgramDetailsPage() {
                                        onClick={() => deleteDraftMutation.mutate(d.draftId)}
                                        disabled={deleteDraftMutation.isPending}
                                      >
-                                       Delete
+                                       {t('common.actions.delete')}
                                      </Button>
                                   </div>
                                 </div>
@@ -471,9 +473,9 @@ export default function ProgramDetailsPage() {
                        ) : (
                          <div className="py-20 text-center flex flex-col items-center gap-3 opacity-40">
                            <Layers className="h-12 w-12" />
-                           <p className="text-sm font-bold leading-tight">No Drafts Yet</p>
+                           <p className="text-sm font-bold leading-tight">{t('programs.details.drafts.noDrafts')}</p>
                            <Button size="sm" className="mt-2" variant="outline" onClick={() => navigate(`/dashboard/programs/${programId}/edit`)}>
-                             Open editor
+                             {t('programs.details.drafts.openEditor')}
                            </Button>
                          </div>
                        )}
@@ -488,17 +490,17 @@ export default function ProgramDetailsPage() {
            <Card className="border-0 shadow-sm ring-1 ring-foreground/5 bg-primary/[0.01]">
               <CardHeader>
                  <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <Info className="h-4 w-4 text-primary" /> Overview
+                    <Info className="h-4 w-4 text-primary" /> {t('programs.details.info.overview')}
                  </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 pt-0">
                  <div className="grid grid-cols-2 gap-4">
                     <div className="p-3 rounded-xl bg-muted/20 border">
-                       <p className="text-[9px] font-bold text-muted-foreground mb-1">Total Devices</p>
+                       <p className="text-[9px] font-bold text-muted-foreground mb-1">{t('programs.details.info.totalDevices')}</p>
                        <p className="text-lg font-black">{deployments.length}</p>
                     </div>
                     <div className="p-3 rounded-xl bg-muted/20 border">
-                       <p className="text-[9px] font-bold text-muted-foreground mb-1">Max Version</p>
+                       <p className="text-[9px] font-bold text-muted-foreground mb-1">{t('programs.details.info.maxVersion')}</p>
                        <p className="text-lg font-black">v{maxVersion}</p>
                     </div>
                  </div>
@@ -507,12 +509,12 @@ export default function ProgramDetailsPage() {
                  
                  <div className="space-y-3">
                     <div className="flex items-center justify-between text-[11px]">
-                       <span className="text-muted-foreground font-bold">Resolution</span>
+                       <span className="text-muted-foreground font-bold">{t('programs.details.info.resolution')}</span>
                        <span className="font-bold opacity-80">{program.width}×{program.height}</span>
                     </div>
                     <div className="flex items-center justify-between text-[11px]">
-                       <span className="text-muted-foreground font-bold">Sync Integrity</span>
-                       <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-700 h-4 px-1.5 text-[8px] font-bold">Verified</Badge>
+                       <span className="text-muted-foreground font-bold">{t('programs.details.info.syncIntegrity')}</span>
+                       <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-700 h-4 px-1.5 text-[8px] font-bold">{t('programs.details.info.verified')}</Badge>
                     </div>
                  </div>
               </CardContent>
@@ -521,7 +523,7 @@ export default function ProgramDetailsPage() {
            <Card className="border-0 shadow-sm ring-1 ring-foreground/5">
               <CardHeader className="pb-3">
                  <CardTitle className="text-sm font-bold">
-                   {hasRelease ? `Latest Release (v${maxVersion})` : 'No releases yet'}
+                   {hasRelease ? t('programs.details.info.latestRelease', { version: maxVersion }) : t('programs.details.info.noRelease')}
                  </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
@@ -534,11 +536,11 @@ export default function ProgramDetailsPage() {
                        )}
                     </div>
                     <p className="text-[10px] text-muted-foreground italic text-center">
-                      {hasRelease ? 'Preview of the most recently published snapshot.' : 'Publish to create your first release (v1).'}
+                      {hasRelease ? t('programs.details.info.previewDesc') : t('programs.details.info.publishToCreate')}
                     </p>
                      {!hasRelease ? (
                       <Button size="sm" className="font-bold gap-2" onClick={() => navigate(`/dashboard/programs/${programId}/edit`)}>
-                        <Send className="h-3.5 w-3.5" /> Open editor
+                        <Send className="h-3.5 w-3.5" /> {t('programs.details.drafts.openEditor')}
                       </Button>
                      ) : null}
                   </div>
@@ -574,22 +576,22 @@ export default function ProgramDetailsPage() {
               <Trash2 className="h-6 w-6" />
             </div>
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-xl font-bold tracking-tight">Delete Program Permanently?</AlertDialogTitle>
+              <AlertDialogTitle className="text-xl font-bold tracking-tight">{t('programs.details.dialogs.delete.title')}</AlertDialogTitle>
               <AlertDialogDescription className="text-sm pt-2 space-y-4">
-                <span className="block">This action cannot be undone. You are about to permanently delete:</span>
+                <span className="block">{t('programs.details.dialogs.delete.desc')}</span>
                 <span className="block rounded-xl bg-destructive/5 border border-destructive/10 p-4 font-bold text-destructive text-base truncate">
                   {program.name}
                 </span>
-                <span className="block">This will delete the program and all its versions from our system.</span>
+                <span className="block">{t('programs.details.dialogs.delete.note')}</span>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="mt-8 gap-3">
-              <AlertDialogCancel className="font-bold text-xs uppercase tracking-widest px-8">Cancel</AlertDialogCancel>
+              <AlertDialogCancel className="font-bold text-xs uppercase tracking-widest px-8">{t('common.actions.cancel')}</AlertDialogCancel>
               <AlertDialogAction 
                 onClick={() => deleteMutation.mutate()}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold text-xs uppercase tracking-widest px-10 h-10 shadow-xl shadow-destructive/20"
               >
-                Delete
+                {t('common.actions.delete')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </div>
@@ -599,15 +601,15 @@ export default function ProgramDetailsPage() {
       <AlertDialog open={unpublishConfirmOpen} onOpenChange={setUnpublishConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Undeploy from All Devices?</AlertDialogTitle>
+            <AlertDialogTitle>{t('programs.details.dialogs.undeploy.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will stop the program on all currently assigned devices.
+              {t('programs.details.dialogs.undeploy.desc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.actions.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={() => unpublishMutation.mutate()}>
-              Undeploy All
+              {t('programs.details.header.undeployAll')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

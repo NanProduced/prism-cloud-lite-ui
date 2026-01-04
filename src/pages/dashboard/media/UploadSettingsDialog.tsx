@@ -25,6 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tree, TreeItem, TreeItemLabel } from '@/components/ui/tree';
 import { cn } from '@/lib/utils';
 import type { MediaNode } from '@/types/media-library';
+import { useTranslation } from 'react-i18next';
 
 import type { PendingUploadFile } from './uploadModels';
 
@@ -51,7 +52,8 @@ export function UploadSettingsDialog({
   onPickMore: () => void;
   onRequestCreateFolder: (parentId: string | null) => void;
 }) {
-  const folderItems = useMemo(() => buildFolderItems(folderNodes), [folderNodes]);
+  const { t } = useTranslation();
+  const folderItems = useMemo(() => buildFolderItems(folderNodes, t), [folderNodes, t]);
   const selectedTreeId = selectedFolderId ?? MY_MEDIA_ID;
 
   const tree = useTree<FolderItemData>({
@@ -88,14 +90,14 @@ export function UploadSettingsDialog({
             <DialogHeader className="mb-0">
               <div className="flex items-center justify-between gap-4">
                 <div className="space-y-1">
-                  <DialogTitle className="text-xl font-bold tracking-tight">Upload Settings</DialogTitle>
+                  <DialogTitle className="text-xl font-bold tracking-tight">{t('media.upload.settings.title')}</DialogTitle>
                   <DialogDescription className="text-sm">
-                    Review file titles and choose a destination folder for {pendingFiles.length} item(s).
+                    {t('media.upload.settings.description', { count: pendingFiles.length })}
                   </DialogDescription>
                 </div>
                 <Button variant="outline" size="sm" onClick={onPickMore} className="rounded-xl gap-2 border-primary/20 hover:bg-primary/5 hover:text-primary">
                   <FolderPlus className="h-4 w-4" />
-                  Add More Files
+                  {t('media.upload.settings.addMore')}
                 </Button>
               </div>
             </DialogHeader>
@@ -105,12 +107,12 @@ export function UploadSettingsDialog({
             {/* Left Sidebar: Folder Tree */}
             <div className="w-[300px] border-r bg-muted/5 flex flex-col p-6 shrink-0">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[11px] font-bold uppercase text-muted-foreground tracking-wider">Destination</h3>
+                <h3 className="text-[11px] font-bold uppercase text-muted-foreground tracking-wider">{t('media.upload.settings.destination')}</h3>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={() => onRequestCreateFolder(selectedFolderId)} title="New Folder">
+                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={() => onRequestCreateFolder(selectedFolderId)} title={t('media.explorer.actions.newFolder')}>
                     <FolderPlus className="h-3.5 w-3.5" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={() => tree.collapseAll()} title="Collapse All">
+                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={() => tree.collapseAll()} title={t('media.upload.settings.collapseAll')}>
                     <ListCollapse className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -176,7 +178,7 @@ export function UploadSettingsDialog({
                               <Folder className={cn("h-4 w-4", isSelected ? "text-primary fill-primary/20" : "text-muted-foreground fill-muted-foreground/10")} />
                             )}
 
-                            <span className="truncate text-sm">{data.name}</span>
+                            <span className="truncate text-sm">{data.name === 'Library' ? t('media.explorer.breadcrumbRoot') : data.name}</span>
                           </span>
                         </TreeItemLabel>
                       </TreeItem>
@@ -193,7 +195,7 @@ export function UploadSettingsDialog({
                   {pendingFiles.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-2xl bg-muted/5">
                       <ImageIcon className="h-10 w-10 text-muted-foreground/20 mb-3" />
-                      <p className="text-sm font-bold text-muted-foreground">No files selected</p>
+                      <p className="text-sm font-bold text-muted-foreground">{t('media.upload.toasts.noFilesSelected')}</p>
                     </div>
                   ) : (
                     pendingFiles.map((p) => (
@@ -219,11 +221,11 @@ export function UploadSettingsDialog({
                               </div>
 
                               <div className="w-full sm:w-[280px]">
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 ml-0.5">Asset Title</p>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 ml-0.5">{t('media.upload.settings.assetTitle')}</p>
                                 <Input
                                   value={p.title}
                                   onChange={(e) => onPendingTitleChange(p.id, e.target.value)}
-                                  placeholder="Enter display title..."
+                                  placeholder={t('media.upload.settings.titlePlaceholder')}
                                   className="h-10 rounded-xl bg-muted/5 border-muted-foreground/20 focus-visible:ring-primary/20"
                                 />
                               </div>
@@ -249,20 +251,20 @@ export function UploadSettingsDialog({
 
           <div className="px-8 py-4 bg-muted/20 border-t flex items-center justify-between shrink-0">
              <div className="text-xs text-muted-foreground">
-               Selected Destination: <span className="font-bold text-foreground">
-                 {selectedFolderId ? folderNodes.find(n => n.id === selectedFolderId)?.name : 'Library (Root)'}
+               {t('media.upload.settings.selectedDestination')}: <span className="font-bold text-foreground">
+                 {selectedFolderId ? folderNodes.find(n => n.id === selectedFolderId)?.name : t('media.explorer.breadcrumbRoot')}
                </span>
              </div>
              <div className="flex items-center gap-3">
                 <Button variant="ghost" onClick={handleClose} className="rounded-xl px-6 h-11">
-                  Cancel
+                  {t('common.actions.cancel')}
                 </Button>
                 <Button 
                   onClick={onConfirm} 
                   disabled={pendingFiles.length === 0}
                   className="rounded-xl px-10 h-11 bg-zinc-900 text-white hover:bg-zinc-800 shadow-xl"
                 >
-                  Confirm & Start Upload
+                  {t('media.upload.settings.confirm')}
                 </Button>
              </div>
           </div>
@@ -277,7 +279,7 @@ type FolderItemData = { name: string; children: string[] };
 const ROOT_ID = '__media-folder-root__';
 const MY_MEDIA_ID = '__media-folder-my-media__';
 
-function buildFolderItems(nodes: MediaNode[]): {
+function buildFolderItems(nodes: MediaNode[], t: any): {
   items: Record<string, FolderItemData>;
   initialExpandedItems: string[];
 } {
@@ -319,7 +321,7 @@ function buildFolderItems(nodes: MediaNode[]): {
 
   const items: Record<string, FolderItemData> = {
     [ROOT_ID]: { name: 'root', children: [MY_MEDIA_ID] },
-    [MY_MEDIA_ID]: { name: 'Library', children: topLevel },
+    [MY_MEDIA_ID]: { name: t('media.explorer.breadcrumbRoot'), children: topLevel },
   };
 
   for (const folder of nodes) {

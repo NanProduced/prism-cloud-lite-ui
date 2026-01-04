@@ -1,23 +1,8 @@
-import { useMemo, useState } from 'react';
-import { BellRing, Loader2, Save, Smartphone, Timer } from 'lucide-react';
-
-import { cn } from '@/lib/utils';
-import { Button } from '@/registry/new-york/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/registry/new-york/ui/card';
-import { Field, FieldContent, FieldDescription, FieldLabel } from '@/registry/new-york/ui/field';
-import { InputGroup, InputGroupInput } from '@/registry/new-york/ui/input-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/registry/new-york/ui/select';
-import { Separator } from '@/registry/new-york/ui/separator';
 import { Switch } from '@/registry/new-york/ui/switch';
+import { useTranslation } from 'react-i18next';
 
 export type DeviceDefaults = {
-  defaultTimezoneMode: 'inherit' | 'fixed';
-  defaultTimezone: string;
-  offlineAlertMinutes: number;
-  autoReceiveLatestProgramVersion: boolean;
-  toastOnDeviceOffline: boolean;
-};
-
+// ...
 export function DeviceDefaultsCard({
   value,
   onSave,
@@ -27,45 +12,17 @@ export function DeviceDefaultsCard({
   onSave?: (next: DeviceDefaults) => Promise<void>;
   className?: string;
 }) {
+  const { t } = useTranslation();
   const defaultValue = useMemo<DeviceDefaults>(() => ({
-    defaultTimezoneMode: 'inherit',
-    defaultTimezone: 'UTC',
-    offlineAlertMinutes: 30,
-    autoReceiveLatestProgramVersion: false,
-    toastOnDeviceOffline: true,
-  }), []);
-
-  const [draft, setDraft] = useState<DeviceDefaults>(value ?? defaultValue);
-  const [isSaving, setIsSaving] = useState(false);
-
-  const timezones = useMemo(
-    () => [
-      { value: 'UTC', label: 'UTC' },
-      { value: 'Asia/Shanghai', label: 'Asia/Shanghai' },
-      { value: 'Asia/Tokyo', label: 'Asia/Tokyo' },
-      { value: 'Europe/London', label: 'Europe/London' },
-      { value: 'America/Los_Angeles', label: 'America/Los_Angeles' },
-    ],
-    [],
-  );
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await onSave?.(draft);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
+// ...
   return (
     <Card className={cn('w-full shadow-xs', className)}>
       <CardHeader>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <CardTitle className="wrap-break-word">Device Defaults</CardTitle>
+            <CardTitle className="wrap-break-word">{t('settings.deviceDefaults.title')}</CardTitle>
             <CardDescription className="wrap-break-word">
-              Defaults applied when you onboard new devices.
+              {t('settings.deviceDefaults.subtitle')}
             </CardDescription>
           </div>
           {onSave && (
@@ -80,12 +37,12 @@ export function DeviceDefaultsCard({
               {isSaving ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Saving…
+                  {t('common.actions.saving')}
                 </>
               ) : (
                 <>
                   <Save className="size-4" />
-                  Save
+                  {t('common.actions.save')}
                 </>
               )}
             </Button>
@@ -96,20 +53,20 @@ export function DeviceDefaultsCard({
       <CardContent>
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-4">
-            <h3 className="font-semibold text-base">Timezone</h3>
+            <h3 className="font-semibold text-base">{t('settings.deviceDefaults.timezone.title')}</h3>
 
             <Field>
-              <FieldLabel>Default timezone for new devices</FieldLabel>
+              <FieldLabel>{t('settings.deviceDefaults.timezone.label')}</FieldLabel>
               <FieldContent>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="rounded-lg border p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex flex-col gap-1">
                         <FieldLabel className="mb-0" htmlFor="tz-mode-inherit">
-                          Inherit from my profile
+                          {t('settings.deviceDefaults.timezone.inherit')}
                         </FieldLabel>
                         <FieldDescription className="text-xs">
-                          Use your account timezone by default.
+                          {t('settings.deviceDefaults.timezone.inheritDesc')}
                         </FieldDescription>
                       </div>
                       <Switch
@@ -129,10 +86,10 @@ export function DeviceDefaultsCard({
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex flex-col gap-1">
                         <FieldLabel className="mb-0" htmlFor="tz-mode-fixed">
-                          Use a fixed timezone
+                          {t('settings.deviceDefaults.timezone.fixed')}
                         </FieldLabel>
                         <FieldDescription className="text-xs">
-                          Override device timezone on creation.
+                          {t('settings.deviceDefaults.timezone.fixedDesc')}
                         </FieldDescription>
                       </div>
                       <Switch
@@ -153,7 +110,7 @@ export function DeviceDefaultsCard({
 
             {draft.defaultTimezoneMode === 'fixed' && (
               <Field>
-                <FieldLabel htmlFor="default-timezone">Default timezone</FieldLabel>
+                <FieldLabel htmlFor="default-timezone">{t('settings.deviceDefaults.timezone.select')}</FieldLabel>
                 <FieldContent>
                   <Select
                     onValueChange={(next) =>
@@ -162,7 +119,7 @@ export function DeviceDefaultsCard({
                     value={draft.defaultTimezone}
                   >
                     <SelectTrigger className="w-full" id="default-timezone">
-                      <SelectValue placeholder="Select timezone" />
+                      <SelectValue placeholder={t('settings.deviceDefaults.timezone.selectPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
                       {timezones.map((tz) => (
@@ -174,7 +131,7 @@ export function DeviceDefaultsCard({
                   </Select>
                 </FieldContent>
                 <FieldDescription>
-                  Only used for newly created devices (existing devices are not changed).
+                  {t('settings.deviceDefaults.timezone.selectDesc')}
                 </FieldDescription>
               </Field>
             )}
@@ -183,11 +140,11 @@ export function DeviceDefaultsCard({
           <Separator />
 
           <div className="flex flex-col gap-4">
-            <h3 className="font-semibold text-base">Alerts</h3>
+            <h3 className="font-semibold text-base">{t('settings.deviceDefaults.alerts.title')}</h3>
 
             <Field>
               <FieldLabel htmlFor="offline-alert-minutes">
-                Offline alert threshold (minutes)
+                {t('settings.deviceDefaults.alerts.threshold')}
               </FieldLabel>
               <FieldContent>
                 <InputGroup>
@@ -211,7 +168,7 @@ export function DeviceDefaultsCard({
                 </InputGroup>
               </FieldContent>
               <FieldDescription>
-                Device is considered offline if it stops reporting for this duration.
+                {t('settings.deviceDefaults.alerts.thresholdDesc')}
               </FieldDescription>
             </Field>
 
@@ -223,10 +180,10 @@ export function DeviceDefaultsCard({
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <FieldLabel className="mb-0" htmlFor="toast-device-offline">
-                      Toast when device goes offline
+                      {t('settings.deviceDefaults.alerts.toast')}
                     </FieldLabel>
                     <FieldDescription className="text-xs">
-                      Show an in-app toast for offline events.
+                      {t('settings.deviceDefaults.alerts.toastDesc')}
                     </FieldDescription>
                   </div>
                 </div>
@@ -244,7 +201,7 @@ export function DeviceDefaultsCard({
           <Separator />
 
           <div className="flex flex-col gap-4">
-            <h3 className="font-semibold text-base">Delivery</h3>
+            <h3 className="font-semibold text-base">{t('settings.deviceDefaults.delivery.title')}</h3>
 
             <Field>
               <div className="flex items-center justify-between rounded-lg border p-3">
@@ -254,10 +211,10 @@ export function DeviceDefaultsCard({
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <FieldLabel className="mb-0" htmlFor="auto-receive-latest">
-                      Auto receive latest program version
+                      {t('settings.deviceDefaults.delivery.autoReceive')}
                     </FieldLabel>
                     <FieldDescription className="text-xs">
-                      Lite defaults to off. Enable only if you want auto-updates.
+                      {t('settings.deviceDefaults.delivery.autoReceiveDesc')}
                     </FieldDescription>
                   </div>
                 </div>

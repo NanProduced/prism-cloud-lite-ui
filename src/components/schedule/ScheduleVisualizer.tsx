@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { isDateAllowedByWeekday, formatWeekdaySelection, formatTimeRange, formatDateRange, weekdayBooleanToIndices } from "@/lib/schedule/weekdayUtils"
 import { COMMAND_TYPE_CONFIG, DEFAULT_COMMAND_TYPE_INFO } from "@/lib/schedule/commandConfig"
+import { useTranslation } from "react-i18next"
 
 // Types
 interface ScheduleVisualizerProps {
@@ -75,7 +76,7 @@ function getDayStatus(date: Date, rules: any[]) {
   return { hasRotation, hasSpot }
 }
 
-function getActiveRulesForDate(date: Date, rules: any[]): ActiveRule[] {
+function getActiveRulesForDate(date: Date, rules: any[], t: any): ActiveRule[] {
   const activeRules: ActiveRule[] = []
 
   for (const rule of rules) {
@@ -103,14 +104,14 @@ function getActiveRulesForDate(date: Date, rules: any[]): ActiveRule[] {
         formatTimeRange(slot.start, slot.end)
       ).filter((s: string) => s !== '—')
     } else {
-      timeSlots = ['All day']
+      timeSlots = [t('schedules.details.visualizer.allDay')]
     }
 
     activeRules.push({
       id: rule.id,
       type: rule.type,
       priority: rule.priority,
-      programName: rule.deviceTitleSnapshot || 'Untitled Program',
+      programName: rule.deviceTitleSnapshot || t('schedules.dialogs.create.untitled'),
       version: rule.releaseVersion,
       timeSlots,
       isActiveToday,
@@ -318,6 +319,7 @@ function normalizeTimeSlot(slot: Record<string, unknown>): { start: string; end:
 }
 
 export function ScheduleVisualizer({ rules, commandRules = [], programsMap = {}, onTabChange, className }: ScheduleVisualizerProps) {
+  const { t } = useTranslation();
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list')
@@ -333,7 +335,7 @@ export function ScheduleVisualizer({ rules, commandRules = [], programsMap = {},
   }, [currentMonth])
 
   // Active Rules for Selected Date
-  const activeRules = useMemo(() => getActiveRulesForDate(selectedDate, rules), [selectedDate, rules])
+  const activeRules = useMemo(() => getActiveRulesForDate(selectedDate, rules, t), [selectedDate, rules, t])
   const activeCommands = useMemo(() => getActiveCommandsForDate(selectedDate, commandRules), [selectedDate, commandRules])
 
   // Timeline Data
@@ -360,7 +362,13 @@ export function ScheduleVisualizer({ rules, commandRules = [], programsMap = {},
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-7 text-center text-xs text-muted-foreground mb-2">
-            <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+            <div>{t('schedules.details.visualizer.days.su')}</div>
+            <div>{t('schedules.details.visualizer.days.mo')}</div>
+            <div>{t('schedules.details.visualizer.days.tu')}</div>
+            <div>{t('schedules.details.visualizer.days.we')}</div>
+            <div>{t('schedules.details.visualizer.days.th')}</div>
+            <div>{t('schedules.details.visualizer.days.fr')}</div>
+            <div>{t('schedules.details.visualizer.days.sa')}</div>
           </div>
           <div className="grid grid-cols-7 gap-1">
             {calendarDays.map((day, i) => {
@@ -389,9 +397,9 @@ export function ScheduleVisualizer({ rules, commandRules = [], programsMap = {},
             })}
           </div>
           <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-blue-400" /> Rotation</div>
-            <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-rose-500" /> Spot</div>
-            <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-yellow-400" /> Command</div>
+            <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-blue-400" /> {t('schedules.details.programRules.rotation')}</div>
+            <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-rose-500" /> {t('schedules.details.programRules.spot')}</div>
+            <div className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-yellow-400" /> {t('logs.command.actionType.POWER')}</div>
           </div>
         </CardContent>
       </Card>
@@ -402,19 +410,19 @@ export function ScheduleVisualizer({ rules, commandRules = [], programsMap = {},
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-sm font-medium">
-                Schedule for {format(selectedDate, "EEEE, MMM d, yyyy")}
+                {t('schedules.details.visualizer.scheduleFor', { date: format(selectedDate, "EEEE, MMM d, yyyy") })}
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {activeCount} active item{activeCount !== 1 ? 's' : ''} on this day
+                {t('schedules.details.visualizer.activeItems', { count: activeCount })}
               </p>
             </div>
             <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'list' | 'timeline')} className="h-8">
               <TabsList className="h-8">
                 <TabsTrigger value="list" className="h-7 px-2 gap-1 text-xs">
-                  <List className="h-3.5 w-3.5" /> List
+                  <List className="h-3.5 w-3.5" /> {t('schedules.details.visualizer.list')}
                 </TabsTrigger>
                 <TabsTrigger value="timeline" className="h-7 px-2 gap-1 text-xs">
-                  <BarChart3 className="h-3.5 w-3.5" /> Timeline
+                  <BarChart3 className="h-3.5 w-3.5" /> {t('schedules.details.visualizer.timeline')}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -426,7 +434,7 @@ export function ScheduleVisualizer({ rules, commandRules = [], programsMap = {},
               {/* Program Rules Section */}
               {activeRules.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-xs font-semibold text-muted-foreground tracking-wide">Programs</h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground tracking-wide">{t('schedules.details.tabs.programs')}</h4>
                   <div className="space-y-2">
                     {activeRules.map((r) => {
                       const programInfo = r.rule.programId ? programsMap[r.rule.programId] : null;
@@ -450,14 +458,14 @@ export function ScheduleVisualizer({ rules, commandRules = [], programsMap = {},
                                     ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300"
                                     : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
                                 )}>
-                                  {r.type === 'spot' ? 'Spot' : 'Rotation'}
+                                  {r.type === 'spot' ? t('schedules.details.programRules.spot') : t('schedules.details.programRules.rotation')}
                                 </span>
-                                <span className="text-xs text-muted-foreground">Priority {r.priority}</span>
+                                <span className="text-xs text-muted-foreground">{t('schedules.details.programRules.priority')} {r.priority}</span>
                                 {r.version != null && (
                                   <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">v{r.version}</span>
                                 )}
                                 {!r.isActiveToday && (
-                                  <span className="text-xs text-amber-600 dark:text-amber-400">Not active today</span>
+                                  <span className="text-xs text-amber-600 dark:text-amber-400">{t('schedules.details.visualizer.notActiveToday')}</span>
                                 )}
                               </div>
                               <p className="text-sm font-medium mt-1 truncate">{displayName}</p>
@@ -490,7 +498,7 @@ export function ScheduleVisualizer({ rules, commandRules = [], programsMap = {},
               {/* Command Rules Section */}
               {activeCommands.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-xs font-semibold text-muted-foreground tracking-wide">Commands</h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground tracking-wide">{t('schedules.details.tabs.commands')}</h4>
                   <div className="space-y-2">
                     {activeCommands.map((c) => {
                       const typeInfo = COMMAND_TYPE_CONFIG[c.actionType] || DEFAULT_COMMAND_TYPE_INFO
@@ -527,8 +535,8 @@ export function ScheduleVisualizer({ rules, commandRules = [], programsMap = {},
 
               {activeRules.length === 0 && activeCommands.length === 0 && (
                 <div className="py-8 text-center text-muted-foreground">
-                  <p className="text-sm font-medium">No rules configured</p>
-                  <p className="text-xs mt-1">Add program or command rules to see them here.</p>
+                  <p className="text-sm font-medium">{t('schedules.details.commandRules.noRules')}</p>
+                  <p className="text-xs mt-1">{t('schedules.details.commandRules.noRulesDesc')}</p>
                 </div>
               )}
             </div>
@@ -554,7 +562,7 @@ export function ScheduleVisualizer({ rules, commandRules = [], programsMap = {},
 
                   {timelineBlocks.length === 0 ? (
                     <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
-                      No programs scheduled for this day
+                      {t('schedules.details.visualizer.noPrograms')}
                     </div>
                   ) : (
                     timelineBlocks.map(block => {
@@ -579,7 +587,7 @@ export function ScheduleVisualizer({ rules, commandRules = [], programsMap = {},
                               {block.type !== 'command' && isWideEnough && (
                                 <div className="h-full flex flex-col justify-center px-1.5 py-1">
                                   <span className="text-[10px] font-semibold text-white truncate leading-tight">{programName}</span>
-                                  <span className="text-[9px] text-white/80 font-medium">{block.type === 'spot' ? 'Spot' : 'Rot'} P{block.priority}</span>
+                                  <span className="text-[9px] text-white/80 font-medium">{block.type === 'spot' ? t('schedules.details.programRules.spot') : t('schedules.details.programRules.rotation')} P{block.priority}</span>
                                 </div>
                               )}
                             </div>
@@ -588,15 +596,15 @@ export function ScheduleVisualizer({ rules, commandRules = [], programsMap = {},
                             {block.type === 'command' ? (
                               <div className="text-xs space-y-1">
                                 <div className="flex items-center justify-between gap-4">
-                                  <p className="font-semibold">Command Rule</p>
+                                  <p className="font-semibold">{t('schedules.details.visualizer.command')}</p>
                                   <span className="font-mono text-[10px] bg-primary/10 text-primary px-1 rounded">{block.timeLabel}</span>
                                 </div>
-                                <p className="text-muted-foreground">Click to view in Commands tab</p>
+                                <p className="text-muted-foreground">{t('schedules.details.visualizer.viewInCommands')}</p>
                               </div>
                             ) : (
                               <div className="text-xs space-y-1">
                                 <div className="flex items-center justify-between gap-4">
-                                  <p className="font-semibold truncate max-w-[140px]">{programName || 'Untitled Program'}</p>
+                                  <p className="font-semibold truncate max-w-[140px]">{programName || t('schedules.dialogs.create.untitled')}</p>
                                   <span className="font-mono text-[10px] bg-primary/10 text-primary px-1 rounded whitespace-nowrap">{block.timeLabel}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -604,9 +612,9 @@ export function ScheduleVisualizer({ rules, commandRules = [], programsMap = {},
                                     "px-1.5 py-0.5 rounded text-[10px] font-medium",
                                     block.type === 'spot' ? "bg-rose-100 text-rose-700" : "bg-blue-100 text-blue-700"
                                   )}>
-                                    {block.type === 'spot' ? 'Spot' : 'Rotation'}
+                                    {block.type === 'spot' ? t('schedules.details.programRules.spot') : t('schedules.details.programRules.rotation')}
                                   </span>
-                                  <span>Priority {block.priority}</span>
+                                  <span>{t('schedules.details.programRules.priority')} {block.priority}</span>
                                   {block.rule.releaseVersion != null && (
                                     <span className="font-mono">v{block.rule.releaseVersion}</span>
                                   )}

@@ -6,6 +6,7 @@ import { Field, FieldContent, FieldDescription, FieldLabel } from '@/registry/ne
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/registry/new-york/ui/select';
 
 import type { ProgramDraftSavePolicy } from '@/features/programs/storage/draftPolicyDb';
+import { useTranslation } from 'react-i18next';
 
 export function ProgramDraftPolicyCard({
   value,
@@ -14,26 +15,27 @@ export function ProgramDraftPolicyCard({
   value: ProgramDraftSavePolicy;
   onChange: (next: ProgramDraftSavePolicy) => void;
 }) {
+  const { t } = useTranslation();
   const options = useMemo(
     () =>
       [
         {
           value: 'ask' as const,
-          label: 'Always ask (recommended)',
-          description: 'Prompt when leaving the editor with unpublished changes.',
+          label: t('settings.draftPolicy.options.ask.label'),
+          description: t('settings.draftPolicy.options.ask.desc'),
         },
         {
           value: 'always' as const,
-          label: 'Always save draft',
-          description: 'Keep a draft snapshot automatically when leaving or switching versions.',
+          label: t('settings.draftPolicy.options.always.label'),
+          description: t('settings.draftPolicy.options.always.desc'),
         },
         {
           value: 'never' as const,
-          label: 'Never save draft',
-          description: 'Discard unpublished changes when leaving or switching versions.',
+          label: t('settings.draftPolicy.options.never.label'),
+          description: t('settings.draftPolicy.options.never.desc'),
         },
       ] satisfies Array<{ value: ProgramDraftSavePolicy; label: string; description: string }>,
-    [],
+    [t],
   );
 
   const selected = options.find((o) => o.value === value) ?? options[0];
@@ -46,9 +48,9 @@ export function ProgramDraftPolicyCard({
             <FileClock className="size-5 text-muted-foreground" />
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <CardTitle className="wrap-break-word">Program draft saving</CardTitle>
+            <CardTitle className="wrap-break-word">{t('settings.draftPolicy.title')}</CardTitle>
             <CardDescription className="wrap-break-word">
-              Controls what happens to unpublished changes when you leave the program editor.
+              {t('settings.draftPolicy.subtitle')}
             </CardDescription>
           </div>
         </div>
@@ -56,7 +58,7 @@ export function ProgramDraftPolicyCard({
 
       <CardContent className="space-y-4">
         <Field>
-          <FieldLabel>Draft save rule</FieldLabel>
+          <FieldLabel>{t('settings.draftPolicy.label')}</FieldLabel>
           <FieldContent>
             <Select value={value} onValueChange={(next) => onChange(next as ProgramDraftSavePolicy)}>
               <SelectTrigger className="w-full">

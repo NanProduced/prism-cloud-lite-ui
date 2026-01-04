@@ -15,6 +15,7 @@ import type { ProgramListResp, ProgramVersionResp } from '@/types/program';
 import type { ScheduleContentsRuleResp, UpsertScheduleContentsRuleReq } from '@/types/schedule';
 import { WeekdaySelector } from '@/components/schedule/WeekdaySelector';
 import { DatePicker, TimePicker } from '@/components/schedule/SchedulePickers';
+import { useTranslation } from 'react-i18next';
 
 // Note: Weekday index follows backend convention: 0=Mon, 1=Tue, ..., 6=Sun
 // See docs/integration/program-and-schedule.md for details
@@ -27,6 +28,7 @@ export function ScheduleContentsRuleSheet(props: {
   existingRules: ScheduleContentsRuleResp[];
   onSave: (req: UpsertScheduleContentsRuleReq) => void;
 }) {
+  const { t } = useTranslation();
   const { open, onOpenChange, initialRule, existingPriorities, existingRules, onSave } = props;
 
   const [type, setType] = useState<'rotation' | 'spot'>('rotation');
@@ -108,7 +110,8 @@ export function ScheduleContentsRuleSheet(props: {
     if (initialRule?.limitTime && typeof initialRule.limitTime === 'object' && !Array.isArray(initialRule.limitTime)) {
         const t = initialRule.limitTime as any;
         setLimitTime({ start: t.start || "08:00:00", end: t.end || "18:00:00" });
-    } else {
+    }
+    else {
         setLimitTime({ start: "08:00:00", end: "18:00:00" });
     }
 
@@ -117,7 +120,8 @@ export function ScheduleContentsRuleSheet(props: {
     if (initialRule?.limitDate && typeof initialRule.limitDate === 'object') {
         const d = initialRule.limitDate as any;
         setDateRange({ start: d.start || "", end: d.end || "" });
-    } else {
+    }
+    else {
         setDateRange({ start: "", end: "" });
     }
 
@@ -129,10 +133,12 @@ export function ScheduleContentsRuleSheet(props: {
             // Backend boolean[7] format: index 0=Mon, 6=Sun
             const nums = raw.map((b, i) => b ? i : -1).filter(n => n >= 0);
             setWeekdays(nums);
-        } else {
+        }
+        else {
             setWeekdays([]);
         }
-    } else {
+    }
+    else {
         // Default to workdays: Mon(0), Tue(1), Wed(2), Thu(3), Fri(4)
         setWeekdays([0, 1, 2, 3, 4]);
     }
@@ -152,19 +158,19 @@ export function ScheduleContentsRuleSheet(props: {
 
   function handleSave() {
     if (effectiveExistingPriorities.includes(priority)) {
-      toast.error('Priority already exists in this schedule');
+      toast.error(t('schedules.details.contentsRule.toasts.priorityExists'));
       return;
     }
     if (!Number.isFinite(priority) || priority < 0) {
-      toast.error('Priority must be >= 0');
+      toast.error(t('schedules.details.contentsRule.toasts.priorityInvalid'));
       return;
     }
     if (!selectedReleaseProgramId) {
-      toast.error('Please select a published program version');
+      toast.error(t('schedules.details.contentsRule.toasts.selectVersion'));
       return;
     }
     if (programVersionLock && selectedReleaseProgramId !== programVersionLock.lockedReleaseProgramId) {
-      toast.error('This schedule can only use one version per program');
+      toast.error(t('schedules.details.contentsRule.toasts.versionConflict'));
       return;
     }
 
@@ -180,36 +186,39 @@ export function ScheduleContentsRuleSheet(props: {
 
     if (ifLimitTime) {
       if (!limitTime.start || !limitTime.end) {
-         toast.error("Please set start and end time");
+         toast.error(t('schedules.details.contentsRule.toasts.setTime'));
          return;
       }
       req.limitTime = {
           start: limitTime.start.length === 5 ? limitTime.start + ":00" : limitTime.start,
           end: limitTime.end.length === 5 ? limitTime.end + ":00" : limitTime.end
       };
-    } else {
+    }
+    else {
       req.limitTime = null;
     }
     
     if (ifLimitDate) {
       if (!dateRange.start || !dateRange.end) {
-          toast.error("Please select start and end dates");
+          toast.error(t('schedules.details.contentsRule.toasts.setDates'));
           return;
       }
       req.limitDate = dateRange as any;
-    } else {
+    }
+    else {
       req.limitDate = null;
     }
     
     if (ifLimitWeekday) {
        if (weekdays.length === 0) {
-           toast.error("Please select at least one weekday");
+           toast.error(t('schedules.details.contentsRule.toasts.setWeekday'));
            return;
        }
        const boolArr = new Array(7).fill(false);
        weekdays.forEach(n => { if(n>=0 && n<7) boolArr[n] = true; });
        req.limitWeekday = boolArr;
-    } else {
+    }
+    else {
        req.limitWeekday = null;
     }
 
@@ -220,9 +229,9 @@ export function ScheduleContentsRuleSheet(props: {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-[540px] w-full overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>{isEdit ? 'Edit rule' : 'Add rule'}</SheetTitle>
+          <SheetTitle>{isEdit ? t('schedules.details.contentsRule.editTitle') : t('schedules.details.contentsRule.addTitle')}</SheetTitle>
           <SheetDescription>
-            Configure what to play and when.
+            {t('schedules.details.contentsRule.subtitle')}
           </SheetDescription>
         </SheetHeader>
 
@@ -230,25 +239,25 @@ export function ScheduleContentsRuleSheet(props: {
             
           {/* Section 1: Content */}
           <div className="space-y-4">
-             <h3 className="text-sm font-medium leading-none text-primary">1. Content strategy</h3>
+             <h3 className="text-sm font-medium leading-none text-primary">{t('schedules.details.contentsRule.content.title')}</h3>
              <div className="grid grid-cols-2 gap-4">
                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-muted-foreground">Mode</label>
+                    <label className="text-xs font-semibold text-muted-foreground">{t('schedules.details.contentsRule.content.mode')}</label>
                     <Tabs value={type} onValueChange={(v) => setType(v as any)} className="w-full">
                         <TabsList className="w-full h-11 bg-muted/50 p-1">
-                            <TabsTrigger value="rotation" className="flex-1 rounded-lg">Rotation</TabsTrigger>
-                            <TabsTrigger value="spot" className="flex-1 rounded-lg">Spot</TabsTrigger>
+                            <TabsTrigger value="rotation" className="flex-1 rounded-lg">{t('schedules.details.programRules.rotation')}</TabsTrigger>
+                            <TabsTrigger value="spot" className="flex-1 rounded-lg">{t('schedules.details.programRules.spot')}</TabsTrigger>
                         </TabsList>
                     </Tabs>
                  </div>
                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-muted-foreground">Priority</label>
+                    <label className="text-xs font-semibold text-muted-foreground">{t('schedules.details.contentsRule.content.priority')}</label>
                     <Input type="number" value={priority} onChange={(e) => setPriority(Number(e.target.value))} className="h-11 rounded-xl" />
                  </div>
              </div>
              
              <div className="space-y-2">
-                <label className="text-xs font-semibold text-muted-foreground">Program</label>
+                <label className="text-xs font-semibold text-muted-foreground">{t('schedules.details.contentsRule.content.program')}</label>
                 <Select
                   value={selectedProgramId || '__none__'}
                   onValueChange={(v) => {
@@ -258,7 +267,7 @@ export function ScheduleContentsRuleSheet(props: {
                   }}
                 >
                   <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Select program" />
+                    <SelectValue placeholder={t('schedules.details.contentsRule.content.selectProgram')} />
                   </SelectTrigger>
                   <SelectContent>
                      {programList.map((p: ProgramListResp) => (
@@ -270,14 +279,14 @@ export function ScheduleContentsRuleSheet(props: {
              
              {selectedProgramId && (
                   <div className="space-y-2">
-                     <label className="text-xs font-semibold text-muted-foreground">Version</label>
+                     <label className="text-xs font-semibold text-muted-foreground">{t('schedules.details.contentsRule.content.version')}</label>
                      <Select
                        value={selectedDeviceProgramId ? String(selectedDeviceProgramId) : '__none__'}
                        onValueChange={(v) => setSelectedDeviceProgramId(v === '__none__' ? null : Number(v))}
                        disabled={Boolean(programVersionLock)}
                      >
                        <SelectTrigger className="h-11">
-                         <SelectValue placeholder="Select version" />
+                         <SelectValue placeholder={t('schedules.details.contentsRule.content.selectVersion')} />
                        </SelectTrigger>
                        <SelectContent>
                          {versions.map((v: ProgramVersionResp) => (
@@ -289,11 +298,7 @@ export function ScheduleContentsRuleSheet(props: {
                      </Select>
                      {programVersionLock ? (
                        <p className="text-[11px] text-muted-foreground">
-                         This program is already used by other rules in this schedule. Version is locked to{' '}
-                         {programVersionLock.lockedReleaseVersion != null
-                           ? `v${programVersionLock.lockedReleaseVersion}`
-                           : 'the existing version'}
-                         .
+                         {t('schedules.details.contentsRule.content.lockedDesc', { version: programVersionLock.lockedReleaseVersion != null ? `v${programVersionLock.lockedReleaseVersion}` : t('schedules.list.table.enabled') })}
                        </p>
                      ) : null}
                   </div>
@@ -304,25 +309,25 @@ export function ScheduleContentsRuleSheet(props: {
 
           {/* Section 2: Time Constraints */}
           <div className="space-y-6">
-             <h3 className="text-sm font-medium leading-none text-primary">2. Playback constraints</h3>
+             <h3 className="text-sm font-medium leading-none text-primary">{t('schedules.details.contentsRule.constraints.title')}</h3>
              
              {/* Date Range */}
              <div className="space-y-4 rounded-xl border p-4 bg-muted/5">
                  <div className="flex items-center justify-between">
                      <div className="space-y-0.5">
-                        <label className="text-sm font-semibold">Valid date range</label>
-                        <p className="text-xs text-muted-foreground">Schedule only triggers within this period.</p>
+                        <label className="text-sm font-semibold">{t('schedules.details.contentsRule.constraints.date.title')}</label>
+                        <p className="text-xs text-muted-foreground">{t('schedules.details.contentsRule.constraints.date.desc')}</p>
                      </div>
                      <Switch checked={ifLimitDate} onCheckedChange={setIfLimitDate} />
                  </div>
                  {ifLimitDate && (
                      <div className="grid grid-cols-2 gap-3 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
                         <div className="space-y-1.5">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">Start date</span>
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">{t('schedules.details.contentsRule.constraints.date.start')}</span>
                             <DatePicker value={dateRange.start} onChange={(val) => setDateRange(prev => ({ ...prev, start: val }))} />
                         </div>
                         <div className="space-y-1.5">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">End date</span>
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">{t('schedules.details.contentsRule.constraints.date.end')}</span>
                             <DatePicker value={dateRange.end} onChange={(val) => setDateRange(prev => ({ ...prev, end: val }))} />
                         </div>
                      </div>
@@ -333,8 +338,8 @@ export function ScheduleContentsRuleSheet(props: {
              <div className="space-y-4 rounded-xl border p-4 bg-muted/5">
                  <div className="flex items-center justify-between">
                      <div className="space-y-0.5">
-                        <label className="text-sm font-semibold">Weekly recurrence</label>
-                        <p className="text-xs text-muted-foreground">Specify days of the week.</p>
+                        <label className="text-sm font-semibold">{t('schedules.details.contentsRule.constraints.weekday.title')}</label>
+                        <p className="text-xs text-muted-foreground">{t('schedules.details.contentsRule.constraints.weekday.desc')}</p>
                      </div>
                      <Switch checked={ifLimitWeekday} onCheckedChange={setIfLimitWeekday} />
                  </div>
@@ -349,19 +354,19 @@ export function ScheduleContentsRuleSheet(props: {
              <div className="space-y-4 rounded-xl border p-4 bg-muted/5">
                  <div className="flex items-center justify-between">
                      <div className="space-y-0.5">
-                        <label className="text-sm font-semibold">Daily time range</label>
-                        <p className="text-xs text-muted-foreground">Set active hours within each day.</p>
+                        <label className="text-sm font-semibold">{t('schedules.details.contentsRule.constraints.time.title')}</label>
+                        <p className="text-xs text-muted-foreground">{t('schedules.details.contentsRule.constraints.time.desc')}</p>
                      </div>
                      <Switch checked={ifLimitTime} onCheckedChange={setIfLimitTime} />
                  </div>
                  {ifLimitTime && (
                      <div className="grid grid-cols-2 gap-3 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
                         <div className="space-y-1.5">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">Start time</span>
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">{t('schedules.details.contentsRule.constraints.time.start')}</span>
                             <TimePicker value={limitTime.start} onChange={(val) => setLimitTime(prev => ({ ...prev, start: val }))} />
                         </div>
                         <div className="space-y-1.5">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">End time</span>
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">{t('schedules.details.contentsRule.constraints.time.end')}</span>
                             <TimePicker value={limitTime.end} onChange={(val) => setLimitTime(prev => ({ ...prev, end: val }))} />
                         </div>
                      </div>
@@ -372,8 +377,8 @@ export function ScheduleContentsRuleSheet(props: {
         </div>
 
         <SheetFooter className="gap-3 pt-4 border-t mt-4">
-           <Button variant="ghost" onClick={() => onOpenChange(false)} className="h-11 px-8 font-semibold">Cancel</Button>
-           <Button onClick={handleSave} className="h-11 px-10 font-bold shadow-lg shadow-primary/20">Save changes</Button>
+           <Button variant="ghost" onClick={() => onOpenChange(false)} className="h-11 px-8 font-semibold">{t('common.actions.cancel')}</Button>
+           <Button onClick={handleSave} className="h-11 px-10 font-bold shadow-lg shadow-primary/20">{t('common.actions.save')}</Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

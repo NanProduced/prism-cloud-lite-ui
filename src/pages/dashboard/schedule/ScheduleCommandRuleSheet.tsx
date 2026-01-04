@@ -14,6 +14,7 @@ import type { UpsertScheduleCommandRuleReq, ScheduleCommandActionType } from '@/
 import { WeekdaySelector } from '@/components/schedule/WeekdaySelector';
 import { DatePicker, TimePicker } from '@/components/schedule/SchedulePickers';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 // Note: Weekday index follows backend convention: 0=Mon, 1=Tue, ..., 6=Sun
 // See docs/integration/program-and-schedule.md for details
@@ -24,6 +25,7 @@ export function ScheduleCommandRuleSheet(props: {
   initialRule?: UpsertScheduleCommandRuleReq | null;
   onSave: (req: UpsertScheduleCommandRuleReq) => void;
 }) {
+  const { t } = useTranslation();
   const { open, onOpenChange, initialRule, onSave } = props;
   const isEdit = Boolean(initialRule?.id);
 
@@ -105,7 +107,7 @@ export function ScheduleCommandRuleSheet(props: {
 
   function handleSave() {
       if (opTimes.length === 0) {
-          toast.error("At least one execution time is required");
+          toast.error(t('schedules.details.commandRule.toasts.timeRequired'));
           return;
       }
 
@@ -142,14 +144,14 @@ export function ScheduleCommandRuleSheet(props: {
       };
 
       if (ifLimitDate) {
-          if (!dateRange.start || !dateRange.end) { toast.error("Start/End date required"); return; }
+          if (!dateRange.start || !dateRange.end) { toast.error(t('schedules.details.commandRule.toasts.datesRequired')); return; }
           req.limitDate = dateRange as any;
       } else {
           req.limitDate = null;
       }
 
       if (ifLimitWeekday) {
-          if (weekdays.length === 0) { toast.error("Weekdays required"); return; }
+          if (weekdays.length === 0) { toast.error(t('schedules.details.commandRule.toasts.weekdaysRequired')); return; }
           const boolArr = new Array(7).fill(false);
           weekdays.forEach(n => { if(n>=0 && n<7) boolArr[n] = true; });
           req.limitWeekday = boolArr;
@@ -164,9 +166,9 @@ export function ScheduleCommandRuleSheet(props: {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-[540px] w-full overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>{isEdit ? 'Edit command rule' : 'Add command rule'}</SheetTitle>
+          <SheetTitle>{isEdit ? t('schedules.details.commandRule.editTitle') : t('schedules.details.commandRule.addTitle')}</SheetTitle>
           <SheetDescription>
-            Schedule device actions like Power, Brightness, and Volume.
+            {t('schedules.details.commandRule.subtitle')}
           </SheetDescription>
         </SheetHeader>
 
@@ -174,21 +176,21 @@ export function ScheduleCommandRuleSheet(props: {
             
             {/* 1. Action Config */}
             <div className="space-y-4">
-                <h3 className="text-sm font-medium text-primary">1. Action configuration</h3>
+                <h3 className="text-sm font-medium text-primary">{t('schedules.details.commandRule.config.title')}</h3>
                 
                 <div className="space-y-2">
-                    <label className="text-xs font-semibold text-muted-foreground">Action type</label>
+                    <label className="text-xs font-semibold text-muted-foreground">{t('schedules.details.commandRule.config.type')}</label>
                     <Select value={actionType} onValueChange={(v) => setActionType(v as any)}>
                         <SelectTrigger className="h-11">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="BRIGHTNESS">Set brightness</SelectItem>
-                            <SelectItem value="VOLUME">Set volume</SelectItem>
-                            <SelectItem value="POWER">Power control</SelectItem>
-                            <SelectItem value="INPUT_MODE">Switch input</SelectItem>
-                            <SelectItem value="COLOR_TEMP">Color temperature</SelectItem>
-                            <SelectItem value="CLEAR_CACHE">Clear cache</SelectItem>
+                            <SelectItem value="BRIGHTNESS">{t('logs.command.actionType.BRIGHTNESS')}</SelectItem>
+                            <SelectItem value="VOLUME">{t('logs.command.actionType.VOLUME')}</SelectItem>
+                            <SelectItem value="POWER">{t('logs.command.actionType.POWER')}</SelectItem>
+                            <SelectItem value="INPUT_MODE">{t('logs.command.actionType.INPUT_MODE')}</SelectItem>
+                            <SelectItem value="COLOR_TEMP">{t('logs.command.actionType.COLOR_TEMP')}</SelectItem>
+                            <SelectItem value="CLEAR_CACHE">{t('logs.command.actionType.CLEAR_CACHE')}</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -197,7 +199,7 @@ export function ScheduleCommandRuleSheet(props: {
                     {actionType === 'BRIGHTNESS' && (
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                                <label className="text-sm font-semibold">Brightness level</label>
+                                <label className="text-sm font-semibold">{t('schedules.details.commandRule.config.brightness')}</label>
                                 <span className="text-sm font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">{brightness}%</span>
                             </div>
                             <Slider value={[brightness]} onValueChange={([v]) => setBrightness(v)} max={100} step={1} />
@@ -206,7 +208,7 @@ export function ScheduleCommandRuleSheet(props: {
                     {actionType === 'VOLUME' && (
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                                <label className="text-sm font-semibold">Volume level</label>
+                                <label className="text-sm font-semibold">{t('schedules.details.commandRule.config.volume')}</label>
                                 <span className="text-sm font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">{volume}%</span>
                             </div>
                             <Slider value={[volume]} onValueChange={([v]) => setVolume(v)} max={100} step={1} />
@@ -214,19 +216,19 @@ export function ScheduleCommandRuleSheet(props: {
                     )}
                     {actionType === 'POWER' && (
                         <div className="space-y-3">
-                            <label className="text-sm font-semibold">Power action</label>
+                            <label className="text-sm font-semibold">{t('schedules.details.commandRule.config.power')}</label>
                             <Tabs value={powerState} onValueChange={(v) => setPowerState(v as any)} className="w-full">
                                 <TabsList className="w-full h-11 bg-muted/50 p-1">
-                                    <TabsTrigger value="wakeup" className="flex-1 rounded-lg">Wake up</TabsTrigger>
-                                    <TabsTrigger value="sleep" className="flex-1 rounded-lg">Sleep</TabsTrigger>
-                                    <TabsTrigger value="reboot" className="flex-1 rounded-lg text-rose-600 font-semibold">Reboot</TabsTrigger>
+                                    <TabsTrigger value="wakeup" className="flex-1 rounded-lg">{t('deviceDetails.actions.power.wakeup')}</TabsTrigger>
+                                    <TabsTrigger value="sleep" className="flex-1 rounded-lg">{t('deviceDetails.actions.power.sleep')}</TabsTrigger>
+                                    <TabsTrigger value="reboot" className="flex-1 rounded-lg text-rose-600 font-semibold">{t('deviceDetails.actions.power.restart')}</TabsTrigger>
                                 </TabsList>
                             </Tabs>
                         </div>
                     )}
                     {actionType === 'INPUT_MODE' && (
                         <div className="space-y-3">
-                             <label className="text-sm font-semibold">Input source</label>
+                             <label className="text-sm font-semibold">{t('schedules.details.commandRule.config.input')}</label>
                              <Select value={inputSource} onValueChange={setInputSource}>
                                 <SelectTrigger className="h-11">
                                     <SelectValue />
@@ -241,7 +243,7 @@ export function ScheduleCommandRuleSheet(props: {
                     {actionType === 'COLOR_TEMP' && (
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                                <label className="text-sm font-semibold">Color temperature</label>
+                                <label className="text-sm font-semibold">{t('schedules.details.commandRule.config.colorTemp')}</label>
                                 <span className="text-sm font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">{colorTemp}K</span>
                             </div>
                             <Slider value={[colorTemp]} onValueChange={([v]) => setColorTemp(v)} min={2000} max={10000} step={100} />
@@ -250,7 +252,7 @@ export function ScheduleCommandRuleSheet(props: {
                     {actionType === 'CLEAR_CACHE' && (
                         <div className="flex items-center gap-3 text-muted-foreground py-2">
                             <Trash2 className="h-5 w-5 opacity-50" />
-                            <p className="text-sm text-balance leading-relaxed">This action will clear all unused cached assets on the device at the scheduled time.</p>
+                            <p className="text-sm text-balance leading-relaxed">{t('schedules.details.commandRule.config.clearCacheDesc')}</p>
                         </div>
                     )}
                 </div>
@@ -260,13 +262,13 @@ export function ScheduleCommandRuleSheet(props: {
 
             {/* 2. Time Config */}
             <div className="space-y-4">
-                <h3 className="text-sm font-medium text-primary">2. Execution time</h3>
+                <h3 className="text-sm font-medium text-primary">{t('schedules.details.commandRule.execution.title')}</h3>
                 <div className="space-y-3">
-                    {opTimes.map((t, idx) => (
+                    {opTimes.map((t_str, idx) => (
                         <div key={idx} className="flex items-center gap-3 group">
                             <div className="relative flex-1">
                                 <TimePicker 
-                                    value={t} 
+                                    value={t_str} 
                                     onChange={(val) => updateOpTime(idx, val)} 
                                 />
                             </div>
@@ -276,7 +278,7 @@ export function ScheduleCommandRuleSheet(props: {
                         </div>
                     ))}
                     <Button variant="outline" size="sm" onClick={addOpTime} className="w-full h-11 border-dashed rounded-xl gap-2 text-muted-foreground hover:text-primary">
-                        <Plus className="h-4 w-4" /> Add execution time
+                        <Plus className="h-4 w-4" /> {t('schedules.details.commandRule.execution.add')}
                     </Button>
                 </div>
             </div>
@@ -285,25 +287,25 @@ export function ScheduleCommandRuleSheet(props: {
 
             {/* 3. Conditions */}
              <div className="space-y-6">
-                <h3 className="text-sm font-medium text-primary">3. Conditions (Optional)</h3>
+                <h3 className="text-sm font-medium text-primary">{t('schedules.details.commandRule.conditions.title')}</h3>
                 
                 {/* Date Range */}
                  <div className="space-y-4 rounded-xl border p-4 bg-muted/5">
                      <div className="flex items-center justify-between">
                          <div className="space-y-0.5">
-                            <label className="text-sm font-semibold">Valid date range</label>
-                            <p className="text-xs text-muted-foreground">Action only triggers within this period.</p>
+                            <label className="text-sm font-semibold">{t('schedules.details.commandRule.conditions.date.title')}</label>
+                            <p className="text-xs text-muted-foreground">{t('schedules.details.commandRule.conditions.date.desc')}</p>
                          </div>
                          <Switch checked={ifLimitDate} onCheckedChange={setIfLimitDate} />
                      </div>
                      {ifLimitDate && (
                          <div className="grid grid-cols-2 gap-3 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
                             <div className="space-y-1.5">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">Start date</span>
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">{t('schedules.details.contentsRule.constraints.date.start')}</span>
                                 <DatePicker value={dateRange.start} onChange={(val) => setDateRange(prev => ({ ...prev, start: val }))} />
                             </div>
                             <div className="space-y-1.5">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">End date</span>
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1">{t('schedules.details.contentsRule.constraints.date.end')}</span>
                                 <DatePicker value={dateRange.end} onChange={(val) => setDateRange(prev => ({ ...prev, end: val }))} />
                             </div>
                          </div>
@@ -314,8 +316,8 @@ export function ScheduleCommandRuleSheet(props: {
                  <div className="space-y-4 rounded-xl border p-4 bg-muted/5">
                      <div className="flex items-center justify-between">
                          <div className="space-y-0.5">
-                            <label className="text-sm font-semibold">Weekly recurrence</label>
-                            <p className="text-xs text-muted-foreground">Specify days of the week.</p>
+                            <label className="text-sm font-semibold">{t('schedules.details.commandRule.conditions.weekday.title')}</label>
+                            <p className="text-xs text-muted-foreground">{t('schedules.details.commandRule.conditions.weekday.desc')}</p>
                          </div>
                          <Switch checked={ifLimitWeekday} onCheckedChange={setIfLimitWeekday} />
                      </div>
@@ -330,8 +332,8 @@ export function ScheduleCommandRuleSheet(props: {
         </div>
 
         <SheetFooter className="gap-3 pt-4 border-t mt-4">
-           <Button variant="ghost" onClick={() => onOpenChange(false)} className="h-11 px-8 font-semibold">Cancel</Button>
-           <Button onClick={handleSave} className="h-11 px-10 font-bold shadow-lg shadow-primary/20">Save command</Button>
+           <Button variant="ghost" onClick={() => onOpenChange(false)} className="h-11 px-8 font-semibold">{t('common.actions.cancel')}</Button>
+           <Button onClick={handleSave} className="h-11 px-10 font-bold shadow-lg shadow-primary/20">{t('common.actions.save')}</Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

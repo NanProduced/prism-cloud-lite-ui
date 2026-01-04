@@ -189,11 +189,11 @@ export default function MessagesPage() {
       retryTranscodeTask(taskId, { assetId, presetId, targetFolderId, options }),
     onSuccess: (res) => {
       if (res.success && res.data) {
-        toast.success('Retrying transcoding task');
+        toast.success(t('message.ui.toasts.retryTranscode'));
         setSelectedMessageId(res.data.messageId);
         queryClient.invalidateQueries({ queryKey: ['messages'] });
       } else {
-        toast.error(res.error?.displayMessage || 'Failed to retry task');
+        toast.error(res.error?.displayMessage || t('common.errors.unknown'));
       }
     }
   });
@@ -217,7 +217,7 @@ export default function MessagesPage() {
 
     if (unreadIds.length > 0) {
       markReadMutation.mutate(unreadIds);
-      toast.success("Marked current page as read");
+      toast.success(t('message.ui.toasts.markReadSuccess'));
     }
   };
 
@@ -347,7 +347,7 @@ export default function MessagesPage() {
           <DateRangePicker 
             value={dateRange}
             onChange={(val) => { setDateRange(val); setPage(0); }}
-            label="Message period"
+            label={t('message.ui.period')}
             className="!h-11"
           />
         </div>
@@ -357,15 +357,15 @@ export default function MessagesPage() {
         <div className="flex items-center gap-4 bg-muted/40 px-5 py-2 rounded-2xl border-2 border-transparent hover:border-primary/20 hover:bg-muted/60 transition-all min-w-[150px]">
           <Filter className="h-5 w-5 text-primary/60 shrink-0" />
           <div className="flex flex-col flex-1 min-w-0">
-            <span className="text-[10px] font-black tracking-widest text-primary/40 uppercase leading-none mb-1.5">Read status</span>
+            <span className="text-[10px] font-black tracking-widest text-primary/40 uppercase leading-none mb-1.5">{t('message.ui.readStatus')}</span>
             <Select value={readFilter} onValueChange={(v) => { setReadFilter(v as any); setPage(0); }}>
               <SelectTrigger className="h-5 border-none bg-transparent font-bold text-[13px] p-0 focus:ring-0 shadow-none">
-                <SelectValue placeholder="All" />
+                <SelectValue placeholder={t('message.ui.allMessages')} />
               </SelectTrigger>
               <SelectContent className="rounded-2xl border-none shadow-2xl">
-                <SelectItem value="all" className="font-bold">All Messages</SelectItem>
-                <SelectItem value="unread" className="font-medium text-rose-600">Unread Only</SelectItem>
-                <SelectItem value="read" className="font-medium">Read Only</SelectItem>
+                <SelectItem value="all" className="font-bold">{t('message.ui.allMessages')}</SelectItem>
+                <SelectItem value="unread" className="font-medium text-rose-600">{t('message.ui.unreadOnly')}</SelectItem>
+                <SelectItem value="read" className="font-medium">{t('message.ui.readOnly')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -376,17 +376,17 @@ export default function MessagesPage() {
         <div className="flex items-center gap-4 bg-muted/40 px-5 py-2 rounded-2xl border-2 border-transparent hover:border-primary/20 hover:bg-muted/60 transition-all min-w-[150px]">
           <Activity className="h-5 w-5 text-primary/60 shrink-0" />
           <div className="flex flex-col flex-1 min-w-0">
-            <span className="text-[10px] font-black tracking-widest text-primary/40 uppercase leading-none mb-1.5">Status</span>
+            <span className="text-[10px] font-black tracking-widest text-primary/40 uppercase leading-none mb-1.5">{t('logs.command.table.status')}</span>
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(0); }}>
               <SelectTrigger className="h-5 border-none bg-transparent font-bold text-[13px] p-0 focus:ring-0 shadow-none">
-                <SelectValue placeholder="All" />
+                <SelectValue placeholder={t('message.ui.allStatus')} />
               </SelectTrigger>
               <SelectContent className="rounded-2xl border-none shadow-2xl">
-                <SelectItem value="all" className="font-bold">All Status</SelectItem>
-                <SelectItem value="PENDING" className="font-medium">Pending</SelectItem>
-                <SelectItem value="RUNNING" className="font-medium text-blue-600">Running</SelectItem>
-                <SelectItem value="SUCCESS" className="font-medium text-emerald-600">Success</SelectItem>
-                <SelectItem value="FAILED" className="font-medium text-rose-600">Failed</SelectItem>
+                <SelectItem value="all" className="font-bold">{t('message.ui.allStatus')}</SelectItem>
+                <SelectItem value="PENDING" className="font-medium">{t('message.status.PENDING')}</SelectItem>
+                <SelectItem value="RUNNING" className="font-medium text-blue-600">{t('message.status.RUNNING')}</SelectItem>
+                <SelectItem value="SUCCESS" className="font-medium text-emerald-600">{t('message.status.SUCCESS')}</SelectItem>
+                <SelectItem value="FAILED" className="font-medium text-rose-600">{t('message.status.FAILED')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -397,7 +397,7 @@ export default function MessagesPage() {
         <div className="flex items-center gap-4 bg-muted/30 px-5 py-2 rounded-2xl border-2 border-muted/20 flex-1 max-w-md focus-within:bg-background focus-within:border-primary/40 focus-within:shadow-lg focus-within:shadow-primary/5 transition-all">
           <Search className="h-5 w-5 text-primary/30 shrink-0" />
           <Input
-            placeholder="Search messages..."
+            placeholder={t('message.ui.searchPlaceholder')}
             className="h-6 border-none bg-transparent font-bold text-[13px] p-0 focus-visible:ring-0 placeholder:text-muted-foreground/30"
             value={searchKeyword}
             onChange={(e) => { setSearchKeyword(e.target.value); setPage(0); }}
@@ -407,7 +407,7 @@ export default function MessagesPage() {
         <div className="flex items-center gap-2 ml-auto">
             {unreadRes?.data && unreadRes.data.count > 0 && (
               <Badge className="bg-rose-500 hover:bg-rose-600 text-white border-none rounded-xl h-6 px-3 text-[11px] font-black tabular-nums shadow-lg shadow-rose-500/20 animate-in zoom-in duration-300">
-                {unreadRes.data.count} unread
+                {t('message.ui.unreadCount', { count: unreadRes.data.count })}
               </Badge>
             )}
         </div>
@@ -416,6 +416,7 @@ export default function MessagesPage() {
       {/* CONTENT */}
       <Card className="flex-1 flex flex-col min-h-0 border rounded-[2rem] bg-card shadow-sm overflow-hidden">
         <div className="flex-1 overflow-auto custom-scrollbar">
+            <>
             {isLoading ? (
               <div className="flex flex-col items-center justify-center h-full p-24 space-y-4">
                 <RefreshCw className="h-8 w-8 animate-spin text-primary/40" />
@@ -446,32 +447,35 @@ export default function MessagesPage() {
               ))}
             </div>
           )}
+            </>
         </div>
 
         {totalPages > 1 && (
           <div className="px-6 py-3 border-t bg-muted/5 flex items-center justify-between">
             <p className="text-[10px] text-muted-foreground font-bold tracking-wide">
-              Showing {page * pageSize + 1} to {Math.min((page + 1) * pageSize, total)} of {total} messages 
+              {t('message.ui.showing', { start: page * pageSize + 1, end: Math.min((page + 1) * pageSize, total), total })}
             </p>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0 rounded-lg shadow-sm"
+                size="icon"
+                className="h-8 w-8 rounded-xl border-2"
                 onClick={() => setPage(p => Math.max(0, p - 1))}
                 disabled={page === 0}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <div className="bg-background border rounded-lg px-3 h-8 flex items-center text-[10px] font-black shadow-inner">
-                {page + 1} / {totalPages}
+              <div className="flex items-center gap-1 mx-2">
+                <span className="text-[11px] font-black">{page + 1}</span>
+                <span className="text-[11px] text-muted-foreground/40 font-bold">/</span>
+                <span className="text-[11px] text-muted-foreground/40 font-bold">{totalPages}</span>
               </div>
               <Button
                 variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0 rounded-lg shadow-sm"
+                size="icon"
+                className="h-8 w-8 rounded-xl border-2"
                 onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                disabled={page === totalPages - 1}
+                disabled={page >= totalPages - 1}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -480,86 +484,51 @@ export default function MessagesPage() {
         )}
       </Card>
 
-      {/* DETAIL DIALOG */}
       <Dialog open={!!selectedMessageId} onOpenChange={(open) => !open && setSelectedMessageId(null)}>
-        <DialogContent className="max-w-2xl overflow-hidden rounded-[2rem] p-0 border-none shadow-2xl">
-          {isDetailLoading && (
-            <div className="p-10 flex items-center justify-center gap-3 text-muted-foreground">
-              <RefreshCw className="h-5 w-5 animate-spin" />
-              <span className="text-sm font-medium">{t('message.ui.loading')}</span>
+        <DialogContent className="max-w-2xl p-0 border-none bg-transparent shadow-none overflow-visible">
+          {isDetailLoading ? (
+            <div className="bg-card rounded-[2.5rem] p-12 flex flex-col items-center justify-center space-y-4 border shadow-2xl">
+              <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
+              <p className="text-xs font-bold tracking-widest text-muted-foreground/40 uppercase">{t('message.ui.loadingDetail')}</p>
             </div>
-          )}
-
-          {detailRes && !detailRes.success && (
-            <div className="p-10">
-              <p className="text-base font-semibold">{t('message.ui.loadFailedTitle')}</p>
-              <p className="text-sm text-muted-foreground mt-2">{detailRes.error?.displayMessage || t('message.ui.loadFailedHint')}</p>
-              <div className="mt-6 flex justify-end">
-                <Button className="rounded-xl font-semibold" onClick={() => setSelectedMessageId(null)}>
-                  {t('message.ui.close')}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {detailRes?.success && detailRes.data && (
-            <div className="flex flex-col">
-              <div className="bg-primary/5 p-8 border-b relative">
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "h-14 w-14 rounded-2xl flex items-center justify-center shadow-inner",
-                    detailRes.data.kind === 'TASK' ? "bg-blue-500/10 text-blue-600" : "bg-primary/10 text-primary"
-                  )}>
-                    {getStatusIcon(detailRes.data.kind, detailRes.data.status)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <Badge variant="outline" className="mb-2 text-[8px] font-semibold tracking-wide bg-background/50">
-                      {t(`message.kind.${detailRes.data.kind}`)}
-                    </Badge>
-                    <DialogTitle className="text-xl font-bold tracking-tight">
-                      {renderMessage(detailRes.data).title}
-                    </DialogTitle>
-                    <div className="flex items-center gap-3 mt-1.5">
-                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold tracking-tight">
-                        <Clock className="h-3 w-3" />
+          ) : detailRes?.data && (
+            <div className="bg-card rounded-[2.5rem] p-8 border shadow-2xl space-y-8 animate-in zoom-in-95 duration-300">
+                <>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-primary/5 border shadow-sm">
+                      {getStatusIcon(detailRes.data.kind, detailRes.data.status)}
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold tracking-tight">{renderMessage(detailRes.data, t).title}</h2>
+                      <p className="text-[10px] font-black tracking-widest text-muted-foreground/40 uppercase mt-1">
                         {formatDateTime(detailRes.data.createdAt)}
-                      </div>
-                      {detailRes.data.status && (
-                        <Badge className={cn(
-                          "h-5 text-[9px] px-2 font-semibold border-none",
-                          detailRes.data.status === 'SUCCESS' ? "bg-emerald-500 text-white" :
-                          detailRes.data.status === 'FAILED' ? "bg-rose-500 text-white" :
-                          "bg-blue-500 text-white animate-pulse"
-                        )}>
-                          {t(`message.status.${detailRes.data.status}`)}
-                        </Badge>
-                      )}
+                      </p>
                     </div>
                   </div>
+                  <Badge 
+                    variant="outline" 
+                    className={cn(
+                      "h-7 px-3 rounded-xl font-bold text-[10px] tracking-wide",
+                      detailRes.data.readAt ? "bg-muted/30 text-muted-foreground" : "bg-emerald-50 text-emerald-600 border-emerald-100"
+                    )}
+                  >
+                    {detailRes.data.readAt ? t('message.ui.read') : t('message.ui.unread')}
+                  </Badge>
                 </div>
-              </div>
 
-              <div className="p-8 space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                <div className="space-y-3">
-                  <p className="text-[10px] font-semibold tracking-wide text-muted-foreground">{t('message.ui.summary')}</p>
-                  <p className="text-sm leading-relaxed text-foreground font-medium">
-                    {renderMessage(detailRes.data).summary}
-                  </p>
+                <div className="text-sm leading-relaxed text-foreground/80 font-medium bg-muted/20 p-6 rounded-[2rem] border-2 border-transparent">
+                  {renderMessage(detailRes.data, t).description || renderMessage(detailRes.data, t).summary}
                 </div>
 
+                {detailRes.data.type === 'export.task' && <ExportTaskDetails message={detailRes.data} />}
                 {detailRes.data.type === 'media.transcode' && (
-                  <TranscodeTaskDetails
-                    message={detailRes.data}
+                  <TranscodeTaskDetails 
+                    message={detailRes.data} 
                     sseConnected={sseConnected}
                     onOpenMediaLibrary={() => navigate('/dashboard/media')}
                     onRetry={(args) => retryTranscodeMutation.mutate(args)}
                     isRetrying={retryTranscodeMutation.isPending}
-                  />
-                )}
-
-                {detailRes.data.type?.startsWith('export.') && (
-                  <ExportTaskDetails
-                    message={detailRes.data}
                   />
                 )}
 
@@ -584,7 +553,7 @@ export default function MessagesPage() {
                                <Monitor className="h-4 w-4" />
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-[9px] font-semibold text-muted-foreground tracking-wide leading-none mb-1">Device</span>
+                              <span className="text-[9px] font-semibold text-muted-foreground tracking-wide leading-none mb-1">{t('message.ui.device')}</span>
                               <span className="text-xs font-bold truncate max-w-[150px]">
                                 {detailRes.data.deviceName}
                               </span>
@@ -609,7 +578,7 @@ export default function MessagesPage() {
                                <Layers className="h-4 w-4" />
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-[9px] font-semibold text-muted-foreground tracking-wide leading-none mb-1">Program</span>
+                              <span className="text-[9px] font-semibold text-muted-foreground tracking-wide leading-none mb-1">{t('message.ui.program')}</span>
                               <span className="text-xs font-bold truncate max-w-[150px]">
                                 {detailRes.data.programName}
                               </span>
@@ -634,9 +603,9 @@ export default function MessagesPage() {
                                <Image className="h-4 w-4" />
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-[9px] font-semibold text-muted-foreground tracking-wide leading-none mb-1">Media asset</span>
+                              <span className="text-[9px] font-semibold text-muted-foreground tracking-wide leading-none mb-1">{t('message.ui.mediaAsset')}</span>
                               <span className="text-xs font-bold truncate max-w-[150px]">
-                                {assetTitle || 'Media Resource'}
+                                {assetTitle || t('message.ui.mediaResource')}
                               </span>
                             </div>
                           </div>
@@ -711,7 +680,7 @@ export default function MessagesPage() {
                     {t('message.ui.dismiss')}
                   </Button>
                 </div>
-              </div>
+                </>
             </div>
           )}
         </DialogContent>
@@ -735,10 +704,10 @@ function ExportTaskDetails({ message }: { message: MessageDetail }) {
       if (res.success && res.data?.url) {
         window.open(res.data.url, '_blank');
       } else {
-        toast.error(res.error?.displayMessage || 'Failed to get download URL');
+        toast.error(res.error?.displayMessage || t('common.errors.unknown'));
       }
     } catch (e) {
-      toast.error('Failed to download');
+      toast.error(t('common.errors.unknown'));
     } finally {
       setIsDownloading(false);
     }
@@ -751,13 +720,13 @@ function ExportTaskDetails({ message }: { message: MessageDetail }) {
     try {
       const res = await deleteExport(exportId);
       if (res.success) {
-        toast.success('File deleted and quota released');
+        toast.success(t('message.ui.task.export.deleteSuccess'));
         // The message status will be updated via SSE (payload.stage=DELETED)
       } else {
-        toast.error(res.error?.displayMessage || 'Failed to delete file');
+        toast.error(res.error?.displayMessage || t('common.errors.unknown'));
       }
     } catch (e) {
-      toast.error('Failed to delete');
+      toast.error(t('common.errors.unknown'));
     } finally {
       setIsDeleting(false);
     }
@@ -765,15 +734,15 @@ function ExportTaskDetails({ message }: { message: MessageDetail }) {
 
   const stageLabelMap: Record<string, string> = {
     PENDING: t('message.status.PENDING'),
-    QUERYING: 'Querying data',
-    UPLOADING: 'Uploading result',
+    QUERYING: t('message.ui.task.export.querying'),
+    UPLOADING: t('message.ui.task.export.uploading'),
     SUCCESS: t('message.status.SUCCESS'),
     FAILED: t('message.status.FAILED'),
-    DELETED: 'Deleted'
+    DELETED: t('message.ui.task.export.deleted')
   };
 
   const stage = String(payload.stage || '');
-  const stageLabel = stageLabelMap[stage] || stage || 'Working';
+  const stageLabel = stageLabelMap[stage] || stage || t('message.ui.task.export.working');
 
   return (
     <div className="rounded-2xl border bg-muted/10 p-6 space-y-5">
@@ -837,7 +806,7 @@ function ExportTaskDetails({ message }: { message: MessageDetail }) {
 
       {stage === 'DELETED' && (
         <p className="text-[11px] text-muted-foreground/60 italic text-center py-2">
-          File has been removed to free up storage space.
+          {t('message.ui.task.export.deletedDesc')}
         </p>
       )}
     </div>
@@ -861,12 +830,12 @@ function TranscodeTaskDetails({
   const payload = message.payload || {};
 
   const stageLabelMap: Record<string, string> = {
-    PENDING: 'Queued',
-    DOWNLOADING: 'Preparing source',
-    TRANSCODING: 'Transcoding',
-    UPLOADING: 'Uploading output',
-    FINALIZING: 'Saving to library',
-    FAILED: 'Failed',
+    PENDING: t('message.ui.task.transcode.queued'),
+    DOWNLOADING: t('message.ui.task.transcode.preparing'),
+    TRANSCODING: t('message.ui.task.transcode.transcoding'),
+    UPLOADING: t('message.ui.task.transcode.uploading'),
+    FINALIZING: t('message.ui.task.transcode.finalizing'),
+    FAILED: t('message.ui.task.transcode.failed'),
   };
 
   const presetLabelMap: Record<string, string> = {
@@ -877,7 +846,7 @@ function TranscodeTaskDetails({
     mp4_h264: 'Native',
   };
 
-  const stageLabel = stageLabelMap[String(payload.stage || '')] || (payload.stage ? String(payload.stage) : 'Working');
+  const stageLabel = stageLabelMap[String(payload.stage || '')] || (payload.stage ? String(payload.stage) : t('message.ui.task.transcode.working'));
 
   const sourceTitle =
     typeof payload.source?.title === 'string' && payload.source.title.trim().length > 0 ? payload.source.title.trim() : undefined;
@@ -909,7 +878,7 @@ function TranscodeTaskDetails({
         <div className="min-w-0">
           <p className="text-sm font-semibold tracking-tight">{t('message.ui.task.transcode.title')}</p>
           <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-            {sourceTitle ? <span className="font-medium text-foreground/90">{sourceTitle}</span> : 'Media file'}
+            {sourceTitle ? <span className="font-medium text-foreground/90">{sourceTitle}</span> : t('message.ui.mediaFile')}
             {presetLabel ? <span className="text-muted-foreground"> · {presetLabel}</span> : null}
           </p>
         </div>

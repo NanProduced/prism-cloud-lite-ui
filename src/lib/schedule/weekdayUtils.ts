@@ -51,29 +51,30 @@ export function isDateAllowedByWeekday(date: Date, limitWeekday: boolean[] | nul
 /**
  * 将选中的后端索引数组格式化为可读字符串
  * @param selectedIndices 后端索引数组 (0-6)
- * @param locale 语言，默认 'en'
+ * @param t i18next translation function
  */
-export function formatWeekdaySelection(selectedIndices: number[], locale: 'en' | 'cn' = 'en'): string {
+export function formatWeekdaySelection(selectedIndices: number[], t?: any): string {
   if (selectedIndices.length === 0) return '—';
-  if (selectedIndices.length === 7) return locale === 'cn' ? '每天' : 'Every day';
-
-  const labels = locale === 'cn' ? BACKEND_WEEKDAY_LABELS_CN : BACKEND_WEEKDAY_LABELS;
+  if (selectedIndices.length === 7) return t ? t('schedules.weekdaySelector.everyDay') : 'Every day';
 
   // 检查是否是工作日 (Mon-Fri = 0,1,2,3,4)
   const workdays = [0, 1, 2, 3, 4];
   if (selectedIndices.length === 5 && workdays.every((d) => selectedIndices.includes(d))) {
-    return locale === 'cn' ? '周一至周五' : 'Mon - Fri';
+    return t ? t('schedules.weekdaySelector.monFri') : 'Mon - Fri';
   }
 
   // 检查是否是周末 (Sat-Sun = 5,6)
   const weekend = [5, 6];
   if (selectedIndices.length === 2 && weekend.every((d) => selectedIndices.includes(d))) {
-    return locale === 'cn' ? '周末' : 'Sat - Sun';
+    return t ? t('schedules.weekdaySelector.satSun') : 'Sat - Sun';
   }
 
   // 排序后显示
   const sorted = [...selectedIndices].sort((a, b) => a - b);
-  return sorted.map((i) => labels[i]).join(', ');
+  if (t) {
+    return sorted.map((i) => t(`schedules.weekdaySelector.labels.${i}`)).join(', ');
+  }
+  return sorted.map((i) => BACKEND_WEEKDAY_LABELS[i]).join(', ');
 }
 
 /**

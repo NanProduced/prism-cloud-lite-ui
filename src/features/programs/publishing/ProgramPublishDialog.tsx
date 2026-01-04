@@ -134,20 +134,20 @@ export function ProgramPublishDialog({
     mutationFn: (data: ProgramPublishReq) => publishProgram(program.id, data),
     onSuccess: (res) => {
       const syncMsg = plan.counts.pendingSync > 0 
-        ? `. ${plan.counts.pendingSync} devices will sync when online.` 
+        ? t('program.publish.toasts.pendingSync', { count: plan.counts.pendingSync })
         : '';
       const canCleanupDraft = res.data && res.data.version != null && cleanupDraftId && versionMode === 'CREATE';
-      toast.success(`Published to ${res.data?.results.length || 0} devices${syncMsg}`, {
+      toast.success(t('program.publish.toasts.published', { count: res.data?.results.length || 0 }) + syncMsg, {
         action: canCleanupDraft
           ? {
-              label: 'Delete draft',
+              label: t('programEditor.dialogs.unsaved.discard'),
               onClick: () => {
                 void (async () => {
                   try {
                     await deleteProgramDraft(program.id, cleanupDraftId);
                     queryClient.invalidateQueries({ queryKey: ['programs'] });
                     queryClient.invalidateQueries({ queryKey: ['programs', program.id] });
-                    toast.success('Draft deleted');
+                    toast.success(t('programs.details.toasts.draftDeleted'));
                   } catch (err) {
                     toast.error(getErrorMessage(err));
                   }
@@ -322,7 +322,7 @@ export function ProgramPublishDialog({
     const finalDraftId = preferredDraftId ?? selectedDraftId;
 
     if (!finalVsnJson && !finalDraftId) {
-      toast.error('No draft snapshot found. Please open the editor to create a draft, then publish again.');
+      toast.error(t('program.publish.toasts.noDraft'));
       return;
     }
 
@@ -369,7 +369,7 @@ export function ProgramPublishDialog({
                <div className="flex items-center justify-between mb-8">
                  <PublishStepper currentStep={step} />
                  <div className="text-[10px] font-bold text-muted-foreground tracking-widest opacity-40">
-                   Step {step + 1} of 3
+                   {t('program.publish.stepOf', { current: step + 1, total: 3 })}
                  </div>
                </div>
                
@@ -426,7 +426,7 @@ export function ProgramPublishDialog({
                {/* Action Footer */}
                <div className="mt-6 flex items-center justify-between pt-6 border-t bg-background/50 backdrop-blur-sm">
                   <Button variant="ghost" onClick={step === 0 ? close : () => setStep(s => s - 1)} className="px-6 font-bold h-10">
-                    {step === 0 ? 'Cancel' : 'Previous Step'}
+                    {step === 0 ? t('common.actions.cancel') : t('program.publish.actions.previous')}
                   </Button>
                   <Button 
                     onClick={step === 2 ? onConfirm : () => setStep(s => s + 1)} 
@@ -434,11 +434,11 @@ export function ProgramPublishDialog({
                     className="px-10 font-bold gap-2 h-10 shadow-lg shadow-primary/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
                   >
                     {publishMutation.isPending ? (
-                      <><RefreshCw className="h-4 w-4 animate-spin" /> Processing...</>
+                      <><RefreshCw className="h-4 w-4 animate-spin" /> {t('program.publish.actions.processing')}</>
                     ) : step === 2 ? (
-                      <><ShieldCheck className="h-4 w-4" /> Finalize & Deploy</>
+                      <><ShieldCheck className="h-4 w-4" /> {t('program.publish.actions.finalize')}</>
                     ) : (
-                      <>Continue <ChevronRight className="h-4 w-4" /></>
+                      <>{t('program.publish.actions.continue')} <ChevronRight className="h-4 w-4" /></>
                     )}
                   </Button>
                </div>
@@ -448,17 +448,17 @@ export function ProgramPublishDialog({
             <div className="w-[360px] bg-muted/5 flex flex-col p-6">
                <div className="flex items-center gap-2 mb-6">
                   <History className="h-3.5 w-3.5 text-muted-foreground" />
-                  <h3 className="text-[10px] font-bold tracking-widest text-muted-foreground opacity-60">Execution Plan</h3>
+                  <h3 className="text-[10px] font-bold tracking-widest text-muted-foreground opacity-60">{t('program.publish.sidebar.plan')}</h3>
                </div>
                
                <div className="flex-1 space-y-8 flex flex-col min-h-0">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="p-4 rounded-2xl bg-background border shadow-sm flex flex-col items-center">
-                       <p className="text-[9px] font-bold text-muted-foreground mb-1 tracking-wider opacity-60">Targets</p>
+                       <p className="text-[9px] font-bold text-muted-foreground mb-1 tracking-wider opacity-60">{t('program.publish.sidebar.targets')}</p>
                        <p className="text-2xl font-black tabular-nums">{baseTargetDeviceIds.length}</p>
                     </div>
                     <div className="p-4 rounded-2xl bg-background border shadow-sm flex flex-col items-center">
-                       <p className="text-[9px] font-bold text-muted-foreground mb-1 tracking-wider opacity-60">Release</p>
+                       <p className="text-[9px] font-bold text-muted-foreground mb-1 tracking-wider opacity-60">{t('program.publish.sidebar.release')}</p>
                        <p className="text-2xl font-black tabular-nums text-primary">v{plan.targetVersion}</p>
                     </div>
                   </div>
@@ -467,43 +467,18 @@ export function ProgramPublishDialog({
 
                   <div className="flex-1 flex flex-col min-h-0">
                      <div className="flex items-center justify-between mb-3 px-1">
-                        <p className="text-[10px] font-bold text-muted-foreground tracking-wider opacity-60">Device Queue</p>
+                        <p className="text-[10px] font-bold text-muted-foreground tracking-wider opacity-60">{t('program.publish.sidebar.queue')}</p>
                         <Badge variant="secondary" className="h-4 text-[9px] font-black px-1.5">{selectedDeviceIds.size}</Badge>
                      </div>
-                     <ScrollArea className="flex-1 -mx-2 px-2 scrollbar-thin">
-                        <div className="space-y-2 pb-8">
-                           {selectedDevices.map((d) => (
-                              <div key={d.deviceId} className="group relative p-3 rounded-xl border bg-background shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
-                                 <p className="text-xs font-bold truncate pr-6 leading-tight tracking-tight">{d.alias || d.deviceName}</p>
-                                 <div className="flex items-center gap-3 mt-2">
-                                    <div className="flex items-center gap-1.5">
-                                       <div className={cn("w-1.5 h-1.5 rounded-full", d.status === 'online' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "bg-zinc-300")} />
-                                       <span className="text-[9px] font-bold text-muted-foreground/60 tracking-tighter">{d.status}</span>
-                                    </div>
-                                    <div className="h-2.5 w-px bg-muted" />
-                                    <span className="text-[9px] font-mono text-muted-foreground/40">{formatDeviceId(d.deviceId)}</span>
-                                 </div>
-                                 <button 
-                                    onClick={() => setSelectedDeviceIds(prev => {
-                                      const n = new Set(prev);
-                                      n.delete(d.deviceId);
-                                      return n;
-                                    })}
-                                    className="absolute right-2 top-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all"
-                                 >
-                                    <X className="h-3 w-3" />
-                                 </button>
-                              </div>
-                           ))}
+                     <ScrollArea className="flex-1">
                            {selectedDeviceIds.size === 0 && (
                              <div className="py-32 text-center flex flex-col items-center gap-4 opacity-10 grayscale">
                                 <div className="p-4 rounded-full border-2 border-dashed">
                                    <Monitor className="h-10 w-10" />
                                 </div>
-                                <p className="text-[10px] font-bold tracking-widest leading-relaxed">Initialize queue<br/>to continue</p>
+                                <p className="text-[10px] font-bold tracking-widest leading-relaxed">{t('program.publish.sidebar.initialize')}</p>
                              </div>
                            )}
-                        </div>
                      </ScrollArea>
                   </div>
                </div>
@@ -591,7 +566,7 @@ function DeviceSelectStep({
              <Input 
                 value={deviceQuery} 
                 onChange={(e) => onDeviceQueryChange(e.target.value)} 
-                placeholder="Search nodes by name, ID or IP..." 
+                placeholder={t('program.publish.filter.searchPlaceholder')} 
                 className="pl-10 h-11 bg-muted/20 border-border focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary/50 transition-all rounded-xl"
              />
           </div>
@@ -603,7 +578,7 @@ function DeviceSelectStep({
               return next;
             });
           }}>
-            {allSelected ? <><X className="h-3.5 w-3.5" /> Deselect All</> : <><Check className="h-3.5 w-3.5" /> Select Visible</>}
+            {allSelected ? <><X className="h-3.5 w-3.5" /> {t('program.publish.actions.deselectAll')}</> : <><Check className="h-3.5 w-3.5" /> {t('program.publish.actions.selectVisible')}</>}
           </Button>
        </div>
 
@@ -618,13 +593,13 @@ function DeviceSelectStep({
                   onClick={() => onTagMatchModeChange('any')}
                   className={cn("px-2 py-1 text-[9px] font-black rounded-md transition-all", tagMatchMode === 'any' ? "bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.02]" : "text-muted-foreground/40 hover:text-muted-foreground")}
                 >
-                  ANY
+                  {t('program.publish.filter.any')}
                 </button>
                 <button 
                   onClick={() => onTagMatchModeChange('all')}
                   className={cn("px-2 py-1 text-[9px] font-black rounded-md transition-all", tagMatchMode === 'all' ? "bg-background text-foreground shadow-sm ring-1 ring-foreground/[0.02]" : "text-muted-foreground/40 hover:text-muted-foreground")}
                 >
-                  ALL
+                  {t('program.publish.filter.all')}
                 </button>
              </div>
           </div>
@@ -787,13 +762,13 @@ interface StrategyStepProps {
 
 function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, program, createDraft, createVsnJsonProvided, isFromEditor, existingVersion, onExistingVersionChange, latest, scope, onScopeChange, selectedCount, deployments, mode, onModeChange, lockVersionMode }: StrategyStepProps) {
   const { t } = useTranslation();
-  const draftBaseLabel = createDraft?.baseVersion == null || createDraft?.baseVersion === 0 ? 'Blank' : `v${createDraft?.baseVersion}`;
-  const draftSourceLabel = isFromEditor ? 'current editor draft' : 'latest saved draft';
+  const draftBaseLabel = createDraft?.baseVersion == null || createDraft?.baseVersion === 0 ? t('programEditor.header.blank') : `v${createDraft?.baseVersion}`;
+  const draftSourceLabel = isFromEditor ? t('programEditor.header.saveStatus.unsaved') : t('programEditor.header.saveStatus.saved');
   const draftHint = createVsnJsonProvided
-    ? 'current editor snapshot'
+    ? t('programEditor.header.saveStatus.saving')
     : createDraft
-      ? `${draftSourceLabel} · base ${draftBaseLabel}`
-      : 'No draft snapshot available · open editor to create one';
+      ? `${draftSourceLabel} · ${t('programEditor.panels.inspector.labels.loopType')} ${draftBaseLabel}`
+      : t('program.publish.strategy.requiresDraft');
 
   const canUseExisting = (program.versions?.length || 0) > 0;
   const canCreate = createVsnJsonProvided || Boolean(createDraft);
@@ -806,7 +781,7 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
        <div className="space-y-5">
           <div className="flex items-center justify-between px-1">
              <h4 className="text-[11px] font-bold tracking-widest text-muted-foreground flex items-center gap-3">
-                <div className="h-1 w-6 bg-primary rounded-full" /> Lifecycle Control
+                <div className="h-1 w-6 bg-primary rounded-full" /> {t('program.publish.strategy.lifecycle')}
              </h4>
              <Badge variant="outline" className="font-mono text-[10px] opacity-30 border-dashed">VCS: Active</Badge>
           </div>
@@ -844,7 +819,7 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
                         canCreate ? "bg-primary text-white shadow-primary/20" : "bg-muted text-muted-foreground shadow-none",
                       )}
                     >
-                      {canCreate ? 'Release' : 'Requires draft'}
+                      {canCreate ? t('program.publish.strategy.release') : t('program.publish.strategy.requiresDraft')}
                     </div>
                  </div>
               </div>
@@ -882,7 +857,7 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
                       disabled={versionMode !== 'EXISTING'}
                    >
                       <SelectTrigger className="w-full h-12 text-xs font-bold px-4 bg-muted/60 border-0 shadow-inner rounded-xl">
-                         <SelectValue placeholder="Select version" />
+                         <SelectValue placeholder={t('program.publish.strategy.selectVersion')} />
                       </SelectTrigger>
                       <SelectContent>
                          {[...(program.versions || [])].reverse().map(v => (
@@ -900,21 +875,21 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
 
        <div className="space-y-6 pt-10 border-t border-dashed">
           <h4 className="text-[11px] font-bold tracking-widest text-muted-foreground flex items-center gap-3 px-1">
-             <div className="h-1 w-6 bg-emerald-500 rounded-full" /> Traffic Distribution
+             <div className="h-1 w-6 bg-emerald-500 rounded-full" /> {t('program.publish.strategy.traffic')}
           </h4>
           <div className="grid grid-cols-2 gap-12">
              <div className="space-y-4">
-                <span className="text-[10px] font-bold text-muted-foreground/60 tracking-widest ml-2">Endpoint Selection</span>
+                <span className="text-[10px] font-bold text-muted-foreground/60 tracking-widest ml-2">{t('program.publish.strategy.endpoint')}</span>
                 <div className="flex p-1.5 bg-muted/40 rounded-2xl gap-1.5 ring-1 ring-inset ring-foreground/5 shadow-inner">
-                   <button onClick={() => onScopeChange('SELECTED')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-bold transition-all tracking-widest", scope === 'SELECTED' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground")}>Queue ({selectedCount})</button>
-                   <button disabled={deployments.length === 0} onClick={() => onScopeChange('RUNNING')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-bold transition-all tracking-widest", scope === 'RUNNING' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground", deployments.length === 0 && "opacity-20 cursor-not-allowed")}>Active ({deployments.length})</button>
+                   <button onClick={() => onScopeChange('SELECTED')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-bold transition-all tracking-widest", scope === 'SELECTED' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground")}>{t('program.publish.strategy.queue')} ({selectedCount})</button>
+                   <button disabled={deployments.length === 0} onClick={() => onScopeChange('RUNNING')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-bold transition-all tracking-widest", scope === 'RUNNING' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground", deployments.length === 0 && "opacity-20 cursor-not-allowed")}>{t('program.publish.strategy.active')} ({deployments.length})</button>
                 </div>
              </div>
              <div className="space-y-4">
-                <span className="text-[10px] font-bold text-muted-foreground/60 tracking-widest ml-2">Override Protocol</span>
+                <span className="text-[10px] font-bold text-muted-foreground/60 tracking-widest ml-2">{t('program.publish.strategy.override')}</span>
                 <div className="flex p-1.5 bg-muted/40 rounded-2xl gap-1.5 ring-1 ring-inset ring-foreground/5 shadow-inner">
-                   <button disabled={scope === 'RUNNING'} onClick={() => onModeChange('APPEND')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-bold transition-all tracking-widest", mode === 'APPEND' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground", scope === 'RUNNING' && "opacity-20 cursor-not-allowed")}>Append</button>
-                   <button onClick={() => onModeChange('OVERWRITE')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-bold transition-all tracking-widest", mode === 'OVERWRITE' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground")}>Overwrite</button>
+                   <button disabled={scope === 'RUNNING'} onClick={() => onModeChange('APPEND')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-bold transition-all tracking-widest", mode === 'APPEND' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground", scope === 'RUNNING' && "opacity-20 cursor-not-allowed")}>{t('program.publish.strategy.append')}</button>
+                   <button onClick={() => onModeChange('OVERWRITE')} className={cn("flex-1 py-3 rounded-xl text-[10px] font-bold transition-all tracking-widest", mode === 'OVERWRITE' ? "bg-background shadow-lg text-foreground scale-[1.02]" : "text-muted-foreground/60 hover:text-muted-foreground")}>{t('program.publish.strategy.overwrite')}</button>
                 </div>
              </div>
           </div>
@@ -932,6 +907,7 @@ function StrategyStep({ versionMode, onVersionModeChange, predictedNewVersion, p
 
 function ReviewStep({ plan, devices }: { plan: any; devices: Device[] }) {
   const deviceById = useMemo(() => new Map(devices.map((d) => [d.deviceId, d])), [devices]);
+  const { t } = useTranslation();
   
   return (
     <div className="h-full flex flex-col gap-8 animate-in fade-in zoom-in-95 duration-500 py-2">
@@ -940,33 +916,33 @@ function ReviewStep({ plan, devices }: { plan: any; devices: Device[] }) {
              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
                 <ShieldCheck className="h-14 w-14 text-emerald-500" />
              </div>
-             <p className="text-[10px] font-bold text-emerald-700/50 mb-2 tracking-widest">Active Push</p>
+             <p className="text-[10px] font-bold text-emerald-700/50 mb-2 tracking-widest">{t('program.publish.review.activePush')}</p>
              <p className="text-4xl font-black tabular-nums tracking-tighter text-emerald-700">{plan.counts.deploy + plan.counts.update + plan.counts.rollback}</p>
-             <p className="text-[9px] font-bold text-emerald-600/40 mt-1">Nodes updating</p>
+             <p className="text-[9px] font-bold text-emerald-600/40 mt-1">{t('program.publish.review.nodesUpdating')}</p>
           </div>
           <div className="p-7 rounded-[2.5rem] bg-primary/[0.03] border-2 border-primary/10 shadow-sm relative overflow-hidden group hover:border-primary/30 transition-all">
              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
                 <Database className="h-14 w-14 text-primary" />
              </div>
-             <p className="text-[10px] font-bold text-primary/50 mb-2 tracking-widest">Target State</p>
+             <p className="text-[10px] font-bold text-primary/50 mb-2 tracking-widest">{t('program.publish.review.targetState')}</p>
              <p className="text-4xl font-black tabular-nums tracking-tighter text-primary">v{plan.targetVersion}</p>
-             <p className="text-[9px] font-bold text-primary/40 mt-1">Production Rev</p>
+             <p className="text-[9px] font-bold text-primary/40 mt-1">{t('program.publish.review.productionRev')}</p>
           </div>
           <div className="p-7 rounded-[2.5rem] bg-amber-500/[0.03] border-2 border-amber-500/10 shadow-sm relative overflow-hidden group hover:border-amber-500/30 transition-all">
              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
                 <Clock className="h-14 w-14 text-amber-500" />
              </div>
-             <p className="text-[10px] font-bold text-amber-700/50 mb-2 tracking-widest">Async Sync</p>
+             <p className="text-[10px] font-bold text-amber-700/50 mb-2 tracking-widest">{t('program.publish.review.asyncSync')}</p>
              <p className="text-4xl font-black tabular-nums tracking-tighter text-amber-700">{plan.counts.pendingSync}</p>
-             <p className="text-[9px] font-bold text-emerald-600/40 mt-1">Pending Recon</p>
+             <p className="text-[9px] font-bold text-emerald-600/40 mt-1">{t('program.publish.review.pendingRecon')}</p>
           </div>
        </div>
 
        <div className="flex-1 border-2 border-muted rounded-[2.5rem] bg-muted/5 overflow-hidden flex flex-col shadow-inner relative">
           <div className="flex items-center gap-4 px-12 py-4 bg-muted/20 text-[10px] font-bold tracking-widest text-muted-foreground/60 border-b">
-             <span className="flex-1">Hardware Device</span>
-             <span className="w-44 text-center">Version Transition</span>
-             <span className="w-24 text-right">Status</span>
+             <span className="flex-1">{t('program.publish.review.device')}</span>
+             <span className="w-44 text-center">{t('program.publish.review.transition')}</span>
+             <span className="w-24 text-right">{t('program.publish.review.status')}</span>
           </div>
           <ScrollArea className="flex-1">
              <div className="divide-y divide-foreground/[0.04] px-4">
@@ -997,7 +973,7 @@ function ReviewStep({ plan, devices }: { plan: any; devices: Device[] }) {
                           <Badge className={cn(
                             "text-[8px] font-bold tracking-[0.1em] px-2.5 h-5.5 border-0 shadow-sm",
                             row.action === 'deploy' ? "bg-emerald-500 text-white" : row.action === 'rollback' ? "bg-amber-500 text-white" : row.action === 'update' ? "bg-primary text-white" : "bg-muted text-muted-foreground"
-                          )}>{row.action === 'no-change' ? 'Synced' : row.action}</Badge>
+                          )}>{row.action === 'no-change' ? t('program.publish.review.synced') : row.action}</Badge>
                        </div>
                     </div>
                   );

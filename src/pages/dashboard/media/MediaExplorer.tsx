@@ -131,7 +131,7 @@ export function MediaExplorer({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['media', 'nodes'] });
       queryClient.invalidateQueries({ queryKey: ['media', 'usage'] });
-      toast.success('Deleted successfully');
+      toast.success(t('media.explorer.toasts.deleteSuccess'));
     },
     onError: (error) => {
       toast.error(getErrorMessage(error as any));
@@ -142,7 +142,7 @@ export function MediaExplorer({
     mutationFn: ({ id, name }: { id: string; name: string }) => renameNode(id, name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['media', 'nodes'] });
-      toast.success('Renamed successfully');
+      toast.success(t('media.explorer.toasts.renameSuccess'));
     },
     onError: (error) => {
       toast.error(getErrorMessage(error as any));
@@ -155,7 +155,7 @@ export function MediaExplorer({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['media', 'nodes'] });
       queryClient.invalidateQueries({ queryKey: ['media', 'folders'] });
-      toast.success('Items moved successfully');
+      toast.success(t('media.explorer.toasts.moveSuccess'));
     },
     onError: (error) => {
       toast.error(getErrorMessage(error as any));
@@ -184,7 +184,7 @@ export function MediaExplorer({
     if (action === 'Preview') {
       if (node.type !== 'asset') return;
       if (!supportsAssetPreview(node)) {
-        toast.message('Preview is not available for this file type yet.');
+        toast.message(t('media.explorer.toasts.previewNotAvailable'));
         return;
       }
       setPreviewAsset(node);
@@ -269,7 +269,7 @@ export function MediaExplorer({
               className="h-9 w-9 rounded-lg"
               disabled={!currentFolder}
               onClick={() => onFolderChange(currentFolder?.parentId ?? null)}
-              title="Back"
+              title={t('common.actions.back')}
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -280,7 +280,7 @@ export function MediaExplorer({
                 className="h-9 px-2 text-sm font-medium"
                 onClick={() => onFolderChange(null)}
               >
-                Library
+                {t('media.explorer.breadcrumbRoot')}
               </Button>
               {currentPath.map((segment) => (
                 <div key={segment.id} className="flex items-center gap-1">
@@ -311,21 +311,21 @@ export function MediaExplorer({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="justify-between gap-2">
-                  {t('common.filter')}: {formatFilterLabel(filter, t)}
+                  {t('media.explorer.filter.label')}: {formatFilterLabel(filter, t)}
                   <ChevronRight className="h-4 w-4 rotate-90 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>{t('common.view')}</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('common.actions.view')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {(
                   [
-                    ['all', t('common.all')],
-                    ['folders', 'Folders'],
-                    ['image', 'Images'],
-                    ['video', 'Videos'],
-                    ['document', 'Documents'],
-                    ['other', 'Other files'],
+                    ['all', t('media.explorer.filter.all')],
+                    ['folders', t('media.explorer.filter.folders')],
+                    ['image', t('media.explorer.filter.image')],
+                    ['video', t('media.explorer.filter.video')],
+                    ['document', t('media.explorer.filter.document')],
+                    ['other', t('media.explorer.filter.other')],
                   ] as const
                 ).map(([value, label]) => (
                   <DropdownMenuItem
@@ -342,18 +342,18 @@ export function MediaExplorer({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="justify-between gap-2">
-                  {t('common.sort')}: {formatSortLabel(sort, t)}
+                  {t('media.explorer.sort.label')}: {formatSortLabel(sort, t)}
                   <ChevronRight className="h-4 w-4 rotate-90 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>{t('common.sort')}</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('media.explorer.sort.label')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {(
                   [
-                    ['updatedAt', t('common.sort')],
-                    ['name', 'Name (A → Z)'],
-                    ['size', 'Size (largest)'],
+                    ['updatedAt', t('media.explorer.sort.updatedAt')],
+                    ['name', t('media.explorer.sort.name')],
+                    ['size', t('media.explorer.sort.size')],
                   ] as const
                 ).map(([value, label]) => (
                   <DropdownMenuItem
@@ -370,21 +370,21 @@ export function MediaExplorer({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="justify-between gap-2">
-                  {t('common.view')}: {formatViewModeLabel(viewMode, t)}
+                  {t('media.explorer.view.label')}: {formatViewModeLabel(viewMode, t)}
                   <ChevronRight className="h-4 w-4 rotate-90 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Layout</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('media.explorer.view.label')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuRadioGroup value={viewMode} onValueChange={handleViewModeChange}>
                   <DropdownMenuRadioItem value="thumbnails">
                     <LayoutGrid className="h-4 w-4" />
-                    Thumbnails
+                    {t('media.explorer.view.thumbnails')}
                   </DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="list">
                     <List className="h-4 w-4" />
-                    List
+                    {t('media.explorer.view.list')}
                   </DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
               </DropdownMenuContent>
@@ -392,12 +392,12 @@ export function MediaExplorer({
 
             <Button variant="outline" className="gap-2" onClick={() => onRequestCreateFolder(currentFolderId)}>
               <FolderPlus className="h-4 w-4" />
-              New Folder
+              {t('media.explorer.actions.newFolder')}
             </Button>
 
             <Button className="gap-2" onClick={onRequestUpload}>
               <Upload className="h-4 w-4" />
-              Upload
+              {t('media.explorer.actions.upload')}
             </Button>
           </div>
         </div>
@@ -410,14 +410,14 @@ export function MediaExplorer({
               <Folder className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-sm font-medium">This folder is empty</p>
-              <p className="mt-1 text-xs text-muted-foreground">Upload new assets or create a folder to get started.</p>
+              <p className="text-sm font-medium">{t('media.explorer.empty.title')}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t('media.explorer.empty.description')}</p>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={() => onRequestCreateFolder(currentFolderId)}>
-                New Folder
+                {t('media.explorer.actions.newFolder')}
               </Button>
-              <Button onClick={onRequestUpload}>Upload</Button>
+              <Button onClick={onRequestUpload}>{t('media.explorer.actions.upload')}</Button>
             </div>
           </div>
         ) : (
@@ -434,14 +434,15 @@ export function MediaExplorer({
                   {isLoadingMore ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Loading...
+                      {t('common.actions.refresh')}...
                     </>
                   ) : (
-                    'Load More'
+                    t('media.explorer.actions.loadMore')
                   )}
                 </Button>
               </div>
             )}
+
           </>
         )}
         </CardContent>
@@ -478,12 +479,14 @@ export function MediaExplorer({
               <Pencil className="h-6 w-6" />
             </div>
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold tracking-tight">Rename Item</DialogTitle>
-              <DialogDescription className="text-sm pt-2">Enter a new name for this {renameTarget?.type === 'folder' ? 'folder' : 'asset'}.</DialogDescription>
+              <DialogTitle>{t('media.dialogs.rename.title')}</DialogTitle>
+              <DialogDescription className="text-sm pt-2">
+                {t('media.dialogs.rename.desc', { type: renameTarget?.type === 'folder' ? t('media.dialogs.rename.folder') : t('media.dialogs.rename.asset') })}
+              </DialogDescription>
             </DialogHeader>
             <form className="mt-8 space-y-6" onSubmit={(e) => { e.preventDefault(); handleRenameSubmit(); }}>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60" htmlFor="media-rename-name">New Name</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60" htmlFor="media-rename-name">{t('media.dialogs.rename.label')}</label>
                 <Input 
                   id="media-rename-name" 
                   value={renameValue} 
@@ -493,9 +496,9 @@ export function MediaExplorer({
                 />
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="ghost" onClick={() => setRenameOpen(false)} className="font-bold text-xs uppercase tracking-widest px-8">Cancel</Button>
+                <Button type="button" variant="ghost" onClick={() => setRenameOpen(false)} className="font-bold text-xs uppercase tracking-widest px-8">{t('common.actions.cancel')}</Button>
                 <Button type="submit" disabled={renameMutation.isPending} className="font-bold text-xs uppercase tracking-widest px-10 h-11 shadow-xl">
-                  {renameMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-2" />} Save
+                  {renameMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-2" />} {t('common.actions.save')}
                 </Button>
               </div>
             </form>
@@ -510,22 +513,22 @@ export function MediaExplorer({
               <Trash2 className="h-6 w-6" />
             </div>
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-xl font-bold tracking-tight">Delete Permanently?</AlertDialogTitle>
+              <AlertDialogTitle className="text-xl font-bold tracking-tight">{t('media.dialogs.delete.title')}</AlertDialogTitle>
               <AlertDialogDescription className="text-sm pt-2 space-y-4">
-                <span className="block">This action cannot be undone. You are about to permanently delete:</span>
+                <span className="block">{t('media.dialogs.delete.desc')}</span>
                 <span className="block rounded-xl bg-destructive/5 border border-destructive/10 p-4 font-bold text-destructive text-base truncate">
                   {nodeToDelete?.name}
                 </span>
-                <span className="block">Removing this will free up space but it cannot be recovered.</span>
+                <span className="block">{t('media.dialogs.delete.descNote')}</span>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="mt-8 gap-3">
-              <AlertDialogCancel className="font-bold text-xs uppercase tracking-widest px-8">Cancel</AlertDialogCancel>
+              <AlertDialogCancel className="font-bold text-xs uppercase tracking-widest px-8">{t('common.actions.cancel')}</AlertDialogCancel>
               <AlertDialogAction 
                 onClick={() => nodeToDelete && deleteMutation.mutate(nodeToDelete.id)}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold text-xs uppercase tracking-widest px-10 h-10 shadow-xl shadow-destructive/20"
               >
-                Delete
+                {t('common.actions.delete')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </div>
@@ -665,8 +668,8 @@ function MediaNodeListRow({
     else onAction('Preview', node);
   };
 
-  const subtitleMobile = formatListMobileSubtitle(node, formatRelative);
-  const subtitleDesktop = formatListDesktopSubtitle(node);
+  const subtitleMobile = formatListMobileSubtitle(node, formatRelative, t);
+  const subtitleDesktop = formatListDesktopSubtitle(node, t);
 
   const leadingVisual =
     node.type === 'asset' && node.coverUrl ? (
@@ -718,7 +721,7 @@ function MediaNodeListRow({
       </div>
 
       <div className="hidden items-center gap-3 text-xs text-muted-foreground sm:flex">
-        <span className="tabular-nums">{node.type === 'asset' ? formatBytes(node.sizeBytes) : 'Folder'}</span>
+        <span className="tabular-nums">{node.type === 'asset' ? formatBytes(node.sizeBytes) : t('media.explorer.filter.folders')}</span>
         {node.type !== 'folder' && <span className="tabular-nums">{formatRelative(node.updatedAt)}</span>}
       </div>
 
@@ -753,15 +756,15 @@ function MediaNodeActionsMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuLabel>{t('common.actions.view')}</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {canPreview ? <DropdownMenuItem onClick={() => onAction('Preview', node)}>Preview</DropdownMenuItem> : null}
-        <DropdownMenuItem onClick={() => onAction('Rename', node)}>Rename</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onAction('Move', node)}>Move</DropdownMenuItem>
-        {canTranscode ? <DropdownMenuItem onClick={() => onAction('Transcode', node)}>Transcode</DropdownMenuItem> : null}
+        {canPreview ? <DropdownMenuItem onClick={() => onAction('Preview', node)}>{t('media.explorer.actions.preview')}</DropdownMenuItem> : null}
+        <DropdownMenuItem onClick={() => onAction('Rename', node)}>{t('media.explorer.actions.rename')}</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAction('Move', node)}>{t('media.explorer.actions.move')}</DropdownMenuItem>
+        {canTranscode ? <DropdownMenuItem onClick={() => onAction('Transcode', node)}>{t('media.explorer.actions.transcode')}</DropdownMenuItem> : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem className="text-rose-600" onClick={() => onAction('Delete', node)}>
-          Delete
+          {t('media.explorer.actions.delete')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -788,37 +791,37 @@ function getThumbnailMetaLines(node: MediaNode, formatRelative: (d: string) => s
   return [`${ext} · ${formatBytes(node.sizeBytes)}`, formatRelative(node.updatedAt)];
 }
 
-function formatDetailsTypeLabel(node: MediaNode): string {
-  if (node.type === 'folder') return 'Folder';
-  if (node.assetKind === 'video') return 'Video';
-  if (node.assetKind === 'image') return 'Image';
-  if (node.assetKind === 'document') return 'Document';
-  return 'File';
+function formatDetailsTypeLabel(node: MediaNode, t: TFunction): string {
+  if (node.type === 'folder') return t('media.explorer.filter.folders');
+  if (node.assetKind === 'video') return t('media.explorer.filter.video');
+  if (node.assetKind === 'image') return t('media.explorer.filter.image');
+  if (node.assetKind === 'document') return t('media.explorer.filter.document');
+  return t('media.explorer.filter.other');
 }
 
-function formatDetailsSubtitle(node: MediaNode): string {
-  if (node.type === 'folder') return 'Folder';
+function formatDetailsSubtitle(node: MediaNode, t: TFunction): string {
+  if (node.type === 'folder') return t('media.explorer.filter.folders');
 
   if (node.assetKind === 'video') {
     const duration = node.durationMs ? formatDuration(node.durationMs) : undefined;
     const dims = node.width && node.height ? `${node.width}×${node.height}` : undefined;
-    return [duration, dims].filter(Boolean).join(' · ') || 'Video';
+    return [duration, dims].filter(Boolean).join(' · ') || t('media.explorer.filter.video');
   }
 
   if (node.assetKind === 'image') {
     const dims = node.width && node.height ? `${node.width}×${node.height}` : undefined;
-    return [dims, node.extension?.toUpperCase()].filter(Boolean).join(' · ') || 'Image';
+    return [dims, node.extension?.toUpperCase()].filter(Boolean).join(' · ') || t('media.explorer.filter.image');
   }
 
   const ext = node.extension?.toUpperCase();
-  return [ext, node.mimeType].filter(Boolean).join(' · ') || 'File';
+  return [ext, node.mimeType].filter(Boolean).join(' · ') || t('media.explorer.filter.other');
 }
 
-function formatListMobileSubtitle(node: MediaNode, formatRelative: (d: string) => string): string {
-  if (node.type === 'folder') return 'Folder';
+function formatListMobileSubtitle(node: MediaNode, formatRelative: (d: string) => string, t: TFunction): string {
+  if (node.type === 'folder') return t('media.explorer.filter.folders');
 
   const parts: string[] = [];
-  parts.push(formatDetailsTypeLabel(node));
+  parts.push(formatDetailsTypeLabel(node, t));
   parts.push(formatBytes(node.sizeBytes));
 
   if (node.assetKind === 'video' && node.durationMs) parts.push(formatDuration(node.durationMs));
@@ -833,9 +836,9 @@ function formatListMobileSubtitle(node: MediaNode, formatRelative: (d: string) =
   return parts.join(' · ');
 }
 
-function formatListDesktopSubtitle(node: MediaNode): string {
-  if (node.type === 'folder') return 'Folder';
-  return formatDetailsSubtitle(node);
+function formatListDesktopSubtitle(node: MediaNode, t: TFunction): string {
+  if (node.type === 'folder') return t('media.explorer.filter.folders');
+  return formatDetailsSubtitle(node, t);
 }
 
 function supportsAssetPreview(node: MediaNode): node is MediaAssetNode {
@@ -874,40 +877,40 @@ function sortNodes(nodes: MediaNode[], sort: MediaSort): MediaNode[] {
 function formatFilterLabel(filter: MediaFilter, t: TFunction): string {
   switch (filter) {
     case 'folders':
-      return 'Folders';
+      return t('media.explorer.filter.folders');
     case 'image':
-      return 'Images';
+      return t('media.explorer.filter.image');
     case 'video':
-      return 'Videos';
+      return t('media.explorer.filter.video');
     case 'document':
-      return 'Documents';
+      return t('media.explorer.filter.document');
     case 'other':
-      return 'Other';
+      return t('media.explorer.filter.other');
     case 'all':
     default:
-      return t('common.all');
+      return t('media.explorer.filter.all');
   }
 }
 
 function formatSortLabel(sort: MediaSort, t: TFunction): string {
   switch (sort) {
     case 'name':
-      return 'Name';
+      return t('media.explorer.sort.name');
     case 'size':
-      return 'Size';
+      return t('media.explorer.sort.size');
     case 'updatedAt':
     default:
-      return t('common.sort');
+      return t('media.explorer.sort.updatedAt');
   }
 }
 
 function formatViewModeLabel(mode: MediaViewMode, t: TFunction): string {
   switch (mode) {
     case 'list':
-      return 'List';
+      return t('media.explorer.view.list');
     case 'thumbnails':
     default:
-      return 'Thumbnails';
+      return t('media.explorer.view.thumbnails');
   }
 }
 

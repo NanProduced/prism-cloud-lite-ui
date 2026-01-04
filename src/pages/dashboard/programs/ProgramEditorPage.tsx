@@ -189,11 +189,11 @@ export default function ProgramEditorPage() {
 
             setVsn(normalizeVsnForEditor(parsedVsn));
           } catch (e) {
-            toast.error('Failed to parse program content');
+            toast.error(t('programEditor.toasts.parseFailed'));
           }
         }
       } catch (e) {
-        toast.error('Failed to initialize editor');
+        toast.error(t('programEditor.toasts.initFailed'));
         navigate('/dashboard/programs');
       } finally {
         setIsInitializing(false);
@@ -324,7 +324,7 @@ export default function ProgramEditorPage() {
     mutationFn: (name: string) => renameProgramApi(programId!, name),
     onSuccess: () => {
        queryClient.invalidateQueries({ queryKey: ['programs', programId] });
-       toast.success('Program renamed');
+       toast.success(t('programs.toasts.renameSuccess'));
     }
   });
 
@@ -340,9 +340,9 @@ export default function ProgramEditorPage() {
   const handleSaveManually = useCallback(() => {
     if (!vsn || !draft) return;
     saveMutation.mutate(vsn, {
-      onSuccess: () => toast.success('Draft saved'),
+      onSuccess: () => toast.success(t('programEditor.toasts.draftSaved')),
     });
-  }, [vsn, draft, saveMutation]);
+  }, [vsn, draft, saveMutation, t]);
 
   // Autosave Logic
   useEffect(() => {
@@ -618,7 +618,7 @@ export default function ProgramEditorPage() {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center gap-4 bg-background">
         <RefreshCw className="h-10 w-10 animate-spin text-primary/40" />
-        <p className="text-xs font-bold text-muted-foreground/60">Booting Canvas Editor...</p>
+        <p className="text-xs font-bold text-muted-foreground/60">{t('programEditor.states.loading')}</p>
       </div>
     );
   }
@@ -628,9 +628,9 @@ export default function ProgramEditorPage() {
       <div className="flex h-screen w-screen items-center justify-center p-6">
         <div className="max-w-md space-y-4 text-center">
           <TriangleAlert className="mx-auto h-12 w-12 text-amber-600" />
-          <h2 className="text-xl font-bold">Program not found</h2>
-          <p className="text-muted-foreground">The program may have been deleted or the URL is incorrect.</p>
-          <Button variant="outline" asChild><Link to="/dashboard/programs"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Programs</Link></Button>
+          <h2 className="text-xl font-bold">{t('programEditor.states.notFound')}</h2>
+          <p className="text-muted-foreground">{t('programEditor.states.notFoundDesc')}</p>
+          <Button variant="outline" asChild><Link to="/dashboard/programs"><ArrowLeft className="mr-2 h-4 w-4" /> {t('programs.details.toasts.backToLibrary')}</Link></Button>
         </div>
       </div>
     );
@@ -639,12 +639,12 @@ export default function ProgramEditorPage() {
   const handlePublish = async () => {
     if (!draft || !vsn) return;
     if (saveMutation.isPending) {
-      toast.info('Saving draft, please wait...');
+      toast.info(t('programEditor.toasts.savingWait'));
       return;
     }
     const res = validateVsnDocument(vsn, 'publish');
     if (!res.isValid) {
-      toast.error(`Fix ${res.issues.filter((i) => i.severity === 'error').length} error(s) before publishing.`);
+      toast.error(t('programEditor.toasts.fixErrors', { count: res.issues.filter((i) => i.severity === 'error').length }));
       return;
     }
     if (dirty) {
@@ -759,7 +759,7 @@ export default function ProgramEditorPage() {
         let doc = vsn;
         let rIdx = selection.regionIndex;
         if (rIdx == null) {
-          const res = createRegionForInsert({ name: 'Text Window', x: 100, y: 100, width: 400, height: 200 });
+          const res = createRegionForInsert({ name: t('programEditor.panels.items.text'), x: 100, y: 100, width: 400, height: 200 });
           if (!res) return;
           doc = res.doc;
           rIdx = res.regionIndex;
@@ -815,8 +815,8 @@ export default function ProgramEditorPage() {
     <div className="flex min-h-0 flex-1 flex-col">
       {devtoolsEnabled && (
         <div className="flex items-center gap-2 mb-3">
-          <RightTabButton active={rightTab === 'inspector'} onClick={() => setRightTab('inspector')} icon={<SlidersHorizontal className="h-4 w-4" />}>Inspector</RightTabButton>
-          <RightTabButton active={rightTab === 'problems'} onClick={() => setRightTab('problems')} icon={<ListChecks className="h-4 w-4" />}>Problems</RightTabButton>
+          <RightTabButton active={rightTab === 'inspector'} onClick={() => setRightTab('inspector')} icon={<SlidersHorizontal className="h-4 w-4" />}>{t('programEditor.panels.inspector.title')}</RightTabButton>
+          <RightTabButton active={rightTab === 'problems'} onClick={() => setRightTab('problems')} icon={<ListChecks className="h-4 w-4" />}>{t('programEditor.panels.problems.title')}</RightTabButton>
           <RightTabButton active={rightTab === 'json'} onClick={() => setRightTab('json')} icon={<Code2 className="h-4 w-4" />}>JSON</RightTabButton>
         </div>
       )}
