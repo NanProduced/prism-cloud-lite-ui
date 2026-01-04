@@ -189,7 +189,7 @@ export function ExportDialog({
                   {/* DATA SCOPE SELECTION */}
                   <div className="space-y-4">
                     <Label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground ml-1">
-                      {t('export.scope.label', 'Data Range')}
+                      {t('export.scope.label')}
                     </Label>
                     <div className="flex flex-col gap-2">
                       <div
@@ -209,8 +209,8 @@ export function ExportDialog({
                              {getScopeIcon()}
                            </div>
                            <div className="flex flex-col">
-                             <span className="font-bold text-sm">{t('export.scope.all', `All ${t(`export.type.${type}`)}`)}</span>
-                             <span className="text-[10px] text-muted-foreground/60">{t('export.scope.allDesc', 'Export all records in selected time range')}</span>
+                             <span className="font-bold text-sm">{t('export.scope.all', { type: t(`export.type.${type}`) })}</span>
+                             <span className="text-[10px] text-muted-foreground/60">{t('export.scope.allDesc')}</span>
                            </div>
                         </div>
                         <div className={cn(
@@ -239,9 +239,9 @@ export function ExportDialog({
                              {getScopeIcon()}
                            </div>
                            <div className="flex flex-col min-w-0">
-                             <span className="font-bold text-sm truncate">{t('export.scope.selected', 'Selected Item')}</span>
+                             <span className="font-bold text-sm truncate">{t('export.scope.selected')}</span>
                              <span className="text-[10px] text-muted-foreground/60 truncate max-w-[280px]">
-                               {selectedName || selectedId || t('export.scope.noSelection', 'No item selected')}
+                               {selectedName || selectedId || t('export.scope.noSelection')}
                              </span>
                            </div>
                         </div>
@@ -289,7 +289,7 @@ export function ExportDialog({
                         {t('export.fields')}
                       </Label>
                       <span className="text-[10px] text-muted-foreground/60 font-medium">
-                        {selectedFields.length} selected
+                        {t('export.fieldsSelected', { count: selectedFields.length })}
                       </span>
                     </div>
                     <ScrollArea className="h-[180px] rounded-2xl border-2 border-muted/30 bg-muted/10 p-4">
@@ -333,7 +333,7 @@ export function ExportDialog({
                 <div className="py-12 text-center text-muted-foreground">
                   <AlertCircle className="h-10 w-10 mx-auto mb-4 opacity-20" />
                   <p>{t('export.loadSchemaFailed')}</p>
-                  <Button variant="link" onClick={loadSchema} className="mt-2">Retry</Button>
+                  <Button variant="link" onClick={loadSchema} className="mt-2">{t('common.actions.retry')}</Button>
                 </div>
               )}
             </div>
@@ -344,7 +344,7 @@ export function ExportDialog({
                 onClick={() => onOpenChange(false)}
                 className="rounded-2xl h-12 px-6 font-bold"
               >
-                Cancel
+                {t('common.actions.cancel')}
               </Button>
               <Button 
                 onClick={handleSubmit} 
@@ -373,7 +373,7 @@ export function ExportDialog({
               </div>
               <DialogHeader className="space-y-3 mb-0">
                 <DialogTitle className="text-2xl font-bold tracking-tight text-center">
-                  Task Created Successfully
+                  {t('export.successTitle')}
                 </DialogTitle>
                 <DialogDescription className="text-center text-base max-w-[340px] leading-relaxed">
                   {t('export.success')}
@@ -394,7 +394,7 @@ export function ExportDialog({
                 className="w-full h-12 rounded-2xl font-bold text-muted-foreground" 
                 onClick={() => onOpenChange(false)}
               >
-                Close
+                {t('common.actions.close')}
               </Button>
             </div>
           </div>

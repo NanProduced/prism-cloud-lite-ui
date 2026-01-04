@@ -19,6 +19,15 @@
       "rename": "Rename",
       "move": "Move",
       "preview": "Preview"
+    },
+    "units": {
+      "day": "Day",
+      "hour": "Hr",
+      "minute": "Min",
+      "second": "Sec",
+      "24h": "24H",
+      "7d": "7D",
+      "30d": "30D"
     }
   },
   "nav": {
@@ -855,12 +864,21 @@
       "PROGRAM_PLAY_SESSIONS": "Program Play Sessions",
       "MEDIA_PLAY_SESSIONS": "Media Play Sessions"
     },
+    "scope": {
+      "label": "Data Range",
+      "all": "All {{type}}",
+      "allDesc": "Export all records in selected time range",
+      "selected": "Selected Item",
+      "noSelection": "No item selected"
+    },
     "format": "File Format",
     "fields": "Select Fields",
     "fieldsHint": "Select the data points you want to include in the file.",
+    "fieldsSelected": "{{count}} selected",
     "submit": "Create Export Task",
     "submitting": "Creating Task...",
     "success": "Export task created! Check progress in Task Center.",
+    "successTitle": "Task Created Successfully",
     "error": "Failed to create export task",
     "viewTasks": "View Tasks",
     "noFields": "No fields found in schema.",
@@ -936,6 +954,22 @@
     }
   },
   "logs": {
+    "tabs": {
+      "deviceLogs": "Hardware Logs",
+      "commandLogs": "Command Logs"
+    },
+    "common": {
+      "period": "Analysis Period",
+      "filterDevice": "Filter Device",
+      "allDevices": "All Devices",
+      "searchDevicePlaceholder": "Search device name...",
+      "noDeviceFound": "No device found",
+      "export": "Export Data",
+      "all": "All",
+      "close": "Close",
+      "done": "Done",
+      "copied": "Copied to clipboard"
+    },
     "command": {
       "actionType": {
         "BRIGHTNESS": "Brightness",
@@ -962,7 +996,26 @@
       },
       "statusUi": {
         "DONE": "Done",
-        "UNKNOWN": "Unknown"
+        "UNKNOWN": "Unknown",
+        "PROBLEMS": "Problems"
+      },
+      "table": {
+        "issuedAt": "Issued At",
+        "device": "Device",
+        "actionType": "Action",
+        "status": "Status",
+        "audit": "Audit",
+        "sendMethod": "Method",
+        "details": "Details",
+        "total": "Total {{total}} logs found"
+      },
+      "accepted": {
+        "true": "Device confirmed receipt",
+        "false": "Waiting for device ACK"
+      },
+      "covered": {
+        "true": "Command covered by a later update",
+        "false": "Command currently active"
       },
       "trackingLevel": {
         "UPDATE_ONLY": "Update Only",
@@ -970,7 +1023,29 @@
         "PROPERTY_MATCH": "Property Match",
         "EXPLICIT_RESULT": "Explicit Result",
         "UNKNOWN": "Unknown"
-      }
+      },
+      "detail": {
+        "title": "Command Log Details",
+        "subtitle": "Full execution lifecycle tracking and raw payload (for troubleshooting)",
+        "loading": "Loading details...",
+        "loadFailed": "Failed to load details",
+        "debugTitle": "Debug Details (Internal Fields)",
+        "operationId": "Operation ID",
+        "queuedId": "Queued ID",
+        "trackingLevel": "Tracking Level",
+        "sendMethod": "Method",
+        "ttlMinutes": "TTL (Minutes)",
+        "createdAt": "Created At",
+        "errorMessage": "Error Message",
+        "payload": "Raw Payload (JSON)",
+        "copyPayload": "Copy JSON",
+        "noPayload": "No payload recorded"
+      },
+      "statusLabel": "Status Filter",
+      "searchPlaceholder": "Search commands or Operation ID...",
+      "loading": "Loading command logs...",
+      "loadFailed": "Failed to load command logs",
+      "empty": "No command logs found for the selected criteria."
     },
     "device": {
       "loading": "Fetching Logs...",

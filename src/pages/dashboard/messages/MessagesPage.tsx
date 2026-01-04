@@ -420,7 +420,7 @@ export default function MessagesPage() {
             {isLoading ? (
               <div className="flex flex-col items-center justify-center h-full p-24 space-y-4">
                 <RefreshCw className="h-8 w-8 animate-spin text-primary/40" />
-                <p className="text-[10px] font-semibold tracking-wide text-muted-foreground/50">Syncing messages…</p>
+                <p className="text-[10px] font-semibold tracking-wide text-muted-foreground/50">{t('message.ui.syncing')}</p>
               </div>
             ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full p-24 text-center">

@@ -216,19 +216,19 @@ export default function LogsPage() {
               size="sm"
               onClick={() => setQuickRange(1)}
               className={cn("h-8 px-4 text-[10px] font-black rounded-xl transition-all", isQuickRangeActive(1) && "bg-background text-primary shadow-sm")}
-            >24H</Button>
+            >{t('common.units.24h', '24H')}</Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setQuickRange(7)}
               className={cn("h-8 px-4 text-[10px] font-black rounded-xl transition-all", isQuickRangeActive(7) && "bg-background text-primary shadow-sm")}
-            >7D</Button>
+            >{t('common.units.7d', '7D')}</Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setQuickRange(30)}
               className={cn("h-8 px-4 text-[10px] font-black rounded-xl transition-all", isQuickRangeActive(30) && "bg-background text-primary shadow-sm")}        
-            >30D</Button>
+            >{t('common.units.30d', '30D')}</Button>
           </div>
           <Button variant="outline" size="icon" className="rounded-2xl h-10 w-10 border-2 hover:bg-primary hover:text-white transition-all shadow-sm" onClick={handleRefresh}>     
             <RefreshCw className="h-4 w-4" />

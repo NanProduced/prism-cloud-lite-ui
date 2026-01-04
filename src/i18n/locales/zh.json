@@ -25,13 +25,15 @@
     "toasts": {
       "copied": "已复制到剪贴板"
     },
-    "units": {
-      "day": "天",
-      "hour": "时",
-      "minute": "分",
-      "second": "秒"
-    }
-  },
+          "units": {
+          "day": "天",
+          "hour": "时",
+          "minute": "分",
+          "second": "秒",
+          "24h": "24小时",
+          "7d": "7天",
+          "30d": "30天"
+        }  },
   "nav": {
     "home": "首页",
     "features": "功能特性",
@@ -939,7 +941,10 @@
       "searchDevicePlaceholder": "搜索设备名称...",
       "noDeviceFound": "未找到设备",
       "export": "导出数据",
-      "all": "全部"
+      "all": "全部",
+      "close": "关闭",
+      "done": "完成",
+      "copied": "复制成功"
     },
     "command": {
       "actionType": {
@@ -967,7 +972,26 @@
       },
       "statusUi": {
         "DONE": "已完成",
-        "UNKNOWN": "状态未知"
+        "UNKNOWN": "状态未知",
+        "PROBLEMS": "异常记录"
+      },
+      "table": {
+        "issuedAt": "下发时间",
+        "device": "目标设备",
+        "actionType": "指令类型",
+        "status": "执行状态",
+        "audit": "审计",
+        "sendMethod": "下发方式",
+        "details": "详情",
+        "total": "共找到 {{total}} 条指令记录"
+      },
+      "accepted": {
+        "true": "设备已确认收到指令",
+        "false": "设备尚未确认"
+      },
+      "covered": {
+        "true": "指令已被后续操作覆盖",
+        "false": "指令当前有效"
       },
       "trackingLevel": {
         "UPDATE_ONLY": "仅更新",
@@ -994,7 +1018,10 @@
         "noPayload": "未记录负载内容"
       },
       "statusLabel": "状态筛选",
-      "searchPlaceholder": "搜索指令内容或操作 ID..."
+      "searchPlaceholder": "搜索指令内容或操作 ID...",
+      "loading": "正在加载指令日志...",
+      "loadFailed": "加载指令日志失败",
+      "empty": "未找到符合筛选条件的指令记录。"
     },
     "device": {
       "operationType": "操作类别",
@@ -2337,14 +2364,15 @@
     },
     "ui": {
       "loading": "正在加载消息...",
+      "loadingDetail": "正在加载详情...",
       "loadFailedTitle": "无法加载该消息",
       "loadFailedHint": "请稍后重试。",
       "close": "关闭",
       "summary": "消息摘要",
-      "debugTitle": "调试信息（内部字段）",
-      "payload": "原始 Payload（JSON）",
+      "debugTitle": "调试详情 (内部字段)",
+      "payload": "原始 Payload (JSON)",
       "copyPayload": "复制 JSON",
-      "dismiss": "知道了",
+      "dismiss": "我知道了",
       "inbox": "收件箱",
       "notifications": "系统通知",
       "tasks": "后台任务",
@@ -3154,12 +3182,21 @@
       "PROGRAM_PLAY_SESSIONS": "节目播放明细",
       "MEDIA_PLAY_SESSIONS": "素材播放明细"
     },
+    "scope": {
+      "label": "数据范围",
+      "all": "全部{{type}}",
+      "allDesc": "导出当前时间范围内所有记录",
+      "selected": "已选单项",
+      "noSelection": "未选择任何项"
+    },
     "format": "文件格式",
     "fields": "选择字段",
     "fieldsHint": "选择您希望包含在文件中的数据点。",
+    "fieldsSelected": "已选 {{count}} 项",
     "submit": "创建导出任务",
     "submitting": "正在创建任务...",
     "success": "导出任务已创建！请在任务中心查看进度。",
+    "successTitle": "任务创建成功",
     "error": "创建导出任务失败",
     "viewTasks": "查看任务",
     "noFields": "Schema 中未找到字段。",
