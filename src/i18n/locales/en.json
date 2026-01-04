@@ -307,6 +307,25 @@
   "logoWall": {
     "title": "Trusted by industry leaders worldwide"
   },
+  "globalReach": {
+    "title": "Global Reach.",
+    "titleHighlight": "Total Control.",
+    "subtitle": "Control your entire fleet with millisecond precision, powered by our proprietary Tier-1 backbone and 240+ edge nodes.",
+    "stats": {
+      "edgeLocations": {
+        "label": "Edge Locations",
+        "value": "240+"
+      },
+      "avgLatency": {
+        "label": "Avg. Latency",
+        "value": "14ms"
+      },
+      "globalUptime": {
+        "label": "Global Uptime",
+        "value": "99.99%"
+      }
+    }
+  },
   "testimonials": {
     "badge": "Customer Stories",
     "title": "Loved by teams",

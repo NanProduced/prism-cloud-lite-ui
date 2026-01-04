@@ -307,6 +307,25 @@
   "logoWall": {
     "title": "全球行业领袖的共同选择"
   },
+  "globalReach": {
+    "title": "全球覆盖",
+    "titleHighlight": "极致掌控",
+    "subtitle": "依托自有 Tier-1 骨干网络与 240+ 边缘节点，以毫秒级精度掌控您的整个设备网络。",
+    "stats": {
+      "edgeLocations": {
+        "label": "边缘节点",
+        "value": "240+"
+      },
+      "avgLatency": {
+        "label": "平均延迟",
+        "value": "14ms"
+      },
+      "globalUptime": {
+        "label": "全球可用性",
+        "value": "99.99%"
+      }
+    }
+  },
   "testimonials": {
     "badge": "客户故事",
     "title": "深受各行业",
