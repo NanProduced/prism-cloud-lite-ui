@@ -34,9 +34,9 @@ export const Footer = () => {
           <div>
             <h5 className="text-white font-medium mb-6">{t("footer.company")}</h5>
             <ul className="space-y-3 text-[#8a8a8a] text-sm">
-              <li><Link to="/roadmap" className="hover:text-white transition-colors">Roadmap</Link></li>
+              <li><Link to="/roadmap" className="hover:text-white transition-colors">{t("footer.roadmap")}</Link></li>
               <li><Link to="/about" className="hover:text-white transition-colors">{t("footer.aboutUs")}</Link></li>
-              <li><Link to="/benefits" className="hover:text-white transition-colors">Benefits</Link></li>
+              <li><Link to="/benefits" className="hover:text-white transition-colors">{t("footer.benefits")}</Link></li>
             </ul>
           </div>
 
