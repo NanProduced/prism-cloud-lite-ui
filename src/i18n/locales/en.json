@@ -1335,28 +1335,51 @@
       "confirmDesc": "Grid view loads all devices for advanced analysis, grouping, and aggregations. This may take a few seconds.",
       "dontShowAgain": "Don't show this again"
     },
-    "table": {
-      "columns": {
-        "deviceName": "Device Name",
-        "screenshot": "Screenshot",
-        "status": "Status",
-        "model": "Model",
-        "version": "Version",
-        "network": "Network",
-        "signal": "Signal",
-        "lastReport": "Last Report",
-        "resolution": "Resolution",
-        "brightness": "Brightness",
-        "storage": "Storage",
-        "program": "Program",
-        "tags": "Tags"
-      },
-      "empty": "No devices found",
-      "groupCount": "{{count}} devices",
-      "waitingReport": "Waiting for first report..."
-    },
-    "filter": {
-      "search": "Search…",
+          "table": {
+            "columns": {
+              "deviceName": "Device Name",
+              "screenshot": "Screenshot",
+              "status": "Status",
+              "model": "Model",
+              "version": "Version",
+              "network": "Network",
+              "signal": "Signal",
+              "lastReport": "Last Report",
+              "resolution": "Resolution",
+              "brightness": "Brightness",
+              "storage": "Storage",
+              "program": "Program",
+              "tags": "Tags"
+            },
+            "empty": "No devices found",
+            "groupCount": "{{count}} devices",
+            "waitingReport": "Waiting for first report..."
+          },
+          "dialogs": {
+            "add": {
+              "title": "Add New Device",
+              "description": "Register a new terminal device to your organization.",
+              "displayName": "Display Name",
+              "displayNamePlaceholder": "e.g. Lobby Screen 01",
+              "deviceAccount": "Device Account",
+              "deviceAccountPlaceholder": "device_admin",
+              "devicePassword": "Device Password",
+              "devicePasswordPlaceholder": "Min 12 chars",
+              "description": "Description (Optional)",
+              "descriptionPlaceholder": "Location, purpose, or other notes...",
+              "cancel": "Cancel",
+              "create": "Create Device",
+              "success": {
+                "title": "Registration Success",
+                "description": "Secure credentials have been generated. Copy them before closing.",
+                "account": "Terminal Account",
+                "password": "Access Password",
+                "warning": "Permanent Action: These credentials are encrypted at rest. We cannot recover this password if lost. Please store it in a secure password manager.",
+                "confirm": "I Have Saved the Credentials"
+              }
+            }
+          },
+          "filter": {      "search": "Search…",
       "searchOptions": "Search options...",
       "noMatches": "No matches",
       "extracting": "Extracting...",

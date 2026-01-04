@@ -2553,28 +2553,51 @@
       "confirmDesc": "表格视图将加载所有设备以进行高级分析、分组和聚合。这可能需要几秒钟。",
       "dontShowAgain": "不再显示"
     },
-    "table": {
-      "columns": {
-        "deviceName": "设备名称",
-        "screenshot": "截图",
-        "status": "状态",
-        "model": "型号",
-        "version": "版本",
-        "network": "网络",
-        "signal": "信号",
-        "lastReport": "最后上报",
-        "resolution": "分辨率",
-        "brightness": "亮度",
-        "storage": "存储",
-        "program": "节目",
-        "tags": "标签"
-      },
-      "empty": "未找到设备",
-      "groupCount": "{{count}} 台设备",
-      "waitingReport": "等待首次上报..."
-    },
-    "filter": {
-      "search": "搜索…",
+          "table": {
+            "columns": {
+              "deviceName": "设备名称",
+              "screenshot": "截图",
+              "status": "状态",
+              "model": "型号",
+              "version": "版本",
+              "network": "网络",
+              "signal": "信号",
+              "lastReport": "最后上报",
+              "resolution": "分辨率",
+              "brightness": "亮度",
+              "storage": "存储",
+              "program": "节目",
+              "tags": "标签"
+            },
+            "empty": "未找到设备",
+            "groupCount": "{{count}} 台设备",
+            "waitingReport": "等待首次上报..."
+          },
+          "dialogs": {
+            "add": {
+              "title": "添加新设备",
+              "description": "为您的组织注册一个新的终端设备。",
+              "displayName": "显示名称",
+              "displayNamePlaceholder": "例如：大堂 1 号屏",
+              "deviceAccount": "设备账号",
+              "deviceAccountPlaceholder": "device_admin",
+              "devicePassword": "设备密码",
+              "devicePasswordPlaceholder": "至少 12 位",
+              "description": "描述 (可选)",
+              "descriptionPlaceholder": "位置、用途或其他备注...",
+              "cancel": "取消",
+              "create": "创建设备",
+              "success": {
+                "title": "注册成功",
+                "description": "安全凭证已生成。请在关闭前复制它们。",
+                "account": "终端账号",
+                "password": "访问密码",
+                "warning": "永久操作：这些凭证已加密。如果丢失，我们将无法找回此密码。请将其保存在安全的密码管理器中。",
+                "confirm": "我已保存凭证"
+              }
+            }
+          },
+          "filter": {      "search": "搜索…",
       "searchOptions": "搜索选项...",
       "noMatches": "无匹配项",
       "extracting": "提取中...",

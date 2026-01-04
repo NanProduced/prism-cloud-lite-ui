@@ -32,6 +32,7 @@ import { UrlGlimpseLink } from './UrlGlimpseLink';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { useLyteNyteTheme } from '@/hooks/use-lytenyte-theme';
 import { Plus } from 'lucide-react';
+import { ProgramVersionDisplay } from '@/components/programs/ProgramVersionDisplay';
 import { useTranslation } from 'react-i18next';
 
 interface DeviceTableProps {
@@ -700,7 +701,7 @@ export function DeviceTable({
       id: 'playingProgram',
       name: t('devices.table.columns.program'),
       type: 'string',
-      width: 160,
+      width: 180,
       field: 'playingProgram',
       floatingCellRenderer: DeviceGridFloatingFilterCell,
       uiHints: {
@@ -714,15 +715,26 @@ export function DeviceTable({
         const program = row.data.playingProgram;
         if (!program) return null;
         const vp = grid.state.viewport.get() ?? undefined;
-        return measureText(program ?? '', vp).width + 24;
+        // Approximation since ProgramVersionDisplay is complex
+        return measureText(program ?? '', vp).width + 60;
       },
       cellRenderer: ({ row, grid }: CellRendererParams<Device>) => {
         if (grid.api.rowIsGroup(row) || !row.data) return null;
-        const program = row.data.playingProgram;
-        if (!program) return <span className="text-muted-foreground">-</span>;
+        const device = row.data;
+        const programName = device.playingProgram;
+        const programId = device.currentProgram?.id;
+
+        if (!programName) return <span className="text-muted-foreground">-</span>;
+        
         return (
-          <div className="flex flex-col gap-0.5">
-            <span className="text-sm">{program}</span>
+          <div 
+            className={cn(
+              "flex flex-col gap-0.5 min-w-0 px-1",
+              programId && "cursor-pointer hover:text-primary transition-colors"
+            )}
+            onClick={() => programId && navigate(`/dashboard/programs/${programId}`)}
+          >
+            <ProgramVersionDisplay name={programName} variant="compact" />
           </div>
         );
       },
