@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import type { RealtimeMetric } from '../types';
-import { M2_TAB_GROUPS } from '../constants';
+import { getM2TabGroups } from '../constants';
 import { SensorGroupCard } from './SensorGroupCard';
 import { RelayCard } from './RelayCard';
 import { HistoryDrawer } from './HistoryDrawer';
@@ -28,6 +29,9 @@ export function M2SensorTab({
   historyRange,
   className,
 }: M2SensorTabProps) {
+  const { t } = useTranslation();
+  const allGroups = useMemo(() => getM2TabGroups(t), [t]);
+
   // History drawer state
   const [historyState, setHistoryState] = useState<HistoryState>({
     open: false,
@@ -43,7 +47,7 @@ export function M2SensorTab({
       let title = reportType;
       let sourceType: SensorSourceType = 'M2_SENSOR';
 
-      for (const group of M2_TAB_GROUPS) {
+      for (const group of allGroups) {
         const sensor = group.sensors.find((s) => s.reportType === reportType);
         if (sensor) {
           title = `${group.title} - ${sensor.label}`;
@@ -60,7 +64,7 @@ export function M2SensorTab({
         title,
       });
     },
-    []
+    [allGroups]
   );
 
   // Close history drawer
@@ -69,10 +73,10 @@ export function M2SensorTab({
   }, []);
 
   // Get sensor groups excluding relay (handled by RelayCard)
-  const sensorGroups = M2_TAB_GROUPS.filter((g) => g.id !== 'relay');
+  const sensorGroups = allGroups.filter((g) => g.id !== 'relay');
 
   // Check if relay group exists
-  const hasRelay = M2_TAB_GROUPS.some((g) => g.id === 'relay');
+  const hasRelay = allGroups.some((g) => g.id === 'relay');
 
   return (
     <div className={cn('space-y-4', className)}>

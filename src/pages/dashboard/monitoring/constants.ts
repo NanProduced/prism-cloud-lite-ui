@@ -69,271 +69,275 @@ export const SENSOR_ID_MAP: Record<number, { reportType: string; sourceType: Sen
 // --- Device Tab Sensor Groups ---
 // 注意：接收卡(receiveCard)已移至独立Tab，不在此处定义
 
-export const DEVICE_TAB_GROUPS: SensorGroup[] = [
-  {
-    id: 'climate',
-    title: 'Climate',
-    icon: Thermometer,
-    chartType: 'area',
-    canCombine: true,
-    sensors: [
-      {
-        reportType: 'temperature',
-        sensorIds: [2],
-        sourceType: 'DEVICE_SENSOR',
-        unit: '°C',
-        label: 'Temperature',
-      },
-      {
-        reportType: 'temperatureOnBoard',
-        sensorIds: [6],
-        sourceType: 'DEVICE_SENSOR',
-        unit: '°C',
-        label: 'Board Temp',
-      },
-      {
-        reportType: 'humidity',
-        sensorIds: [2],
-        sourceType: 'DEVICE_SENSOR',
-        unit: '%',
-        label: 'Humidity',
-      },
-      {
-        reportType: 'humidityOnBoard',
-        sensorIds: [7],
-        sourceType: 'DEVICE_SENSOR',
-        unit: '%',
-        label: 'Board Humidity',
-      },
-    ],
-  },
-  {
-    id: 'airQuality',
-    title: 'Air Quality',
-    icon: Wind,
-    chartType: 'area',
-    canCombine: false,
-    sensors: [
-      {
-        reportType: 'pm10',
-        sensorIds: [4],
-        sourceType: 'DEVICE_SENSOR',
-        unit: 'μg/m³',
-        label: 'PM10',
-      },
-      {
-        reportType: 'pm25',
-        sensorIds: [4],
-        sourceType: 'DEVICE_SENSOR',
-        unit: 'μg/m³',
-        label: 'PM2.5',
-      },
-      {
-        reportType: 'smoke',
-        sensorIds: [3],
-        sourceType: 'DEVICE_SENSOR',
-        unit: 'ppm',
-        label: 'Smoke',
-      },
-      {
-        reportType: 'noise',
-        sensorIds: [1],
-        sourceType: 'DEVICE_SENSOR',
-        unit: 'dB',
-        label: 'Noise',
-      },
-    ],
-  },
-  {
-    id: 'brightness',
-    title: 'Brightness',
-    icon: Sun,
-    chartType: 'area',
-    sensors: [
-      {
-        reportType: 'bright',
-        sensorIds: [0],
-        sourceType: 'DEVICE_SENSOR',
-        metricKeys: ['sensorBrightValue'],
-        unit: 'lux',
-        label: 'Ambient Light',
-      },
-    ],
-  },
-];
+export function getDeviceTabGroups(t: any): SensorGroup[] {
+  return [
+    {
+      id: 'climate',
+      title: t('monitoring.sensors.groups.climate'),
+      icon: Thermometer,
+      chartType: 'area',
+      canCombine: true,
+      sensors: [
+        {
+          reportType: 'temperature',
+          sensorIds: [2],
+          sourceType: 'DEVICE_SENSOR',
+          unit: '°C',
+          label: t('monitoring.sensors.labels.temperature'),
+        },
+        {
+          reportType: 'temperatureOnBoard',
+          sensorIds: [6],
+          sourceType: 'DEVICE_SENSOR',
+          unit: '°C',
+          label: t('monitoring.sensors.labels.boardTemp'),
+        },
+        {
+          reportType: 'humidity',
+          sensorIds: [2],
+          sourceType: 'DEVICE_SENSOR',
+          unit: '%',
+          label: t('monitoring.sensors.labels.humidity'),
+        },
+        {
+          reportType: 'humidityOnBoard',
+          sensorIds: [7],
+          sourceType: 'DEVICE_SENSOR',
+          unit: '%',
+          label: t('monitoring.sensors.labels.boardHumidity'),
+        },
+      ],
+    },
+    {
+      id: 'airQuality',
+      title: t('monitoring.sensors.groups.airQuality'),
+      icon: Wind,
+      chartType: 'area',
+      canCombine: false,
+      sensors: [
+        {
+          reportType: 'pm10',
+          sensorIds: [4],
+          sourceType: 'DEVICE_SENSOR',
+          unit: 'μg/m³',
+          label: t('monitoring.sensors.labels.pm10'),
+        },
+        {
+          reportType: 'pm25',
+          sensorIds: [4],
+          sourceType: 'DEVICE_SENSOR',
+          unit: 'μg/m³',
+          label: t('monitoring.sensors.labels.pm25'),
+        },
+        {
+          reportType: 'smoke',
+          sensorIds: [3],
+          sourceType: 'DEVICE_SENSOR',
+          unit: 'ppm',
+          label: t('monitoring.sensors.labels.smoke'),
+        },
+        {
+          reportType: 'noise',
+          sensorIds: [1],
+          sourceType: 'DEVICE_SENSOR',
+          unit: 'dB',
+          label: t('monitoring.sensors.labels.noise'),
+        },
+      ],
+    },
+    {
+      id: 'brightness',
+      title: t('monitoring.sensors.groups.brightness'),
+      icon: Sun,
+      chartType: 'area',
+      sensors: [
+        {
+          reportType: 'bright',
+          sensorIds: [0],
+          sourceType: 'DEVICE_SENSOR',
+          metricKeys: ['sensorBrightValue'],
+          unit: 'lux',
+          label: t('monitoring.sensors.labels.ambientLight'),
+        },
+      ],
+    },
+  ];
+}
 
 // --- M2 Tab Sensor Groups ---
 
-export const M2_TAB_GROUPS: SensorGroup[] = [
-  {
-    id: 'climate',
-    title: 'Climate',
-    icon: Thermometer,
-    chartType: 'area',
-    canCombine: true,
-    sensors: [
-      {
-        reportType: 'temperature',
-        sensorIds: [1002],
-        sourceType: 'M2_SENSOR',
-        unit: '°C',
-        label: 'Temperature',
-      },
-      {
-        reportType: 'temperatureOnBoard',
-        sensorIds: [2002],
-        sourceType: 'M2_SENSOR',
-        unit: '°C',
-        label: 'Board Temp',
-      },
-      {
-        reportType: 'humidity',
-        sensorIds: [1002],
-        sourceType: 'M2_SENSOR',
-        unit: '%',
-        label: 'Humidity',
-      },
-      {
-        reportType: 'humidityOnBoard',
-        sensorIds: [2002],
-        sourceType: 'M2_SENSOR',
-        unit: '%',
-        label: 'Board Humidity',
-      },
-    ],
-  },
-  {
-    id: 'airQuality',
-    title: 'Air Quality',
-    icon: Wind,
-    chartType: 'area',
-    canCombine: false,
-    sensors: [
-      {
-        reportType: 'pm10',
-        sensorIds: [1004],
-        sourceType: 'M2_SENSOR',
-        unit: 'μg/m³',
-        label: 'PM10',
-      },
-      {
-        reportType: 'pm25',
-        sensorIds: [1004],
-        sourceType: 'M2_SENSOR',
-        unit: 'μg/m³',
-        label: 'PM2.5',
-      },
-      {
-        reportType: 'smoke',
-        sensorIds: [1003],
-        sourceType: 'M2_SENSOR',
-        unit: 'ppm',
-        label: 'Smoke',
-      },
-      {
-        reportType: 'noise',
-        sensorIds: [1001],
-        sourceType: 'M2_SENSOR',
-        unit: 'dB',
-        label: 'Noise',
-      },
-    ],
-  },
-  {
-    id: 'brightness',
-    title: 'Brightness',
-    icon: Sun,
-    chartType: 'line',
-    canCombine: true,
-    sensors: [
-      {
-        reportType: 'bright',
-        sensorIds: [1000],
-        sourceType: 'M2_SENSOR',
-        metricKeys: ['masterBrightValue', 'screenBrightValue'],
-        unit: '',
-        label: 'Screen Brightness',
-      },
-    ],
-  },
-  {
-    id: 'power',
-    title: 'Power',
-    icon: Zap,
-    chartType: 'line',
-    canCombine: true,
-    sensors: [
-      {
-        reportType: 'voltage',
-        sensorIds: [9999],
-        sourceType: 'M2_SENSOR',
-        unit: 'V',
-        label: 'Voltage',
-      },
-      {
-        reportType: 'voltage2',
-        sensorIds: [9999],
-        sourceType: 'M2_SENSOR',
-        unit: 'V',
-        label: 'Voltage 2',
-      },
-      {
-        reportType: 'electromagnetic',
-        sensorIds: [9999],
-        sourceType: 'M2_SENSOR',
-        unit: '',
-        label: 'EM Door',
-      },
-    ],
-  },
-  {
-    id: 'relay',
-    title: 'Relay Control',
-    icon: ToggleLeft,
-    chartType: 'status',
-    sensors: [
-      {
-        reportType: 'relayStatus',
-        sensorIds: [9999],
-        sourceType: 'M2_SENSOR',
-        label: 'Relay 1',
-      },
-      {
-        reportType: 'relayStatus2',
-        sensorIds: [9999],
-        sourceType: 'M2_SENSOR',
-        label: 'Relay 2',
-      },
-      {
-        reportType: 'relayStatus3',
-        sensorIds: [9999],
-        sourceType: 'M2_SENSOR',
-        label: 'Relay 3',
-      },
-      {
-        reportType: 'relayDelay',
-        sensorIds: [9999],
-        sourceType: 'M2_SENSOR',
-        unit: 'ms',
-        label: 'Delay 1',
-      },
-      {
-        reportType: 'relayDelay2',
-        sensorIds: [9999],
-        sourceType: 'M2_SENSOR',
-        unit: 'ms',
-        label: 'Delay 2',
-      },
-      {
-        reportType: 'relayDelay3',
-        sensorIds: [9999],
-        sourceType: 'M2_SENSOR',
-        unit: 'ms',
-        label: 'Delay 3',
-      },
-    ],
-  },
-];
+export function getM2TabGroups(t: any): SensorGroup[] {
+  return [
+    {
+      id: 'climate',
+      title: t('monitoring.sensors.groups.climate'),
+      icon: Thermometer,
+      chartType: 'area',
+      canCombine: true,
+      sensors: [
+        {
+          reportType: 'temperature',
+          sensorIds: [1002],
+          sourceType: 'M2_SENSOR',
+          unit: '°C',
+          label: t('monitoring.sensors.labels.temperature'),
+        },
+        {
+          reportType: 'temperatureOnBoard',
+          sensorIds: [2002],
+          sourceType: 'M2_SENSOR',
+          unit: '°C',
+          label: t('monitoring.sensors.labels.boardTemp'),
+        },
+        {
+          reportType: 'humidity',
+          sensorIds: [1002],
+          sourceType: 'M2_SENSOR',
+          unit: '%',
+          label: t('monitoring.sensors.labels.humidity'),
+        },
+        {
+          reportType: 'humidityOnBoard',
+          sensorIds: [2002],
+          sourceType: 'M2_SENSOR',
+          unit: '%',
+          label: t('monitoring.sensors.labels.boardHumidity'),
+        },
+      ],
+    },
+    {
+      id: 'airQuality',
+      title: t('monitoring.sensors.groups.airQuality'),
+      icon: Wind,
+      chartType: 'area',
+      canCombine: false,
+      sensors: [
+        {
+          reportType: 'pm10',
+          sensorIds: [1004],
+          sourceType: 'M2_SENSOR',
+          unit: 'μg/m³',
+          label: t('monitoring.sensors.labels.pm10'),
+        },
+        {
+          reportType: 'pm25',
+          sensorIds: [1004],
+          sourceType: 'M2_SENSOR',
+          unit: 'μg/m³',
+          label: t('monitoring.sensors.labels.pm25'),
+        },
+        {
+          reportType: 'smoke',
+          sensorIds: [1003],
+          sourceType: 'M2_SENSOR',
+          unit: 'ppm',
+          label: t('monitoring.sensors.labels.smoke'),
+        },
+        {
+          reportType: 'noise',
+          sensorIds: [1001],
+          sourceType: 'M2_SENSOR',
+          unit: 'dB',
+          label: t('monitoring.sensors.labels.noise'),
+        },
+      ],
+    },
+    {
+      id: 'brightness',
+      title: t('monitoring.sensors.groups.brightness'),
+      icon: Sun,
+      chartType: 'line',
+      canCombine: true,
+      sensors: [
+        {
+          reportType: 'bright',
+          sensorIds: [1000],
+          sourceType: 'M2_SENSOR',
+          metricKeys: ['masterBrightValue', 'screenBrightValue'],
+          unit: '',
+          label: t('monitoring.sensors.labels.screenBrightness'),
+        },
+      ],
+    },
+    {
+      id: 'power',
+      title: t('monitoring.sensors.groups.power'),
+      icon: Zap,
+      chartType: 'line',
+      canCombine: true,
+      sensors: [
+        {
+          reportType: 'voltage',
+          sensorIds: [9999],
+          sourceType: 'M2_SENSOR',
+          unit: 'V',
+          label: t('monitoring.sensors.labels.voltage'),
+        },
+        {
+          reportType: 'voltage2',
+          sensorIds: [9999],
+          sourceType: 'M2_SENSOR',
+          unit: 'V',
+          label: t('monitoring.sensors.labels.voltage2'),
+        },
+        {
+          reportType: 'electromagnetic',
+          sensorIds: [9999],
+          sourceType: 'M2_SENSOR',
+          unit: '',
+          label: t('monitoring.sensors.labels.emDoor'),
+        },
+      ],
+    },
+    {
+      id: 'relay',
+      title: t('monitoring.sensors.groups.relay'),
+      icon: ToggleLeft,
+      chartType: 'status',
+      sensors: [
+        {
+          reportType: 'relayStatus',
+          sensorIds: [9999],
+          sourceType: 'M2_SENSOR',
+          label: t('monitoring.sensors.labels.relay', { num: 1 }),
+        },
+        {
+          reportType: 'relayStatus2',
+          sensorIds: [9999],
+          sourceType: 'M2_SENSOR',
+          label: t('monitoring.sensors.labels.relay', { num: 2 }),
+        },
+        {
+          reportType: 'relayStatus3',
+          sensorIds: [9999],
+          sourceType: 'M2_SENSOR',
+          label: t('monitoring.sensors.labels.relay', { num: 3 }),
+        },
+        {
+          reportType: 'relayDelay',
+          sensorIds: [9999],
+          sourceType: 'M2_SENSOR',
+          unit: 'ms',
+          label: t('monitoring.sensors.labels.delay', { num: 1 }),
+        },
+        {
+          reportType: 'relayDelay2',
+          sensorIds: [9999],
+          sourceType: 'M2_SENSOR',
+          unit: 'ms',
+          label: t('monitoring.sensors.labels.delay', { num: 2 }),
+        },
+        {
+          reportType: 'relayDelay3',
+          sensorIds: [9999],
+          sourceType: 'M2_SENSOR',
+          unit: 'ms',
+          label: t('monitoring.sensors.labels.delay', { num: 3 }),
+        },
+      ],
+    },
+  ];
+}
 
 // --- Chart Colors ---
 

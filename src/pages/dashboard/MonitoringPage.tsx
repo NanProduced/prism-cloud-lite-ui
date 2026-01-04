@@ -39,7 +39,10 @@ function toLocalDateString(date: Date) {
   return format(date, 'yyyy-MM-dd');
 }
 
+import { useTranslation } from 'react-i18next';
+
 export default function MonitoringPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { formatDateTime } = useTimeFormatter();
 
@@ -145,7 +148,7 @@ export default function MonitoringPage() {
   if (isDevicesLoading) {
     return (
       <div className="flex h-[70vh] items-center justify-center text-muted-foreground font-semibold tracking-wider text-xs">
-        Initializing Device Monitoring...
+        {t('monitoring.initializing')}
       </div>
     );
   }
@@ -158,7 +161,7 @@ export default function MonitoringPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <DateRangePicker
             value={historyDraft}
-            label="Analysis period"
+            label={t('monitoring.analysisPeriod')}
             onChange={(val) => {
               setHistoryDraft(val);
               // For monitoring, we apply immediately when a preset is chosen or range changes
@@ -176,7 +179,7 @@ export default function MonitoringPage() {
             <div className="relative group">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50 transition-colors group-focus-within:text-primary" />
               <Input
-                placeholder="Search by name, network or tags..."
+                placeholder={t('monitoring.searchPlaceholder')}
                 className="pl-8 h-8 bg-background text-xs"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -184,7 +187,7 @@ export default function MonitoringPage() {
             </div>
             <div className="flex items-center justify-between px-1">
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Devices ({devices.length})
+                {t('monitoring.devices')} ({devices.length})
               </span>
               <Button
                 variant="ghost"
@@ -196,7 +199,7 @@ export default function MonitoringPage() {
                 }}
               >
                 <RefreshCw className={cn("h-3 w-3", sseState.status === 'reconnecting' && "animate-spin")} />
-                Refresh
+                {t('common.actions.refresh')}
               </Button>
             </div>
           </div>
@@ -241,7 +244,7 @@ export default function MonitoringPage() {
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                          <div className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground/70 bg-muted/50 px-1.5 py-0.5 rounded uppercase tracking-wider">
                            <NetworkIcon className="h-2.5 w-2.5" />
-                           {d.networkType || 'Offline'}
+                           {d.networkType || t('devices.stats.offline')}
                          </div>
                          {d.tags?.slice(0, 2).map((t: Tag) => (
                             <TagChip 
@@ -269,10 +272,10 @@ export default function MonitoringPage() {
             <div className="flex-1 flex flex-col items-center justify-center text-center opacity-40 bg-muted/10 rounded-lg border border-dashed">
               <Monitor className="h-12 w-12 mb-3" />
               <h2 className="text-lg font-bold tracking-tight">
-                No Device Selected
+                {t('monitoring.noDeviceSelected')}
               </h2>
               <p className="text-xs max-w-xs">
-                Select a device from the fleet list to start receiving real-time telemetry.
+                {t('monitoring.noDeviceSelectedDesc')}
               </p>
             </div>
           ) : (
@@ -289,7 +292,7 @@ export default function MonitoringPage() {
                     className="h-6 px-3 text-xs font-semibold data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2"
                   >
                     <Cpu className="h-3.5 w-3.5" />
-                    Receive Cards
+                    {t('monitoring.tabs.receiveCard')}
                     {tabCounts.receiveCard > 0 && (
                       <span className="ml-1 px-1.5 py-0.5 text-[9px] bg-primary/10 text-primary rounded-full">
                         {tabCounts.receiveCard}
@@ -301,7 +304,7 @@ export default function MonitoringPage() {
                     className="h-6 px-3 text-xs font-semibold data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2"
                   >
                     <Monitor className="h-3.5 w-3.5" />
-                    Device Sensors
+                    {t('monitoring.tabs.deviceSensor')}
                     {tabCounts.device > 0 && (
                       <span className="ml-1 px-1.5 py-0.5 text-[9px] bg-primary/10 text-primary rounded-full">
                         {tabCounts.device}
@@ -313,7 +316,7 @@ export default function MonitoringPage() {
                     className="h-6 px-3 text-xs font-semibold data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2"
                   >
                     <Gauge className="h-3.5 w-3.5" />
-                    M2 External
+                    {t('monitoring.tabs.m2Sensor')}
                     {tabCounts.m2 > 0 && (
                       <span className="ml-1 px-1.5 py-0.5 text-[9px] bg-primary/10 text-primary rounded-full">
                         {tabCounts.m2}
@@ -324,8 +327,10 @@ export default function MonitoringPage() {
 
                 <div className="text-[10px] font-bold text-muted-foreground flex items-center gap-2">
                   <span className="flex items-center gap-1.5">
-                    <Clock className="h-3 w-3" /> Real-time feed active
+                    <Clock className="h-3 w-3" /> {t('monitoring.status.realtimeActive')}
                   </span>
+                  <div className="w-px h-3 bg-border mx-1" />
+                  <SSEStatus status={sseState.status as any} />
                 </div>
               </div>
 
@@ -373,11 +378,12 @@ export default function MonitoringPage() {
 // --- Internal UI Helpers ---
 
 function SSEStatus({ status }: { status: 'connected' | 'reconnecting' | 'error' | 'idle' }) {
+  const { t } = useTranslation();
   const configs = {
-    connected: { color: 'text-emerald-500', label: 'Connected', icon: Wifi },
-    reconnecting: { color: 'text-amber-500', label: 'Reconnecting', icon: RefreshCw },
-    error: { color: 'text-rose-500', label: 'Error', icon: AlertTriangle },
-    idle: { color: 'text-muted-foreground', label: 'Disconnected', icon: Wifi },
+    connected: { color: 'text-emerald-500', label: t('monitoring.status.connected'), icon: Wifi },
+    reconnecting: { color: 'text-amber-500', label: t('monitoring.status.reconnecting'), icon: RefreshCw },
+    error: { color: 'text-rose-500', label: t('monitoring.status.error'), icon: AlertTriangle },
+    idle: { color: 'text-muted-foreground', label: t('monitoring.status.disconnected'), icon: Wifi },
   } as const;
   
   const config = configs[status as keyof typeof configs] || configs.idle;
@@ -386,11 +392,11 @@ function SSEStatus({ status }: { status: 'connected' | 'reconnecting' | 'error' 
   return (
     <div
       className={cn(
-        'flex items-center gap-2 px-2.5 h-8 rounded-md border bg-background text-[10px] font-bold uppercase tracking-tight',
+        'flex items-center gap-2 px-2.5 h-6 rounded-md border bg-background text-[9px] font-bold uppercase tracking-tight',
         config.color
       )}
     >
-      <Icon className={cn('h-3 w-3', status === 'reconnecting' && 'animate-spin')} />
+      <Icon className={cn('h-2.5 w-2.5', status === 'reconnecting' && 'animate-spin')} />
       {config.label}
     </div>
   );

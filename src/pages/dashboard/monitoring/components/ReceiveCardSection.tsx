@@ -43,11 +43,14 @@ interface ReceiveCardSectionProps {
   className?: string;
 }
 
+import { useTranslation } from 'react-i18next';
+
 export function ReceiveCardSection({
   deviceId,
   metrics,
   className,
 }: ReceiveCardSectionProps) {
+  const { t } = useTranslation();
   const { formatDateTime } = useTimeFormatter();
   const [selectedPort, setSelectedPort] = useState<number | null>(null);
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
@@ -181,7 +184,7 @@ export function ReceiveCardSection({
             <Cpu className="h-3.5 w-3.5 text-indigo-500" />
           </div>
           <CardTitle className="text-xs font-bold uppercase tracking-widest text-foreground/70">
-            Receive Cards
+            {t('monitoring.tabs.receiveCard')}
           </CardTitle>
         </div>
         {hasData && (
@@ -202,10 +205,7 @@ export function ReceiveCardSection({
           <div className="flex flex-col items-center justify-center py-8 text-center opacity-40">
             <Cpu className="h-8 w-8 mb-2" />
             <p className="text-[10px] font-bold uppercase tracking-widest">
-              No Receive Card Data
-            </p>
-            <p className="text-[9px] mt-1">
-              Waiting for receive card telemetry...
+              {t('monitoring.status.awaitingData')}
             </p>
           </div>
         ) : !showHistory ? (
@@ -217,7 +217,7 @@ export function ReceiveCardSection({
                 <p className="text-xl font-bold tracking-tight">
                   {summary.totalCards}
                 </p>
-                <p className="text-[9px] font-bold uppercase opacity-40">Cards</p>
+                <p className="text-[9px] font-bold uppercase opacity-40">{t('monitoring.receiveCard.cards')}</p>
               </div>
               <div className="p-3 rounded-lg bg-muted/30 text-center border">
                 <p className="text-xl font-bold tracking-tight">
@@ -229,7 +229,7 @@ export function ReceiveCardSection({
                 <p className="text-xl font-bold tracking-tight">
                   {Object.keys(receiveCardData).length}
                 </p>
-                <p className="text-[9px] font-bold uppercase opacity-40">Devices</p>
+                <p className="text-[9px] font-bold uppercase opacity-40">{t('monitoring.devices')}</p>
               </div>
             </div>
 
@@ -295,7 +295,7 @@ export function ReceiveCardSection({
                 className="h-7 text-[10px] font-bold rounded-md"
                 onClick={() => setShowHistory(false)}
               >
-                ← Back
+                ← {t('common.actions.back')}
               </Button>
 
               <Select
@@ -348,13 +348,13 @@ export function ReceiveCardSection({
               isHistoryLoading ? (
                 <div className="h-48 flex items-center justify-center">
                   <p className="text-[10px] font-bold opacity-40 animate-pulse">
-                    Loading history...
+                    {t('monitoring.history.loading')}
                   </p>
                 </div>
               ) : historyData.length === 0 ? (
                 <div className="h-48 flex items-center justify-center">
                   <p className="text-[10px] font-bold opacity-40">
-                    No historical data found
+                    {t('monitoring.history.noData')}
                   </p>
                 </div>
               ) : (
@@ -407,7 +407,7 @@ export function ReceiveCardSection({
                         yAxisId="left"
                         type="monotone"
                         dataKey="temperature"
-                        name="Temp (°C)"
+                        name={`${t('monitoring.receiveCard.temp')} (°C)`}
                         stroke={CHART_COLORS.temperature}
                         strokeWidth={2}
                         dot={false}
@@ -416,7 +416,7 @@ export function ReceiveCardSection({
                         yAxisId="right"
                         type="monotone"
                         dataKey="humidity"
-                        name="Humidity (%)"
+                        name={`${t('monitoring.receiveCard.humidity')} (%)`}
                         stroke={CHART_COLORS.humidity}
                         strokeWidth={2}
                         dot={false}
@@ -438,10 +438,7 @@ export function ReceiveCardSection({
               <div className="h-48 flex flex-col items-center justify-center text-center opacity-40">
                 <Layers className="h-8 w-8 mb-2" />
                 <p className="text-[10px] font-bold uppercase tracking-widest">
-                  Select Port & Card
-                </p>
-                <p className="text-[9px] mt-1">
-                  Choose a port and card to view historical data
+                  {t('monitoring.history.selectHint')}
                 </p>
               </div>
             )}

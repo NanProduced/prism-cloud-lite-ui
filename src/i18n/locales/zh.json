@@ -1774,6 +1774,7 @@
     "analysisPeriod": "分析时段",
     "searchPlaceholder": "搜索设备名称、网络或标签...",
     "fleet": "终端列表",
+    "devices": "终端设备",
     "noDeviceSelected": "未选择设备",
     "noDeviceSelectedDesc": "请在左侧列表中选择一台终端以开始接收实时遥测数据。",
     "tabs": {
@@ -1786,7 +1787,63 @@
       "connected": "已连接",
       "reconnecting": "正在重连",
       "error": "连接错误",
-      "disconnected": "已断开"
+      "disconnected": "已断开",
+      "awaitingData": "等待数据..."
+    },
+    "receiveCard": {
+      "topology": "物理拓扑",
+      "cards": "张接收卡",
+      "gridLayout": "网格布局",
+      "clickHint": "点击接收卡查看详情",
+      "detailTitle": "接收卡详情",
+      "ber": "误码率 (BER)",
+      "temp": "温度",
+      "humidity": "湿度",
+      "history": "历史趋势",
+      "berTrend": "误码率趋势",
+      "tempHum": "温度与湿度",
+      "lastSample": "最后上报: {{time}}"
+    },
+    "sensors": {
+      "history": "历史记录",
+      "groups": {
+        "climate": "环境气候",
+        "airQuality": "空气质量",
+        "brightness": "亮度光感",
+        "power": "供电状态",
+        "relay": "继电器控制"
+      },
+      "labels": {
+        "temperature": "环境温度",
+        "boardTemp": "核心板温度",
+        "humidity": "环境湿度",
+        "boardHumidity": "核心板湿度",
+        "pm10": "PM10",
+        "pm25": "PM2.5",
+        "smoke": "烟雾感应",
+        "noise": "噪音分贝",
+        "ambientLight": "环境光强",
+        "screenBrightness": "屏幕亮度",
+        "voltage": "电压 1",
+        "voltage2": "电压 2",
+        "emDoor": "电磁门锁",
+        "relay": "继电器 {{num}}",
+        "delay": "延时 {{num}}"
+      }
+    },
+    "history": {
+      "title": "历史遥测数据",
+      "to": "至",
+      "loading": "正在加载历史数据...",
+      "noData": "暂无历史数据",
+      "noDataDesc": "所选时间段内未找到遥测记录",
+      "selectHint": "请选择端口和接收卡以查看数据",
+      "stats": {
+        "min": "最小值",
+        "max": "最大值",
+        "avg": "平均值",
+        "count": "数据点"
+      }
     }
   },
   "map": {

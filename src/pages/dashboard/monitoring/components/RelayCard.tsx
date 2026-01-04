@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ToggleLeft, ToggleRight, Clock, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +19,7 @@ interface RelayState {
 }
 
 export function RelayCard({ metrics, className }: RelayCardProps) {
+  const { t } = useTranslation();
   // Extract relay data from metrics
   const relayData = useMemo(() => {
     const relays: Record<string, RelayState> = {
@@ -80,12 +82,12 @@ export function RelayCard({ metrics, className }: RelayCardProps) {
             <Zap className="h-4 w-4 text-violet-500" />
           </div>
           <CardTitle className="text-xs font-bold uppercase tracking-widest">
-            Relay Control
+            {t('monitoring.sensors.groups.relay')}
           </CardTitle>
         </div>
         {hasData && (
           <Badge variant="outline" className="text-[9px] font-bold">
-            {activeRelays.filter(([, r]) => r.status === true).length} ACTIVE
+            {activeRelays.filter(([, r]) => r.status === true).length} {t('monitoring.status.realtimeActive').includes('Active') ? 'ACTIVE' : '激活'}
           </Badge>
         )}
       </CardHeader>
@@ -95,10 +97,7 @@ export function RelayCard({ metrics, className }: RelayCardProps) {
           <div className="flex flex-col items-center justify-center py-8 text-center opacity-40">
             <ToggleLeft className="h-8 w-8 mb-2" />
             <p className="text-[10px] font-bold uppercase tracking-widest">
-              No Relay Data
-            </p>
-            <p className="text-[9px] mt-1">
-              Waiting for relay status telemetry...
+              {t('monitoring.status.awaitingData')}
             </p>
           </div>
         ) : (
@@ -124,7 +123,7 @@ export function RelayCard({ metrics, className }: RelayCardProps) {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[10px] font-bold uppercase">
-                        Relay {num}
+                        {t('monitoring.sensors.labels.relay', { num })}
                       </span>
                       {hasStatus ? (
                         isOn ? (
@@ -140,7 +139,7 @@ export function RelayCard({ metrics, className }: RelayCardProps) {
                     <div className="space-y-1">
                       {/* Status */}
                       <div className="flex items-center justify-between">
-                        <span className="text-[9px] opacity-50">Status</span>
+                        <span className="text-[9px] opacity-50">{t('devices.table.columns.status')}</span>
                         {hasStatus ? (
                           <Badge
                             variant={isOn ? 'default' : 'secondary'}
@@ -162,7 +161,7 @@ export function RelayCard({ metrics, className }: RelayCardProps) {
                       <div className="flex items-center justify-between">
                         <span className="text-[9px] opacity-50 flex items-center gap-1">
                           <Clock className="h-2.5 w-2.5" />
-                          Delay
+                          {t('monitoring.sensors.labels.delay', { num: '' }).trim()}
                         </span>
                         {relay.delay !== null ? (
                           <span className="text-[9px] font-bold tabular-nums">
@@ -183,8 +182,7 @@ export function RelayCard({ metrics, className }: RelayCardProps) {
             {/* Last Update */}
             {activeRelays.length > 0 && (
               <div className="text-[9px] text-muted-foreground text-right">
-                Last update:{' '}
-                {new Date(
+                {t('monitoring.receiveCard.lastSample', { time: new Date(
                   Math.max(
                     ...activeRelays
                       .map(([, r]) => [r.statusAt, r.delayAt])
@@ -192,7 +190,7 @@ export function RelayCard({ metrics, className }: RelayCardProps) {
                       .filter(Boolean)
                       .map((t) => new Date(t!).getTime())
                   )
-                ).toLocaleTimeString()}
+                ).toLocaleTimeString() })}
               </div>
             )}
           </div>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { ChevronRight, TrendingUp, type LucideIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { ChevronRight, type LucideIcon } from 'lucide-react';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,10 +12,6 @@ import {
   Area,
   LineChart,
   Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
 } from 'recharts';
 import { cn } from '@/lib/utils';
 import type { RealtimeMetric } from '../types';
@@ -36,6 +33,7 @@ export function SensorGroupCard({
   onViewHistory,
   className,
 }: SensorGroupCardProps) {
+  const { t } = useTranslation();
   const [activeMetric, setActiveMetric] = useState<string>(
     group.sensors[0]?.reportType || ''
   );
@@ -134,14 +132,14 @@ export function SensorGroupCard({
       return [
         {
           key: 'temperature',
-          label: 'Temperature',
+          label: t('monitoring.receiveCard.temp'),
           sensors: group.sensors.filter((s) =>
             s.reportType.toLowerCase().includes('temperature')
           ),
         },
         {
           key: 'humidity',
-          label: 'Humidity',
+          label: t('monitoring.receiveCard.humidity'),
           sensors: group.sensors.filter((s) =>
             s.reportType.toLowerCase().includes('humidity')
           ),
@@ -159,18 +157,18 @@ export function SensorGroupCard({
         },
         {
           key: 'smoke',
-          label: 'Smoke',
+          label: t('monitoring.sensors.labels.smoke'),
           sensors: group.sensors.filter((s) => s.reportType === 'smoke'),
         },
         {
           key: 'noise',
-          label: 'Noise',
+          label: t('monitoring.sensors.labels.noise'),
           sensors: group.sensors.filter((s) => s.reportType === 'noise'),
         },
       ];
     }
     return [];
-  }, [group]);
+  }, [group, t]);
 
   return (
     <Card
@@ -197,7 +195,7 @@ export function SensorGroupCard({
               onViewHistory(activeSensor.reportType, activeSensor.metricKeys)
             }
           >
-            History
+            {t('monitoring.sensors.history')}
             <ChevronRight className="h-3 w-3" />
           </Button>
         )}
@@ -208,7 +206,7 @@ export function SensorGroupCard({
           <div className="flex flex-col items-center justify-center py-8 text-center opacity-40">
             <Icon className="h-8 w-8 mb-2" />
             <p className="text-[10px] font-bold uppercase tracking-widest">
-              Awaiting Data
+              {t('monitoring.status.awaitingData')}
             </p>
           </div>
         ) : useTabs ? (
@@ -283,6 +281,7 @@ function SensorDisplay({
   getLatestValue,
   getAlertStatus,
 }: SensorDisplayProps) {
+  const { t } = useTranslation();
   const { formatDateTime } = useTimeFormatter();
   // Get primary sensor for display
   const primarySensor = sensors[0];

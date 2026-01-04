@@ -2579,11 +2579,12 @@
     }
   },
   "monitoring": {
-    "title": "Real-time Telemetry",
-    "initializing": "Initializing Device Monitoring...",
+    "title": "Real-time Monitoring",
+    "initializing": "Initializing telemetry system...",
     "analysisPeriod": "Analysis period",
     "searchPlaceholder": "Search by name, network or tags...",
-    "fleet": "Devices",
+    "fleet": "Device Fleet",
+    "devices": "Devices",
     "noDeviceSelected": "No Device Selected",
     "noDeviceSelectedDesc": "Select a device from the fleet list to start receiving real-time telemetry.",
     "tabs": {
@@ -2596,7 +2597,63 @@
       "connected": "Connected",
       "reconnecting": "Reconnecting",
       "error": "Error",
-      "disconnected": "Disconnected"
+      "disconnected": "Disconnected",
+      "awaitingData": "Awaiting Data"
+    },
+    "receiveCard": {
+      "topology": "Physical Topology",
+      "cards": "Cards",
+      "gridLayout": "Grid Layout",
+      "clickHint": "Click a card to view details",
+      "detailTitle": "Receive Card Details",
+      "ber": "Bit Error Rate",
+      "temp": "Temp",
+      "humidity": "Humidity",
+      "history": "History",
+      "berTrend": "Bit Error Rate Trend",
+      "tempHum": "Temperature & Humidity",
+      "lastSample": "Last sample: {{time}}"
+    },
+    "sensors": {
+      "history": "History",
+      "groups": {
+        "climate": "Climate",
+        "airQuality": "Air Quality",
+        "brightness": "Brightness",
+        "power": "Power",
+        "relay": "Relay Control"
+      },
+      "labels": {
+        "temperature": "Temperature",
+        "boardTemp": "Board Temp",
+        "humidity": "Humidity",
+        "boardHumidity": "Board Humidity",
+        "pm10": "PM10",
+        "pm25": "PM2.5",
+        "smoke": "Smoke",
+        "noise": "Noise",
+        "ambientLight": "Ambient Light",
+        "screenBrightness": "Screen Brightness",
+        "voltage": "Voltage 1",
+        "voltage2": "Voltage 2",
+        "emDoor": "EM Door",
+        "relay": "Relay {{num}}",
+        "delay": "Delay {{num}}"
+      }
+    },
+    "history": {
+      "title": "Historical Telemetry",
+      "to": "TO",
+      "loading": "Loading data...",
+      "noData": "No Historical Data",
+      "noDataDesc": "No data found for the selected time range",
+      "selectHint": "Please select a port and card to view data",
+      "stats": {
+        "min": "Min",
+        "max": "Max",
+        "avg": "Avg",
+        "count": "Points"
+      }
     }
   },
   "map": {

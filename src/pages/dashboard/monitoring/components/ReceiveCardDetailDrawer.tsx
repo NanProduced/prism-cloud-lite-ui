@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { X, Cpu, Thermometer, Droplets, TrendingUp, Clock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
   Sheet,
   SheetContent,
@@ -50,6 +51,7 @@ export function ReceiveCardDetailDrawer({
   defaultFromIso,
   defaultToIso,
 }: ReceiveCardDetailDrawerProps) {
+  const { t } = useTranslation();
   const { formatDateTime } = useTimeFormatter();
   const [selectedRange, setSelectedRange] = useState<number>(24); // 默认24小时
   const [mode, setMode] = useState<'preset' | 'range'>('preset');
@@ -139,7 +141,7 @@ export function ReceiveCardDetailDrawer({
             <Card className="rounded-lg border bg-card shadow-sm">
               <CardContent className="p-3 text-center">
                 <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
-                  Bit Error Rate
+                  {t('monitoring.receiveCard.ber')}
                 </p>
                 <p className="text-lg font-bold tracking-tight tabular-nums text-indigo-600">
                   {card.bitErrorRate.toFixed(6)}
@@ -151,7 +153,7 @@ export function ReceiveCardDetailDrawer({
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <Thermometer className="h-3 w-3 text-rose-500" />
                   <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Temp
+                    {t('monitoring.receiveCard.temp')}
                   </p>
                 </div>
                 <p className="text-lg font-bold tracking-tight tabular-nums">
@@ -164,7 +166,7 @@ export function ReceiveCardDetailDrawer({
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <Droplets className="h-3 w-3 text-blue-500" />
                   <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Humidity
+                    {t('monitoring.receiveCard.humidity')}
                   </p>
                 </div>
                 <p className="text-lg font-bold tracking-tight tabular-nums">
@@ -179,7 +181,7 @@ export function ReceiveCardDetailDrawer({
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-primary" />
               <span className="text-xs font-bold uppercase tracking-widest text-foreground/70">
-                History
+                {t('monitoring.receiveCard.history')}
               </span>
             </div>
             <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-md">
@@ -193,7 +195,7 @@ export function ReceiveCardDetailDrawer({
                     setCustomRange({ from: defaultFromIso, to: defaultToIso });
                   }}
                 >
-                  Custom
+                  {t('map.dialogs.location.cancel').replace(/Cancel|取消/g, t('map.presets.timeRange.30d').includes('Custom') ? 'Custom' : '自定义')}
                 </Button>
               )}
               {TIME_RANGES.map((range) => (
@@ -208,7 +210,7 @@ export function ReceiveCardDetailDrawer({
                     setSelectedRange(range.hours);
                   }}
                 >
-                  {range.label}
+                  {t(`map.presets.timeRange.${range.label}`)}
                 </Button>
               ))}
             </div>
@@ -218,16 +220,16 @@ export function ReceiveCardDetailDrawer({
           <Card className="rounded-lg border bg-card shadow-sm">
             <CardContent className="p-3">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                Bit Error Rate Trend
+                {t('monitoring.receiveCard.berTrend')}
               </p>
               <div className="h-[140px]">
                 {isLoading ? (
                   <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 animate-pulse">
-                    Loading...
+                    {t('monitoring.history.loading')}
                   </div>
                 ) : historyData.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
-                    No data available
+                    {t('monitoring.history.noData')}
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
@@ -276,16 +278,16 @@ export function ReceiveCardDetailDrawer({
           <Card className="rounded-lg border bg-card shadow-sm">
             <CardContent className="p-3">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                Temperature & Humidity
+                {t('monitoring.receiveCard.tempHum')}
               </p>
               <div className="h-[140px]">
                 {isLoading ? (
                   <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20 animate-pulse">
-                    Loading...
+                    {t('monitoring.history.loading')}
                   </div>
                 ) : historyData.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-[10px] font-bold opacity-20">
-                    No data available
+                    {t('monitoring.history.noData')}
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
@@ -330,7 +332,7 @@ export function ReceiveCardDetailDrawer({
                         yAxisId="left"
                         type="monotone"
                         dataKey="temperature"
-                        name="Temp (°C)"
+                        name={`${t('monitoring.receiveCard.temp')} (°C)`}
                         stroke={CHART_COLORS.temperature}
                         strokeWidth={2}
                         dot={false}
@@ -339,7 +341,7 @@ export function ReceiveCardDetailDrawer({
                         yAxisId="right"
                         type="monotone"
                         dataKey="humidity"
-                        name="Humidity (%)"
+                        name={`${t('monitoring.receiveCard.humidity')} (%)`}
                         stroke={CHART_COLORS.humidity}
                         strokeWidth={2}
                         dot={false}
@@ -356,7 +358,7 @@ export function ReceiveCardDetailDrawer({
             <div className="flex items-center justify-center gap-2 text-[9px] font-bold text-muted-foreground/50">
               <Clock className="h-3 w-3" />
               <span>
-                Last sample: {formatDateTime(historyData[historyData.length - 1]?.at)}
+                {t('monitoring.receiveCard.lastSample', { time: formatDateTime(historyData[historyData.length - 1]?.at) })}
               </span>
             </div>
           )}

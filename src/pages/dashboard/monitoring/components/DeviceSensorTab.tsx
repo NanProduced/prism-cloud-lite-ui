@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import type { RealtimeMetric } from '../types';
-import { DEVICE_TAB_GROUPS } from '../constants';
+import { getDeviceTabGroups } from '../constants';
 import { SensorGroupCard } from './SensorGroupCard';
 import { HistoryDrawer } from './HistoryDrawer';
 import type { SensorSourceType } from '@/services/telemetryApi';
@@ -30,6 +31,9 @@ export function DeviceSensorTab({
   historyRange,
   className,
 }: DeviceSensorTabProps) {
+  const { t } = useTranslation();
+  const sensorGroups = useMemo(() => getDeviceTabGroups(t), [t]);
+
   // History drawer state
   const [historyState, setHistoryState] = useState<HistoryState>({
     open: false,
@@ -45,7 +49,7 @@ export function DeviceSensorTab({
       let title = reportType;
       let sourceType: SensorSourceType = 'DEVICE_SENSOR';
 
-      for (const group of DEVICE_TAB_GROUPS) {
+      for (const group of sensorGroups) {
         const sensor = group.sensors.find((s) => s.reportType === reportType);
         if (sensor) {
           title = `${group.title} - ${sensor.label}`;
@@ -63,16 +67,13 @@ export function DeviceSensorTab({
         isReceiveCard: false,
       });
     },
-    []
+    [sensorGroups]
   );
 
   // Close history drawer
   const handleCloseHistory = useCallback(() => {
     setHistoryState((prev) => ({ ...prev, open: false }));
   }, []);
-
-  // Device sensor groups (接收卡已移至独立Tab)
-  const sensorGroups = DEVICE_TAB_GROUPS;
 
   return (
     <div className={cn('space-y-4', className)}>

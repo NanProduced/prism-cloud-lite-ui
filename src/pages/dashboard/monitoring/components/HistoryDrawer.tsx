@@ -41,6 +41,8 @@ import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import type { HistoryDrawerProps } from '../types';
 import { CHART_COLORS } from '../constants';
 
+import { useTranslation } from 'react-i18next';
+
 export function HistoryDrawer({
   open,
   onClose,
@@ -55,6 +57,7 @@ export function HistoryDrawer({
   defaultFromIso,
   defaultToIso,
 }: HistoryDrawerProps) {
+  const { t } = useTranslation();
   const { formatDateTime } = useTimeFormatter();
 
   const toLocalInputValue = (date: Date) => {
@@ -129,7 +132,7 @@ export function HistoryDrawer({
     ],
     queryFn: () =>
       getReceiveCardSamples({
-        deviceId,
+        deviceId: String(deviceId),
         netPortNum: selectedPort,
         receiveCardNum: selectedCard,
         from: fromIso,
@@ -147,9 +150,9 @@ export function HistoryDrawer({
   const chartKeys = useMemo(() => {
     if (isReceiveCard) {
       return [
-        { key: 'temperature', name: 'Temperature', color: CHART_COLORS.temperature, unit: '°C' },
-        { key: 'humidity', name: 'Humidity', color: CHART_COLORS.humidity, unit: '%' },
-        { key: 'bitErrorRate', name: 'Bit Error Rate', color: CHART_COLORS.smoke, unit: '' },
+        { key: 'temperature', name: t('monitoring.receiveCard.temp'), color: CHART_COLORS.temperature, unit: '°C' },
+        { key: 'humidity', name: t('monitoring.receiveCard.humidity'), color: CHART_COLORS.humidity, unit: '%' },
+        { key: 'bitErrorRate', name: t('monitoring.receiveCard.ber'), color: CHART_COLORS.smoke, unit: '' },
       ];
     }
 
@@ -172,7 +175,7 @@ export function HistoryDrawer({
         unit: '',
       },
     ];
-  }, [isReceiveCard, reportType, metricKeys, title]);
+  }, [isReceiveCard, reportType, metricKeys, title, t]);
 
   // Process data for chart
   const chartData = useMemo(() => {
@@ -234,7 +237,7 @@ export function HistoryDrawer({
               <div>
                 <SheetTitle className="text-lg font-bold">{title}</SheetTitle>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-0.5">
-                  {sourceType} | Device: {deviceId}
+                  {sourceType} | {t('monitoring.receiveCard.clickHint').includes('Click') ? 'Device' : '终端设备'}: {deviceId}
                 </p>
               </div>
             </div>
@@ -252,7 +255,7 @@ export function HistoryDrawer({
               onChange={(e) => setTimeRange((prev) => ({ ...prev, from: e.target.value }))}
               className="h-8 w-44 text-[10px] font-bold"
             />
-            <span className="text-[10px] font-bold text-muted-foreground">TO</span>
+            <span className="text-[10px] font-bold text-muted-foreground">{t('monitoring.history.to')}</span>
             <Input
               type="datetime-local"
               value={timeRange.to}
@@ -313,7 +316,7 @@ export function HistoryDrawer({
               <div className="text-center">
                 <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Loading data...
+                  {t('monitoring.history.loading')}
                 </p>
               </div>
             </div>
@@ -321,11 +324,11 @@ export function HistoryDrawer({
             <div className="h-full flex items-center justify-center">
               <div className="text-center opacity-40">
                 <LineChartIcon className="h-12 w-12 mx-auto mb-3" />
-                <p className="text-sm font-bold">No Historical Data</p>
+                <p className="text-sm font-bold">{t('monitoring.history.noData')}</p>
                 <p className="text-[10px] mt-1">
                   {isReceiveCard && (selectedPort === undefined || selectedCard === undefined)
-                    ? 'Please select a port and card to view data'
-                    : 'No data found for the selected time range'}
+                    ? t('monitoring.history.selectHint')
+                    : t('monitoring.history.noDataDesc')}
                 </p>
               </div>
             </div>
@@ -338,25 +341,25 @@ export function HistoryDrawer({
                     <p className="text-lg font-bold tracking-tighter tabular-nums">
                       {stats.min.toFixed(2)}
                     </p>
-                    <p className="text-[9px] font-bold uppercase opacity-40">Min</p>
+                    <p className="text-[9px] font-bold uppercase opacity-40">{t('monitoring.history.stats.min')}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-muted/30 text-center">
                     <p className="text-lg font-bold tracking-tighter tabular-nums">
                       {stats.max.toFixed(2)}
                     </p>
-                    <p className="text-[9px] font-bold uppercase opacity-40">Max</p>
+                    <p className="text-[9px] font-bold uppercase opacity-40">{t('monitoring.history.stats.max')}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-muted/30 text-center">
                     <p className="text-lg font-bold tracking-tighter tabular-nums">
                       {stats.avg.toFixed(2)}
                     </p>
-                    <p className="text-[9px] font-bold uppercase opacity-40">Avg</p>
+                    <p className="text-[9px] font-bold uppercase opacity-40">{t('monitoring.history.stats.avg')}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-muted/30 text-center">
                     <p className="text-lg font-bold tracking-tighter tabular-nums">
                       {stats.count}
                     </p>
-                    <p className="text-[9px] font-bold uppercase opacity-40">Points</p>
+                    <p className="text-[9px] font-bold uppercase opacity-40">{t('monitoring.history.stats.count')}</p>
                   </div>
                 </div>
               )}
@@ -423,7 +426,7 @@ export function HistoryDrawer({
                       Downsampled
                     </Badge>
                   )}
-                  {chartData.length.toLocaleString()} data points
+                  {chartData.length.toLocaleString()} {t('monitoring.history.stats.count').toLowerCase()}
                 </span>
                 <span>
                   {new Date(chartData[0]?.at).toLocaleString()} -{' '}

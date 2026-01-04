@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { ZoomIn, ZoomOut, RotateCcw, Cpu, Thermometer, Droplets, Cable } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { ReceiveCardData, ReceiveCardPortData } from '../types';
+import type { ReceiveCardPortData } from '../types';
 
 // 扁平化的接收卡Tile数据
 export interface ReceiveCardTile {
@@ -41,6 +42,8 @@ export function ReceiveCardTopology({
   selectedCard,
   className,
 }: ReceiveCardTopologyProps) {
+  const { t } = useTranslation();
+  
   // 扁平化所有接收卡
   const tiles = useMemo<ReceiveCardTile[]>(() => {
     const result: ReceiveCardTile[] = [];
@@ -233,8 +236,7 @@ export function ReceiveCardTopology({
       <Card className={cn('rounded-lg border bg-card shadow-sm', className)}>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center opacity-40">
           <Cpu className="h-12 w-12 mb-3" />
-          <p className="text-sm font-bold">No Receive Cards</p>
-          <p className="text-[10px] mt-1">Waiting for receive card data...</p>
+          <p className="text-sm font-bold">{t('monitoring.status.awaitingData')}</p>
         </CardContent>
       </Card>
     );
@@ -248,15 +250,15 @@ export function ReceiveCardTopology({
             <Cpu className="h-3.5 w-3.5 text-indigo-500" />
           </div>
           <CardTitle className="text-xs font-bold uppercase tracking-widest text-foreground/70">
-            Physical Topology
+            {t('monitoring.receiveCard.topology')}
           </CardTitle>
           <Badge variant="outline" className="text-[9px] font-bold h-5 px-2 rounded-full ml-2">
-            {tiles.length} Cards
+            {tiles.length} {t('monitoring.receiveCard.cards')}
           </Badge>
         </div>
         {!hasCoordinates && (
           <Badge variant="secondary" className="text-[9px] font-bold h-5 px-2 rounded-full">
-            Grid Layout
+            {t('monitoring.receiveCard.gridLayout')}
           </Badge>
         )}
       </CardHeader>
@@ -277,7 +279,7 @@ export function ReceiveCardTopology({
                   size="icon"
                   className="h-7 w-7 rounded-sm"
                   onClick={() => zoomIn()}
-                  title="Zoom In"
+                  title={t('common.actions.open')}
                 >
                   <ZoomIn className="h-3.5 w-3.5" />
                 </Button>
@@ -286,7 +288,7 @@ export function ReceiveCardTopology({
                   size="icon"
                   className="h-7 w-7 rounded-sm"
                   onClick={() => zoomOut()}
-                  title="Zoom Out"
+                  title={t('common.actions.close')}
                 >
                   <ZoomOut className="h-3.5 w-3.5" />
                 </Button>
@@ -295,7 +297,7 @@ export function ReceiveCardTopology({
                   size="icon"
                   className="h-7 w-7 rounded-sm"
                   onClick={() => resetTransform()}
-                  title="Reset"
+                  title={t('common.actions.refresh')}
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                 </Button>
@@ -328,7 +330,7 @@ export function ReceiveCardTopology({
         {/* 选中提示 */}
         {!selectedCard && (
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest">
-            Click a card to view details
+            {t('monitoring.receiveCard.clickHint')}
           </div>
         )}
       </CardContent>
