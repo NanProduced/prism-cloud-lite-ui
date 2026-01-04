@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "@/store/notificationStore";
 import { PrismWordmark, PrismIcon, GoogleLogo, AppleLogo, WechatLogo } from "../../components/shared/logo";
 import { LanguageSwitcher } from "../../components/shared/LanguageSwitcher";
-import { login, requestEmailOtp, googleLogin, getErrorMessage, getErrorCode } from "../../services/authApi";
+import { login, requestEmailOtp, requestPhoneOtp, googleLogin, getErrorMessage, getErrorCode } from "../../services/authApi";
 import type { AuthType } from "../../types/auth";
 import { AuthErrorCode } from "../../types/auth";
 import { useAuthStore } from "../../store/authStore";
@@ -224,7 +224,11 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
   const handleSendCode = async () => {
     if (!identifier) return;
     try {
-      const response = await requestEmailOtp({ email: identifier });
+      const isEmailAuth = isEmail(identifier);
+      const response = isEmailAuth 
+        ? await requestEmailOtp({ email: identifier })
+        : await requestPhoneOtp({ phone: identifier });
+        
       if (response.success) {
         setCountdown(60);
       } else {

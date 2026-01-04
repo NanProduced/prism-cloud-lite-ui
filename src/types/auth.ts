@@ -37,6 +37,11 @@ export interface RequestEmailOtpRequest {
   email: string;
 }
 
+// Request phone OTP
+export interface RequestPhoneOtpRequest {
+  phone: string;
+}
+
 // Register request OTP
 export interface RegisterRequestOtpRequest {
   email: string;

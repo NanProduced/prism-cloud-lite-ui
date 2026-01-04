@@ -6,6 +6,7 @@ import type {
   LoginRequest,
   LoginResponse,
   RequestEmailOtpRequest,
+  RequestPhoneOtpRequest,
   RegisterRequestOtpRequest,
   RegisterVerifyOtpRequest,
   RegisterVerifyOtpResponse,
@@ -71,6 +72,22 @@ export async function requestEmailOtp(
   return handleBffRequest<void>(
     authApiClient.post<BffResponse<void>>(
       '/login/request-email-otp',
+      request
+    )
+  );
+}
+
+/**
+ * Login API - Request phone (SMS) OTP
+ */
+export async function requestPhoneOtp(
+  request: RequestPhoneOtpRequest
+): Promise<BffResponse<void>> {
+  if (USE_MOCK) return mockResponse<void>();
+  
+  return handleBffRequest<void>(
+    authApiClient.post<BffResponse<void>>(
+      '/login/request-phone-otp',
       request
     )
   );

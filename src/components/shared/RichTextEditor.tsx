@@ -88,8 +88,8 @@ export function RichTextEditor({
   };
 
   return (
-    <div className={cn('flex flex-col rounded-2xl border bg-background overflow-hidden', className)}>
-      <div className="flex flex-wrap items-center gap-1 border-b bg-muted/30 p-1">
+    <div className={cn('flex flex-col rounded-[1.5rem] border bg-background/50 backdrop-blur-sm overflow-hidden transition-all duration-300 focus-within:ring-2 focus-within:ring-primary/10', className)}>
+      <div className="flex flex-wrap items-center gap-1.5 border-b bg-muted/40 p-2">
         <MenuButton
           onClick={() => editor.chain().focus().toggleBold().run()}
           active={editor.isActive('bold')}
@@ -104,7 +104,7 @@ export function RichTextEditor({
         >
           <Italic className="h-4 w-4" />
         </MenuButton>
-        <div className="w-px h-4 bg-border mx-1" />
+        <div className="w-px h-5 bg-border/60 mx-1.5" />
         <MenuButton
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           active={editor.isActive('bulletList')}
@@ -126,7 +126,7 @@ export function RichTextEditor({
         >
           <Quote className="h-4 w-4" />
         </MenuButton>
-        <div className="w-px h-4 bg-border mx-1" />
+        <div className="w-px h-5 bg-border/60 mx-1.5" />
         <MenuButton
           onClick={setLink}
           active={editor.isActive('link')}
@@ -135,20 +135,22 @@ export function RichTextEditor({
           <LinkIcon className="h-4 w-4" />
         </MenuButton>
         <div className="flex-1" />
-        <MenuButton
-          onClick={() => editor.chain().focus().undo().run()}
-          disabled={!editor.can().undo()}
-          title="Undo"
-        >
-          <Undo className="h-4 w-4" />
-        </MenuButton>
-        <MenuButton
-          onClick={() => editor.chain().focus().redo().run()}
-          disabled={!editor.can().redo()}
-          title="Redo"
-        >
-          <Redo className="h-4 w-4" />
-        </MenuButton>
+        <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-0.5">
+          <MenuButton
+            onClick={() => editor.chain().focus().undo().run()}
+            disabled={!editor.can().undo()}
+            title="Undo"
+          >
+            <Undo className="h-3.5 w-3.5" />
+          </MenuButton>
+          <MenuButton
+            onClick={() => editor.chain().focus().redo().run()}
+            disabled={!editor.can().redo()}
+            title="Redo"
+          >
+            <Redo className="h-3.5 w-3.5" />
+          </MenuButton>
+        </div>
       </div>
       <EditorContent editor={editor} />
       <style dangerouslySetInnerHTML={{ __html: `
@@ -156,12 +158,13 @@ export function RichTextEditor({
           content: attr(data-placeholder);
           float: left;
           color: #94a3b8;
+          opacity: 0.5;
           pointer-events: none;
           height: 0;
         }
         .tiptap ul { list-style-type: disc; padding-left: 1.5rem; }
         .tiptap ol { list-style-type: decimal; padding-left: 1.5rem; }
-        .tiptap blockquote { border-left: 3px solid #e2e8f0; padding-left: 1rem; color: #64748b; font-style: italic; }
+        .tiptap blockquote { border-left: 4px solid #b6f09c; padding-left: 1.25rem; color: #64748b; font-style: italic; background: rgba(182, 240, 156, 0.05); padding-top: 0.5rem; padding-bottom: 0.5rem; border-radius: 0 0.5rem 0.5rem 0; }
       `}} />
     </div>
   );
@@ -177,7 +180,7 @@ function MenuButton({
   onClick: () => void; 
   active?: boolean; 
   disabled?: boolean;
-  children: React.ReactNode;
+  children: React.ReactNode; 
   title?: string;
 }) {
   return (
@@ -186,8 +189,8 @@ function MenuButton({
       variant="ghost"
       size="icon"
       className={cn(
-        'h-8 w-8 rounded-lg transition-colors',
-        active ? 'bg-background text-primary shadow-sm ring-1 ring-black/5' : 'text-muted-foreground/60 hover:text-muted-foreground'
+        'h-9 w-9 rounded-xl transition-all duration-200',
+        active ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110 z-10' : 'text-muted-foreground/60 hover:text-primary hover:bg-primary/5'
       )}
       onClick={onClick}
       disabled={disabled}

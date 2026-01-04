@@ -26,6 +26,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { RichTextEditor } from './RichTextEditor';
 import { toast } from '@/store/notificationStore';
 import { useAuthStore } from '@/store/authStore';
@@ -232,79 +233,113 @@ export function FeedbackDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl p-0 overflow-hidden border-none bg-transparent shadow-none">
         {isSuccess ? (
-          <div className="bg-card rounded-[2.5rem] p-12 border shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col items-center text-center space-y-6">
-            <div className="h-20 w-20 rounded-3xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
-              <CheckCircle2 className="h-10 w-10" />
+          <div className="bg-card rounded-[2.5rem] p-12 border shadow-2xl animate-in zoom-in-95 duration-500 flex flex-col items-center text-center space-y-8 relative overflow-hidden">
+            {/* Background Decorative Element */}
+            <div className="absolute -top-24 -right-24 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative">
+              <div className="h-24 w-24 rounded-[2rem] bg-emerald-500/10 flex items-center justify-center text-emerald-600 relative z-10">
+                <CheckCircle2 className="h-12 w-12" />
+              </div>
+              <div className="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full animate-pulse" />
             </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold tracking-tight">{t('feedback.success.title')}</h2>
-              <p className="text-muted-foreground max-w-sm mx-auto">
+
+            <div className="space-y-3 relative z-10">
+              <h2 className="text-3xl font-extrabold tracking-tight text-foreground">{t('feedback.success.title')}</h2>
+              <p className="text-muted-foreground max-w-sm mx-auto leading-relaxed">
                 {t('feedback.success.desc')}
               </p>
             </div>
+
             {reportId && (
-              <div className="bg-muted/30 px-6 py-4 rounded-2xl border flex items-center gap-4 w-full max-w-xs group">
+              <div className="bg-muted/40 backdrop-blur-md px-6 py-5 rounded-3xl border border-border/50 flex items-center gap-4 w-full max-w-sm group hover:bg-muted/60 transition-all duration-300 relative z-10">
                 <div className="flex-1 text-left">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 leading-none mb-1.5">Report ID</p>
-                  <p className="font-mono text-sm font-bold truncate">{reportId}</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 leading-none mb-2">Report ID</p>
+                  <p className="font-mono text-sm font-bold text-foreground/80 truncate">{reportId}</p>
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={copyReportId}>
-                  <Copy className="h-3.5 w-3.5" />
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="h-10 w-10 rounded-xl bg-background shadow-sm hover:scale-110 transition-all duration-200" 
+                  onClick={copyReportId}
+                  title="Copy ID"
+                >
+                  <Copy className="h-4 w-4" />
                 </Button>
               </div>
             )}
-            <Button className="rounded-xl px-12 h-12 font-bold shadow-xl" onClick={() => handleOpenChange(false)}>
+
+            <Button 
+              className="rounded-2xl px-16 h-14 font-bold shadow-xl shadow-emerald-500/10 hover:shadow-emerald-500/20 hover:scale-105 transition-all duration-300 relative z-10 text-lg" 
+              onClick={() => handleOpenChange(false)}
+            >
               {t('common.actions.close')}
             </Button>
           </div>
         ) : (
-          <div className="bg-card rounded-[2.5rem] border shadow-2xl flex flex-col max-h-[90vh]">
-            <div className="p-8 pb-4 border-b flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                  <MessageSquareWarning className="h-6 w-6" />
+          <div className="bg-card rounded-[2.5rem] border shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="p-8 pb-6 border-b bg-gradient-to-b from-muted/20 to-transparent flex items-center justify-between">
+              <div className="flex items-center gap-5">
+                <div className="h-14 w-14 rounded-[1.25rem] bg-primary/10 flex items-center justify-center text-primary relative group">
+                  <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <MessageSquareWarning className="h-7 w-7 relative z-10" />
                 </div>
-                <DialogHeader className="p-0 space-y-0 text-left">
-                  <DialogTitle className="text-xl font-bold tracking-tight">{t('feedback.ui.title')}</DialogTitle>
-                  <DialogDescription className="text-xs font-medium">{t('feedback.ui.subtitle')}</DialogDescription>
+                <DialogHeader className="p-0 space-y-1 text-left">
+                  <DialogTitle className="text-2xl font-black tracking-tight text-foreground/90">{t('feedback.ui.title')}</DialogTitle>
+                  <DialogDescription className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest">{t('feedback.ui.subtitle')}</DialogDescription>
                 </DialogHeader>
               </div>
-              <Button variant="ghost" size="icon" className="rounded-xl h-10 w-10" onClick={() => handleOpenChange(false)}>
-                <X className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="rounded-2xl h-12 w-12 hover:bg-muted/80 transition-colors" onClick={() => handleOpenChange(false)}>
+                <X className="h-6 w-6 text-muted-foreground/60" />
               </Button>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex-1 overflow-auto custom-scrollbar p-8 space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="title" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
-                  {t('feedback.ui.fields.title')}
-                </Label>
-                <Input
-                  id="title"
-                  placeholder={t('feedback.ui.placeholders.title')}
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="h-12 rounded-2xl bg-muted/20 border-transparent focus:border-primary/20 focus:bg-background transition-all font-bold text-sm"
-                  required
-                />
+            {/* Form Body */}
+            <form onSubmit={handleSubmit} className="flex-1 overflow-auto custom-scrollbar p-8 pt-6 space-y-8">
+              {/* Title Section */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between px-1">
+                  <Label htmlFor="title" className="text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground/50">
+                    {t('feedback.ui.fields.title')}
+                  </Label>
+                </div>
+                <div className="relative group">
+                  <Input
+                    id="title"
+                    placeholder={t('feedback.ui.placeholders.title')}
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="h-14 rounded-2xl bg-muted/20 border-transparent focus:border-primary/20 focus:bg-background focus:ring-4 focus:ring-primary/5 transition-all duration-300 font-bold text-base px-5"
+                    required
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-focus-within:opacity-100 transition-opacity">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+              {/* Content Section */}
+              <div className="space-y-2.5">
+                <Label className="text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground/50 px-1">
                   {t('feedback.ui.fields.content')}
                 </Label>
-                <RichTextEditor
-                  content={contentHtml}
-                  onChange={setContentHtml}
-                  placeholder={t('feedback.ui.placeholders.content')}
-                  className="rounded-[2rem] border-2 border-muted/30"
-                  editorClassName="min-h-[200px]"
-                />
+                <div className="relative group rounded-[2.25rem] p-1 border-2 border-dashed border-muted/30 focus-within:border-primary/20 transition-all duration-300">
+                  <RichTextEditor
+                    content={contentHtml}
+                    onChange={setContentHtml}
+                    placeholder={t('feedback.ui.placeholders.content')}
+                    className="border-none bg-transparent"
+                    editorClassName="min-h-[200px] px-6 py-4"
+                  />
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+              {/* Contact & URL Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2">
+                <div className="space-y-2.5">
+                  <Label htmlFor="email" className="text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground/50 px-1">
                     {t('feedback.ui.fields.email')}
                   </Label>
                   <Input
@@ -313,67 +348,86 @@ export function FeedbackDialog({
                     placeholder="user@example.com"
                     value={contactEmail}
                     onChange={(e) => setContactEmail(e.target.value)}
-                    className="h-12 rounded-2xl bg-muted/20 border-transparent focus:border-primary/20 transition-all font-bold text-sm"
+                    className="h-14 rounded-2xl bg-muted/20 border-transparent focus:border-primary/20 focus:bg-background focus:ring-4 focus:ring-primary/5 transition-all duration-300 font-bold text-sm px-5"
                   />
                 </div>
-                <div className="flex flex-col justify-center gap-2 px-2">
-                   <label className="flex items-center gap-3 cursor-pointer group">
-                      <input 
-                        type="checkbox" 
-                        checked={includeUrl} 
-                        onChange={e => setIncludeUrl(e.target.checked)}
-                        className="h-4 w-4 rounded border-muted-foreground/30 text-primary focus:ring-primary/20"
-                      />
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold group-hover:text-primary transition-colors">{t('feedback.ui.fields.includeUrl')}</span>
-                        <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">{window.location.href}</span>
+                <div className="flex flex-col justify-center bg-muted/10 rounded-2xl px-5 py-3 border border-transparent hover:border-muted-foreground/10 transition-all group">
+                   <label className="flex items-center gap-4 cursor-pointer">
+                      <div className="relative flex items-center justify-center">
+                        <input 
+                          type="checkbox" 
+                          checked={includeUrl} 
+                          onChange={e => setIncludeUrl(e.target.checked)}
+                          className="peer h-5 w-5 rounded-lg border-muted-foreground/30 text-primary focus:ring-primary/20 transition-all cursor-pointer"
+                        />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[13px] font-bold text-foreground/80 transition-colors">{t('feedback.ui.fields.includeUrl')}</span>
+                        <span className="text-[10px] text-muted-foreground font-medium truncate opacity-60 group-hover:opacity-100 transition-opacity">
+                          {window.location.hostname}...{window.location.pathname}
+                        </span>
                       </div>
                    </label>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1 flex items-center justify-between">
-                  {t('feedback.ui.fields.attachments')}
-                  <span className="font-bold lowercase opacity-40">{attachments.length}/5</span>
-                </Label>
+              {/* Attachments Section */}
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center justify-between px-1">
+                  <Label className="text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground/50">
+                    {t('feedback.ui.fields.attachments')}
+                  </Label>
+                  <Badge variant="outline" className="rounded-full px-3 py-0.5 bg-muted/30 border-muted-foreground/10 text-[10px] font-black opacity-40">
+                    {attachments.length} / 5
+                  </Badge>
+                </div>
                 
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {attachments.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-4 p-3 rounded-2xl bg-muted/20 border-2 border-transparent group hover:bg-muted/30 transition-all">
-                       <div className="h-10 w-10 rounded-xl bg-background border flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
-                          <Paperclip className="h-4 w-4" />
+                    <div key={idx} className="flex items-center gap-4 p-4 rounded-[1.25rem] bg-muted/20 border border-muted-foreground/5 group hover:bg-muted/30 hover:shadow-lg hover:shadow-black/5 transition-all duration-300 animate-in slide-in-from-bottom-2">
+                       <div className="h-11 w-11 rounded-xl bg-background border shadow-sm flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:scale-110 transition-all">
+                          <Paperclip className="h-5 w-5" />
                        </div>
                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold truncate">{item.file.name}</p>
-                          <p className="text-[10px] font-medium text-muted-foreground">
-                            {(item.file.size / 1024).toFixed(1)} KB
-                            {item.status === 'uploading' && ` · ${t('media.upload.taskStatus.uploading')}...`}
-                            {item.status === 'error' && ` · ${item.error}`}
+                          <p className="text-xs font-black truncate text-foreground/80">{item.file.name}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tighter mt-0.5">
+                            {(item.file.size / 1024).toFixed(0)} KB
+                            {item.status === 'uploading' && <span className="text-primary ml-1.5 animate-pulse">···</span>}
                           </p>
                        </div>
-                       <div className="flex items-center gap-1">
-                          {item.status === 'uploading' && <Loader2 className="h-4 w-4 animate-spin text-primary/40" />}
-                          {item.status === 'done' && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                       <div className="flex items-center">
+                          {item.status === 'uploading' && <Loader2 className="h-5 w-5 animate-spin text-primary/40" />}
+                          {item.status === 'done' && (
+                            <div className="h-6 w-6 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                            </div>
+                          )}
                           {item.status === 'error' && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500" onClick={() => uploadMutation.mutate(idx)}>
-                               <AlertCircle className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-500/10 rounded-lg" onClick={() => uploadMutation.mutate(idx)}>
+                               <AlertCircle className="h-5 w-5" />
                             </Button>
                           )}
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removeAttachment(idx)}>
-                            <Trash2 className="h-4 w-4" />
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-9 w-9 text-muted-foreground/40 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl ml-1 group-hover:opacity-100 opacity-0 transition-all" 
+                            onClick={() => removeAttachment(idx)}
+                          >
+                            <Trash2 className="h-4.5 w-4.5" />
                           </Button>
                        </div>
                     </div>
                   ))}
 
                   {attachments.length < 5 && (
-                    <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-[2rem] bg-muted/10 hover:bg-muted/20 hover:border-primary/20 cursor-pointer transition-all group">
-                       <div className="h-10 w-10 rounded-2xl bg-background border flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors mb-2">
-                          <Paperclip className="h-4 w-4" />
+                    <label className="flex items-center gap-4 p-4 border-2 border-dashed rounded-[1.25rem] bg-muted/5 hover:bg-muted/20 hover:border-primary/30 hover:shadow-inner cursor-pointer transition-all duration-300 group overflow-hidden relative">
+                       <div className="h-11 w-11 rounded-xl bg-background border flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:rotate-12 transition-all shadow-sm">
+                          <Paperclip className="h-5 w-5" />
                        </div>
-                       <span className="text-xs font-bold text-muted-foreground group-hover:text-primary transition-colors">{t('feedback.ui.actions.addAttachment')}</span>
-                       <span className="text-[10px] text-muted-foreground/50 mt-1">{t('feedback.ui.hints.attachmentSize')}</span>
+                       <div className="flex flex-col">
+                          <span className="text-xs font-black text-foreground/60 group-hover:text-primary transition-colors">{t('feedback.ui.actions.addAttachment')}</span>
+                          <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest mt-1">Max 10MB · Images/PDF</span>
+                       </div>
                        <input type="file" multiple className="hidden" onChange={handleFileSelect} accept="image/*,.pdf,.doc,.docx,.txt" />
                     </label>
                   )}
@@ -381,17 +435,22 @@ export function FeedbackDialog({
               </div>
             </form>
 
-            <div className="p-8 border-t bg-muted/5 flex items-center justify-end gap-3 rounded-b-[2.5rem]">
-               <Button variant="ghost" className="rounded-xl px-8 h-12 font-bold" onClick={() => handleOpenChange(false)}>
+            {/* Footer */}
+            <div className="p-8 border-t bg-muted/10 backdrop-blur-md flex items-center justify-between gap-4">
+               <Button variant="ghost" className="rounded-2xl px-8 h-14 font-bold text-muted-foreground hover:bg-muted/80 transition-all" onClick={() => handleOpenChange(false)}>
                   {t('common.actions.cancel')}
                </Button>
                <Button 
-                className="rounded-xl px-10 h-12 font-bold shadow-xl shadow-primary/20 gap-2"
+                className="rounded-2xl px-12 h-14 font-black shadow-2xl shadow-primary/20 gap-3 hover:scale-[1.02] active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:grayscale"
                 onClick={handleSubmit}
                 disabled={submitMutation.isPending || attachments.some(a => a.status === 'uploading')}
                >
-                  {submitMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  {t('feedback.ui.actions.submit')}
+                  {submitMutation.isPending ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Send className="h-5 w-5" />
+                  )}
+                  <span className="text-base uppercase tracking-wider">{t('feedback.ui.actions.submit')}</span>
                </Button>
             </div>
           </div>
