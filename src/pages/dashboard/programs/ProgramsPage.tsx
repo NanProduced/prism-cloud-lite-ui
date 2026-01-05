@@ -95,6 +95,7 @@ export default function ProgramsPage() {
   const [createHeight, setCreateHeight] = useState(1080);
   const [createTargetDeviceId, setCreateTargetDeviceId] = useState<string | null>(null);
   const [isCustomResolution, setIsCustomResolution] = useState(false);
+  const [showDevicePicker, setShowDevicePicker] = useState(false);
 
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<ProgramListResp | null>(null);
@@ -181,8 +182,8 @@ export default function ProgramsPage() {
     
     let width = createWidth;
     let height = createHeight;
-    
-    if (!isCustomResolution && createTargetDeviceId == null) {
+
+    if (!isCustomResolution && !showDevicePicker) {
       const preset = RESOLUTION_PRESETS[createPresetIndex] ?? RESOLUTION_PRESETS[0];
       width = preset.width;
       height = preset.height;
@@ -460,7 +461,7 @@ export default function ProgramsPage() {
         </CardContent>
       </Card>
 
-            <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) { setCreateName('New Program'); setCreatePresetIndex(0); setCreateMode('blank'); setCreateTargetDeviceId(null); setIsCustomResolution(false); } }}>
+            <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) { setCreateName('New Program'); setCreatePresetIndex(0); setCreateMode('blank'); setCreateTargetDeviceId(null); setIsCustomResolution(false); setShowDevicePicker(false); } }}>
               <DialogContent className="max-w-[500px] p-0 overflow-hidden border-0 shadow-2xl rounded-2xl ring-1 ring-foreground/5 text-foreground">
                 <div className="p-8">
                   <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -493,9 +494,9 @@ export default function ProgramsPage() {
                       <div className="flex items-center justify-between">
                         <label className="text-[10px] font-bold text-muted-foreground/60">{t('programs.dialogs.create.resolutionLabel')}</label>
                         <div className="flex items-center gap-4">
-                          {!createTargetDeviceId && (
-                            <button 
-                              type="button" 
+                          {!showDevicePicker && (
+                            <button
+                              type="button"
                               onClick={() => setIsCustomResolution(!isCustomResolution)}
                               className="text-[10px] font-bold text-primary hover:underline"
                             >
@@ -503,22 +504,26 @@ export default function ProgramsPage() {
                             </button>
                           )}
                           <span className="text-[10px] text-muted-foreground/20">|</span>
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             onClick={() => {
-                              if (createTargetDeviceId) {
+                              if (showDevicePicker) {
+                                setShowDevicePicker(false);
                                 setCreateTargetDeviceId(null);
+                              } else {
+                                setShowDevicePicker(true);
+                                setIsCustomResolution(false);
                               }
                             }}
-                            className={cn("text-[10px] font-bold hover:underline", createTargetDeviceId ? "text-rose-500" : "text-primary")}
+                            className={cn("text-[10px] font-bold hover:underline", showDevicePicker ? "text-rose-500" : "text-primary")}
                           >
-                            {createTargetDeviceId ? t('common.actions.cancel') : t('programs.dialogs.create.deviceResolution')}
+                            {showDevicePicker ? t('common.actions.cancel') : t('programs.dialogs.create.deviceResolution')}
                           </button>
                         </div>
                       </div>
-      
-                      {createTargetDeviceId ? (
-                         <div className="space-y-3">
+
+                      {showDevicePicker ? (
+                         <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
                             <DeviceResolutionPicker
                               devices={devices}
                               value={createTargetDeviceId}
@@ -534,9 +539,11 @@ export default function ProgramsPage() {
                                 }
                               }}
                             />
-                            <p className="text-[10px] font-medium text-muted-foreground italic px-1">
-                              {t('programEditor.panels.inspector.labels.canvasResolution')}: <span className="text-primary font-bold">{createWidth} &times; {createHeight}</span>
-                            </p>
+                            {createTargetDeviceId && (
+                              <p className="text-[10px] font-medium text-muted-foreground italic px-1">
+                                {t('programEditor.panels.inspector.labels.canvasResolution')}: <span className="text-primary font-bold">{createWidth} &times; {createHeight}</span>
+                              </p>
+                            )}
                          </div>
                       ) : isCustomResolution ? (
                         <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2 duration-300">

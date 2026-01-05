@@ -203,11 +203,38 @@ export default function ProgramEditorPage() {
   }, [programId, baseVersion, hasBaseFromUrl, isInitializing, navigate, programQuery.isLoading, programQuery.data]);
 
   // --- Capture Cover Screenshot ---
+
+  // Wait for a single image to load (with timeout)
+  const waitForImageLoad = useCallback((img: HTMLImageElement, timeoutMs = 3000): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (img.complete && img.naturalWidth > 0) {
+        resolve(true);
+        return;
+      }
+      const timer = setTimeout(() => resolve(false), timeoutMs);
+      img.onload = () => { clearTimeout(timer); resolve(true); };
+      img.onerror = () => { clearTimeout(timer); resolve(false); };
+    });
+  }, []);
+
+  // Wait for all images in a container to load
+  const waitForAllImages = useCallback(async (container: HTMLElement, timeoutMs = 5000): Promise<void> => {
+    const images = Array.from(container.querySelectorAll('img'));
+    if (images.length === 0) return;
+
+    await Promise.all(images.map(img => waitForImageLoad(img as HTMLImageElement, timeoutMs)));
+    // Small delay to ensure rendering is complete
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }, [waitForImageLoad]);
+
   const captureVideoFrameAsDataUrl = useCallback((video: HTMLVideoElement): string | null => {
     try {
       const width = video.videoWidth;
       const height = video.videoHeight;
+      // Check if video has valid dimensions and is ready
       if (!width || !height) return null;
+      if (video.readyState < 2) return null; // HAVE_CURRENT_DATA or higher
+
       const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
@@ -215,17 +242,53 @@ export default function ProgramEditorPage() {
       if (!ctx) return null;
       ctx.drawImage(video, 0, 0, width, height);
       return canvas.toDataURL('image/png');
-    } catch {
+    } catch (e) {
+      console.warn('Failed to capture video frame:', e);
       return null;
     }
+  }, []);
+
+  // Generate a placeholder image for failed media
+  const generatePlaceholder = useCallback((width: number, height: number, text = 'Media'): string => {
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(width, 100);
+    canvas.height = Math.max(height, 100);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+
+    // Dark gradient background
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    gradient.addColorStop(0, '#1a1a2e');
+    gradient.addColorStop(1, '#16213e');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Icon placeholder
+    ctx.fillStyle = '#4a4a6a';
+    const iconSize = Math.min(canvas.width, canvas.height) * 0.3;
+    const iconX = (canvas.width - iconSize) / 2;
+    const iconY = (canvas.height - iconSize) / 2 - 10;
+    ctx.fillRect(iconX, iconY, iconSize, iconSize * 0.7);
+
+    // Text label
+    ctx.fillStyle = '#8a8aa0';
+    ctx.font = `${Math.max(12, iconSize * 0.2)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(text, canvas.width / 2, iconY + iconSize + 20);
+
+    return canvas.toDataURL('image/png');
   }, []);
 
   const captureCoverStage = useCallback(async (stage: HTMLElement): Promise<string> => {
     const captureOptions = {
       pixelRatio: 1,
+      cacheBust: true, // Force re-fetch to avoid stale cache issues
       // Avoid mutating URLs (e.g. presigned S3 URLs); use fetch cache controls instead.
       fetchRequestInit: { cache: 'no-store' as const, credentials: 'include' as const },
     };
+
+    // Wait for existing images in stage to load first
+    await waitForAllImages(stage);
 
     const hasVideo = stage.querySelector('video') != null;
     if (!hasVideo) {
@@ -253,39 +316,75 @@ export default function ProgramEditorPage() {
       const poster = (clonedVideo as HTMLVideoElement).poster || originalVideo?.poster || '';
       const frameDataUrl = originalVideo ? captureVideoFrameAsDataUrl(originalVideo) : null;
 
+      // Determine the best available source
+      let imgSrc = frameDataUrl || poster;
+
+      // If no valid source, generate placeholder
+      if (!imgSrc) {
+        const videoWidth = originalVideo?.videoWidth || clonedVideo.clientWidth || 320;
+        const videoHeight = originalVideo?.videoHeight || clonedVideo.clientHeight || 180;
+        imgSrc = generatePlaceholder(videoWidth, videoHeight, 'Video');
+      }
+
       const img = document.createElement('img');
       img.className = clonedVideo.className;
       img.alt = '';
-      img.decoding = 'async';
+      img.decoding = 'sync'; // Use sync for immediate rendering
       img.loading = 'eager';
-      img.src = frameDataUrl || poster;
+      img.src = imgSrc;
       img.style.width = '100%';
       img.style.height = '100%';
       img.style.objectFit = (clonedVideo as HTMLElement).style.objectFit || 'contain';
-      img.setAttribute('crossorigin', 'anonymous');
+      // Only set crossorigin for external URLs to avoid CORS issues with data URLs
+      if (!imgSrc.startsWith('data:')) {
+        img.setAttribute('crossorigin', 'anonymous');
+      }
 
       clonedVideo.replaceWith(img);
     });
 
     stagingRoot.appendChild(clone);
     document.body.appendChild(stagingRoot);
+
     try {
+      // Wait for replaced images to load
+      await waitForAllImages(stagingRoot);
       return await toPng(clone, captureOptions);
     } finally {
       stagingRoot.remove();
     }
-  }, [captureVideoFrameAsDataUrl]);
+  }, [captureVideoFrameAsDataUrl, waitForAllImages, generatePlaceholder]);
 
   const captureCover = useCallback(async (): Promise<{ base64: string; contentType: string } | null> => {
     const container = stageCaptureContainerRef.current;
     const stage = container?.querySelector('[data-testid="program-stage"]') as HTMLElement | null;
     if (!stage) return null;
-    try {
-      const dataUrl = await captureCoverStage(stage);
-      return { base64: dataUrl, contentType: 'image/png' };
-    } catch {
-      return null;
+
+    // Retry mechanism: try up to 3 times with increasing delays
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const dataUrl = await captureCoverStage(stage);
+
+        // Validate the result is not empty/black
+        // A valid PNG data URL should be reasonably long (>1KB for any real content)
+        if (dataUrl && dataUrl.length > 1000) {
+          return { base64: dataUrl, contentType: 'image/png' };
+        }
+
+        // If result seems too small, wait and retry
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+        }
+      } catch (e) {
+        console.warn(`Cover capture attempt ${attempt} failed:`, e);
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+        }
+      }
     }
+
+    return null;
   }, [captureCoverStage]);
 
   // --- Mutations ---
