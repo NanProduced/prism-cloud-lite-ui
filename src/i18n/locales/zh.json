@@ -2997,13 +2997,19 @@
       },
       "types": {
         "DISPLAY": { "label": "显示设置", "desc": "亮度与色温调节" },
+        "BRIGHTNESS": { "label": "调整亮度", "desc": "设置设备屏幕亮度" },
+        "COLOR_TEMP": { "label": "调整色温", "desc": "设置设备屏幕色温" },
         "VOLUME": { "label": "音量控制", "desc": "调节音频输出" },
         "INPUT_MODE": { "label": "信号源", "desc": "切换视频输入源" },
         "POWER": { "label": "电源管理", "desc": "控制屏幕电源状态" },
         "TIMEZONE": { "label": "系统时区", "desc": "同步设备系统时钟" },
         "LOCALE": { "label": "语言区域", "desc": "设置核心显示语言" },
         "CONTENT_REPORT_SWITCH": { "label": "统计开关", "desc": "播放数据上报控制" },
-        "CLEAR_CACHE": { "label": "清除缓存", "desc": "清空终端存储空间" }
+        "CLEAR_CACHE": { "label": "清除缓存", "desc": "清空终端存储空间" },
+        "SCREENSHOT": { "label": "远程截屏", "desc": "抓取当前设备屏幕画面" },
+        "SET_SENSOR_REPORT_TIME": { "label": "设置遥测周期", "desc": "调整传感器数据上报间隔" },
+        "DELETE_DEVICE_VSN": { "label": "移除特定节目", "desc": "从设备中删除指定的节目文件" },
+        "CLEAR_DEVICE_PROGRAM": { "label": "清除全部节目", "desc": "清空设备中所有已下载的节目" }
       },
       "params": {
         "brightness": "亮度",
@@ -3069,7 +3075,7 @@
       "options": {
         "online": "在线",
         "offline": "离线",
-        "pending": "待审核",
+        "pending": "未上云",
         "strong": "强",
         "fair": "一般",
         "weak": "弱",
@@ -3137,7 +3143,7 @@
       "total": "总数",
       "online": "在线",
       "offline": "离线",
-      "pending": "待审核",
+      "pending": "未上云",
       "filtered": "已筛选"
     },
     "grid": {
@@ -3274,7 +3280,7 @@
       "status": {
         "online": "在线",
         "offline": "离线",
-        "pending": "待审核"
+        "pending": "未上云"
       },
       "network": {
         "wifi": "WiFi",

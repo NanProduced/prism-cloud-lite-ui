@@ -102,7 +102,7 @@ import { buildProgramNameVersionKey, formatVsnDisplayName, parseVsnFilename } fr
 import { useTimeFormatter } from "@/hooks/use-time-formatter";
 import { formatInTimeZone } from 'date-fns-tz';
 import { useTranslation } from "react-i18next";
-import { deriveUserStatus, getActionTypeLabelKey, getStatusLabelKey, getUserStatusTone } from "@/features/logs/commandLogI18n";
+import { deriveUserStatus, getActionTypeLabelKey, getActionTypeIcon, getStatusLabelKey, getUserStatusTone } from "@/features/logs/commandLogI18n";
 import { CommandLogDetailDialog } from "@/features/logs/CommandLogDetailDialog";
 
 export default function DeviceDetailsPage() {
@@ -1066,14 +1066,11 @@ export default function DeviceDetailsPage() {
                                     const tone = getUserStatusTone(userStatus);
 
                                     const isSending = userStatus === 'PUBLISHED';
+                                    const ActionIcon = getActionTypeIcon(op.actionType);
                                     const icon = isSending ? (
                                       <Loader2 className="h-5 w-5 animate-spin" />
-                                    ) : tone === 'success' ? (
-                                      <CheckCircle2 className="h-5 w-5" />
-                                    ) : tone === 'error' ? (
-                                      <XCircle className="h-5 w-5" />
                                     ) : (
-                                      <Activity className="h-5 w-5" />
+                                      <ActionIcon className="h-5 w-5" />
                                     );
 
                                     const toneClass =

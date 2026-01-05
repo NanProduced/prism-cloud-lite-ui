@@ -1498,10 +1498,10 @@
         "targetLabel": "Target:",
         "deviceCount": "{{count}} device(s)",
         "steps": {
-          "selection": { "label": "Selection", "description": "Target scope" },
-          "params": { "label": "Parameters", "description": "Action settings" },
-          "review": { "label": "Review", "description": "Safety check" },
-          "terminal": { "label": "Terminal", "description": "Real-time status" }
+          "selection": { "label": "Selection", "desc": "Target scope" },
+          "params": { "label": "Parameters", "desc": "Action settings" },
+          "review": { "label": "Review", "desc": "Safety check" },
+          "terminal": { "label": "Terminal", "desc": "Real-time status" }
         },
         "actions": {
           "cancel": "Cancel",
@@ -1521,13 +1521,19 @@
       },
       "types": {
         "DISPLAY": { "label": "Display Settings", "desc": "Luminance & Color Temp" },
+        "BRIGHTNESS": { "label": "Brightness", "desc": "Adjust screen brightness level" },
+        "COLOR_TEMP": { "label": "Color Temperature", "desc": "Adjust screen color temperature" },
         "VOLUME": { "label": "Volume", "desc": "Control acoustic output" },
         "INPUT_MODE": { "label": "Input Mode", "desc": "Switch video input source" },
         "POWER": { "label": "Power", "desc": "Manage display power state" },
         "TIMEZONE": { "label": "Timezone", "desc": "Sync system clock" },
         "LOCALE": { "label": "Locale", "desc": "Set interface core dialect" },
         "CONTENT_REPORT_SWITCH": { "label": "Statistics", "desc": "Playback reporting switches" },
-        "CLEAR_CACHE": { "label": "Clear Cache", "desc": "Wipe terminal storage" }
+        "CLEAR_CACHE": { "label": "Clear Cache", "desc": "Wipe terminal storage" },
+        "SCREENSHOT": { "label": "Screenshot", "desc": "Capture current screen frame" },
+        "SET_SENSOR_REPORT_TIME": { "label": "Telemetry Interval", "desc": "Adjust sensor data report frequency" },
+        "DELETE_DEVICE_VSN": { "label": "Remove Program", "desc": "Delete specific program from device" },
+        "CLEAR_DEVICE_PROGRAM": { "label": "Clear Programs", "desc": "Wipe all downloaded programs" }
       },
       "params": {
         "brightness": "Brightness",

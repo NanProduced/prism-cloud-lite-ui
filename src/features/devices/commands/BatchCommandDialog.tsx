@@ -82,7 +82,9 @@ function formatActionParams(type: ActionType, params: any, t: TFunction): string
     case 'POWER':
       if (params.command === 'reboot') return t('devices.commands.format.reboot');
       return params.command === 'wakeup' ? t('devices.commands.format.wakeup') : t('devices.commands.format.sleep');
-    case 'DISPLAY': {
+    case 'DISPLAY':
+    case 'BRIGHTNESS':
+    case 'COLOR_TEMP': {
       const parts = [];
       if (params.brightness !== undefined) parts.push(`${t('devices.commands.format.brightness')}: ${params.brightness}%`);
       if (params.colortemp !== undefined) parts.push(`${t('devices.commands.format.colortemp')}: ${params.colortemp}K`);
@@ -606,7 +608,8 @@ function ActionConfigStep({
   t: TFunction
 }) {
   const ALL_ACTION_TYPES: { type: ActionType, label: string, desc: string, icon: any }[] = [
-    { type: 'DISPLAY', label: t('devices.commands.types.DISPLAY.label'), desc: t('devices.commands.types.DISPLAY.desc'), icon: Sun },
+    { type: 'BRIGHTNESS', label: t('devices.commands.types.BRIGHTNESS.label'), desc: t('devices.commands.types.BRIGHTNESS.desc'), icon: Sun },
+    { type: 'COLOR_TEMP', label: t('devices.commands.types.COLOR_TEMP.label'), desc: t('devices.commands.types.COLOR_TEMP.desc'), icon: Thermometer },
     { type: 'VOLUME', label: t('devices.commands.types.VOLUME.label'), desc: t('devices.commands.types.VOLUME.desc'), icon: Volume2 },
     { type: 'INPUT_MODE', label: t('devices.commands.types.INPUT_MODE.label'), desc: t('devices.commands.types.INPUT_MODE.desc'), icon: Monitor },
     { type: 'POWER', label: t('devices.commands.types.POWER.label'), desc: t('devices.commands.types.POWER.desc'), icon: Power },
@@ -699,19 +702,19 @@ function ActionConfigStep({
                 
                 <CardContent className="p-4 pt-2">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                    {action.type === 'DISPLAY' && (
-                      <>
+                    {(action.type === 'DISPLAY' || action.type === 'BRIGHTNESS') && (
                         <ControlItem label={`${t('devices.commands.params.brightness')}: ${action.params.brightness}%`} className="col-span-2">
                            <div className="pt-2 px-1">
                               <Slider value={[action.params.brightness]} onValueChange={([v]) => updateParam(index, 'brightness', v)} max={100} step={1} />
                            </div>
                         </ControlItem>
+                    )}
+                    {(action.type === 'DISPLAY' || action.type === 'COLOR_TEMP') && (
                         <ControlItem label={`${t('devices.commands.params.colortemp')}: ${action.params.colortemp}K`} className="col-span-2">
                            <div className="pt-2 px-1">
                               <Slider value={[action.params.colortemp]} onValueChange={([v]) => updateParam(index, 'colortemp', v)} min={2000} max={10000} step={100} />
                            </div>
                         </ControlItem>
-                      </>
                     )}
                     {action.type === 'POWER' && (
                       <div className="space-y-2 col-span-2">
@@ -1177,6 +1180,8 @@ function getDefaultParams(type: ActionType, props?: any): any {
   switch (type) {
     case 'POWER': return { command: 'wakeup' };
     case 'DISPLAY': return { brightness: currentB, colortemp: currentC };
+    case 'BRIGHTNESS': return { brightness: currentB };
+    case 'COLOR_TEMP': return { colortemp: currentC };
     case 'VOLUME': return { musicvolume: currentV };
     case 'INPUT_MODE': return { inputmode: currentIM };
     case 'TIMEZONE': return { timezoneId: 'Asia/Shanghai', timezone: 8 };

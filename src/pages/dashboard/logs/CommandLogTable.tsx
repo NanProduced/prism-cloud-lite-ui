@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next';
 import {
   deriveUserStatus,
   getActionTypeLabelKey,
+  getActionTypeIcon,
   getStatusLabelKey,
   getUserStatusTone,
 } from '@/features/logs/commandLogI18n';
@@ -173,7 +174,10 @@ export function CommandLogTable({ filters, searchText }: CommandLogTableProps) {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <Terminal className="h-3.5 w-3.5 text-muted-foreground" />
+                      {(() => {
+                        const Icon = getActionTypeIcon(log.actionType);
+                        return <Icon className="h-3.5 w-3.5 text-muted-foreground" />;
+                      })()}
                       <span className="font-bold  tracking-tight text-[10px] text-primary/80">{t(getActionTypeLabelKey(log.actionType))}</span>
                     </div>
                   </td>

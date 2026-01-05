@@ -2,6 +2,7 @@ import { type DeviceStatus } from '@/types/device';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Circle, Moon, Power } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface DeviceStatusBadgeProps {
   status?: DeviceStatus | number;
@@ -18,11 +19,13 @@ export function DeviceStatusBadge({
   className,
   pulse,
 }: DeviceStatusBadgeProps) {
+  const { t } = useTranslation();
   const isOnline = status === 'online' || status === 1;
+  
   const getStatusConfig = () => {
     if (isOnline) {
       return {
-        label: 'Online',
+        label: t('devices.filters.options.online'),
         color: 'text-emerald-600 dark:text-emerald-400',
         dotColor: 'bg-emerald-500',
         bgColor: 'bg-emerald-500/10',
@@ -31,7 +34,7 @@ export function DeviceStatusBadge({
     }
     if (status === 'offline' || status === 0) {
       return {
-        label: offlineDuration ? `Offline (${formatDuration(offlineDuration)})` : 'Offline',
+        label: offlineDuration ? `${t('devices.filters.options.offline')} (${formatDuration(offlineDuration, t)})` : t('devices.filters.options.offline'),
         color: 'text-slate-600 dark:text-slate-400',
         dotColor: 'bg-slate-400',
         bgColor: 'bg-slate-500/10',
@@ -40,7 +43,7 @@ export function DeviceStatusBadge({
     }
     if (status === 'pending') {
       return {
-        label: 'Pending',
+        label: t('devices.filters.options.pending'),
         color: 'text-amber-600 dark:text-amber-400',
         dotColor: 'bg-amber-500',
         bgColor: 'bg-amber-500/10',
@@ -48,7 +51,7 @@ export function DeviceStatusBadge({
       };
     }
     return {
-      label: 'Unknown',
+      label: t('common.notSet'),
       color: 'text-gray-500',
       dotColor: 'bg-gray-400',
       bgColor: 'bg-gray-500/10',
@@ -86,23 +89,23 @@ export function DeviceStatusBadge({
           )}
         >
           <Moon className="h-3 w-3" />
-          <span>Sleep</span>
+          <span>{t('devices.commands.params.sleep')}</span>
         </Badge>
       )}
     </div>
   );
 }
 
-function formatDuration(seconds: number): string {
+function formatDuration(seconds: number, t: any): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
 
   if (hours >= 24) {
     const days = Math.floor(hours / 24);
-    return `${days}d ago`;
+    return `${days}${t('common.units.day')}${t('common.units.ago')}`;
   }
   if (hours > 0) {
-    return `${hours}h ago`;
+    return `${hours}${t('common.units.hour')}${t('common.units.ago')}`;
   }
-  return `${minutes}m ago`;
+  return `${minutes}${t('common.units.minute')}${t('common.units.ago')}`;
 }

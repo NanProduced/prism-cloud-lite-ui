@@ -1,3 +1,21 @@
+import { 
+  Sun, 
+  Volume2, 
+  Power, 
+  Thermometer, 
+  Trash2, 
+  Monitor, 
+  Clock, 
+  Languages, 
+  Film, 
+  Camera,
+  Timer,
+  FileX,
+  Database,
+  Terminal,
+  type LucideIcon 
+} from 'lucide-react';
+
 export type DeviceCommandStatus =
   | 'PUBLISHED'
   | 'CONFIRMED'
@@ -96,4 +114,38 @@ export function getStatusLabelKey(userStatus: DeviceCommandUserStatus): string {
   if (userStatus === 'DONE') return 'logs.command.statusUi.DONE';
   if (userStatus === 'UNKNOWN') return 'logs.command.statusUi.UNKNOWN';
   return `logs.command.status.${userStatus}`;
+}
+
+export function getActionTypeIcon(actionType: string | null | undefined): LucideIcon {
+  const v = normalizeEnum(actionType);
+  switch (v) {
+    case 'BRIGHTNESS':
+      return Sun;
+    case 'POWER':
+      return Power;
+    case 'COLOR_TEMP':
+      return Thermometer;
+    case 'VOLUME':
+      return Volume2;
+    case 'CLEAR_CACHE':
+      return Trash2;
+    case 'INPUT_MODE':
+      return Monitor;
+    case 'TIMEZONE':
+      return Clock;
+    case 'LOCALE':
+      return Languages;
+    case 'CONTENT_REPORT_SWITCH':
+      return Film;
+    case 'SCREENSHOT':
+      return Camera;
+    case 'SET_SENSOR_REPORT_TIME':
+      return Timer;
+    case 'DELETE_DEVICE_VSN':
+      return FileX;
+    case 'CLEAR_DEVICE_PROGRAM':
+      return Database;
+    default:
+      return Terminal;
+  }
 }
