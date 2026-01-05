@@ -1526,7 +1526,7 @@
         }
       },
       "types": {
-        "DISPLAY": { "label": "Display Settings", "desc": "Luminance & Color Temp" },
+        "DISPLAY": { "label": "Screen Display", "desc": "Luminance & Color Temp" },
         "BRIGHTNESS": { "label": "Brightness", "desc": "Adjust screen brightness level" },
         "COLOR_TEMP": { "label": "Color Temperature", "desc": "Adjust screen color temperature" },
         "VOLUME": { "label": "Volume", "desc": "Control acoustic output" },

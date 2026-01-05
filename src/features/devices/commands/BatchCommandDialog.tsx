@@ -608,8 +608,7 @@ function ActionConfigStep({
   t: TFunction
 }) {
   const ALL_ACTION_TYPES: { type: ActionType, label: string, desc: string, icon: any }[] = [
-    { type: 'BRIGHTNESS', label: t('devices.commands.types.BRIGHTNESS.label'), desc: t('devices.commands.types.BRIGHTNESS.desc'), icon: Sun },
-    { type: 'COLOR_TEMP', label: t('devices.commands.types.COLOR_TEMP.label'), desc: t('devices.commands.types.COLOR_TEMP.desc'), icon: Thermometer },
+    { type: 'DISPLAY', label: t('devices.commands.types.DISPLAY.label'), desc: t('devices.commands.types.DISPLAY.desc'), icon: Monitor },
     { type: 'VOLUME', label: t('devices.commands.types.VOLUME.label'), desc: t('devices.commands.types.VOLUME.desc'), icon: Volume2 },
     { type: 'INPUT_MODE', label: t('devices.commands.types.INPUT_MODE.label'), desc: t('devices.commands.types.INPUT_MODE.desc'), icon: Monitor },
     { type: 'POWER', label: t('devices.commands.types.POWER.label'), desc: t('devices.commands.types.POWER.desc'), icon: Power },
@@ -626,11 +625,14 @@ function ActionConfigStep({
     if (mode === 'MULTI_DEVICE_SINGLE_COMMAND') {
       onActionsChange([{ type, params: defaultParams, timeout: defaultTimeout }]);
     } else {
-      if (actions.some(a => a.type === type)) {
-        toast.error(t('common.errors.updateFailed'));
-        return;
+      const existingIndex = actions.findIndex(a => a.type === type);
+      if (existingIndex !== -1) {
+        // Toggle: remove if exists
+        removeAction(existingIndex);
+      } else {
+        // Add if not exists
+        onActionsChange([...actions, { type, params: defaultParams, timeout: defaultTimeout }]);
       }
-      onActionsChange([...actions, { type, params: defaultParams, timeout: defaultTimeout }]);
     }
   };
 
@@ -702,19 +704,36 @@ function ActionConfigStep({
                 
                 <CardContent className="p-4 pt-2">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                    {(action.type === 'DISPLAY' || action.type === 'BRIGHTNESS') && (
-                        <ControlItem label={`${t('devices.commands.params.brightness')}: ${action.params.brightness}%`} className="col-span-2">
-                           <div className="pt-2 px-1">
-                              <Slider value={[action.params.brightness]} onValueChange={([v]) => updateParam(index, 'brightness', v)} max={100} step={1} />
-                           </div>
-                        </ControlItem>
-                    )}
-                    {(action.type === 'DISPLAY' || action.type === 'COLOR_TEMP') && (
-                        <ControlItem label={`${t('devices.commands.params.colortemp')}: ${action.params.colortemp}K`} className="col-span-2">
-                           <div className="pt-2 px-1">
-                              <Slider value={[action.params.colortemp]} onValueChange={([v]) => updateParam(index, 'colortemp', v)} min={2000} max={10000} step={100} />
-                           </div>
-                        </ControlItem>
+                    {action.type === 'DISPLAY' && (
+                      <ControlItem label={t('devices.commands.types.DISPLAY.label')} className="col-span-2">
+                        <div className="flex flex-col gap-6 p-4 bg-primary/[0.02] border border-dashed rounded-xl">
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-2">
+                                  <Sun className="h-3.5 w-3.5 text-amber-500" />
+                                  <p className="text-xs font-bold text-slate-700">{t('devices.commands.params.brightness')}</p>
+                               </div>
+                               <span className="text-xs font-bold text-primary tabular-nums">{action.params.brightness}%</span>
+                            </div>
+                            <div className="px-1">
+                               <Slider value={[action.params.brightness]} onValueChange={([v]) => updateParam(index, 'brightness', v)} max={100} step={1} />
+                            </div>
+                          </div>
+                          <Separator className="opacity-40" />
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-2">
+                                  <Thermometer className="h-3.5 w-3.5 text-blue-500" />
+                                  <p className="text-xs font-bold text-slate-700">{t('devices.commands.params.colortemp')}</p>
+                               </div>
+                               <span className="text-xs font-bold text-primary tabular-nums">{action.params.colortemp}K</span>
+                            </div>
+                            <div className="px-1">
+                               <Slider value={[action.params.colortemp]} onValueChange={([v]) => updateParam(index, 'colortemp', v)} min={2000} max={10000} step={100} />
+                            </div>
+                          </div>
+                        </div>
+                      </ControlItem>
                     )}
                     {action.type === 'POWER' && (
                       <div className="space-y-2 col-span-2">
@@ -1151,6 +1170,7 @@ function StatusBadge({ status, isAckOnly = false, t }: { status: string, isAckOn
 
 function ActionIcon({ type, className }: { type: ActionType, className?: string }) {
   switch (type) {
+    case 'DISPLAY': return <Monitor className={className} />;
     case 'POWER': return <Power className={className} />;
     case 'BRIGHTNESS': return <Sun className={className} />;
     case 'VOLUME': return <Volume2 className={className} />;

@@ -3005,7 +3005,7 @@
         }
       },
       "types": {
-        "DISPLAY": { "label": "显示设置", "desc": "亮度与色温调节" },
+        "DISPLAY": { "label": "屏幕显示", "desc": "亮度与色温调节" },
         "BRIGHTNESS": { "label": "调整亮度", "desc": "设置设备屏幕亮度" },
         "COLOR_TEMP": { "label": "调整色温", "desc": "设置设备屏幕色温" },
         "VOLUME": { "label": "音量控制", "desc": "调节音频输出" },

@@ -211,7 +211,7 @@ export function CommandSearch() {
                       key={`device-${device.id}`}
                       value={`device-${device.id}-${device.name}`}
                       onSelect={() => {
-                        navigate(`/dashboard/devices?id=${device.id}`);
+                        navigate(`/dashboard/devices/${device.id}`);
                         setOpen(false);
                       }}
                     >
@@ -240,7 +240,7 @@ export function CommandSearch() {
                       key={`program-${program.id}`}
                       value={`program-${program.id}-${program.name}`}
                       onSelect={() => {
-                        navigate(`/dashboard/programs?id=${program.id}`);
+                        navigate(`/dashboard/programs/${program.id}`);
                         setOpen(false);
                       }}
                     >
