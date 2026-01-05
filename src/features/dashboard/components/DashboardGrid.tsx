@@ -64,6 +64,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
                 >
                   <WidgetComponent 
                     settings={widget.settings} 
+                    layout={widget.layout}
                     onUpdateSettings={(s: any) => onUpdateWidgetSettings(widget.id, s)}
                   />
                 </WidgetFrame>

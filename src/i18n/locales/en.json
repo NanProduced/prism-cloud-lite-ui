@@ -1423,6 +1423,8 @@
       "storage": {
         "title": "Cloud Storage",
         "description": "Detailed breakdown of space usage",
+        "used": "Used",
+        "usedOf": "Used of {{quota}}",
         "mismatch": "Mismatch: {{size}} between ledger and quota service.",
         "items": "items"
       },

@@ -2902,6 +2902,8 @@
       "storage": {
         "title": "云端存储",
         "description": "空间使用情况的详细分解",
+        "used": "已使用",
+        "usedOf": "已使用（总计 {{quota}}）",
         "mismatch": "不匹配：账本与配额服务之间存在 {{size}} 差异。",
         "items": "项"
       },
