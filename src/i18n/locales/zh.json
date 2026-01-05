@@ -1109,6 +1109,21 @@
       "noUploads": "暂无上传记录",
       "viewAll": "查看全部",
       "storageTight": "存储空间即将不足 —— 请考虑清理不再使用的素材。",
+      "storage": {
+        "breakdown": "容量占用详情",
+        "used": "已使用",
+        "of": "/",
+        "seeAll": "查看全部"
+      },
+      "dropzone": {
+        "title": "上传素材",
+        "description": "将文件拖拽至此处，或点击选择文件上传。",
+        "hint": "支持图片、视频和文档。大文件将直接上传至 S3（不占用服务器带宽）。",
+        "chooseLabel": "选择文件",
+        "pasteLabel": "粘贴",
+        "dropText": "选择文件或将其拖拽至此处",
+        "dropHint": "支持图片、视频和文档。支持多选。"
+      },
       "categories": {
         "image": "图片",
         "video": "视频",

@@ -20,11 +20,14 @@ interface ApplicationItem {
 export interface StorageCardProps extends React.ComponentProps<typeof Card> {
   title: string;
   seeAllHref?: string;
+  seeAllLabel?: string;
   applicationsLabel?: string;
   totalBytes: number;
   categories: StorageCategory[];
   applications: ApplicationItem[];
   alertMessage?: React.ReactNode;
+  usedLabel?: string; // e.g. "used"
+  ofLabel?: string; // e.g. "of"
 }
 
 const StorageCard = React.forwardRef<
@@ -34,11 +37,14 @@ const StorageCard = React.forwardRef<
   className,
   title,
   seeAllHref,
+  seeAllLabel = "See All",
   applicationsLabel = "Breakdown",
   totalBytes,
   categories,
   applications,
   alertMessage,
+  usedLabel = "used",
+  ofLabel = "of",
   ...props 
 }, ref) => {
   const usedBytes = React.useMemo(
@@ -56,7 +62,7 @@ const StorageCard = React.forwardRef<
               href={seeAllHref}
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
             >
-              See All
+              {seeAllLabel}
             </a>
           )}
         </div>
@@ -100,7 +106,7 @@ const StorageCard = React.forwardRef<
               ))}
             </div>
             <p className="mt-2 text-sm text-muted-foreground sm:mt-0">
-              {formatBytes(usedBytes)} of {formatBytes(totalBytes)} used
+              {formatBytes(usedBytes)} {ofLabel} {formatBytes(totalBytes)} {usedLabel}
             </p>
           </div>
         </div>

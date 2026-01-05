@@ -2099,13 +2099,28 @@
       }
     },
     "upload": {
-      "title": "Library Storage",
+      "title": "Media Library Storage",
       "activity": "Upload Activity",
-      "active": "active",
-      "recent": "recent",
-      "noUploads": "No uploads yet",
+      "active": "Uploading",
+      "recent": "Recently Uploaded",
+      "noUploads": "No recent uploads",
       "viewAll": "View All",
-      "storageTight": "Storage is getting tight — consider cleaning up unused assets.",
+      "storageTight": "Storage space is running low —— consider cleaning up unused assets.",
+      "storage": {
+        "breakdown": "Storage Breakdown",
+        "used": "used",
+        "of": "of",
+        "seeAll": "See All"
+      },
+      "dropzone": {
+        "title": "Upload assets",
+        "description": "Drag & drop files here, or choose files to upload.",
+        "hint": "Images, videos, and documents are supported. Large files use direct-to-S3 upload (no server bandwidth).",
+        "chooseLabel": "Choose Files",
+        "pasteLabel": "Paste",
+        "dropText": "Choose files or drag & drop them here",
+        "dropHint": "Images, videos, and documents. Multiple selection supported."
+      },
       "categories": {
         "image": "Images",
         "video": "Videos",

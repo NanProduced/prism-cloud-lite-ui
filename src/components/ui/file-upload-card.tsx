@@ -1,6 +1,7 @@
 import * as React from "react"
 import { UploadCloud } from "lucide-react"
 import { motion, type HTMLMotionProps } from "framer-motion"
+import { useTranslation } from "react-i18next"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -11,6 +12,8 @@ export type FileUploadCardProps = Omit<HTMLMotionProps<"div">, "children"> & {
   hint?: string
   chooseLabel?: string
   pasteLabel?: string
+  dropzoneText?: string
+  dropzoneHint?: string
   onChooseFiles: () => void
   onPasteFiles: () => void
   onDropFiles: (files: File[]) => void
@@ -21,11 +24,13 @@ export const FileUploadCard = React.forwardRef<HTMLDivElement, FileUploadCardPro
   (
     {
       className,
-      title = "Upload assets",
-      description = "Drag & drop files here, or choose files to upload.",
-      hint = "Images, videos, and documents are supported. Large files use direct-to-S3 upload (no server bandwidth).",
-      chooseLabel = "Choose Files",
-      pasteLabel = "Paste",
+      title,
+      description,
+      hint,
+      chooseLabel,
+      pasteLabel,
+      dropzoneText,
+      dropzoneHint,
       onChooseFiles,
       onPasteFiles,
       onDropFiles,
@@ -34,7 +39,17 @@ export const FileUploadCard = React.forwardRef<HTMLDivElement, FileUploadCardPro
     },
     ref,
   ) => {
+    const { t } = useTranslation()
     const [isDragging, setIsDragging] = React.useState(false)
+
+    // Use translations if props are not provided
+    const displayTitle = title ?? t('media.upload.dropzone.title')
+    const displayDescription = description ?? t('media.upload.dropzone.description')
+    const displayHint = hint ?? t('media.upload.dropzone.hint')
+    const displayChooseLabel = chooseLabel ?? t('media.upload.dropzone.chooseLabel')
+    const displayPasteLabel = pasteLabel ?? t('media.upload.dropzone.pasteLabel')
+    const displayDropzoneText = dropzoneText ?? t('media.upload.dropzone.dropText')
+    const displayDropzoneHint = dropzoneHint ?? t('media.upload.dropzone.dropHint')
 
     const handleDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault()
@@ -83,8 +98,8 @@ export const FileUploadCard = React.forwardRef<HTMLDivElement, FileUploadCardPro
               <UploadCloud className="h-5 w-5 text-muted-foreground" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-base font-semibold text-foreground">{title}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+              <h3 className="text-base font-semibold text-foreground">{displayTitle}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{displayDescription}</p>
             </div>
           </div>
 
@@ -106,8 +121,8 @@ export const FileUploadCard = React.forwardRef<HTMLDivElement, FileUploadCardPro
             )}
           >
             <UploadCloud className="mx-auto mb-3 h-9 w-9 text-muted-foreground" />
-            <p className="text-sm font-semibold text-foreground">Choose files or drag & drop them here</p>
-            <p className="mt-1 text-xs text-muted-foreground">Images, videos, and documents. Multiple selection supported.</p>
+            <p className="text-sm font-semibold text-foreground">{displayDropzoneText}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{displayDropzoneHint}</p>
 
             <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
               <Button
@@ -119,7 +134,7 @@ export const FileUploadCard = React.forwardRef<HTMLDivElement, FileUploadCardPro
                 }}
               >
                 <UploadCloud className="h-4 w-4" />
-                {chooseLabel}
+                {displayChooseLabel}
               </Button>
               <Button
                 type="button"
@@ -129,12 +144,12 @@ export const FileUploadCard = React.forwardRef<HTMLDivElement, FileUploadCardPro
                   onPasteFiles()
                 }}
               >
-                {pasteLabel}
+                {displayPasteLabel}
               </Button>
             </div>
           </div>
 
-          {hint && <p className="mt-3 text-xs text-muted-foreground">{hint}</p>}
+          {displayHint && <p className="mt-3 text-xs text-muted-foreground">{displayHint}</p>}
         </div>
 
         {children && <div className="border-t p-4">{children}</div>}

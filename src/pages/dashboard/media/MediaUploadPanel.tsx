@@ -23,7 +23,7 @@ import {
   getUploadUrls
 } from '@/services/mediaApi';
 import axios from 'axios';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, type TFunction } from 'react-i18next';
 
 export type MediaUploadPanelHandle = {
   openFilePicker: () => void;
@@ -680,7 +680,7 @@ export const MediaUploadPanel = forwardRef<
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium">Upload activity</p>
+                  <p className="text-sm font-medium">{t('media.upload.activity')}</p>
                   <p className="text-xs text-muted-foreground">{recentCountLabel}</p>
                 </div>
                 {uploadTasks.length > 2 && (
@@ -690,7 +690,7 @@ export const MediaUploadPanel = forwardRef<
                     className="h-auto p-0 text-xs"
                     onClick={() => setUploadsDrawerOpen(true)}
                   >
-                    View all ({uploadTasks.length})
+                    {t('media.upload.viewAll')} ({uploadTasks.length})
                   </Button>
                 )}
               </div>
@@ -711,7 +711,10 @@ export const MediaUploadPanel = forwardRef<
 
         <StorageCard
           className="h-full max-w-none"
-          title="Library storage"
+          title={t('media.upload.title')}
+          applicationsLabel={t('media.upload.storage.breakdown')}
+          ofLabel={t('media.upload.storage.of')}
+          usedLabel={t('media.upload.storage.used')}
           totalBytes={totalQuotaBytes}
           categories={storageBreakdown.categories}
           applications={storageBreakdown.applications}
@@ -719,7 +722,7 @@ export const MediaUploadPanel = forwardRef<
             quotaPercent >= 85 ? (
               <span className="inline-flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
-                Storage is getting tight — consider cleaning up unused assets.
+                {t('media.upload.storageTight')}
               </span>
             ) : undefined
           }
@@ -791,12 +794,13 @@ function UploadTaskMiniRow({
   onCancel: () => void;
   onRetry: () => void;
 }) {
+  const { t } = useTranslation();
   const icon = task.kind === 'video' ? Video : task.kind === 'image' ? ImageIcon : FileText;
   const Icon = icon;
   const showProgress = task.status === 'verifying' || task.status === 'uploading';
   const percentLabel = showProgress ? `${Math.round(task.progress * 100)}%` : undefined;
   const speedLabel = showProgress ? formatThroughput(task.throughputBps) : undefined;
-  const statusLine = [formatTaskStatus(task.status), percentLabel, speedLabel].filter(Boolean).join(' · ');
+  const statusLine = [formatTaskStatus(task.status, t), percentLabel, speedLabel].filter(Boolean).join(' · ');
   const bytesLine =
     task.status === 'verifying' || task.status === 'uploading'
       ? `${formatBytes(task.bytesUploaded)} / ${formatBytes(task.bytesTotal)}`
@@ -853,6 +857,7 @@ function UploadTaskRow({
   onCancel: () => void;
   onRetry: () => void;
 }) {
+  const { t } = useTranslation();
   const icon = task.kind === 'video' ? Video : task.kind === 'image' ? ImageIcon : FileText;
   const Icon = icon;
   const showProgress = task.status === 'verifying' || task.status === 'uploading';
@@ -877,7 +882,7 @@ function UploadTaskRow({
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">{task.title}</p>
             <p className="text-xs text-muted-foreground">
-              {formatTaskStatus(task.status)}
+              {formatTaskStatus(task.status, t)}
               {detailLine}
             </p>
           </div>
