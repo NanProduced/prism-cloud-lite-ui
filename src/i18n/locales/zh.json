@@ -18,7 +18,12 @@
       "network": "网络连接异常",
       "updateFailed": "更新失败",
       "deleteFailed": "删除失败",
-      "loadFailed": "加载失败"
+      "loadFailed": "加载失败",
+      "systemAnomaly": "系统运行异常",
+      "unexpectedError": "合成核心发生了一个意外错误。",
+      "reloadCore": "重启核心",
+      "returnHome": "返回首页",
+      "recoveryActive": "紧急恢复协议已激活"
     },
     "notSet": "未设置",
     "search": "搜索",
@@ -3067,7 +3072,10 @@
         "pending": "待审核",
         "strong": "强",
         "fair": "一般",
-        "weak": "弱"
+        "weak": "弱",
+        "zh": "中文",
+        "en": "英文",
+        "ja": "日文"
       }
     },
     "customFields": {

@@ -129,7 +129,7 @@ export default function DeviceDetailsPage() {
 
   const { data: bffResponse, isLoading: isDeviceLoading, isFetching: isRefreshing } = useQuery({
     queryKey: ['device', deviceId],
-    queryFn: () => getDevice(deviceId!),
+    queryFn: () => getDevice(Number(deviceId)),
     enabled: !!deviceId,
   });
 
@@ -712,7 +712,7 @@ export default function DeviceDetailsPage() {
                                        size="icon" 
                                        variant="secondary" 
                                        className="h-10 w-10 rounded-full shadow-2xl hover:scale-110 transition-transform" 
-                                       onClick={() => setPreviewImage(screenshotUrl)}
+                                       onClick={() => setPreviewImage(screenshotUrl || null)}
                                     >
                                        <Maximize2 className="h-5 w-5" />
                                     </Button>
@@ -1572,6 +1572,7 @@ function InfoGroup({ title, icon: Icon, children }: { title: string, icon: any, 
 }
 
 function InfoItem({ label, value, copyable = false, highlight = false, fontMono = false }: { label: string, value: any, copyable?: boolean, highlight?: boolean, fontMono?: boolean }) {
+  const { t } = useTranslation();
   return (
     <div className="flex justify-between items-center gap-4 group/item">
       <span className="text-sm text-muted-foreground shrink-0">{label}</span>

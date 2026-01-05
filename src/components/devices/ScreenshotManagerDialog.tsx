@@ -300,7 +300,7 @@ export function ScreenshotManagerDialog({
                              "group relative aspect-[4/3] rounded-xl overflow-hidden border transition-all cursor-pointer bg-muted shadow-sm",
                              selectedIds.includes(sid) ? "ring-2 ring-primary border-primary" : "hover:border-primary/50"
                            )}
-                           onClick={() => setPreviewImage(s.url || s.screenshotUrl)}
+                           onClick={() => setPreviewImage((s.url || s.screenshotUrl || null) as string | null)}
                          >
                             <img src={s.url || s.screenshotUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt="History" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -322,7 +322,7 @@ export function ScreenshotManagerDialog({
                                      size="icon" 
                                      variant="secondary" 
                                      className="h-7 w-7 rounded-lg bg-black/50 border border-white/20 text-white hover:bg-primary transition-colors"
-                                     onClick={() => setPreviewImage(s.url || s.screenshotUrl)}
+                                     onClick={() => setPreviewImage((s.url || s.screenshotUrl || null) as string | null)}
                                   >
                                      <Maximize2 className="h-3.5 w-3.5" />
                                   </Button>
@@ -363,7 +363,7 @@ export function ScreenshotManagerDialog({
                                <div className="col-span-7 flex items-center gap-4">
                                   <div 
                                      className="h-10 w-16 rounded-md overflow-hidden border bg-muted relative group/thumb shadow-sm"
-                                     onClick={(e) => { e.stopPropagation(); setPreviewImage(s.url || s.screenshotUrl); }}
+                                     onClick={(e) => { e.stopPropagation(); setPreviewImage((s.url || s.screenshotUrl || null) as string | null); }}
                                   >
                                      <img src={s.url || s.screenshotUrl} className="w-full h-full object-cover" alt="Thumb" />
                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center transition-opacity">
@@ -382,7 +382,7 @@ export function ScreenshotManagerDialog({
                                      variant="ghost" 
                                      size="icon" 
                                      className="h-8 w-8 rounded-md"
-                                     onClick={() => setPreviewImage(s.url || s.screenshotUrl)}
+                                     onClick={() => setPreviewImage((s.url || s.screenshotUrl || null) as string | null)}
                                   >
                                      <Maximize2 className="h-4 w-4" />
                                   </Button>

@@ -23,7 +23,8 @@ import {
   getUploadUrls
 } from '@/services/mediaApi';
 import axios from 'axios';
-import { useTranslation, type TFunction } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
+import { type TFunction } from 'i18next';
 
 export type MediaUploadPanelHandle = {
   openFilePicker: () => void;
@@ -120,6 +121,8 @@ export const MediaUploadPanel = forwardRef<
             height: undefined as number | undefined,
             durationMs: undefined as number | undefined,
             cover: undefined as Blob | undefined,
+            coverWidth: undefined as number | undefined,
+            coverHeight: undefined as number | undefined,
             parseError: undefined as string | undefined,
           };
 

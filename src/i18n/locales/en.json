@@ -29,7 +29,12 @@
       "network": "Network connection error",
       "updateFailed": "Update failed",
       "deleteFailed": "Delete failed",
-      "loadFailed": "Load failed"
+      "loadFailed": "Load failed",
+      "systemAnomaly": "System Anomaly",
+      "unexpectedError": "An unexpected error occurred in the synthetic core.",
+      "reloadCore": "Reload Core",
+      "returnHome": "Return Home",
+      "recoveryActive": "Emergency Recovery Protocol Active"
     },
     "toasts": {
       "copied": "Copied to clipboard"
@@ -1591,7 +1596,10 @@
         "pending": "Pending",
         "strong": "Strong",
         "fair": "Fair",
-        "weak": "Weak"
+        "weak": "Weak",
+        "zh": "Chinese",
+        "en": "English",
+        "ja": "Japanese"
       }
     },
     "customFields": {

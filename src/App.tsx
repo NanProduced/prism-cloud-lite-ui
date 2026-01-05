@@ -4,6 +4,7 @@ import { PublicLayout, ProtectedLayout } from "@/components/layout/AppLayout";
 import LandingPage from "@/pages/LandingPage";
 import AuthPage from "@/pages/AuthPage";
 import NotFoundPage from "@/pages/NotFoundPage";
+import ErrorPage from "@/pages/ErrorPage";
 import OverviewPage from "@/pages/dashboard/OverviewPage";
 import DevicesPage from "@/pages/dashboard/devices/DevicesPage";
 import MediaLibraryPage from "@/pages/dashboard/media/MediaLibraryPage";
@@ -41,6 +42,7 @@ const router = createBrowserRouter([
   {
     path: "/",
     element: <PublicLayout />,
+    errorElement: <ErrorPage />,
     children: [
       { index: true, element: <LandingPage /> },
       { path: "auth", element: <Navigate to="/login" replace /> },
@@ -61,6 +63,7 @@ const router = createBrowserRouter([
   {
     path: "/dashboard",
     element: <ProtectedLayout />,
+    errorElement: <ErrorPage />,
     children: [
       { index: true, element: <Navigate to="overview" replace /> },
       { path: "overview", element: <OverviewPage /> },

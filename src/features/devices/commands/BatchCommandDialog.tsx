@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useTranslation, type TFunction } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
+import { type TFunction } from 'i18next';
 import { 
   X, 
   Check, 
@@ -46,6 +47,8 @@ import { SlideToUnlock } from '@/components/ui/slide-to-unlock';
 
 type ActionType = 
   | 'DISPLAY'
+  | 'BRIGHTNESS'
+  | 'COLOR_TEMP'
   | 'VOLUME' 
   | 'INPUT_MODE'
   | 'TIMEZONE' 
@@ -1054,7 +1057,7 @@ function ExecutionStep({
     
     // For ACK_ONLY actions, we usually consider CONFIRMED as success.
     // However, for sleep/wakeup, we might want to wait for the actual powerStatus to match.
-    let isAckDone = item.isAckOnly && (s === 'CONFIRMED' || s === 'ACKED');
+    let isAckDone = item.isAckOnly && (s === 'CONFIRMED' || (s as string) === 'ACKED');
     
     if (isAckDone) {
        const type = item.isDevice ? (actions[0]?.type) : item.type;
