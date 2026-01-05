@@ -37,11 +37,15 @@ import {
   createProgram as createProgramApi,
   renameProgram as renameProgramApi,
   deleteProgram as deleteProgramApi,
+  updateProgram as updateProgramApi,
 } from '@/services/programApi';
 import { getErrorMessage } from '@/services/authApi';
+import { getDevices } from '@/services/deviceApi';
 import type { ProgramListResp, ProgramTemplateResp, ProgramDetailResp } from '@/types/program';
 import { useTimeFormatter } from '@/hooks/use-time-formatter';
 import { ProgramPublishDialog } from '@/features/programs/publishing/ProgramPublishDialog';
+import { DeviceResolutionPicker } from '@/features/programs/editor/components/DeviceResolutionPicker';
+import { parseResolution } from '@/lib/resolution';
 import { useTranslation } from 'react-i18next';
 
 type ResolutionPreset = { label: string; width: number; height: number };
@@ -73,14 +77,24 @@ export default function ProgramsPage() {
     queryFn: getProgramTemplates,
   });
 
+  const { data: devicesRes } = useQuery({
+    queryKey: ['devices'],
+    queryFn: () => getDevices(),
+  });
+
   const programs = programsRes?.data || [];
   const templates = templatesRes?.data || [];
+  const devices = devicesRes?.data || [];
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('New Program');
   const [createMode, setCreateMode] = useState<'blank' | 'template'>('blank');
   const [createTemplateId, setCreateTemplateId] = useState<string | null>(null);
   const [createPresetIndex, setCreatePresetIndex] = useState(0);
+  const [createWidth, setCreateWidth] = useState(1920);
+  const [createHeight, setCreateHeight] = useState(1080);
+  const [createTargetDeviceId, setCreateTargetDeviceId] = useState<string | null>(null);
+  const [isCustomResolution, setIsCustomResolution] = useState(false);
 
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<ProgramListResp | null>(null);
@@ -106,13 +120,6 @@ export default function ProgramsPage() {
 
   const createProgramMutation = useMutation({
     mutationFn: createProgramApi,
-    onSuccess: (res) => {
-      if (res.data) {
-        queryClient.invalidateQueries({ queryKey: ['programs'] });
-        navigate(`/dashboard/programs/${res.data.id}/edit`);
-        setCreateOpen(false);
-      }
-    },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
 
@@ -165,14 +172,35 @@ export default function ProgramsPage() {
     deleteMutation.mutate(deleteTarget.id);
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     const name = createName.trim() || t('programs.dialogs.create.untitled');
     if (createMode === 'template') {
        toast.info('Starting from template not yet implemented in API');
        return;
     }
-    const preset = RESOLUTION_PRESETS[createPresetIndex] ?? RESOLUTION_PRESETS[0];
-    createProgramMutation.mutate({ name, width: preset.width, height: preset.height });
+    
+    let width = createWidth;
+    let height = createHeight;
+    
+    if (!isCustomResolution && createTargetDeviceId == null) {
+      const preset = RESOLUTION_PRESETS[createPresetIndex] ?? RESOLUTION_PRESETS[0];
+      width = preset.width;
+      height = preset.height;
+    }
+
+    try {
+      const res = await createProgramMutation.mutateAsync({ name, width, height });
+      if (res.data) {
+        if (createTargetDeviceId) {
+          await updateProgramApi(res.data.id, { targetDeviceId: createTargetDeviceId });
+        }
+        queryClient.invalidateQueries({ queryKey: ['programs'] });
+        navigate(`/dashboard/programs/${res.data.id}/edit`);
+        setCreateOpen(false);
+      }
+    } catch (err) {
+      // Error handled by mutation or toast
+    }
   };
 
   if (isProgramsLoading && tab !== 'templates') {
@@ -432,51 +460,128 @@ export default function ProgramsPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) { setCreateName('New Program'); setCreatePresetIndex(0); setCreateMode('blank'); } }}>
-        <DialogContent className="max-w-[500px] p-0 overflow-hidden border-0 shadow-2xl rounded-2xl ring-1 ring-foreground/5 text-foreground">
-          <div className="p-8">
-            <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <FilePlus2 className="h-6 w-6" />
-            </div>
-            <DialogHeader>
-              <DialogTitle>{t('programs.dialogs.create.title')}</DialogTitle>
-              <DialogDescription className="text-sm pt-2">{t('programs.dialogs.create.description')}</DialogDescription>
-            </DialogHeader>
-            <form className="mt-8 space-y-6" onSubmit={(e) => { e.preventDefault(); handleCreate(); }}>
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-muted-foreground/60" htmlFor="program-name">{t('programs.dialogs.create.nameLabel')}</label>
-                <Input id="program-name" value={createName} onChange={(e) => setCreateName(e.target.value)} className="h-11 bg-muted/20 border-border/50 text-sm font-bold" />
-              </div>
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-muted-foreground/60">{t('programs.dialogs.create.sourceLabel')}</label>
-                  <Select value={createMode} onValueChange={(v) => setCreateMode(v as any)}>
-                    <SelectTrigger className="h-11 bg-muted/20 border-border/50 font-bold text-sm"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="blank" className="font-bold">{t('programs.dialogs.create.blankCanvas')}</SelectItem>
-                      <SelectItem value="template" disabled={templates.length === 0} className="font-bold">{t('programs.dialogs.create.fromTemplate')}</SelectItem>
-                    </SelectContent>
-                  </Select>
+            <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) { setCreateName('New Program'); setCreatePresetIndex(0); setCreateMode('blank'); setCreateTargetDeviceId(null); setIsCustomResolution(false); } }}>
+              <DialogContent className="max-w-[500px] p-0 overflow-hidden border-0 shadow-2xl rounded-2xl ring-1 ring-foreground/5 text-foreground">
+                <div className="p-8">
+                  <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <FilePlus2 className="h-6 w-6" />
+                  </div>
+                  <DialogHeader>
+                    <DialogTitle>{t('programs.dialogs.create.title')}</DialogTitle>
+                    <DialogDescription className="text-sm pt-2">{t('programs.dialogs.create.description')}</DialogDescription>
+                  </DialogHeader>
+                  <form className="mt-8 space-y-6" onSubmit={(e) => { e.preventDefault(); handleCreate(); }}>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-muted-foreground/60" htmlFor="program-name">{t('programs.dialogs.create.nameLabel')}</label>
+                      <Input id="program-name" value={createName} onChange={(e) => setCreateName(e.target.value)} className="h-11 bg-muted/20 border-border/50 text-sm font-bold" />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-muted-foreground/60">{t('programs.dialogs.create.sourceLabel')}</label>
+                        <Select value={createMode} onValueChange={(v) => setCreateMode(v as any)}>
+                          <SelectTrigger className="h-11 bg-muted/20 border-border/50 font-bold text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="blank" className="font-bold">{t('programs.dialogs.create.blankCanvas')}</SelectItem>
+                            <SelectItem value="template" disabled={templates.length === 0} className="font-bold">{t('programs.dialogs.create.fromTemplate')}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+      
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-bold text-muted-foreground/60">{t('programs.dialogs.create.resolutionLabel')}</label>
+                        <div className="flex items-center gap-4">
+                          {!createTargetDeviceId && (
+                            <button 
+                              type="button" 
+                              onClick={() => setIsCustomResolution(!isCustomResolution)}
+                              className="text-[10px] font-bold text-primary hover:underline"
+                            >
+                              {isCustomResolution ? t('programs.dialogs.create.usePreset') : t('programs.dialogs.create.manualResolution')}
+                            </button>
+                          )}
+                          <span className="text-[10px] text-muted-foreground/20">|</span>
+                          <button 
+                            type="button" 
+                            onClick={() => {
+                              if (createTargetDeviceId) {
+                                setCreateTargetDeviceId(null);
+                              }
+                            }}
+                            className={cn("text-[10px] font-bold hover:underline", createTargetDeviceId ? "text-rose-500" : "text-primary")}
+                          >
+                            {createTargetDeviceId ? t('common.actions.cancel') : t('programs.dialogs.create.deviceResolution')}
+                          </button>
+                        </div>
+                      </div>
+      
+                      {createTargetDeviceId ? (
+                         <div className="space-y-3">
+                            <DeviceResolutionPicker
+                              devices={devices}
+                              value={createTargetDeviceId}
+                              onChange={(deviceId) => {
+                                setCreateTargetDeviceId(deviceId);
+                                if (deviceId) {
+                                  const device = devices.find((d) => String(d.deviceId || d.id) === deviceId);
+                                  if (device) {
+                                    const res = parseResolution(device.resolution);
+                                    setCreateWidth(res.width);
+                                    setCreateHeight(res.height);
+                                  }
+                                }
+                              }}
+                            />
+                            <p className="text-[10px] font-medium text-muted-foreground italic px-1">
+                              {t('programEditor.panels.inspector.labels.canvasResolution')}: <span className="text-primary font-bold">{createWidth} &times; {createHeight}</span>
+                            </p>
+                         </div>
+                      ) : isCustomResolution ? (
+                        <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2 duration-300">
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold text-muted-foreground/40 uppercase pl-1">{t('programEditor.panels.inspector.labels.width')}</span>
+                            <Input 
+                              type="number" 
+                              value={createWidth} 
+                              onChange={(e) => setCreateWidth(Number(e.target.value))} 
+                              className="h-11 bg-muted/20 border-border/50 font-mono font-bold" 
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold text-muted-foreground/40 uppercase pl-1">{t('programEditor.panels.inspector.labels.height')}</span>
+                            <Input 
+                              type="number" 
+                              value={createHeight} 
+                              onChange={(e) => setCreateHeight(Number(e.target.value))} 
+                              className="h-11 bg-muted/20 border-border/50 font-mono font-bold" 
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <Select value={String(createPresetIndex)} onValueChange={(v) => {
+                          const idx = Number(v);
+                          setCreatePresetIndex(idx);
+                          setCreateWidth(RESOLUTION_PRESETS[idx].width);
+                          setCreateHeight(RESOLUTION_PRESETS[idx].height);
+                        }}>
+                          <SelectTrigger className="h-11 bg-muted/20 border-border/50 font-bold text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>{RESOLUTION_PRESETS.map((p, i) => (<SelectItem key={p.label} value={String(i)} className="font-bold">{p.label}</SelectItem>))}</SelectContent>
+                        </Select>
+                      )}
+                    </div>
+      
+                    <div className="flex justify-end gap-3 pt-4">
+                      <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)} className="font-bold text-xs px-8">{t('common.actions.cancel')}</Button>
+                      <Button type="submit" disabled={createProgramMutation.isPending} className="font-bold text-xs px-10 h-11 shadow-xl">
+                        {createProgramMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-2" />} {t('common.actions.confirm')}
+                      </Button>
+                    </div>
+                  </form>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-muted-foreground/60">{t('programs.dialogs.create.resolutionLabel')}</label>
-                  <Select value={String(createPresetIndex)} onValueChange={(v) => setCreatePresetIndex(Number(v))}>
-                    <SelectTrigger className="h-11 bg-muted/20 border-border/50 font-bold text-sm"><SelectValue /></SelectTrigger>
-                    <SelectContent>{RESOLUTION_PRESETS.map((p, i) => (<SelectItem key={p.label} value={String(i)} className="font-bold">{p.label}</SelectItem>))}</SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)} className="font-bold text-xs px-8">{t('common.actions.cancel')}</Button>
-                <Button type="submit" disabled={createProgramMutation.isPending} className="font-bold text-xs px-10 h-11 shadow-xl">
-                  {createProgramMutation.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-2" />} {t('common.actions.confirm')}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </DialogContent>
-      </Dialog>
-
+              </DialogContent>
+            </Dialog>
       <Dialog open={renameOpen} onOpenChange={(open) => { setRenameOpen(open); if (!open) setRenameTarget(null); }}>
         <DialogContent className="max-w-[420px] p-0 overflow-hidden border-0 shadow-2xl rounded-2xl ring-1 ring-foreground/5 text-foreground">
           <div className="p-8">

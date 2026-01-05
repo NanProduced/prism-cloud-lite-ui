@@ -594,6 +594,12 @@
       "confirmPassword": "Confirm Password",
       "completeRegistration": "Complete Registration",
       "passwordRequirements": "At least 8 characters with uppercase, lowercase, and number",
+      "passwordHint": {
+        "minLength": "8+ characters",
+        "uppercase": "Uppercase",
+        "lowercase": "Lowercase",
+        "number": "Number"
+      },
       "passwordsDoNotMatch": "Passwords do not match",
       "alreadyHaveAccount": "Already have an account?",
       "agreeToTermsPrefix": "I agree to the",
@@ -2419,6 +2425,9 @@
         "nameLabel": "Program Name",
         "sourceLabel": "Source",
         "resolutionLabel": "Resolution",
+        "manualResolution": "Manual Resolution",
+        "usePreset": "Use Preset",
+        "deviceResolution": "Use Device Resolution",
         "blankCanvas": "Blank Canvas",
         "fromTemplate": "From Template",
         "untitled": "Untitled Program"

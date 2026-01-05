@@ -301,8 +301,16 @@ export default function ProgramEditorPage() {
       const w = Number.parseInt(newVsn.Programs?.Program?.Information?.Width ?? '0', 10);
       const h = Number.parseInt(newVsn.Programs?.Program?.Information?.Height ?? '0', 10);
       
-      if (w > 0 && h > 0 && (w !== program?.width || h !== program?.height)) {
+      const currentWidth = program?.width;
+      const currentHeight = program?.height;
+
+      if (w > 0 && h > 0 && (w !== currentWidth || h !== currentHeight)) {
          await updateProgramApi(programId!, { width: w, height: h });
+         // Manually update the cache to prevent stale comparisons in subsequent saves
+         queryClient.setQueryData(['programs', programId], (old: any) => {
+            if (!old?.data) return old;
+            return { ...old, data: { ...old.data, width: w, height: h } };
+         });
       }
 
       return saveProgramDraft(programId!, draftId, {
@@ -316,6 +324,7 @@ export default function ProgramEditorPage() {
       setAutosavePending(false);
       if (res.data) setDraft(res.data);
       queryClient.invalidateQueries({ queryKey: ['programs', programId] });
+      queryClient.invalidateQueries({ queryKey: ['programs'] });
     },
     onError: (err) => toast.error(`Save failed: ${getErrorMessage(err)}`),
   });
@@ -996,7 +1005,12 @@ export default function ProgramEditorPage() {
           setPublishOpen(next);
           if (!next) setPublishContext(null);
         }}
-        program={program as any} deployments={program.deployments || []}
+        program={{
+          ...program,
+          width: canvasWidth,
+          height: canvasHeight
+        } as any} 
+        deployments={program.deployments || []}
         preferredDraftId={publishContext?.preferredDraftId ?? null}
         initialVersionMode={publishContext?.initialVersionMode ?? null}
         initialExistingVersion={publishContext?.initialExistingVersion ?? null}

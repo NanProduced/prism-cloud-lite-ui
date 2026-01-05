@@ -54,6 +54,20 @@ const MessageIcon = () => (
   </svg>
 );
 
+const EyeIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#686B6E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+    <circle cx="12" cy="12" r="3"></circle>
+  </svg>
+);
+
+const EyeOffIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#686B6E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+    <line x1="1" y1="1" x2="23" y2="23"></line>
+  </svg>
+);
+
 export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" | "register" | "forgot-password") => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -67,6 +81,7 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
   const [countdown, setCountdown] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
 
   const googleCallbackHandledRef = useRef(false);
   const GOOGLE_CONTINUE_STORAGE_KEY = "prism_google_continue_url";
@@ -409,7 +424,10 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
               <div className="absolute border border-[#363a3d] group-focus-within:border-[#82dbf7] inset-[-1px] pointer-events-none rounded-[9px] transition-colors" />
               <div className="flex items-center px-[16px] h-full gap-[12px]">
                 <LockIcon />
-                <input type="password" placeholder={t('auth.login.passwordPlaceholder')} value={password} onChange={(e) => setPassword(e.target.value)} className="bg-transparent border-none outline-none text-[#cdcecf] text-[16px] placeholder-[#686b6e] w-full h-full font-sans" required />
+                <input type={showPassword ? "text" : "password"} placeholder={t('auth.login.passwordPlaceholder')} value={password} onChange={(e) => setPassword(e.target.value)} className="bg-transparent border-none outline-none text-[#cdcecf] text-[16px] placeholder-[#686b6e] w-full h-full font-sans" required />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="p-1 hover:opacity-80 transition-opacity" tabIndex={-1}>
+                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
               </div>
             </div>
           )}

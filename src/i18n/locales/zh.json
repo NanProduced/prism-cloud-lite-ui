@@ -585,6 +585,12 @@
       "confirmPassword": "确认密码",
       "completeRegistration": "完成注册",
       "passwordRequirements": "至少 8 位，包含大小写字母和数字",
+      "passwordHint": {
+        "minLength": "至少8位",
+        "uppercase": "大写字母",
+        "lowercase": "小写字母",
+        "number": "数字"
+      },
       "passwordsDoNotMatch": "两次密码不一致",
       "alreadyHaveAccount": "已有账号?",
       "agreeToTermsPrefix": "我同意",
@@ -1287,6 +1293,9 @@
         "nameLabel": "节目名称",
         "sourceLabel": "来源",
         "resolutionLabel": "分辨率",
+        "manualResolution": "手动设置分辨率",
+        "usePreset": "使用预设",
+        "deviceResolution": "使用设备分辨率",
         "blankCanvas": "空白画布",
         "fromTemplate": "从模版创建",
         "untitled": "未命名节目"

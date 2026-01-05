@@ -14,6 +14,21 @@ function Logo() {
   );
 }
 
+// Eye Icons for password visibility toggle
+const EyeIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#686B6E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+    <circle cx="12" cy="12" r="3"></circle>
+  </svg>
+);
+
+const EyeOffIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#686B6E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+    <line x1="1" y1="1" x2="23" y2="23"></line>
+  </svg>
+);
+
 // Background Illustration Component
 function Illustration({ visible }: { visible: boolean }) {
   if (!visible) return null;
@@ -69,6 +84,10 @@ export default function RegisterPage({ onNavigate }: { onNavigate: (page: "login
   // Survey State
   const [industry, setIndustry] = useState("");
   const [scenarios, setScenarios] = useState<string[]>([]);
+
+  // Password visibility state
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Timer State
   const [countdown, setCountdown] = useState(0);
@@ -444,16 +463,34 @@ export default function RegisterPage({ onNavigate }: { onNavigate: (page: "login
                 <label className="text-[#9b9c9e] text-[14px] font-medium" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>{t('auth.common.password')}</label>
                 <div className="bg-[#1a1d21] h-[48px] relative rounded-[8px] w-full group focus-within:ring-2 ring-[#82dbf7]/20 transition-all">
                   <div className="absolute border border-[#363a3d] group-focus-within:border-[#82dbf7] inset-[-1px] pointer-events-none rounded-[9px] transition-colors" />
-                  <div className="flex items-center px-[16px] h-full">
+                  <div className="flex items-center px-[16px] h-full gap-[12px]">
                     <input
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder={t('auth.register.passwordPlaceholder')}
                       className="bg-transparent border-none outline-none text-[#cdcecf] text-[16px] placeholder-[#686b6e] w-full h-full"
                       style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}
                     />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="p-1 hover:opacity-80 transition-opacity flex-shrink-0" tabIndex={-1}>
+                      {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                    </button>
                   </div>
+                </div>
+                {/* Password requirements hint */}
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <span className={`text-[12px] px-2 py-1 rounded-full ${password.length >= 8 ? 'bg-[#b6f09c]/20 text-[#b6f09c]' : 'bg-[#363a3d] text-[#686b6e]'}`}>
+                    {t('auth.register.passwordHint.minLength', '8+ characters')}
+                  </span>
+                  <span className={`text-[12px] px-2 py-1 rounded-full ${/[A-Z]/.test(password) ? 'bg-[#b6f09c]/20 text-[#b6f09c]' : 'bg-[#363a3d] text-[#686b6e]'}`}>
+                    {t('auth.register.passwordHint.uppercase', 'Uppercase')}
+                  </span>
+                  <span className={`text-[12px] px-2 py-1 rounded-full ${/[a-z]/.test(password) ? 'bg-[#b6f09c]/20 text-[#b6f09c]' : 'bg-[#363a3d] text-[#686b6e]'}`}>
+                    {t('auth.register.passwordHint.lowercase', 'Lowercase')}
+                  </span>
+                  <span className={`text-[12px] px-2 py-1 rounded-full ${/[0-9]/.test(password) ? 'bg-[#b6f09c]/20 text-[#b6f09c]' : 'bg-[#363a3d] text-[#686b6e]'}`}>
+                    {t('auth.register.passwordHint.number', 'Number')}
+                  </span>
                 </div>
               </div>
 
@@ -461,15 +498,18 @@ export default function RegisterPage({ onNavigate }: { onNavigate: (page: "login
                 <label className="text-[#9b9c9e] text-[14px] font-medium" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>{t('auth.register.confirmPassword')}</label>
                 <div className="bg-[#1a1d21] h-[48px] relative rounded-[8px] w-full group focus-within:ring-2 ring-[#82dbf7]/20 transition-all">
                   <div className="absolute border border-[#363a3d] group-focus-within:border-[#82dbf7] inset-[-1px] pointer-events-none rounded-[9px] transition-colors" />
-                  <div className="flex items-center px-[16px] h-full">
+                  <div className="flex items-center px-[16px] h-full gap-[12px]">
                     <input
-                      type="password"
+                      type={showConfirmPassword ? "text" : "password"}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder={t('auth.register.confirmPasswordPlaceholder')}
                       className="bg-transparent border-none outline-none text-[#cdcecf] text-[16px] placeholder-[#686b6e] w-full h-full"
                       style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}
                     />
+                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="p-1 hover:opacity-80 transition-opacity flex-shrink-0" tabIndex={-1}>
+                      {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
+                    </button>
                   </div>
                 </div>
               </div>
