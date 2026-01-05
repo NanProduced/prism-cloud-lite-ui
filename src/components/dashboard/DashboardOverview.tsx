@@ -118,7 +118,7 @@ export function DashboardOverview() {
   const storagePercentage = usage ? (usage.quotaBytes === -1 ? 0 : Math.round((usage.usedBytes / usage.quotaBytes) * 100)) : 0;
 
   const programsQuota = useMemo(() => {
-    const metric = quotaRes?.data?.metrics?.find(m => m.resource === 'programs');
+    const metric = quotaRes?.data?.metrics?.find((m: any) => m.resource === 'programs');
     return {
       used: metric?.used || 0,
       limit: metric?.limit || 20,
@@ -137,9 +137,9 @@ export function DashboardOverview() {
 
   const playbackData = useMemo(() => {
     if (!Array.isArray(playbackRes?.data?.topPrograms)) return [];
-    const total = playbackRes.data.totalSeconds || 1;
+    const total = playbackRes?.data?.programTotal?.playSeconds || 1;
     return playbackRes.data.topPrograms.map(p => ({
-      name: p.name,
+      name: p.programName,
       value: Math.round(((p.playSeconds || 0) / total) * 100)
     }));
   }, [playbackRes]);
@@ -162,15 +162,15 @@ export function DashboardOverview() {
     const alerts = recentMessages.filter(m => m.kind === 'NOTIFICATION' && !m.readAt).slice(0, 1);
     
     return [
-      ...tasks.map(t => ({ id: t.id, title: t.title, progress: 50, type: 'task' as const })),
-      ...alerts.map(a => ({ id: a.id, title: a.title, time: formatRelative(a.createdAt), type: 'alert' as const }))
+      ...tasks.map(t => ({ id: t.id, title: t.type, progress: 50, type: 'task' as const })),
+      ...alerts.map(a => ({ id: a.id, title: a.deviceName || a.type, time: formatRelative(a.createdAt), type: 'alert' as const }))
     ];
   }, [recentMessages, formatRelative]);
 
   const recentAlertsList = useMemo(() => 
     recentMessages.filter(m => m.kind === 'NOTIFICATION').slice(0, 3).map(m => ({
       id: m.id,
-      device: m.title,
+      device: m.deviceName || m.type,
       type: "Alert",
       time: formatRelative(m.createdAt),
       severity: m.status === 'FAILED' ? 'high' : 'medium'

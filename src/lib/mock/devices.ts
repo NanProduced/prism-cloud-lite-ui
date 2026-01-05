@@ -187,7 +187,7 @@ function generateMockDevice(index: number): Device {
     playingProgram: currentProgram?.name,
 
     // Tags
-    tags: tags.map(t => ({ ...t, tagName: t.name, tagSlug: t.slug })),
+    tags: tags.map(t => ({ ...t, tagName: t.name as string, tagSlug: t.slug as string })),
 
     // Custom Fields
     customFieldValues: generateMockDeviceCustomFieldValues(index),

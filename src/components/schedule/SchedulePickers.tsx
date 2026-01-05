@@ -123,17 +123,17 @@ export function TimePicker({ value, onChange }: TimePickerProps) {
             <WheelPicker
               options={hours}
               value={h}
-              onValueChange={(val: number) => handleWheelChange('h', val)}
+              onValueChange={(val: any) => handleWheelChange('h', Number(val))}
             />
             <WheelPicker
               options={minutes}
               value={m}
-              onValueChange={(val: number) => handleWheelChange('m', val)}
+              onValueChange={(val: any) => handleWheelChange('m', Number(val))}
             />
             <WheelPicker
               options={seconds}
               value={s}
-              onValueChange={(val: number) => handleWheelChange('s', val)}
+              onValueChange={(val: any) => handleWheelChange('s', Number(val))}
             />
           </WheelPickerWrapper>
           <Button size="sm" className="w-full" onClick={() => setIsOpen(false)}>Done</Button>

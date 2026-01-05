@@ -420,7 +420,7 @@ export function DeviceTable({
       name: t('devices.table.columns.status'),
       type: 'string',
       width: 160,
-      field: (data) => {
+      field: ({ data }) => {
         if (data.kind !== 'leaf' || !data.data) return '';
         return resolveDeviceStatus(data.data);
       },

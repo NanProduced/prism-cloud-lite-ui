@@ -87,7 +87,7 @@ function filterItemToText(filter?: FilterModelItem<Device>): string {
   }
   if (filter.kind === 'string') return String(filter.value ?? '');
   if (filter.kind === 'number') {
-    const f = filter as FilterNumber<Device>;
+    const f = filter as FilterNumber;
     const opMap: any = { equals: '=', not_equals: '!=', greater_than: '>', less_than: '<', greater_than_or_equals: '>=', less_than_or_equals: '<=' };
     return `${opMap[f.operator] || ''}${f.value}`;
   }

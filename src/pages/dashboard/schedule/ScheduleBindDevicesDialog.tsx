@@ -20,57 +20,59 @@ function getBffDisplayError(res: BffResponse<any> | null | undefined, t: any): s
 }
 
 export function ScheduleBindDevicesDialog(props: {
-
   open: boolean;
-
   onOpenChange: (open: boolean) => void;
-
   scheduleId: string;
-
   alreadyBoundDeviceIds: number[];
-
 }) {
-
   const { t } = useTranslation();
-
   const { open, onOpenChange, scheduleId, alreadyBoundDeviceIds } = props;
+  const queryClient = useQueryClient();
 
-// ...
+  const [keyword, setKeyword] = useState('');
+  const [selectedDeviceIds, setSelectedDeviceIds] = useState<number[]>([]);
+  const [replaceExisting, setReplaceExisting] = useState(false);
+  const [bindResult, setBindResult] = useState<ScheduleBindDevicesResp | null>(null);
+
+  const devicesQuery = useQuery({
+    queryKey: ['devices', 'list-for-binding'],
+    queryFn: getDevices,
+    enabled: open,
+  });
+
+  const devices = useMemo(() => {
+    const list = devicesQuery.data?.data || [];
+    if (!keyword) return list;
+    const q = keyword.toLowerCase();
+    return list.filter(d => 
+      d.deviceName.toLowerCase().includes(q) || 
+      String(d.deviceId).includes(q) ||
+      (d.description || '').toLowerCase().includes(q)
+    );
+  }, [devicesQuery.data, keyword]);
 
   const bindMutation = useMutation({
-
     mutationFn: () => bindDevicesToSchedule(scheduleId, selectedDeviceIds, replaceExisting),
-
     onSuccess: (res) => {
-
       if (!res.success) {
-
         toast.error(getBffDisplayError(res, t));
-
         return;
-
       }
-
       setBindResult(res.data || null);
-
       queryClient.invalidateQueries({ queryKey: ['schedule', scheduleId] });
-
       queryClient.invalidateQueries({ queryKey: ['schedule-bindings', scheduleId] });
-
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
 
-
-
       const conflicts = res.data?.conflicts ?? 0;
-
-      if (conflicts > 0) toast.warning(t('schedules.details.bindDevices.toasts.withConflicts'), { description: t('schedules.details.bindDevices.toasts.conflictsDesc', { count: conflicts }) });
-
-      else toast.success(t('schedules.details.bindDevices.toasts.success'));
-
+      if (conflicts > 0) {
+        toast.warning(t('schedules.details.bindDevices.toasts.withConflicts'), { 
+          description: t('schedules.details.bindDevices.toasts.conflictsDesc', { count: conflicts }) 
+        });
+      } else {
+        toast.success(t('schedules.details.bindDevices.toasts.success'));
+      }
     },
-
     onError: () => toast.error(t('schedules.details.bindDevices.toasts.failed')),
-
   });
 
   function toggleDevice(deviceId: number) {

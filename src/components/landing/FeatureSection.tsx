@@ -213,7 +213,7 @@ const WorkflowStep = ({
   delay,
   isLast
 }: WorkflowStepProps) => {
-  const colorClasses = {
+  const colorMap = {
     cyan: {
       number: "text-cyan-400",
       icon: "bg-cyan-500/10 border-cyan-500/20 text-cyan-400",
@@ -234,7 +234,9 @@ const WorkflowStep = ({
       icon: "bg-amber-500/10 border-amber-500/20 text-amber-400",
       glow: "bg-amber-500",
     },
-  }[color] || colorClasses.cyan;
+  };
+
+  const colorClasses = colorMap[color as keyof typeof colorMap] || colorMap.cyan;
 
   return (
     <FadeIn delay={delay} className="relative group">

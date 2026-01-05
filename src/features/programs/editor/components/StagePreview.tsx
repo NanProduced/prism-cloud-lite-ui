@@ -515,6 +515,7 @@ export function StagePreview({
                   playbackSpeed={playbackSpeed}
                   scale={scale}
                   materialIndex={materialIndex}
+                  t={t}
                   onMoveStart={(event) => {
                     if (event.button !== 0) return;
                     if (tool !== 'select') return;
@@ -657,6 +658,7 @@ function RegionBox({
   playbackSpeed,
   scale,
   materialIndex,
+  t,
   onMoveStart,
   onResizeStart,
 }: {
@@ -670,6 +672,7 @@ function RegionBox({
   playbackSpeed: number;
   scale: number;
   materialIndex: Record<string, EditorMaterial>;
+  t: any;
   onMoveStart: (event: ReactPointerEvent) => void;
   onResizeStart: (event: ReactPointerEvent, handle: ResizeHandle) => void;
 }) {

@@ -2,7 +2,7 @@ import { FadeIn } from "@/components/ui/FadeIn";
 import { useTranslation } from "react-i18next";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 interface BentoCardProps {

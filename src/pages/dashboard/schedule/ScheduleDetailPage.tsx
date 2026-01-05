@@ -37,6 +37,7 @@ import {
   getProgramDetails,
   getProgramsByIds,
 } from '@/services/programApi';
+import { getErrorMessage } from '@/services/authApi';
 import {
   formatWeekdaySelection,
   formatTimeRange,

@@ -518,7 +518,7 @@ export default function MessagesPage() {
                 </div>
 
                 <div className="text-sm leading-relaxed text-foreground/80 font-medium bg-muted/20 p-6 rounded-[2rem] border-2 border-transparent">
-                  {renderMessage(detailRes.data, t).description || renderMessage(detailRes.data, t).summary}
+                  {renderMessage(detailRes.data, t).summary}
                 </div>
 
                 {detailRes.data.type === 'export.task' && <ExportTaskDetails message={detailRes.data} />}
@@ -534,13 +534,13 @@ export default function MessagesPage() {
 
                 {/* Related Resources Grid */}
                 {(() => {
-                  const payload = detailRes.data.payload || {};
+                  const payload = detailRes.data?.payload || {};
                   const assetId = payload.output?.assetId || payload.source?.assetId;
                   const assetTitle = payload.source?.title || payload.output?.title;
 
-                  const showAssetCard = detailRes.data.type !== 'media.transcode' && !!assetId;
-                  const showDeviceCard = !!detailRes.data.deviceName;
-                  const showProgramCard = !!detailRes.data.programName;
+                  const showAssetCard = detailRes.data?.type !== 'media.transcode' && !!assetId;
+                  const showDeviceCard = !!detailRes.data?.deviceName;
+                  const showProgramCard = !!detailRes.data?.programName;
 
                   if (!showDeviceCard && !showProgramCard && !showAssetCard) return null;
 
@@ -555,16 +555,16 @@ export default function MessagesPage() {
                             <div className="flex flex-col">
                               <span className="text-[9px] font-semibold text-muted-foreground tracking-wide leading-none mb-1">{t('message.ui.device')}</span>
                               <span className="text-xs font-bold truncate max-w-[150px]">
-                                {detailRes.data.deviceName}
+                                {detailRes.data?.deviceName}
                               </span>
                             </div>
                           </div>
-                          {detailRes.data.deviceId && (
+                          {detailRes.data?.deviceId && (
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => navigate(`/dashboard/devices/${detailRes.data.deviceId}`)}
+                              onClick={() => navigate(`/dashboard/devices/${detailRes.data?.deviceId}`)}
                             >
                               <ExternalLink className="h-3.5 w-3.5" />
                             </Button>
@@ -580,16 +580,16 @@ export default function MessagesPage() {
                             <div className="flex flex-col">
                               <span className="text-[9px] font-semibold text-muted-foreground tracking-wide leading-none mb-1">{t('message.ui.program')}</span>
                               <span className="text-xs font-bold truncate max-w-[150px]">
-                                {detailRes.data.programName}
+                                {detailRes.data?.programName}
                               </span>
                             </div>
                           </div>
-                          {detailRes.data.programId && (
+                          {detailRes.data?.programId && (
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => navigate(`/dashboard/programs/${detailRes.data.programId}`)}
+                              onClick={() => navigate(`/dashboard/programs/${detailRes.data?.programId}`)}
                             >
                               <ExternalLink className="h-3.5 w-3.5" />
                             </Button>
@@ -650,7 +650,7 @@ export default function MessagesPage() {
                       )}
                     </div>
 
-                    <div className="space-y-2">
+                      <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <p className="text-[10px] font-semibold tracking-wide text-muted-foreground">{t('message.ui.payload')}</p>
                         <Button
@@ -658,7 +658,7 @@ export default function MessagesPage() {
                           size="sm"
                           className="h-7 text-[10px] font-bold gap-1.5"
                           onClick={() => {
-                            navigator.clipboard.writeText(JSON.stringify(detailRes.data.payload ?? {}, null, 2));
+                            navigator.clipboard.writeText(JSON.stringify(detailRes.data?.payload ?? {}, null, 2));
                             toast.success(t('logs.common.copied'));
                           }}
                         >
@@ -668,7 +668,7 @@ export default function MessagesPage() {
                       </div>
                       <div className="bg-slate-950 rounded-2xl p-6 overflow-hidden border border-slate-800 shadow-xl group relative">
                         <pre className="text-xs text-emerald-400 font-mono overflow-auto max-h-[400px] custom-scrollbar leading-relaxed">
-                          {JSON.stringify(detailRes.data.payload ?? {}, null, 2)}
+                          {JSON.stringify(detailRes.data?.payload ?? {}, null, 2)}
                         </pre>
                       </div>
                     </div>

@@ -93,8 +93,8 @@ export default function DevicesPage() {
   });
 
   const deleteFieldMutation = useMutation({
-    mutationFn: (fieldId: number) => deleteCustomFieldDef(fieldId),
-    onSuccess: (res) => {
+    mutationFn: async (fieldId: number) => await deleteCustomFieldDef(fieldId),
+    onSuccess: (res: any) => {
       if (!res.success) {
         toast.error(t('common.errors.deleteFailed'), { description: res.error?.displayMessage });
         return;
@@ -203,6 +203,9 @@ export default function DevicesPage() {
       color: draft.color,
       icon: draft.icon,
     });
+    if (!response.success || !response.data) {
+      throw new Error(response.error?.displayMessage || 'Failed to create tag');
+    }
     return response.data;
   };
 

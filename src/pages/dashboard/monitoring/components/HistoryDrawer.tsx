@@ -201,7 +201,7 @@ export function HistoryDrawer({
     });
 
     return Object.values(grouped).sort(
-      (a, b) => new Date(a.at as string).getTime() - new Date(b.at as string).getTime()
+      (a, b) => new Date(a.at as any).getTime() - new Date(b.at as any).getTime()
     );
   }, [data, isReceiveCard]);
 
@@ -211,7 +211,7 @@ export function HistoryDrawer({
 
     const primaryKey = chartKeys[0]?.key || 'value';
     const values = chartData
-      .map((d) => d[primaryKey])
+      .map((d: any) => d[primaryKey])
       .filter((v) => typeof v === 'number') as number[];
 
     if (values.length === 0) return null;

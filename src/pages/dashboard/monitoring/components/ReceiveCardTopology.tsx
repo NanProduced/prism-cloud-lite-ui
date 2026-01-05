@@ -178,7 +178,7 @@ export function ReceiveCardTopology({
   const renderGridLayout = () => {
     const cardsPerRow = 4;
     let currentY = 20;
-    const elements: JSX.Element[] = [];
+    const elements: React.ReactNode[] = [];
 
     ports.forEach((port, portIndex) => {
       // Port标签

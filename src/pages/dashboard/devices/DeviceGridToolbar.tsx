@@ -231,13 +231,13 @@ export function DeviceGridToolbar({
           if (!data) return true;
           return (
             data.deviceName.toLowerCase().includes(q) ||
-            data.alias?.toLowerCase().includes(q) ||
+            (data.alias?.toLowerCase().includes(q) ?? false) ||
             data.model.toLowerCase().includes(q) ||
-            data.firmwareVersion.toLowerCase().includes(q) ||
-            data.serialNumber?.toLowerCase().includes(q) ||
+            (data.firmwareVersion?.toLowerCase().includes(q) ?? false) ||
+            (data.serialNumber?.toLowerCase().includes(q) ?? false) ||
             data.networkType.toLowerCase().includes(q) ||
             (data.currentProgram?.name.toLowerCase().includes(q) ?? false) ||
-            data.tags.some((t) => t.name.toLowerCase().includes(q))
+            data.tags.some((t) => (t.tagName || t.name || '').toLowerCase().includes(q))
           );
         },
       };

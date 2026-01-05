@@ -53,7 +53,7 @@ const SCENARIOS = [
   "Other / TBD",
 ];
 
-export default function RegisterPage({ onNavigate }: { onNavigate: (page: "login" | "register") => void }) {
+export default function RegisterPage({ onNavigate }: { onNavigate: (page: "login" | "register" | "forgot-password") => void }) {
   const { t } = useTranslation();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);

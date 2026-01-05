@@ -182,17 +182,23 @@ export function CommandLogTable({ filters, searchText }: CommandLogTableProps) {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                       <div className={cn(
-                          "p-1 rounded-md border shadow-sm",
-                          log.accepted ? "bg-emerald-500/10 border-emerald-500/20" : "bg-muted border-border opacity-40"
-                        )}>
-                         <Check className={cn("h-3 w-3", log.accepted ? "text-emerald-500" : "text-muted-foreground")} title={log.accepted ? t('logs.command.accepted.true') : t('logs.command.accepted.false')} />
+                       <div 
+                         className={cn(
+                           "p-1 rounded-md border shadow-sm",
+                           log.accepted ? "bg-emerald-500/10 border-emerald-500/20" : "bg-muted border-border opacity-40"
+                         )}
+                         title={log.accepted ? t('logs.command.accepted.true') : t('logs.command.accepted.false')}
+                        >
+                         <Check className={cn("h-3 w-3", log.accepted ? "text-emerald-500" : "text-muted-foreground")} />
                        </div>
-                       <div className={cn(
-                          "p-1 rounded-md border shadow-sm",
-                          log.covered ? "bg-amber-500/10 border-amber-500/20" : "bg-muted border-border opacity-40"
-                        )}>
-                         <Layers className={cn("h-3 w-3", log.covered ? "text-amber-500" : "text-muted-foreground")} title={log.covered ? t('logs.command.covered.true') : t('logs.command.covered.false')} />
+                       <div 
+                         className={cn(
+                           "p-1 rounded-md border shadow-sm",
+                           log.covered ? "bg-amber-500/10 border-amber-500/20" : "bg-muted border-border opacity-40"
+                         )}
+                         title={log.covered ? t('logs.command.covered.true') : t('logs.command.covered.false')}
+                        >
+                         <Layers className={cn("h-3 w-3", log.covered ? "text-amber-500" : "text-muted-foreground")} />
                        </div>
                     </div>
                   </td>

@@ -145,7 +145,7 @@ export function DeviceGridFloatingFilterCell({
         grid={grid}
         current={current}
         t={t}
-        onApply={(next) => {
+        onApply={(next: any) => {
           grid.state.filterModel.set((prev) => {
             const updated = { ...prev };
             if (!next) delete updated[column.id];
@@ -177,9 +177,10 @@ function filterItemToText(filter?: FilterModelItem<Device>, opts?: any, t?: (key
     }
     return 'Active Filter';
   }
-  if (filter.kind === 'number') {
-     const f = filter as FilterNumber<Device>;
-     const opMap: any = { equals: '=', not_equals: '!=', greater_than: '>', less_than: '<', greater_than_or_equals: '>=', less_than_or_equals: '<=' };
+     if (filter.kind === 'number') {
+       const f = filter as FilterNumber;
+       const opMap: any = { equals: '=', not_equals: '!=', greater_than: '>', less_than: '<', greater_than_or_equals: '>=', less_than_or_equals: '<=' };
+  
      return `${opMap[f.operator] || ''}${f.value}`;
   }
   return String((filter as any).value ?? '');
@@ -375,7 +376,7 @@ function FilterPopover({
           if (columnId === 'resolution' && typeof val === 'object') val = `${val.width} x ${val.height}`;
           if (val == null) return false;
           const sVal = String(val).toLowerCase();
-          return selected.some(s => s.toLowerCase() === sVal);
+          return (selected as string[]).some(s => s.toLowerCase() === sVal);
         }
       });
     } else if (updates.date) {

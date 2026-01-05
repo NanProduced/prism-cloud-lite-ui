@@ -33,17 +33,19 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
     <div ref={containerRef} className="w-full">
       {mounted && (
         <ResponsiveGridLayout
-          className="layout"
-          layouts={layouts}
-          width={width}
-          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-          cols={{ lg: 4, md: 4, sm: 2, xs: 1, xxs: 1 }}
-          rowHeight={120}
-          isDraggable={isEditMode}
-          isResizable={isEditMode}
-          onLayoutChange={(_: any, allLayouts: any) => onLayoutChange(allLayouts.lg)}
-          draggableHandle=".cursor-grab"
-          margin={[16, 16]}
+          {...{
+            className: "layout",
+            layouts: layouts,
+            width: width,
+            breakpoints: { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 },
+            cols: { lg: 4, md: 4, sm: 2, xs: 1, xxs: 1 },
+            rowHeight: 120,
+            isDraggable: isEditMode,
+            isResizable: isEditMode,
+            onLayoutChange: (_: any, allLayouts: any) => onLayoutChange(allLayouts.lg),
+            draggableHandle: ".cursor-grab",
+            margin: [16, 16]
+          } as any}
         >
           {widgets.map((widget) => {
             const definition = WIDGET_REGISTRY[widget.type];

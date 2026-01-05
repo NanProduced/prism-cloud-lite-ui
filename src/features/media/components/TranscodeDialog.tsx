@@ -45,8 +45,8 @@ const transcodeSchema = z.object({
     crf: z.coerce.number().min(0).max(51).optional(),
     videoBitrateKbps: z.coerce.number().optional(),
     audioBitrateKbps: z.coerce.number().optional(),
-    faststart: z.boolean().default(true),
-  }).optional(),
+    faststart: z.boolean(),
+  }),
   targetFolderId: z.string().optional().nullable(),
 });
 
@@ -77,7 +77,7 @@ export const TranscodeDialog: React.FC<TranscodeDialogProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<TranscodeFormValues>({
-    resolver: zodResolver(transcodeSchema),
+    resolver: zodResolver(transcodeSchema) as any,
     defaultValues: {
       presetId: 'mp4_720p_h264',
       options: {

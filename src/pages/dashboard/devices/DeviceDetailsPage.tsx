@@ -165,7 +165,7 @@ export default function DeviceDetailsPage() {
     if (!device) return undefined;
     return device.latestScreenshot?.url || 
            device.lastScreenshotUrl || 
-           device.screenshotUrl || 
+           (device as any).screenshotUrl || 
            (historicalScreenshots.length > 0 ? (historicalScreenshots[0].url || historicalScreenshots[0].screenshotUrl) : undefined);
   }, [device, historicalScreenshots]);
 
@@ -959,7 +959,7 @@ export default function DeviceDetailsPage() {
                               </div>
 
                               <div className="space-y-3">
-                                 {(iface.SSID || iface.currentap) && <InfoItem label={t('deviceDetails.info.network.title')} value={iface.SSID || iface.currentap} fontMono highlight />}
+                                 {((iface as any).SSID || (iface as any).currentap) && <InfoItem label={t('deviceDetails.info.network.title')} value={(iface as any).SSID || (iface as any).currentap} fontMono highlight />}
                                  {iface.ips?.ip && <InfoItem label={t('deviceDetails.info.network.ipAddress')} value={iface.ips.ip} fontMono highlight />}
                                  {iface.ips?.gateway && <InfoItem label={t('deviceDetails.info.network.gateway')} value={iface.ips.gateway} fontMono />}
                                  <InfoItem label={t('deviceDetails.info.network.mac')} value={iface.mac} fontMono />
@@ -1494,8 +1494,8 @@ export default function DeviceDetailsPage() {
       <BatchCommandDialog 
         open={showBatchCommand} 
         onOpenChange={setShowBatchCommand}
-        devices={[device]}
-        initialSelectedDeviceIds={[device.deviceId]}
+        devices={[device as any]}
+        initialSelectedDeviceIds={[String(device.deviceId)]}
         mode="single-device"
         initialDeviceProps={realProps}
       />

@@ -15,6 +15,8 @@ import type {
   BindPhoneRequest,
   BindPhoneConfirmRequest,
   UserStorageQuotaView,
+  UserQuotaOverviewView,
+  UserStorageLedgerView,
 } from '@/types/user';
 
 // User Profile

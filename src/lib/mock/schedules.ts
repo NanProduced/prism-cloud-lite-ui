@@ -1,6 +1,7 @@
-import type { ScheduleRecord } from '@/types/schedule';
+// Mock Schedule Data - Outdated but kept for reference
+// To be updated when real mock data is needed for local dev without backend
 
-export const mockScheduleRecords: ScheduleRecord[] = [
+export const mockScheduleRecords: any[] = [
   {
     id: 'sch-001',
     name: 'Standard Business Day',

@@ -54,7 +54,7 @@ const MessageIcon = () => (
   </svg>
 );
 
-export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" | "register") => void }) {
+export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" | "register" | "forgot-password") => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { clearAuth, isAuthenticated, resetLogoutFlag } = useAuthStore();

@@ -11,6 +11,7 @@ export type DeviceFeatureProperties = {
   source: DeviceLocation["source"];
   timestamp: string;
   selected: boolean;
+  pulsing: boolean;
 };
 
 export type DeviceFeatureCollection = GeoJSON.FeatureCollection<

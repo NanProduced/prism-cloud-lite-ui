@@ -924,7 +924,7 @@ export default function MapPage() {
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between gap-3">
                         <h3 className="text-base font-bold text-foreground truncate tracking-tight">{selectedDevice?.deviceName}</h3>
-                        <span className="text-[11px] font-black text-muted-foreground bg-muted px-2 py-0.5 rounded-lg uppercase tracking-wider">{selectedDevice?.deviceProperties?.info?.info?.model || "Standard"}</span>
+                        <span className="text-[11px] font-black text-muted-foreground bg-muted px-2 py-0.5 rounded-lg uppercase tracking-wider">{selectedDevice?.model || "Standard"}</span>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {selectedDevice?.tags?.slice(0, 3).map(tag => (
