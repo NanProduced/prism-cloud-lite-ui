@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { 
   Trash2, 
   Clock, 
@@ -58,6 +59,7 @@ export function ScreenshotManagerDialog({
   onClearAll,
   onRefresh
 }: ScreenshotManagerDialogProps) {
+  const { t } = useTranslation();
   const { formatDateTime } = useTimeFormatter();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -110,29 +112,29 @@ export function ScreenshotManagerDialog({
     if (selectedIds.length === 0) return;
     
     toast.promise(new Promise(r => setTimeout(r, 800)), {
-      loading: `Deleting ${selectedIds.length} items...`,
+      loading: `${t('common.actions.delete')} ${selectedIds.length} ...`,
       success: () => {
         const remaining = localScreenshots.filter(s => !selectedIds.includes(s.screenshotId || s.id));
         setLocalScreenshots(remaining);
         onDelete?.(selectedIds);
         setSelectedIds([]);
-        return `Deleted ${selectedIds.length} items`;
+        return t('media.explorer.toasts.deleteSuccess');
       },
-      error: "Failed to delete",
+      error: t('common.errors.deleteFailed'),
     });
   };
 
   const handleClearAll = () => {
     setShowClearConfirm(false);
     toast.promise(new Promise(r => setTimeout(r, 1000)), {
-      loading: "Clearing all history...",
+      loading: t('common.units.loading', 'Loading...'),
       success: () => {
         setLocalScreenshots([]);
         setSelectedIds([]);
         onClearAll?.();
-        return "History cleared";
+        return t('deviceDetails.toasts.historyCleared');
       },
-      error: "Failed to clear",
+      error: t('common.errors.deleteFailed'),
     });
   };
 
@@ -142,7 +144,7 @@ export function ScreenshotManagerDialog({
       onRefresh();
       setTimeout(() => {
         setIsRefreshing(false);
-        toast.success("Snapshot list updated");
+        toast.success(t('deviceDetails.toasts.screenshotDispatched'));
       }, 800);
     }
   };
@@ -164,14 +166,14 @@ export function ScreenshotManagerDialog({
                <div className="flex flex-col items-start gap-0.5">
                   <div className="flex items-center gap-2">
                      <DialogTitle className="text-2xl font-bold tracking-tight text-left">
-                        History Snapshots
+                        {t('deviceDetails.cockpit.screenshot.manager.title')}
                      </DialogTitle>
                      <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[10px] font-bold px-2 h-5 uppercase tracking-wider shrink-0">
-                        Archive
+                        {t('deviceDetails.cockpit.screenshot.manager.archive')}
                      </Badge>
                   </div>
                   <DialogDescription className="text-sm text-muted-foreground/80 font-medium text-left">
-                     Visual monitoring log and storage management for this device
+                     {t('deviceDetails.cockpit.screenshot.manager.subtitle')}
                   </DialogDescription>
                </div>
             </div>
@@ -186,7 +188,7 @@ export function ScreenshotManagerDialog({
                       <div className="flex items-baseline gap-1.5">
                          <span className="text-sm font-semibold">{formatSize(quota?.usedBytes || totalSize)}</span>
                          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-                           / {quota?.quotaBytes && quota.quotaBytes > 0 ? formatSize(quota.quotaBytes) : "No Limit"}
+                           / {quota?.quotaBytes && quota.quotaBytes > 0 ? formatSize(quota.quotaBytes) : t('shell.storage.unlimited')}
                          </span>
                       </div>
                    </div>
@@ -207,7 +209,7 @@ export function ScreenshotManagerDialog({
                    onClick={handleSelectAll}
                 >
                    {selectedIds.length === localScreenshots.length && localScreenshots.length > 0 ? <CheckSquare className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
-                   {selectedIds.length === localScreenshots.length && localScreenshots.length > 0 ? "Deselect All" : "Select All"}
+                   {selectedIds.length === localScreenshots.length && localScreenshots.length > 0 ? t('deviceDetails.cockpit.screenshot.manager.deselectAll') : t('deviceDetails.cockpit.screenshot.manager.selectAll')}
                 </Button>
              </div>
              
@@ -221,7 +223,7 @@ export function ScreenshotManagerDialog({
                       disabled={selectedIds.length === 0}
                    >
                       <Trash2 className="h-3.5 w-3.5" />
-                      Delete {selectedIds.length > 0 && `(${selectedIds.length})`}
+                      {t('deviceDetails.cockpit.screenshot.manager.deleteSelected', { count: selectedIds.length })}
                    </Button>
                    <Button 
                       variant="ghost" 
@@ -230,7 +232,7 @@ export function ScreenshotManagerDialog({
                       onClick={() => setShowClearConfirm(true)}
                    >
                       <AlertTriangle className="h-3.5 w-3.5" />
-                      Clear All
+                      {t('deviceDetails.cockpit.screenshot.manager.clearAll')}
                    </Button>
                 </div>
 
@@ -251,7 +253,7 @@ export function ScreenshotManagerDialog({
                            </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                           <p className="text-xs">Refresh data</p>
+                           <p className="text-xs">{t('deviceDetails.cockpit.screenshot.manager.refresh')}</p>
                         </TooltipContent>
                       </Tooltip>
                    </TooltipProvider>
@@ -285,7 +287,7 @@ export function ScreenshotManagerDialog({
                      <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
                         <Eye className="h-8 w-8" />
                      </div>
-                     <p className="text-sm font-medium">No history snapshots found</p>
+                     <p className="text-sm font-medium">{t('deviceDetails.cockpit.screenshot.manager.noHistory')}</p>
                   </div>
                 ) : viewMode === 'grid' ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -333,10 +335,10 @@ export function ScreenshotManagerDialog({
                 ) : (
                   <div className="rounded-lg border bg-background overflow-hidden">
                      <div className="grid grid-cols-12 px-4 py-2 text-[10px] font-bold uppercase text-muted-foreground tracking-wider border-b bg-muted/50">
-                        <div className="col-span-1 text-center">Sel</div>
-                        <div className="col-span-7">Snapshot Details</div>
-                        <div className="col-span-2 text-right">Size</div>
-                        <div className="col-span-2 text-right">Actions</div>
+                        <div className="col-span-1 text-center">#</div>
+                        <div className="col-span-7">{t('deviceDetails.cockpit.screenshot.manager.details')}</div>
+                        <div className="col-span-2 text-right">{t('deviceDetails.cockpit.screenshot.manager.size')}</div>
+                        <div className="col-span-2 text-right">{t('deviceDetails.cockpit.screenshot.manager.actions')}</div>
                      </div>
                      <div className="divide-y">
                         {localScreenshots.map((s) => {
@@ -412,7 +414,7 @@ export function ScreenshotManagerDialog({
                 className="h-10 px-6 font-medium" 
                 onClick={() => onOpenChange(false)}
              >
-                Close
+                {t('deviceDetails.cockpit.screenshot.manager.close')}
              </Button>
           </div>
         </DialogContent>
@@ -426,12 +428,12 @@ export function ScreenshotManagerDialog({
                   <AlertCircle className="h-6 w-6" />
                </div>
                <div className="space-y-1">
-                  <h3 className="text-lg font-semibold">Clear All Snapshots?</h3>
-                  <p className="text-sm text-muted-foreground">This action will permanently delete all historical monitor data for this device. This cannot be undone.</p>
+                  <h3 className="text-lg font-semibold">{t('deviceDetails.cockpit.screenshot.manager.clearConfirmTitle')}</h3>
+                  <p className="text-sm text-muted-foreground">{t('deviceDetails.cockpit.screenshot.manager.clearConfirmDesc')}</p>
                </div>
                <div className="flex w-full gap-3 mt-2">
-                  <Button variant="outline" className="flex-1" onClick={() => setShowClearConfirm(false)}>Cancel</Button>
-                  <Button variant="destructive" className="flex-1" onClick={handleClearAll}>Confirm Clear</Button>
+                  <Button variant="outline" className="flex-1" onClick={() => setShowClearConfirm(false)}>{t('common.actions.cancel')}</Button>
+                  <Button variant="destructive" className="flex-1" onClick={handleClearAll}>{t('common.actions.confirm')}</Button>
                </div>
             </div>
          </DialogContent>
@@ -460,7 +462,7 @@ export function ScreenshotManagerDialog({
                   </Button>
                   
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/60 backdrop-blur-md rounded-full border border-white/10 text-white/80 text-[10px] font-medium uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
-                     ESC to close
+                     {t('deviceDetails.cockpit.screenshot.manager.exitPreview')}
                   </div>
                </div>
             </DialogContent>

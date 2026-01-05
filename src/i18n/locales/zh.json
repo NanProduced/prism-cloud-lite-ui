@@ -2962,6 +2962,114 @@
   },
   "devices": {
     "title": "设备管理",
+    "commands": {
+      "dialog": {
+        "multiTitle": "批量指令下发",
+        "singleTitle": "高级远程指令",
+        "targetLabel": "目标:",
+        "deviceCount": "{{count}} 台设备",
+        "steps": {
+          "selection": { "label": "选择设备", "desc": "确定控制范围" },
+          "params": { "label": "参数配置", "desc": "设置动作细节" },
+          "review": { "label": "安全检查", "desc": "下发前预览" },
+          "terminal": { "label": "指令终端", "desc": "实时执行状态" }
+        },
+        "actions": {
+          "cancel": "取消",
+          "back": "上一步",
+          "continue": "继续下一步",
+          "dispatch": "立即下发 Payload",
+          "exit": "退出控制台"
+        },
+        "execution": {
+          "success": "所有指令已处理",
+          "dispatched": "指令已发出",
+          "complete": "执行完成",
+          "tracking": "实时追踪中",
+          "device": "设备",
+          "queue": "队列"
+        }
+      },
+      "types": {
+        "DISPLAY": { "label": "显示设置", "desc": "亮度与色温调节" },
+        "VOLUME": { "label": "音量控制", "desc": "调节音频输出" },
+        "INPUT_MODE": { "label": "信号源", "desc": "切换视频输入源" },
+        "POWER": { "label": "电源管理", "desc": "控制屏幕电源状态" },
+        "TIMEZONE": { "label": "系统时区", "desc": "同步设备系统时钟" },
+        "LOCALE": { "label": "语言区域", "desc": "设置核心显示语言" },
+        "CONTENT_REPORT_SWITCH": { "label": "统计开关", "desc": "播放数据上报控制" },
+        "CLEAR_CACHE": { "label": "清除缓存", "desc": "清空终端存储空间" }
+      },
+      "params": {
+        "brightness": "亮度",
+        "colortemp": "色温",
+        "volume": "音量级别",
+        "inputMode": "输入源",
+        "timezone": "选择时区",
+        "language": "显示语言",
+        "country": "国家/地区",
+        "reportMaterial": "素材播放统计",
+        "reportMaterialDesc": "上报单个文件的播放时长与频率",
+        "reportProgram": "节目播放统计",
+        "reportProgramDesc": "追踪节目级的执行时间轴",
+        "clearCacheWarn": "此操作将清除终端上所有已下载的素材和缓存数据，设备将重新下载所需内容。",
+        "powerCommand": "动作指令",
+        "wakeup": "唤醒屏幕",
+        "sleep": "进入休眠",
+        "reboot": "系统重启",
+        "placeholder": "请选择...",
+        "startHint": "请在上方选择一个指令类型开始配置"
+      },
+      "review": {
+        "targetScope": "控制范围",
+        "payloadCount": "指令总数",
+        "riskTitle": "关键操作确认",
+        "riskDesc": "本次操作包含硬件状态变更",
+        "riskConfirm": "我已确认",
+        "manifest": "配置清单预览",
+        "ttl": "有效期 (分)"
+      },
+      "status": {
+        "waiting": "等待中",
+        "sending": "发送中",
+        "received": "已送达",
+        "success": "执行成功",
+        "failed": "执行失败",
+        "expired": "已过期"
+      },
+      "format": {
+        "reboot": "系统重启",
+        "wakeup": "切换至唤醒状态",
+        "sleep": "切换至休眠状态",
+        "brightness": "亮度",
+        "colortemp": "色温",
+        "volume": "音量",
+        "inputMode": "信号源",
+        "reporting": "统计上报",
+        "materialOn": "素材开启",
+        "programOn": "节目开启",
+        "disabled": "已禁用",
+        "clearCache": "清除终端缓存",
+        "screenshot": "抓取当前画面"
+      }
+    },
+    "filters": {
+      "advanced": "高级筛选",
+      "status": "在线状态",
+      "network": "网络类型",
+      "signal": "信号强度",
+      "groupBy": "分组方式",
+      "clear": "清除筛选",
+      "noGrouping": "不进行分组",
+      "options": {
+        "online": "在线",
+        "offline": "离线",
+        "pending": "待审核",
+        "strong": "强",
+        "fair": "一般",
+        "weak": "弱"
+      }
+    },
     "customFields": {
       "title": "自定义字段",
       "manage": "管理自定义字段",
@@ -3221,7 +3329,25 @@
         "history": "截图历史",
         "fullScreen": "全屏查看",
         "refresh": "刷新截图",
-        "captureQueued": "截图指令已发送"
+        "captureQueued": "截图指令已发送",
+        "manager": {
+          "title": "历史截图管理",
+          "archive": "存档",
+          "subtitle": "设备的监控日志与截图存储管理",
+          "deselectAll": "取消全选",
+          "selectAll": "全选所有",
+          "deleteSelected": "删除所选 ({{count}})",
+          "clearAll": "清空历史",
+          "refresh": "刷新数据",
+          "noHistory": "未找到历史截图",
+          "details": "截图详情",
+          "size": "大小",
+          "actions": "操作",
+          "close": "关闭",
+          "clearConfirmTitle": "清空所有截图？",
+          "clearConfirmDesc": "此操作将永久删除该设备的所有历史监控数据。此操作无法撤销。",
+          "exitPreview": "按 ESC 退出"
+        }
       },
       "nowPlaying": {
         "label": "正在播放",

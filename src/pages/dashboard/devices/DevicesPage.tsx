@@ -373,7 +373,7 @@ export default function DevicesPage() {
                 </span>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{selectedDeviceIds.size === 0 ? "Open command wizard" : `Command ${selectedDeviceIds.size} selected device(s)`}</p>
+                <p>{selectedDeviceIds.size === 0 ? t('devices.commands.params.startHint') : t('devices.commands.dialog.deviceCount', { count: selectedDeviceIds.size })}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

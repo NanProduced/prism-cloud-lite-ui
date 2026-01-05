@@ -1486,6 +1486,114 @@
   },
   "devices": {
     "title": "Devices",
+    "commands": {
+      "dialog": {
+        "multiTitle": "Command Devices",
+        "singleTitle": "Advanced Remote Command",
+        "targetLabel": "Target:",
+        "deviceCount": "{{count}} device(s)",
+        "steps": {
+          "selection": { "label": "Selection", "description": "Target scope" },
+          "params": { "label": "Parameters", "description": "Action settings" },
+          "review": { "label": "Review", "description": "Safety check" },
+          "terminal": { "label": "Terminal", "description": "Real-time status" }
+        },
+        "actions": {
+          "cancel": "Cancel",
+          "back": "Back",
+          "continue": "Continue",
+          "dispatch": "Dispatch Payload",
+          "exit": "Exit Console"
+        },
+        "execution": {
+          "success": "All commands processed",
+          "dispatched": "Commands dispatched",
+          "complete": "Execution Complete",
+          "tracking": "Tracking Live",
+          "device": "Device",
+          "queue": "Queue"
+        }
+      },
+      "types": {
+        "DISPLAY": { "label": "Display Settings", "desc": "Luminance & Color Temp" },
+        "VOLUME": { "label": "Volume", "desc": "Control acoustic output" },
+        "INPUT_MODE": { "label": "Input Mode", "desc": "Switch video input source" },
+        "POWER": { "label": "Power", "desc": "Manage display power state" },
+        "TIMEZONE": { "label": "Timezone", "desc": "Sync system clock" },
+        "LOCALE": { "label": "Locale", "desc": "Set interface core dialect" },
+        "CONTENT_REPORT_SWITCH": { "label": "Statistics", "desc": "Playback reporting switches" },
+        "CLEAR_CACHE": { "label": "Clear Cache", "desc": "Wipe terminal storage" }
+      },
+      "params": {
+        "brightness": "Brightness",
+        "colortemp": "Color Temperature",
+        "volume": "Volume Level",
+        "inputMode": "Input Mode",
+        "timezone": "Select Timezone",
+        "language": "Language",
+        "country": "Country",
+        "reportMaterial": "Material Playback Stats",
+        "reportMaterialDesc": "Report individual file play duration and frequency",
+        "reportProgram": "Program Playback Stats",
+        "reportProgramDesc": "Track program-level execution timeline",
+        "clearCacheWarn": "This will clear all downloaded materials and cached data on the terminal. The device will re-download required content.",
+        "powerCommand": "Command",
+        "wakeup": "Wake Up",
+        "sleep": "Sleep",
+        "reboot": "Reboot",
+        "placeholder": "Select",
+        "startHint": "Select a command type above to start"
+      },
+      "review": {
+        "targetScope": "Target Scope",
+        "payloadCount": "Payload Count",
+        "riskTitle": "Critical Confirmation",
+        "riskDesc": "Operation includes hardware state changes",
+        "riskConfirm": "Confirmed",
+        "manifest": "Configuration Manifest",
+        "ttl": "TTL (min)"
+      },
+      "status": {
+        "waiting": "In Queue",
+        "sending": "Sending",
+        "received": "Received",
+        "success": "Success",
+        "failed": "Failed",
+        "expired": "Expired"
+      },
+      "format": {
+        "reboot": "System Reboot",
+        "wakeup": "Switch to Wake State",
+        "sleep": "Switch to Sleep State",
+        "brightness": "Brightness",
+        "colortemp": "Temp",
+        "volume": "Volume",
+        "inputMode": "Input Mode",
+        "reporting": "Reporting",
+        "materialOn": "Material ON",
+        "programOn": "Program ON",
+        "disabled": "Disabled",
+        "clearCache": "Clear Terminal Cache",
+        "screenshot": "Capture current frame"
+      }
+    },
+    "filters": {
+      "advanced": "Advanced Filters",
+      "status": "Status",
+      "network": "Network Type",
+      "signal": "Signal Strength",
+      "groupBy": "Group By",
+      "clear": "Clear Filters",
+      "noGrouping": "No Grouping",
+      "options": {
+        "online": "Online",
+        "offline": "Offline",
+        "pending": "Pending",
+        "strong": "Strong",
+        "fair": "Fair",
+        "weak": "Weak"
+      }
+    },
     "customFields": {
       "title": "Custom Fields",
       "manage": "Manage custom fields",
@@ -1745,7 +1853,25 @@
         "history": "Screenshot History",
         "fullScreen": "Full Screen View",
         "refresh": "Refresh Screenshot",
-        "captureQueued": "Screenshot command dispatched"
+        "captureQueued": "Screenshot command dispatched",
+        "manager": {
+          "title": "History Snapshots",
+          "archive": "Archive",
+          "subtitle": "Visual monitoring log and storage management for this device",
+          "deselectAll": "Deselect All",
+          "selectAll": "Select All",
+          "deleteSelected": "Delete ({{count}})",
+          "clearAll": "Clear All",
+          "refresh": "Refresh data",
+          "noHistory": "No history snapshots found",
+          "details": "Snapshot Details",
+          "size": "Size",
+          "actions": "Actions",
+          "close": "Close",
+          "clearConfirmTitle": "Clear All Snapshots?",
+          "clearConfirmDesc": "This action will permanently delete all historical monitor data for this device. This cannot be undone.",
+          "exitPreview": "ESC to close"
+        }
       },
       "nowPlaying": {
         "label": "Now playing",

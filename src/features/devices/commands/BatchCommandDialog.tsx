@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useTranslation, type TFunction } from 'react-i18next';
 import { 
   X, 
   Check, 
@@ -22,7 +23,7 @@ import {
   Timer,
   Thermometer
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/store/notificationStore';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -73,36 +74,36 @@ interface BatchCommandDialogProps {
 
 // --- Logic Helpers ---
 
-function formatActionParams(type: ActionType, params: any): string {
+function formatActionParams(type: ActionType, params: any, t: TFunction): string {
   switch (type) {
     case 'POWER':
-      if (params.command === 'reboot') return 'System Reboot';
-      return params.command === 'wakeup' ? 'Switch to Wake State' : 'Switch to Sleep State';
+      if (params.command === 'reboot') return t('devices.commands.format.reboot');
+      return params.command === 'wakeup' ? t('devices.commands.format.wakeup') : t('devices.commands.format.sleep');
     case 'DISPLAY': {
       const parts = [];
-      if (params.brightness !== undefined) parts.push(`Brightness: ${params.brightness}%`);
-      if (params.colortemp !== undefined) parts.push(`Temp: ${params.colortemp}K`);
+      if (params.brightness !== undefined) parts.push(`${t('devices.commands.format.brightness')}: ${params.brightness}%`);
+      if (params.colortemp !== undefined) parts.push(`${t('devices.commands.format.colortemp')}: ${params.colortemp}K`);
       return parts.join(' | ');
     }
     case 'VOLUME':
-      return `Volume: ${Math.round(params.musicvolume / 15 * 100)}%`;
+      return `${t('devices.commands.format.volume')}: ${Math.round(params.musicvolume / 15 * 100)}%`;
     case 'INPUT_MODE':
-      return `Input Mode: ${(params.inputmode || '').toUpperCase()}`;
+      return `${t('devices.commands.format.inputMode')}: ${(params.inputmode || '').toUpperCase()}`;
     case 'TIMEZONE':
       return `${params.timezoneId} (UTC${params.timezone >= 0 ? '+' : ''}${params.timezone})`;
     case 'LOCALE': {
-      const langs: any = { zh: 'Chinese', en: 'English', ja: 'Japanese' };
-      return `Language: ${langs[params.language] || params.language} (${params.country})`;
+      const langs: any = { zh: t('devices.filters.options.zh', 'Chinese'), en: t('devices.filters.options.en', 'English'), ja: t('devices.filters.options.ja', 'Japanese') };
+      return `${t('devices.commands.params.language')}: ${langs[params.language] || params.language} (${params.country})`;
     }
     case 'CONTENT_REPORT_SWITCH':
       const r = [];
-      if (params.status === 1) r.push('Material ON');
-      if (params.programReportStatus === 1) r.push('Program ON');
-      return r.length ? `Reporting: ${r.join(' & ')}` : 'Reporting Disabled';
+      if (params.status === 1) r.push(t('devices.commands.format.materialOn'));
+      if (params.programReportStatus === 1) r.push(t('devices.commands.format.programOn'));
+      return r.length ? `${t('devices.commands.format.reporting')}: ${r.join(' & ')}` : t('devices.commands.format.disabled');
     case 'CLEAR_CACHE':
-      return 'Clear Terminal Cache';
+      return t('devices.commands.format.clearCache');
     case 'SCREENSHOT':
-      return 'Capture current frame';
+      return t('devices.commands.format.screenshot');
     default:
       return '';
   }
@@ -118,6 +119,7 @@ export function BatchCommandDialog({
   mode: rawMode = 'multi-device',
   initialDeviceProps
 }: BatchCommandDialogProps) {
+  const { t } = useTranslation();
   const mode: CommandMode = rawMode === 'multi-device' 
     ? 'MULTI_DEVICE_SINGLE_COMMAND' 
     : 'SINGLE_DEVICE_MULTI_COMMAND';
@@ -220,7 +222,7 @@ export function BatchCommandDialog({
       const response = await executeBatchActions({ items });
       
       if (response.success && response.data) {
-        toast.success('Commands dispatched');
+        toast.success(t('deviceDetails.toasts.commandAccepted', { command: t('devices.commands.dialog.execution.dispatched') }));
         const initialOpStatus: Record<string, string> = {};
         const mapping: Record<string, string[]> = {};
         const apiResults = response.data.results || [];
@@ -259,11 +261,11 @@ export function BatchCommandDialog({
         setOpStatusMap(initialOpStatus);
         setItemToOpIds(mapping);
       } else {
-        toast.error(response.error?.message || 'Failed to dispatch commands');
+        toast.error(response.error?.message || t('deviceDetails.toasts.dispatchFailed'));
         setStep(2);
       }
     } catch (error) {
-      toast.error('Network error during dispatch');
+      toast.error(t('common.errors.network'));
       setStep(2);
     } finally {
       setIsLoading(false);
@@ -280,13 +282,13 @@ export function BatchCommandDialog({
           <div className="space-y-1">
             <div className="flex items-center gap-3">
               <DialogTitle className="text-xl font-bold tracking-tight">
-                {mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? 'Command Devices' : 'Advanced Remote Command'}
+                {mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? t('devices.commands.dialog.multiTitle') : t('devices.commands.dialog.singleTitle')}
               </DialogTitle>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>Target:</span>
+              <span>{t('devices.commands.dialog.targetLabel')}</span>
               {mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? (
-                <span className="font-medium text-foreground">{selectedDevicesCount} device(s)</span>
+                <span className="font-medium text-foreground">{t('devices.commands.dialog.deviceCount', { count: selectedDevicesCount })}</span>
               ) : (
                 <span className="font-medium text-foreground">{currentDeviceName}</span>
               )}
@@ -304,10 +306,10 @@ export function BatchCommandDialog({
             <VerticalStepper 
               currentStep={step} 
               steps={[
-                { label: 'Selection', description: 'Target scope' },
-                { label: 'Parameters', description: 'Action settings' },
-                { label: 'Review', description: 'Safety check' },
-                { label: 'Terminal', description: 'Real-time status' }
+                { label: t('devices.commands.dialog.steps.selection.label'), description: t('devices.commands.dialog.steps.selection.desc') },
+                { label: t('devices.commands.dialog.steps.params.label'), description: t('devices.commands.dialog.steps.params.desc') },
+                { label: t('devices.commands.dialog.steps.review.label'), description: t('devices.commands.dialog.steps.review.desc') },
+                { label: t('devices.commands.dialog.steps.terminal.label'), description: t('devices.commands.dialog.steps.terminal.desc') }
               ]} 
             />
           </div>
@@ -319,6 +321,7 @@ export function BatchCommandDialog({
                 selectedDeviceIds={selectedDeviceIds}
                 onSelectionChange={setSelectedDeviceIds}
                 locked={mode === 'SINGLE_DEVICE_MULTI_COMMAND'}
+                t={t}
               />
             )}
             {step === 1 && (
@@ -327,6 +330,7 @@ export function BatchCommandDialog({
                 onActionsChange={setActions}
                 mode={mode}
                 initialProps={initialDeviceProps}
+                t={t}
               />
             )}
             {step === 2 && (
@@ -340,6 +344,7 @@ export function BatchCommandDialog({
                 setRiskConfirmed={setRiskConfirmed}
                 onlineOnly={onlineOnly}
                 setOnlineOnly={setOnlineOnly}
+                t={t}
               />
             )}
             {step === 3 && (
@@ -351,6 +356,7 @@ export function BatchCommandDialog({
                 opStatusMap={opStatusMap}
                 itemToOpIds={itemToOpIds}
                 onlineOnly={onlineOnly}
+                t={t}
               />
             )}
           </div>
@@ -365,7 +371,7 @@ export function BatchCommandDialog({
                 className="px-6 h-10 gap-2"
               >
                 <ChevronLeft className="h-4 w-4" />
-                {step === 0 ? 'Cancel' : 'Back'}
+                {step === 0 ? t('devices.commands.dialog.actions.cancel') : t('devices.commands.dialog.actions.back')}
               </Button>
             )}
           </div>
@@ -378,9 +384,9 @@ export function BatchCommandDialog({
                 className="px-8 h-10 gap-2 shadow-sm"
               >
                 {step === 2 ? (
-                  <><CloudUpload className="h-4 w-4" /> Dispatch Payload</>
+                  <><CloudUpload className="h-4 w-4" /> {t('devices.commands.dialog.actions.dispatch')}</>
                 ) : (
-                  <>Continue <ChevronRight className="h-4 w-4" /></>
+                  <>{t('devices.commands.dialog.actions.continue')} <ChevronRight className="h-4 w-4" /></>
                 )}
               </Button>
             )}
@@ -389,7 +395,7 @@ export function BatchCommandDialog({
                  onClick={close} 
                  className="px-10 h-10 bg-zinc-900 text-white hover:bg-zinc-800"
               >
-                Exit Console
+                {t('devices.commands.dialog.actions.exit')}
               </Button>
             )}
           </div>
@@ -446,12 +452,14 @@ function DeviceSelectStep({
   devices, 
   selectedDeviceIds, 
   onSelectionChange,
-  locked = false
+  locked = false,
+  t
 }: { 
   devices: Device[], 
   selectedDeviceIds: Set<string>, 
   onSelectionChange: (ids: Set<string>) => void,
-  locked?: boolean
+  locked?: boolean,
+  t: TFunction
 }) {
   const [query, setQuery] = useState('');
   const filtered = devices.filter(d => 
@@ -474,7 +482,7 @@ function DeviceSelectStep({
           <Input 
             value={query} 
             onChange={(e) => setQuery(e.target.value)} 
-            placeholder="Search devices..." 
+            placeholder={t('devices.toolbar.searchPlaceholder')} 
             className="pl-10 h-10 border rounded-lg bg-muted/5 focus-visible:ring-1"
           />
         </div>
@@ -496,9 +504,9 @@ function DeviceSelectStep({
               }}
             />
           )}
-          <span className="flex-1">Device Name</span>
-          <span className="w-32 text-center">Telemetry</span>
-          <span className="w-24 text-right">Status</span>
+          <span className="flex-1">{t('devices.table.columns.deviceName')}</span>
+          <span className="w-32 text-center">{t('nav.monitoring')}</span>
+          <span className="w-24 text-right">{t('devices.table.columns.status')}</span>
         </div>
         <ScrollArea className="flex-1">
           <div className="divide-y divide-border/50">
@@ -509,7 +517,7 @@ function DeviceSelectStep({
                  </div>
                  <div>
                     <p className="text-xl font-bold">{devices.find(d => String(d.deviceId) === Array.from(selectedDeviceIds)[0])?.deviceName}</p>
-                    <Badge variant="secondary" className="mt-2 font-normal">Target Locked</Badge>
+                    <Badge variant="secondary" className="mt-2 font-normal">{t('devices.filters.options.pending')}</Badge>
                  </div>
               </div>
             ) : filtered.map(d => (
@@ -546,17 +554,17 @@ function DeviceSelectStep({
                         {d.powerStatus === 0 ? (
                           <>
                             <Moon className="h-3 w-3 text-blue-500" />
-                            <span className="text-[9px] font-medium text-blue-600 uppercase">Sleep</span>
+                            <span className="text-[9px] font-medium text-blue-600 uppercase">{t('devices.commands.params.sleep')}</span>
                           </>
                         ) : d.powerStatus === 1 ? (
                           <>
                             <Power className="h-3 w-3 text-emerald-500" />
-                            <span className="text-[9px] font-medium text-emerald-600 uppercase">Awake</span>
+                            <span className="text-[9px] font-medium text-emerald-600 uppercase">{t('devices.commands.params.wakeup')}</span>
                           </>
                         ) : (
                           <>
                             <AlertCircle className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-[9px] font-medium text-muted-foreground uppercase">Unknown</span>
+                            <span className="text-[9px] font-medium text-muted-foreground uppercase">{t('common.notSet')}</span>
                           </>
                         )}
                      </div>
@@ -569,7 +577,7 @@ function DeviceSelectStep({
                      resolveDeviceStatus(d) === 'pending' ? "bg-amber-500/10 text-amber-600" :
                      "bg-zinc-500/10 text-zinc-500"
                    )}>
-                     {resolveDeviceStatus(d)}
+                     {t(`devices.filters.options.${resolveDeviceStatus(d)}`)}
                    </Badge>
                 </div>
               </div>
@@ -585,22 +593,24 @@ function ActionConfigStep({
   actions,
   onActionsChange,
   mode,
-  initialProps
+  initialProps,
+  t
 }: {
   actions: ActionConfig[],
   onActionsChange: (actions: ActionConfig[]) => void,
   mode: CommandMode,
-  initialProps?: any
+  initialProps?: any,
+  t: TFunction
 }) {
   const ALL_ACTION_TYPES: { type: ActionType, label: string, desc: string, icon: any }[] = [
-    { type: 'DISPLAY', label: 'Display Settings', desc: 'Luminance & Color Temp', icon: Sun },
-    { type: 'VOLUME', label: 'Volume', desc: 'Control acoustic output', icon: Volume2 },
-    { type: 'INPUT_MODE', label: 'Input Mode', desc: 'Switch video input source', icon: Monitor },
-    { type: 'POWER', label: 'Power', desc: 'Manage display power state', icon: Power },
-    { type: 'TIMEZONE', label: 'Timezone', desc: 'Sync system clock', icon: Clock },
-    { type: 'LOCALE', label: 'Locale', desc: 'Set interface core dialect', icon: Languages },
-    { type: 'CONTENT_REPORT_SWITCH', label: 'Statistics', desc: 'Playback reporting switches', icon: Film },
-    { type: 'CLEAR_CACHE', label: 'Clear Cache', desc: 'Wipe terminal storage', icon: Trash2 },
+    { type: 'DISPLAY', label: t('devices.commands.types.DISPLAY.label'), desc: t('devices.commands.types.DISPLAY.desc'), icon: Sun },
+    { type: 'VOLUME', label: t('devices.commands.types.VOLUME.label'), desc: t('devices.commands.types.VOLUME.desc'), icon: Volume2 },
+    { type: 'INPUT_MODE', label: t('devices.commands.types.INPUT_MODE.label'), desc: t('devices.commands.types.INPUT_MODE.desc'), icon: Monitor },
+    { type: 'POWER', label: t('devices.commands.types.POWER.label'), desc: t('devices.commands.types.POWER.desc'), icon: Power },
+    { type: 'TIMEZONE', label: t('devices.commands.types.TIMEZONE.label'), desc: t('devices.commands.types.TIMEZONE.desc'), icon: Clock },
+    { type: 'LOCALE', label: t('devices.commands.types.LOCALE.label'), desc: t('devices.commands.types.LOCALE.desc'), icon: Languages },
+    { type: 'CONTENT_REPORT_SWITCH', label: t('devices.commands.types.CONTENT_REPORT_SWITCH.label'), desc: t('devices.commands.types.CONTENT_REPORT_SWITCH.desc'), icon: Film },
+    { type: 'CLEAR_CACHE', label: t('devices.commands.types.CLEAR_CACHE.label'), desc: t('devices.commands.types.CLEAR_CACHE.desc'), icon: Trash2 },
   ];
 
   const addAction = (type: ActionType) => {
@@ -611,7 +621,7 @@ function ActionConfigStep({
       onActionsChange([{ type, params: defaultParams, timeout: defaultTimeout }]);
     } else {
       if (actions.some(a => a.type === type)) {
-        toast.error('Command already in queue');
+        toast.error(t('common.errors.updateFailed'));
         return;
       }
       onActionsChange([...actions, { type, params: defaultParams, timeout: defaultTimeout }]);
@@ -666,9 +676,9 @@ function ActionConfigStep({
                       <ActionIcon type={action.type} className="h-4 w-4" />
                     </div>
                     <div>
-                       <CardTitle className="text-sm font-bold">{formatActionType(action.type)}</CardTitle>
+                       <CardTitle className="text-sm font-bold">{formatActionType(action.type, t)}</CardTitle>
                        <CardDescription className="text-[10px]">
-                         {ALL_ACTION_TYPES.find(t => t.type === action.type)?.desc}
+                         {ALL_ACTION_TYPES.find(t_ => t_.type === action.type)?.desc}
                        </CardDescription>
                     </div>
                   </div>
@@ -688,12 +698,12 @@ function ActionConfigStep({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                     {action.type === 'DISPLAY' && (
                       <>
-                        <ControlItem label={`Brightness: ${action.params.brightness}%`} className="col-span-2">
+                        <ControlItem label={`${t('devices.commands.params.brightness')}: ${action.params.brightness}%`} className="col-span-2">
                            <div className="pt-2 px-1">
                               <Slider value={[action.params.brightness]} onValueChange={([v]) => updateParam(index, 'brightness', v)} max={100} step={1} />
                            </div>
                         </ControlItem>
-                        <ControlItem label={`Color Temperature: ${action.params.colortemp}K`} className="col-span-2">
+                        <ControlItem label={`${t('devices.commands.params.colortemp')}: ${action.params.colortemp}K`} className="col-span-2">
                            <div className="pt-2 px-1">
                               <Slider value={[action.params.colortemp]} onValueChange={([v]) => updateParam(index, 'colortemp', v)} min={2000} max={10000} step={100} />
                            </div>
@@ -702,28 +712,28 @@ function ActionConfigStep({
                     )}
                     {action.type === 'POWER' && (
                       <div className="space-y-2 col-span-2">
-                        <p className="text-[11px] font-bold uppercase text-muted-foreground">Command</p>
+                        <p className="text-[11px] font-bold uppercase text-muted-foreground">{t('devices.commands.params.powerCommand')}</p>
                         <div className="flex gap-3">
                           <Button 
                             variant={action.params.command === 'wakeup' ? 'default' : 'outline'}
                             onClick={() => updateParam(index, 'command', 'wakeup')}
                             className="flex-1 h-10 gap-2 text-xs"
-                          ><Power className="h-3.5 w-3.5" /> Wake Up</Button>
+                          ><Power className="h-3.5 w-3.5" /> {t('devices.commands.params.wakeup')}</Button>
                           <Button 
                             variant={action.params.command === 'sleep' ? 'default' : 'outline'}
                             onClick={() => updateParam(index, 'command', 'sleep')}
                             className="flex-1 h-10 gap-2 text-xs"
-                          ><Moon className="h-3.5 w-3.5" /> Sleep</Button>
+                          ><Moon className="h-3.5 w-3.5" /> {t('devices.commands.params.sleep')}</Button>
                           <Button 
                             variant={action.params.command === 'reboot' ? 'default' : 'outline'}
                             onClick={() => updateParam(index, 'command', 'reboot')}
                             className="flex-1 h-10 gap-2 text-xs"
-                          ><RotateCcw className="h-3.5 w-3.5" /> Reboot</Button>
+                          ><RotateCcw className="h-3.5 w-3.5" /> {t('devices.commands.params.reboot')}</Button>
                         </div>
                       </div>
                     )}
                     {action.type === 'VOLUME' && (
-                      <ControlItem label={`Volume Level: ${Math.round(action.params.musicvolume / 15 * 100)}%`} className="col-span-2">
+                      <ControlItem label={`${t('devices.commands.params.volume')}: ${Math.round(action.params.musicvolume / 15 * 100)}%`} className="col-span-2">
                          <div className="flex items-center gap-6 bg-muted/20 p-3 rounded-md border">
                             <Volume2 className="h-4 w-4 text-primary" />
                             <Slider 
@@ -738,25 +748,25 @@ function ActionConfigStep({
                       </ControlItem>
                     )}
                     {action.type === 'INPUT_MODE' && (
-                      <ControlItem label="Input Mode" className="col-span-2">
+                      <ControlItem label={t('devices.commands.params.inputMode')} className="col-span-2">
                         <Select 
                           value={action.params.inputmode} 
                           onValueChange={(v) => updateParam(index, 'inputmode', v)}
                         >
                           <SelectTrigger className="h-9 rounded-md bg-muted/30 border border-transparent focus:border-primary/40 focus:ring-0 focus-visible:ring-0 outline-none px-3 text-xs transition-all shadow-none">
-                            <SelectValue placeholder="Select" />
+                            <SelectValue placeholder={t('devices.commands.params.placeholder')} />
                           </SelectTrigger>
                           <SelectContent position="popper" sideOffset={4} className="z-[101]">
-                            <SelectItem value="internal" className="text-xs">Internal Player</SelectItem>
-                            <SelectItem value="hdmi" className="text-xs">HDMI</SelectItem>
-                            <SelectItem value="dvi" className="text-xs">DVI</SelectItem>
-                            <SelectItem value="vga" className="text-xs">VGA</SelectItem>
+                            <SelectItem value="internal" className="text-xs">{t('deviceDetails.actions.inputSource.internal')}</SelectItem>
+                            <SelectItem value="hdmi" className="text-xs">{t('deviceDetails.actions.inputSource.hdmi')}</SelectItem>
+                            <SelectItem value="dvi" className="text-xs">{t('deviceDetails.actions.inputSource.dvi')}</SelectItem>
+                            <SelectItem value="vga" className="text-xs">{t('deviceDetails.actions.inputSource.vga')}</SelectItem>
                           </SelectContent>
                         </Select>
                       </ControlItem>
                     )}
                     {action.type === 'TIMEZONE' && (
-                        <ControlItem label="Select Timezone" className="col-span-2">
+                        <ControlItem label={t('devices.commands.params.timezone')} className="col-span-2">
                           <Select 
                             value={action.params.timezoneId} 
                             onValueChange={(v) => {
@@ -766,7 +776,7 @@ function ActionConfigStep({
                             }}
                           >
                             <SelectTrigger className="h-9 rounded-md bg-muted/30 border border-transparent focus:border-primary/40 focus:ring-0 focus-visible:ring-0 outline-none px-3 text-xs transition-all shadow-none">
-                              <SelectValue placeholder="Select" />
+                              <SelectValue placeholder={t('devices.commands.params.placeholder')} />
                             </SelectTrigger>
                             <SelectContent position="popper" sideOffset={4} className="z-[101]">
                               <SelectItem value="Asia/Shanghai" className="text-xs">Shanghai (UTC+8)</SelectItem>
@@ -778,22 +788,22 @@ function ActionConfigStep({
                     )}
                     {action.type === 'LOCALE' && (
                       <>
-                        <ControlItem label="Language">
+                        <ControlItem label={t('devices.commands.params.language')}>
                           <Select value={action.params.language} onValueChange={(v) => updateParam(index, 'language', v)}>
                             <SelectTrigger className="h-9 rounded-md bg-muted/30 border border-transparent focus:ring-0 px-3 text-xs shadow-none">
-                              <SelectValue placeholder="Select" />
+                              <SelectValue placeholder={t('devices.commands.params.placeholder')} />
                             </SelectTrigger>
                             <SelectContent position="popper" sideOffset={4} className="z-[101]">
-                              <SelectItem value="zh" className="text-xs">Chinese (zh)</SelectItem>
-                              <SelectItem value="en" className="text-xs">English (en)</SelectItem>
-                              <SelectItem value="ja" className="text-xs">Japanese (ja)</SelectItem>
+                              <SelectItem value="zh" className="text-xs">{t('devices.filters.options.zh', 'Chinese')}</SelectItem>
+                              <SelectItem value="en" className="text-xs">{t('devices.filters.options.en', 'English')}</SelectItem>
+                              <SelectItem value="ja" className="text-xs">{t('devices.filters.options.ja', 'Japanese')}</SelectItem>
                             </SelectContent>
                           </Select>
                         </ControlItem>
-                        <ControlItem label="Country">
+                        <ControlItem label={t('devices.commands.params.country')}>
                           <Select value={action.params.country} onValueChange={(v) => updateParam(index, 'country', v)}>
                             <SelectTrigger className="h-9 rounded-md bg-muted/30 border border-transparent focus:ring-0 px-3 text-xs shadow-none">
-                              <SelectValue placeholder="Select" />
+                              <SelectValue placeholder={t('devices.commands.params.placeholder')} />
                             </SelectTrigger>
                             <SelectContent position="popper" sideOffset={4} className="z-[101]">
                               <SelectItem value="CN" className="text-xs">China (CN)</SelectItem>
@@ -805,20 +815,20 @@ function ActionConfigStep({
                       </>
                     )}
                     {action.type === 'CONTENT_REPORT_SWITCH' && (
-                      <ControlItem label="Statistics Switches" className="col-span-2">
+                      <ControlItem label={t('devices.commands.types.CONTENT_REPORT_SWITCH.label')} className="col-span-2">
                         <div className="flex flex-col gap-3 p-4 bg-primary/[0.02] border border-dashed rounded-xl">
                           <div className="flex items-center justify-between">
                             <div>
-                               <p className="text-xs font-bold text-slate-700">Material Playback Stats</p>
-                               <p className="text-[10px] text-muted-foreground mt-0.5">Report individual file play duration and frequency</p>
+                               <p className="text-xs font-bold text-slate-700">{t('devices.commands.params.reportMaterial')}</p>
+                               <p className="text-[10px] text-muted-foreground mt-0.5">{t('devices.commands.params.reportMaterialDesc')}</p>
                             </div>
                             <Switch checked={action.params.status === 1} onCheckedChange={(v) => updateParam(index, 'status', v ? 1 : 0)} />
                           </div>
                           <Separator className="opacity-40" />
                           <div className="flex items-center justify-between">
                             <div>
-                               <p className="text-xs font-bold text-slate-700">Program Playback Stats</p>
-                               <p className="text-[10px] text-muted-foreground mt-0.5">Track program-level execution timeline</p>
+                               <p className="text-xs font-bold text-slate-700">{t('devices.commands.params.reportProgram')}</p>
+                               <p className="text-[10px] text-muted-foreground mt-0.5">{t('devices.commands.params.reportProgramDesc')}</p>
                             </div>
                             <Switch checked={action.params.programReportStatus === 1} onCheckedChange={(v) => updateParam(index, 'programReportStatus', v ? 1 : 0)} />
                           </div>
@@ -828,7 +838,7 @@ function ActionConfigStep({
                     {action.type === 'CLEAR_CACHE' && (
                       <div className="col-span-2 flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-md">
                          <Trash2 className="h-4 w-4 text-blue-600 shrink-0" />
-                         <p className="text-[11px] text-blue-900 font-medium leading-relaxed">This will clear all downloaded materials and cached data on the terminal. The device will re-download required content.</p>
+                         <p className="text-[11px] text-blue-900 font-medium leading-relaxed">{t('devices.commands.params.clearCacheWarn')}</p>
                       </div>
                     )}
                   </div>
@@ -841,7 +851,7 @@ function ActionConfigStep({
                 onClick={() => {(document.querySelector('.action-type-btn') as any)?.focus();}}
               >
                 <div className="p-3 rounded-full bg-muted mb-3 group-hover:scale-105 transition-transform"><Plus className="h-6 w-6 text-muted-foreground" /></div>
-                <p className="text-sm font-bold text-muted-foreground">Select a command type above to start</p>
+                <p className="text-sm font-bold text-muted-foreground">{t('devices.commands.params.startHint')}</p>
               </div>
             )}
           </div>
@@ -868,7 +878,8 @@ function ReviewStep({
   riskConfirmed,
   setRiskConfirmed,
   onlineOnly,
-  setOnlineOnly
+  setOnlineOnly,
+  t
 }: { 
   mode: CommandMode,
   selectedDeviceIds: Set<string>, 
@@ -878,7 +889,8 @@ function ReviewStep({
   riskConfirmed: boolean,
   setRiskConfirmed: (v: boolean) => void,
   onlineOnly: boolean,
-  setOnlineOnly: (v: boolean) => void
+  setOnlineOnly: (v: boolean) => void,
+  t: TFunction
 }) {
   const selectedDevices = Array.from(selectedDeviceIds).map(id => devices.find(d => String(d.deviceId) === id)).filter(Boolean) as Device[];
   const onlineCount = selectedDevices.filter(d => resolveDeviceStatus(d) === 'online').length;
@@ -896,18 +908,18 @@ function ReviewStep({
     <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500">
        <div className="grid grid-cols-2 gap-4">
          <div className="p-4 border rounded-lg bg-muted/5">
-           <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Target Scope</p>
+           <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">{t('devices.commands.review.targetScope')}</p>
            <div className="flex items-baseline gap-2">
               <p className="text-2xl font-bold tabular-nums">{selectedDeviceIds.size}</p>
               <div className="flex flex-wrap gap-1.5">
-                 <Badge variant="secondary" className="text-[9px] px-1.5 h-4 bg-emerald-500/10 text-emerald-600 border-none">Online: {onlineCount}</Badge>
-                 <Badge variant="secondary" className="text-[9px] px-1.5 h-4 bg-amber-500/10 text-amber-600 border-none">Pending: {pendingCount}</Badge>
-                 <Badge variant="secondary" className="text-[9px] px-1.5 h-4 bg-zinc-500/10 text-zinc-500 border-none">Offline: {offlineCount}</Badge>
+                 <Badge variant="secondary" className="text-[9px] px-1.5 h-4 bg-emerald-500/10 text-emerald-600 border-none">{t('devices.filters.options.online')}: {onlineCount}</Badge>
+                 <Badge variant="secondary" className="text-[9px] px-1.5 h-4 bg-amber-500/10 text-amber-600 border-none">{t('devices.filters.options.pending')}: {pendingCount}</Badge>
+                 <Badge variant="secondary" className="text-[9px] px-1.5 h-4 bg-zinc-500/10 text-zinc-500 border-none">{t('devices.filters.options.offline')}: {offlineCount}</Badge>
               </div>
            </div>
          </div>
          <div className="p-4 border rounded-lg bg-muted/5">
-           <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Payload Count</p>
+           <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">{t('devices.commands.review.payloadCount')}</p>
            <p className="text-2xl font-bold tabular-nums">{actions.length}</p>
          </div>
        </div>
@@ -918,13 +930,13 @@ function ReviewStep({
              <div className="flex items-center gap-3">
                <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
                <div>
-                 <p className="text-xs font-bold text-rose-900">Critical Confirmation</p>
-                 <p className="text-[10px] text-rose-800/60">Operation includes hardware state changes</p>
+                 <p className="text-xs font-bold text-rose-900">{t('devices.commands.review.riskTitle')}</p>
+                 <p className="text-[10px] text-rose-800/60">{t('devices.commands.review.riskDesc')}</p>
                </div>
              </div>
              <div className="flex items-center gap-2 px-2.5 py-1 rounded-md border border-rose-200 shrink-0">
                <Checkbox id="risk-confirm" checked={riskConfirmed} onCheckedChange={(v) => setRiskConfirmed(!!v)} className="h-4 w-4" />
-               <label htmlFor="risk-confirm" className="text-[10px] font-bold cursor-pointer select-none">Confirmed</label>
+               <label htmlFor="risk-confirm" className="text-[10px] font-bold cursor-pointer select-none">{t('devices.commands.review.riskConfirm')}</label>
              </div>
            </div>
          )}
@@ -932,8 +944,8 @@ function ReviewStep({
 
        <div className="flex-1 border rounded-lg overflow-hidden flex flex-col bg-muted/5">
           <div className="flex items-center gap-6 px-4 py-2 bg-muted/20 text-[10px] font-bold text-muted-foreground border-b uppercase tracking-wider">
-             <span className="flex-1">Configuration Manifest</span>
-             <span className="w-32 text-right">TTL (min)</span>
+             <span className="flex-1">{t('devices.commands.review.manifest')}</span>
+             <span className="w-32 text-right">{t('devices.commands.review.ttl')}</span>
           </div>
           <ScrollArea className="flex-1">
              <div className="divide-y px-4">
@@ -947,8 +959,8 @@ function ReviewStep({
                       <div key={i} className="flex items-center gap-4 p-3 bg-background border rounded-lg shadow-sm">
                         <ActionIcon type={a.type} className="h-4 w-4 text-primary" />
                         <div className="min-w-0 flex-1">
-                           <span className="text-xs font-bold">{formatActionType(a.type)}</span>
-                           <p className="text-[10px] text-muted-foreground truncate">{formatActionParams(a.type, a.params)}</p>
+                           <span className="text-xs font-bold">{formatActionType(a.type, t)}</span>
+                           <p className="text-[10px] text-muted-foreground truncate">{formatActionParams(a.type, a.params, t)}</p>
                         </div>
                         <div className="flex items-center gap-2 border-l pl-4">
                            <Timer className="h-3 w-3 text-muted-foreground" />
@@ -980,7 +992,8 @@ function ExecutionStep({
   actions,
   opStatusMap,
   itemToOpIds,
-  onlineOnly
+  onlineOnly,
+  t
 }: {
   mode: CommandMode,
   selectedDeviceIds: Set<string>,
@@ -988,7 +1001,8 @@ function ExecutionStep({
   actions: ActionConfig[],
   opStatusMap: Record<string, string>,
   itemToOpIds: Record<string, string[]>,
-  onlineOnly: boolean
+  onlineOnly: boolean,
+  t: TFunction
 }) {
   const isActionAckOnly = (type: ActionType) => ['POWER', 'SCREENSHOT'].includes(type);
 
@@ -1001,7 +1015,7 @@ function ExecutionStep({
               return { 
                 id, 
                 label: d?.deviceName || id, 
-                sub: isOnline ? 'Real-time sync' : 'Queued for heartbeat', 
+                sub: isOnline ? t('devices.commands.execution.tracking') : t('devices.commands.status.waiting'), 
                 isDevice: true, 
                 isOffline: !isOnline,
                 isAckOnly: actions.length > 0 && isActionAckOnly(actions[0].type)
@@ -1009,8 +1023,8 @@ function ExecutionStep({
             }).filter(Boolean) as any[]
     : actions.map((a, idx) => ({ 
         id: `${Array.from(selectedDeviceIds)[0]}-action-${idx}`, 
-        label: formatActionType(a.type), 
-        sub: formatActionParams(a.type, a.params), 
+        label: formatActionType(a.type, t), 
+        sub: formatActionParams(a.type, a.params, t), 
         isDevice: false, 
         type: a.type, 
         params: a.params,
@@ -1033,7 +1047,7 @@ function ExecutionStep({
     return 'WAITING';
   };
 
-  const activeStream = trackingData.filter(t => !t.isOffline);
+  const activeStream = trackingData.filter(t_ => !t_.isOffline);
   const finishedCount = trackingData.filter(item => {
     const s = getAggregatedStatus(item.id);
     const isDone = ['COMPLETED', 'SUCCEEDED', 'FAILED', 'EXPIRED'].includes(s);
@@ -1067,10 +1081,10 @@ function ExecutionStep({
              {isAllFinished ? <Check className="h-4 w-4 stroke-[3]" /> : <CloudUpload className="h-4 w-4 animate-bounce" />}
           </div>
           <div>
-            <h3 className="text-sm font-bold">{isAllFinished ? 'All commands processed' : 'Commands dispatched'}</h3>
+            <h3 className="text-sm font-bold">{isAllFinished ? t('devices.commands.execution.success') : t('devices.commands.execution.dispatched')}</h3>
             <div className="flex items-center gap-2 mt-0.5">
                <Badge variant="outline" className={cn("border-none text-[9px] h-4 px-1.5", isAllFinished ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600")}>
-                 {isAllFinished ? <>Execution Complete</> : <><div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" /> Tracking Live</>}
+                 {isAllFinished ? <>{t('devices.commands.execution.complete')}</> : <><div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" /> {t('devices.commands.execution.tracking')}</>}
                </Badge>
             </div>
           </div>
@@ -1079,8 +1093,8 @@ function ExecutionStep({
 
       <div className="flex-1 border rounded-lg overflow-hidden flex flex-col relative bg-muted/5">
         <div className="flex items-center gap-6 px-4 py-2 bg-muted/20 text-[10px] font-bold text-muted-foreground border-b uppercase tracking-wider">
-          <span className="flex-1">{mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? 'Device' : 'Queue'}</span>
-          <span className="w-32 text-center">Status</span>
+          <span className="flex-1">{mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? t('devices.commands.execution.device') : t('devices.commands.execution.queue')}</span>
+          <span className="w-32 text-center">{t('devices.table.columns.status')}</span>
         </div>
         <ScrollArea className="flex-1">
           <div className="divide-y divide-border/50">
@@ -1096,7 +1110,7 @@ function ExecutionStep({
                   </div>
                 </div>
                 <div className="w-32 flex justify-center">
-                  <StatusBadge status={getAggregatedStatus(item.id)} isAckOnly={item.isAckOnly} />
+                  <StatusBadge status={getAggregatedStatus(item.id)} isAckOnly={item.isAckOnly} t={t} />
                 </div>
               </div>
             ))}
@@ -1110,21 +1124,21 @@ function ExecutionStep({
   );
 }
 
-function StatusBadge({ status, isAckOnly = false }: { status: string, isAckOnly?: boolean }) {
+function StatusBadge({ status, isAckOnly = false, t }: { status: string, isAckOnly?: boolean, t: TFunction }) {
   switch (status) {
-    case 'WAITING': return <Badge variant="outline" className="bg-zinc-100 text-zinc-500 border-zinc-200 gap-1.5 h-6 px-2 rounded-md"><Clock className="h-3 w-3" /><span className="text-[9px] font-bold uppercase">In Queue</span></Badge>;
+    case 'WAITING': return <Badge variant="outline" className="bg-zinc-100 text-zinc-500 border-zinc-200 gap-1.5 h-6 px-2 rounded-md"><Clock className="h-3 w-3" /><span className="text-[9px] font-bold uppercase">{t('devices.commands.status.waiting')}</span></Badge>;
     case 'DISPATCHED':
-    case 'PUBLISHED': return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-200 gap-1.5 h-6 px-2 rounded-md"><Loader2 className="h-3 w-3 animate-spin" /><span className="text-[9px] font-bold uppercase">Sending</span></Badge>;
+    case 'PUBLISHED': return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-200 gap-1.5 h-6 px-2 rounded-md"><Loader2 className="h-3 w-3 animate-spin" /><span className="text-[9px] font-bold uppercase">{t('devices.commands.status.sending')}</span></Badge>;
     case 'ACKED':
     case 'CONFIRMED': 
       if (isAckOnly) {
-        return <Badge className="bg-emerald-500 text-white border-none gap-1.5 h-6 px-2 rounded-md shadow-none"><Check className="h-3 w-3 stroke-[3]" /><span className="text-[9px] font-bold uppercase">Success</span></Badge>;
+        return <Badge className="bg-emerald-500 text-white border-none gap-1.5 h-6 px-2 rounded-md shadow-none"><Check className="h-3 w-3 stroke-[3]" /><span className="text-[9px] font-bold uppercase">{t('devices.commands.status.success')}</span></Badge>;
       }
-      return <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200 gap-1.5 h-6 px-2 rounded-md"><Check className="h-3 w-3" /><span className="text-[9px] font-bold uppercase">Received</span></Badge>;
+      return <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200 gap-1.5 h-6 px-2 rounded-md"><Check className="h-3 w-3" /><span className="text-[9px] font-bold uppercase">{t('devices.commands.status.received')}</span></Badge>;
     case 'SUCCEEDED':
-    case 'COMPLETED': return <Badge className="bg-emerald-500 text-white border-none gap-1.5 h-6 px-2 rounded-md shadow-none"><Check className="h-3 w-3 stroke-[3]" /><span className="text-[9px] font-bold uppercase">Success</span></Badge>;
+    case 'COMPLETED': return <Badge className="bg-emerald-500 text-white border-none gap-1.5 h-6 px-2 rounded-md shadow-none"><Check className="h-3 w-3 stroke-[3]" /><span className="text-[9px] font-bold uppercase">{t('devices.commands.status.success')}</span></Badge>;
     case 'FAILED':
-    case 'EXPIRED': return <Badge className="bg-destructive text-white border-none gap-1.5 h-6 px-2 rounded-md shadow-none"><AlertCircle className="h-3 w-3" /><span className="text-[9px] font-bold uppercase">{status === 'EXPIRED' ? 'Expired' : 'Failed'}</span></Badge>;
+    case 'EXPIRED': return <Badge className="bg-destructive text-white border-none gap-1.5 h-6 px-2 rounded-md shadow-none"><AlertCircle className="h-3 w-3" /><span className="text-[9px] font-bold uppercase">{status === 'EXPIRED' ? t('devices.commands.status.expired') : t('devices.commands.status.failed')}</span></Badge>;
     default: return <Badge variant="outline" className="opacity-20 h-6 px-2">{status}</Badge>;
   }
 }
@@ -1144,11 +1158,8 @@ function ActionIcon({ type, className }: { type: ActionType, className?: string 
   }
 }
 
-function formatActionType(type: ActionType): string {
-  if (type === 'DISPLAY') return 'Display Settings';
-  if (type === 'CONTENT_REPORT_SWITCH') return 'Statistics';
-  if (type === 'INPUT_MODE') return 'Input Mode';
-  return type.charAt(0) + type.slice(1).toLowerCase().replace(/_/g, ' ');
+function formatActionType(type: ActionType, t: TFunction): string {
+  return t(`devices.commands.types.${type}.label`, { defaultValue: type.charAt(0) + type.slice(1).toLowerCase().replace(/_/g, ' ') });
 }
 
 function getDefaultParams(type: ActionType, props?: any): any {

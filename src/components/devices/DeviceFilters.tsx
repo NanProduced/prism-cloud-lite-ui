@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -33,12 +34,13 @@ interface DeviceFiltersProps {
 }
 
 export function DeviceFilters({ filters, onFilterChange }: DeviceFiltersProps) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   const statusOptions = [
-    { value: 'online', label: 'Online', color: 'text-emerald-500' },
-    { value: 'offline', label: 'Offline', color: 'text-muted-foreground' },
-    { value: 'pending', label: 'Pending', color: 'text-amber-500' },
+    { value: 'online', label: t('devices.filters.options.online'), color: 'text-emerald-500' },
+    { value: 'offline', label: t('devices.filters.options.offline'), color: 'text-muted-foreground' },
+    { value: 'pending', label: t('devices.filters.options.pending'), color: 'text-amber-500' },
   ] as const;
 
   const networkOptions = [
@@ -48,9 +50,9 @@ export function DeviceFilters({ filters, onFilterChange }: DeviceFiltersProps) {
   ] as const;
 
   const signalOptions = [
-    { value: 'strong', label: 'Strong', Icon: SignalHigh, color: 'text-emerald-500' },
-    { value: 'fair', label: 'Fair', Icon: SignalMedium, color: 'text-amber-500' },
-    { value: 'weak', label: 'Weak', Icon: SignalLow, color: 'text-red-500' },
+    { value: 'strong', label: t('devices.filters.options.strong'), Icon: SignalHigh, color: 'text-emerald-500' },
+    { value: 'fair', label: t('devices.filters.options.fair'), Icon: SignalMedium, color: 'text-amber-500' },
+    { value: 'weak', label: t('devices.filters.options.weak'), Icon: SignalLow, color: 'text-red-500' },
   ] as const;
 
   const handleStatusToggle = (status: string) => {
@@ -96,7 +98,7 @@ export function DeviceFilters({ filters, onFilterChange }: DeviceFiltersProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="gap-2">
               <Filter className="h-4 w-4" />
-              Advanced Filters
+              {t('devices.filters.advanced')}
               {activeFilterCount > 0 && (
                 <Badge variant="secondary" className="ml-1">
                   {activeFilterCount}
@@ -108,7 +110,7 @@ export function DeviceFilters({ filters, onFilterChange }: DeviceFiltersProps) {
             {/* Status */}
             <div className="px-2 py-2 border-b">
               <div className="text-xs font-semibold text-muted-foreground mb-2">
-                Status
+                {t('devices.filters.status')}
               </div>
               <div className="flex gap-1 flex-wrap">
                 {statusOptions.map(({ value, label, color }) => (
@@ -128,7 +130,7 @@ export function DeviceFilters({ filters, onFilterChange }: DeviceFiltersProps) {
             {/* Network type */}
             <div className="px-2 py-2 border-b">
               <div className="text-xs font-semibold text-muted-foreground mb-2">
-                Network Type
+                {t('devices.filters.network')}
               </div>
               <div className="flex gap-1 flex-wrap">
                 {networkOptions.map(({ value, label, Icon }) => (
@@ -148,7 +150,7 @@ export function DeviceFilters({ filters, onFilterChange }: DeviceFiltersProps) {
             {/* Signal strength */}
             <div className="px-2 py-2 border-b">
               <div className="text-xs font-semibold text-muted-foreground mb-2">
-                Signal Strength
+                {t('devices.filters.signal')}
               </div>
               <div className="flex gap-1 flex-wrap">
                 {signalOptions.map(({ value, label, Icon, color }) => (
@@ -170,14 +172,14 @@ export function DeviceFilters({ filters, onFilterChange }: DeviceFiltersProps) {
             {/* Grouping */}
             <div className="px-2 py-2">
               <div className="text-xs font-semibold text-muted-foreground mb-2">
-                Group By
+                {t('devices.filters.groupBy')}
               </div>
               <div className="flex flex-col gap-1">
                 {([
-                  { value: 'none', label: 'No Grouping' },
-                  { value: 'status', label: 'Status' },
-                  { value: 'networkType', label: 'Network Type' },
-                  { value: 'signalStrength', label: 'Signal Strength' },
+                  { value: 'none', label: t('devices.filters.noGrouping') },
+                  { value: 'status', label: t('devices.filters.status') },
+                  { value: 'networkType', label: t('devices.filters.network') },
+                  { value: 'signalStrength', label: t('devices.filters.signal') },
                 ] as const).map(({ value, label }) => (
                   <Button
                     key={value}
@@ -201,7 +203,7 @@ export function DeviceFilters({ filters, onFilterChange }: DeviceFiltersProps) {
                 onClick={handleClearFilters}
               >
                 <X className="h-4 w-4" />
-                Clear Filters
+                {t('devices.filters.clear')}
               </Button>
             )}
           </DropdownMenuContent>
@@ -221,7 +223,7 @@ export function DeviceFilters({ filters, onFilterChange }: DeviceFiltersProps) {
                   {meta && (
                     <Circle className={`h-2.5 w-2.5 fill-current ${meta.color}`} />
                   )}
-                  <span className="capitalize">{meta?.label ?? status}</span>
+                  <span>{meta?.label ?? status}</span>
                   <X
                     className="h-3 w-3 ml-1 cursor-pointer"
                     onClick={() => handleStatusToggle(status)}
@@ -248,7 +250,7 @@ export function DeviceFilters({ filters, onFilterChange }: DeviceFiltersProps) {
 
         {filters.signalStrength && (
           <Badge variant="secondary" className="text-xs">
-            Signal: {filters.signalStrength}
+            {t('devices.filters.signal')}: {t(`devices.filters.options.${filters.signalStrength}`)}
             <X
               className="h-3 w-3 ml-1 cursor-pointer"
               onClick={() => handleSignalStrengthChange(undefined)}
@@ -258,7 +260,7 @@ export function DeviceFilters({ filters, onFilterChange }: DeviceFiltersProps) {
 
         {filters.groupBy && filters.groupBy !== 'none' && (
           <Badge variant="secondary" className="text-xs">
-            Group: {filters.groupBy}
+            {t('devices.filters.groupBy')}: {filters.groupBy === 'status' ? t('devices.filters.status') : filters.groupBy === 'networkType' ? t('devices.filters.network') : t('devices.filters.signal')}
             <X
               className="h-3 w-3 ml-1 cursor-pointer"
               onClick={() => handleGroupByChange('none')}

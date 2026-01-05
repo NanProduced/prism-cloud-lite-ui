@@ -1018,8 +1018,8 @@ export function DeviceTable({
       if (!meta) return;
       if (!meta.locked) return;
       preventDefault();
-      toast.info('Read-only custom field', {
-        description: 'This field requires an active Pro subscription to edit.',
+      toast.info(t('devices.customFields.readOnly'), {
+        description: t('devices.customFields.proRequired'),
       });
     });
 
@@ -1037,7 +1037,7 @@ export function DeviceTable({
       if (!meta) return;
       const bffErr = error as any;
       const displayMsg = bffErr?.error?.displayMessage || bffErr?.message || (validation ? 'Validation failed.' : 'Unknown error.');
-      toast.error('Edit failed', {
+      toast.error(t('common.errors.updateFailed'), {
         description: displayMsg,
       });
     });
