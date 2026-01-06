@@ -41,13 +41,21 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
     handleInputChange, 
     handleSubmit, 
     isLoading, 
-    streamingAssistantId,
     reload, 
+    append,
     data,
     configs,
     currentProvider,
     switchProvider
   } = useAIAssistant();
+
+  // Handle action from tool buttons (sending tokens)
+  const handleToolAction = (text: string) => {
+    append({
+      role: 'user',
+      content: text,
+    });
+  };
 
   // Extract sources from custom data chunks
   const sources = useMemo(() => {
@@ -185,27 +193,29 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                       <Thinking />
                     ) : (
                       <>
+                        {(m as any).reasoning && (
+                          <div className="mb-3 p-2 bg-primary/5 rounded border border-primary/10 border-dashed">
+                             <details open>
+                                <summary className="cursor-pointer select-none text-[10px] font-bold text-primary/60 uppercase tracking-widest flex items-center gap-1">
+                                  <Sparkles className="h-3 w-3" /> 深度思考过程
+                                </summary>
+                                <div className="mt-2 text-xs text-muted-foreground/80 italic whitespace-pre-wrap leading-relaxed border-l-2 border-primary/20 pl-3">
+                                  {(m as any).reasoning}
+                                </div>
+                             </details>
+                          </div>
+                        )}
+
                         {m.content && (
                           <div className="prose prose-sm dark:prose-invert max-w-none break-words">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
                               {m.content}
                             </ReactMarkdown>
-                            {isLoading && streamingAssistantId === m.id && (
+                            {isLoading && index === messages.length - 1 && (
                               <span className="inline-block w-1.5 h-4 ml-1 bg-primary/50 animate-pulse align-middle" />
                             )}
                           </div>
                         )}
-
-                        {m.role === 'assistant' && m.reasoning?.trim() ? (
-                          <details className="mt-2">
-                            <summary className="cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
-                              推理过程
-                            </summary>
-                            <div className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground/80">
-                              {m.reasoning}
-                            </div>
-                          </details>
-                        ) : null}
 
                         {/* Render tool calls */}
                         {m.toolInvocations && m.toolInvocations.length > 0 && (
@@ -213,7 +223,8 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                             {m.toolInvocations.map((toolInvocation: any) => (
                               <AIToolInvocation 
                                 key={toolInvocation.toolCallId} 
-                                toolInvocation={toolInvocation} 
+                                toolInvocation={toolInvocation}
+                                onAction={handleToolAction}
                               />
                             ))}
                           </div>
@@ -230,6 +241,7 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
               ))}
             </div>
           </ScrollArea>
+
 
           <CardFooter className="p-4 border-t bg-muted/5">
             <AIPromptInput 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, CheckCircle2, CircleDashed, AlertCircle, Info, Send, Paperclip, Sparkles } from 'lucide-react';
+import { ExternalLink, CheckCircle2, CircleDashed, AlertCircle, Info, Send, Paperclip, Sparkles, Monitor, Activity, Clock, Box, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -95,30 +95,171 @@ export interface ToolInvocation {
   state: 'call' | 'result';
 }
 
-export function AIToolInvocation({ toolInvocation }: { toolInvocation: ToolInvocation }) {
+export function AIToolInvocation({ 
+  toolInvocation,
+  onAction
+}: { 
+  toolInvocation: ToolInvocation;
+  onAction?: (text: string) => void;
+}) {
   const isCompleted = toolInvocation.state === 'result';
   const hasError = isCompleted && toolInvocation.result?.error;
   
+  const renderToolBadge = (label: string) => (
+    <Badge 
+      variant="outline" 
+      className={cn(
+        "flex items-center gap-2 py-1.5 px-3 font-medium transition-all shadow-sm",
+        isCompleted ? "bg-emerald-500/5 text-emerald-600 border-emerald-200/50" : "bg-blue-500/5 text-blue-600 border-blue-200/50 animate-pulse",
+        hasError && "bg-red-500/5 text-red-600 border-red-200/50"
+      )}
+    >
+      {isCompleted ? (
+        hasError ? <AlertCircle className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />
+      ) : (
+        <CircleDashed className="h-3.5 w-3.5 animate-spin" />
+      )}
+      <span className="text-xs">
+        {label} 
+        {isCompleted ? (hasError ? ' 失败' : ' 已完成') : ' 正在处理...'}
+      </span>
+    </Badge>
+  );
+
+  // Specialized UI for pickDevice
+  if (toolInvocation.toolName === 'pickDevice' && toolInvocation.state === 'call') {
+    const { title, hint, items, includeFleetOption } = toolInvocation.args;
+    return (
+      <div className="my-3 space-y-3 bg-primary/5 p-4 rounded-xl border border-primary/10">
+        <div className="space-y-1">
+          <p className="text-xs font-bold flex items-center gap-2">
+            <Monitor className="h-3.5 w-3.5 text-primary" />
+            {title || '选择设备'}
+          </p>
+          {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
+        </div>
+        <div className="flex flex-col gap-2">
+          {items?.map((item: any) => (
+            <Button
+              key={item.deviceId}
+              variant="outline"
+              size="sm"
+              className="justify-between h-auto py-2.5 px-3 bg-background hover:bg-primary/5 hover:border-primary/30 transition-all text-left"
+              onClick={() => onAction?.(`[[deviceId:${item.deviceId}]] 查看这台设备情况`)}
+            >
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-semibold">{item.label}</span>
+                {item.lastReportTime && (
+                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-2.5 w-2.5" /> {item.lastReportTime}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className={cn("h-1.5 w-1.5 rounded-full", item.online ? "bg-green-500" : "bg-gray-400")} />
+                <span className="text-[10px] uppercase font-bold text-muted-foreground/70">
+                  {item.online ? '在线' : '离线'}
+                </span>
+              </div>
+            </Button>
+          ))}
+          {includeFleetOption && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-9 font-bold bg-primary/10 hover:bg-primary/20 text-primary border-none shadow-none"
+              onClick={() => onAction?.(`[[fleet:true]] 看整体`)}
+            >
+              <Activity className="h-3.5 w-3.5 mr-2" />
+              查看整体概览
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Specialized UI for pickCommandLog
+  if (toolInvocation.toolName === 'pickCommandLog' && toolInvocation.state === 'call') {
+    const { title, hint, items } = toolInvocation.args;
+    return (
+      <div className="my-3 space-y-3 bg-amber-500/5 p-4 rounded-xl border border-amber-500/10">
+        <div className="space-y-1">
+          <p className="text-xs font-bold flex items-center gap-2">
+            <Activity className="h-3.5 w-3.5 text-amber-600" />
+            {title || '选择指令日志'}
+          </p>
+          {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
+        </div>
+        <div className="flex flex-col gap-2">
+          {items?.map((item: any) => (
+            <Button
+              key={item.commandLogId}
+              variant="outline"
+              size="sm"
+              className="flex-col items-start h-auto py-2.5 px-3 bg-background hover:bg-amber-500/5 hover:border-amber-500/30 transition-all text-left"
+              onClick={() => onAction?.(`[[commandLogId:${item.commandLogId}]] 排查这条指令`)}
+            >
+              <div className="w-full flex justify-between items-center mb-1">
+                <span className="text-xs font-bold">{item.deviceName}</span>
+                <Badge variant="outline" className="text-[9px] h-4 px-1 uppercase tracking-tighter">
+                  {item.status}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                <span className="bg-muted px-1 rounded font-mono text-primary/70">{item.actionType}</span>
+                <span className="flex items-center gap-1"><Clock className="h-2.5 w-2.5" /> {item.createdAt}</span>
+              </div>
+            </Button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Specialized UI for searchCommandLogs (when completed)
+  if (toolInvocation.toolName === 'searchCommandLogs' && toolInvocation.state === 'result') {
+    const items = toolInvocation.result?.items;
+    if (items && items.length > 0) {
+      return (
+        <div className="my-3 space-y-2">
+          {renderToolBadge('搜索指令日志')}
+          <div className="flex flex-col gap-2 pl-4 border-l-2 border-primary/20 mt-2">
+            <p className="text-[10px] font-bold text-muted-foreground flex items-center gap-1.5 mb-1">
+              <Search className="h-3 w-3" />
+              搜索结果候选：
+            </p>
+            {items.map((item: any) => (
+              <Button
+                key={item.commandLogId}
+                variant="ghost"
+                size="sm"
+                className="justify-between h-auto py-2 px-3 bg-muted/30 hover:bg-primary/5 hover:text-primary transition-all text-left border border-transparent hover:border-primary/10"
+                onClick={() => onAction?.(`[[commandLogId:${item.commandLogId}]] 排查这条指令`)}
+              >
+                <div className="flex flex-col overflow-hidden">
+                  <span className="text-xs font-medium truncate">{item.deviceName} - {item.actionType}</span>
+                  <span className="text-[9px] text-muted-foreground">{item.createdAt}</span>
+                </div>
+                <Badge variant="outline" className="text-[8px] h-3.5 px-1 opacity-70">{item.status}</Badge>
+              </Button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+  }
+
+  // Default Fallback
+  let label = toolInvocation.toolName;
+  if (label === 'navigateToPage') label = '页面跳转';
+  if (label === 'pickDevice') label = '选择设备';
+  if (label === 'pickCommandLog') label = '选择记录';
+  if (label === 'searchCommandLogs') label = '搜索日志';
+
   return (
     <div className="my-2">
-      <Badge 
-        variant="outline" 
-        className={cn(
-          "flex items-center gap-2 py-1.5 px-3 font-medium transition-all shadow-sm",
-          isCompleted ? "bg-emerald-500/5 text-emerald-600 border-emerald-200/50" : "bg-blue-500/5 text-blue-600 border-blue-200/50 animate-pulse",
-          hasError && "bg-red-500/5 text-red-600 border-red-200/50"
-        )}
-      >
-        {isCompleted ? (
-          hasError ? <AlertCircle className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />
-        ) : (
-          <CircleDashed className="h-3.5 w-3.5 animate-spin" />
-        )}
-        <span className="text-xs">
-          {toolInvocation.toolName === 'navigateToPage' ? '页面跳转' : toolInvocation.toolName} 
-          {isCompleted ? (hasError ? ' 失败' : ' 已完成') : ' 正在处理...'}
-        </span>
-      </Badge>
+      {renderToolBadge(label)}
     </div>
   );
 }
