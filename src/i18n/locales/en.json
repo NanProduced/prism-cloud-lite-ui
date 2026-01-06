@@ -2488,8 +2488,13 @@
           "update": "updated",
           "perform": "performed",
           "to": "to",
-          "resolution": "resolution",
-          "target": "target version"
+          "resolution": "Resolution",
+          "target": "Target version",
+          "toDevices": "to {{count}} devices",
+          "mode": "Mode: {{mode}}",
+          "scope": "Scope: {{scope}}",
+          "newVersion": "Created new version",
+          "reuseVersion": "Redeployed existing version"
         }
       },
       "releases": {

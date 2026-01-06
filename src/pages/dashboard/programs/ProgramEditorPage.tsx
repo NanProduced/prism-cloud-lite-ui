@@ -630,6 +630,9 @@ export default function ProgramEditorPage() {
   const warningCount = useMemo(() => devValidation.issues.filter((i) => i.severity === 'warning').length, [devValidation.issues]);
 
   const applyVsn = (next: VsnDocument, options?: { noHistory?: boolean }) => {
+    // Avoid marking dirty if content hasn't changed (prevents unnecessary autosaves)
+    if (vsn && JSON.stringify(next) === JSON.stringify(vsn)) return;
+
     if (vsn && !options?.noHistory) {
       setPast((prev) => [...prev.slice(-49), vsn]);
       setFuture([]);

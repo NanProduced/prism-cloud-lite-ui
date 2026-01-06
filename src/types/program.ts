@@ -125,6 +125,7 @@ export interface ProgramAuditLogResp {
   operatorName: string;
   createdAt: string;
   metadata?: string;
+  details?: string;
 }
 
 export interface ProgramTemplateResp {

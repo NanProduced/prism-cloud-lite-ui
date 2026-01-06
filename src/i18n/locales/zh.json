@@ -1355,7 +1355,12 @@
           "perform": "执行了",
           "to": "到",
           "resolution": "分辨率",
-          "target": "目标版本"
+          "target": "目标版本",
+          "toDevices": "到 {{count}} 台设备",
+          "mode": "下发模式: {{mode}}",
+          "scope": "范围: {{scope}}",
+          "newVersion": "创建了新版本",
+          "reuseVersion": "重新下发现有版本"
         }
       },
       "releases": {

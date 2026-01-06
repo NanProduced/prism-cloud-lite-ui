@@ -318,8 +318,8 @@ export default function ProgramDetailsPage() {
                     <CardContent className="p-8">
                        <div className="relative space-y-8 before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-muted before:to-transparent">
                           {auditLogs.length > 0 ? auditLogs.map((log) => {
-                             const metadata = log.metadata ? (() => {
-                                try { return JSON.parse(log.metadata); } catch { return null; }
+                             const details = log.details ? (() => {
+                                try { return JSON.parse(log.details); } catch { return null; }
                              })() : null;
 
                              return (
@@ -329,24 +329,51 @@ export default function ProgramDetailsPage() {
                                   </div>
                                   <div className="min-w-0 flex-1 pt-0.5">
                                      <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-[11px] font-bold text-foreground">{log.action.replace(/_/g, ' ')}</span>
+                                        <span className="text-[11px] font-bold text-foreground uppercase tracking-wider">{log.action.replace(/_/g, ' ')}</span>
                                         <span className="text-[10px] text-muted-foreground/60">• {formatDateTime(log.createdAt)}</span>
                                      </div>
                                      <div className="text-sm font-medium text-muted-foreground/80 leading-relaxed">
-                                        <span className="text-foreground font-bold">{log.operatorName}</span>
-                                        <span className="mx-1">{
+                                        {log.operatorName && <span className="text-foreground font-bold mr-1">{log.operatorName}</span>}
+                                        <span>{
                                            log.action.includes('PUBLISH') ? t('programs.details.audit.actions.publish') : 
                                            log.action.includes('CREATE') ? t('programs.details.audit.actions.create') : 
                                            log.action.includes('DELETE') ? t('programs.details.audit.actions.delete') : 
                                            log.action.includes('RENAME') ? t('programs.details.audit.actions.rename') : 
                                            log.action.includes('UPDATE') ? t('programs.details.audit.actions.update') : t('programs.details.audit.actions.perform')
                                         }</span>
-                                        {log.version && <Badge variant="outline" className="h-4.5 px-1 text-[10px] font-bold">v{log.version}</Badge>}
-                                        {metadata?.deviceName && <span className="text-foreground font-semibold"> {t('programs.details.audit.actions.to')} {metadata.deviceName}</span>}
-                                        {metadata?.width && metadata?.height && <span className="text-muted-foreground italic"> ({t('programs.details.audit.actions.resolution')}: {metadata.width}x{metadata.height})</span>}
-                                        {metadata?.newName && <span className="text-foreground font-semibold"> {t('programs.details.audit.actions.to')} "{metadata.newName}"</span>}
-                                        {metadata?.targetVersion && <span className="opacity-60 text-xs"> ({t('programs.details.audit.actions.target')} v{metadata.targetVersion})</span>}
-                                     </div>
+                                        
+                                        {/* Display Version if available */}
+                                        {(log.version || details?.version) && (
+                                          <Badge variant="outline" className="h-5 px-2 text-[11px] font-black border-primary/20 text-primary bg-primary/5 ml-1.5 align-middle">
+                                            v{log.version || details?.version}
+                                          </Badge>
+                                        )}
+
+                                        {/* PUBLISH details: targets, mode, scope */}
+                                        {log.action === 'PUBLISH' && details && (
+                                          <div className="mt-2.5 flex flex-wrap gap-2">
+                                            <Badge variant="secondary" className="h-6 px-2.5 text-[10px] font-bold bg-muted/60 text-foreground border-none shadow-sm">
+                                              {t('programs.details.audit.actions.toDevices', { count: details.targets || 0 })}
+                                            </Badge>
+                                            <Badge variant="secondary" className="h-6 px-2.5 text-[10px] font-bold bg-muted/60 text-foreground border-none shadow-sm">
+                                              {details.mode === 'OVERWRITE' ? t('program.publish.strategy.overwrite') : t('program.publish.strategy.append')}
+                                            </Badge>
+                                            <Badge variant="secondary" className="h-6 px-2.5 text-[10px] font-bold bg-muted/60 text-foreground border-none shadow-sm">
+                                              {details.scope === 'SELECTED' ? t('program.publish.strategy.queue') : t('program.publish.strategy.active')}
+                                            </Badge>
+                                            {details.createdNewVersion && (
+                                              <Badge variant="outline" className="h-6 px-2.5 text-[10px] font-bold text-emerald-600 border-emerald-200 bg-emerald-50 shadow-sm">
+                                                {t('programs.details.audit.actions.newVersion')}
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        )}
+
+                                        {/* Metadata legacy / other fields */}
+                                        {details?.deviceName && <span className="text-foreground font-semibold"> {t('programs.details.audit.actions.to')} {details.deviceName}</span>}
+                                        {details?.width && details?.height && <span className="text-muted-foreground italic"> ({t('programs.details.audit.actions.resolution')}: {details.width}x{details.height})</span>}
+                                        {details?.newName && <span className="text-foreground font-semibold"> {t('programs.details.audit.actions.to')} "{details.newName}"</span>}
+                                      </div>
                                   </div>
                                </div>
                              );
