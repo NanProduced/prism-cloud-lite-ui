@@ -186,8 +186,8 @@ export function EditorLeftPanel({
           </div>
           <div className="flex items-center gap-1">
             <FilterPill active={mediaFilter === 'all'} onClick={() => setMediaFilter('all')}>{t('common.all')}</FilterPill>
-            <FilterPill active={mediaFilter === 'image'} onClick={() => setMediaFilter('image')}>{t('programEditor.items.image')}</FilterPill>
-            <FilterPill active={mediaFilter === 'video'} onClick={() => setMediaFilter('video')}>{t('programEditor.items.video')}</FilterPill>
+            <FilterPill active={mediaFilter === 'image'} onClick={() => setMediaFilter('image')}>{t('programEditor.panels.items.image')}</FilterPill>
+            <FilterPill active={mediaFilter === 'video'} onClick={() => setMediaFilter('video')}>{t('programEditor.panels.items.video')}</FilterPill>
           </div>
         </div>
 
@@ -234,7 +234,7 @@ export function EditorLeftPanel({
                   <div className="min-w-0 flex-1 flex flex-col justify-center">
                     <p className="truncate text-xs font-bold text-foreground/90 leading-tight mb-0.5">{m.name}</p>
                     <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground/60 font-medium">
-                      <span>{m.kind === 'video' ? t('programEditor.items.video') : t('programEditor.items.image')}</span>
+                      <span>{m.kind === 'video' ? t('programEditor.panels.items.video') : t('programEditor.panels.items.image')}</span>
                       {m.width && m.height && (
                         <>
                           <span>·</span>

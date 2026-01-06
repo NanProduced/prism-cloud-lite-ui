@@ -2,6 +2,7 @@ import axios, { AxiosError } from 'axios';
 import type { AxiosResponse } from 'axios';
 import type { BffResponse } from '@/types/auth';
 import { gatewayOrigin, joinUrl } from '@/config/runtime';
+import { useSystemStore } from '@/store/systemStore';
 
 // API base URL for core business logic
 // Proximity through Vite proxy to http://localhost:8082
@@ -35,8 +36,22 @@ const apiClient = axios.create({
 
 // Response interceptor to handle BffResponse format and Auth errors
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // If we get a successful response, ensure backend down flag is cleared
+    useSystemStore.getState().setBackendUnreachable(false);
+    return response;
+  },
   async (error: AxiosError<BffResponse>) => {
+    // Detect backend unavailability (Network Error, 502, 503, 504)
+    const isNetworkError = !error.response && error.request;
+    const isGatewayError = error.response && [502, 503, 504].includes(error.response.status);
+
+    if (isNetworkError || isGatewayError) {
+      console.error('[API] Backend unreachable or gateway error:', error.message);
+      useSystemStore.getState().setBackendUnreachable(true);
+      return Promise.reject(error);
+    }
+
     // Check for 401 Unauthorized or specific Auth error codes
     // Skip logout redirect for auth check endpoints to avoid infinite loop
     const authEndpoints = ['/user/me', '/auth/refresh', '/auth/status'];

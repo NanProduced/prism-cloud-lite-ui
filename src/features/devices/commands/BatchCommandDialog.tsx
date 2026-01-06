@@ -1040,7 +1040,7 @@ function ExecutionStep({
               return { 
                 id, 
                 label: d?.deviceName || id, 
-                sub: isOnline ? t('devices.commands.execution.tracking') : t('devices.commands.status.waiting'), 
+                sub: isOnline ? t('devices.commands.dialog.execution.tracking') : t('devices.commands.status.waiting'), 
                 isDevice: true, 
                 isOffline: !isOnline,
                 isAckOnly: actions.length > 0 && isActionAckOnly(actions[0].type)
@@ -1106,10 +1106,10 @@ function ExecutionStep({
              {isAllFinished ? <Check className="h-4 w-4 stroke-[3]" /> : <CloudUpload className="h-4 w-4 animate-bounce" />}
           </div>
           <div>
-            <h3 className="text-sm font-bold">{isAllFinished ? t('devices.commands.execution.success') : t('devices.commands.execution.dispatched')}</h3>
+            <h3 className="text-sm font-bold">{isAllFinished ? t('devices.commands.dialog.execution.success') : t('devices.commands.dialog.execution.dispatched')}</h3>
             <div className="flex items-center gap-2 mt-0.5">
                <Badge variant="outline" className={cn("border-none text-[9px] h-4 px-1.5", isAllFinished ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600")}>
-                 {isAllFinished ? <>{t('devices.commands.execution.complete')}</> : <><div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" /> {t('devices.commands.execution.tracking')}</>}
+                 {isAllFinished ? <>{t('devices.commands.dialog.execution.complete')}</> : <><div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" /> {t('devices.commands.dialog.execution.tracking')}</>}
                </Badge>
             </div>
           </div>
@@ -1118,7 +1118,7 @@ function ExecutionStep({
 
       <div className="flex-1 border rounded-lg overflow-hidden flex flex-col relative bg-muted/5">
         <div className="flex items-center gap-6 px-4 py-2 bg-muted/20 text-[10px] font-bold text-muted-foreground border-b uppercase tracking-wider">
-          <span className="flex-1">{mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? t('devices.commands.execution.device') : t('devices.commands.execution.queue')}</span>
+          <span className="flex-1">{mode === 'MULTI_DEVICE_SINGLE_COMMAND' ? t('devices.commands.dialog.execution.device') : t('devices.commands.dialog.execution.queue')}</span>
           <span className="w-32 text-center">{t('devices.table.columns.status')}</span>
         </div>
         <ScrollArea className="flex-1">

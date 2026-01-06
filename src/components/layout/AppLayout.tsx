@@ -9,6 +9,8 @@ import { NotificationCenter } from "@/components/uitripled/notification-center";
 import { sseManager } from "@/lib/sse-manager";
 import { useMessageStore } from "@/store/messageStore";
 import { useSettingsStore } from "@/store/settingsStore";
+import { useSystemStore } from "@/store/systemStore";
+import MaintenancePage from "@/pages/MaintenancePage";
 import i18n from "i18next";
 
 import { PrismIcon } from "@/components/shared/logo";
@@ -65,6 +67,7 @@ export const PublicLayout = () => {
   const outlet = useOutlet();
   const { checkAuth, isInitializing } = useAuthStore();
   const { preferences } = useSettingsStore();
+  const { isBackendUnreachable } = useSystemStore();
   const initialized = React.useRef(false);
 
   useEffect(() => {
@@ -75,6 +78,13 @@ export const PublicLayout = () => {
   }, [checkAuth]);
 
   if (isInitializing) return <FullPageLoader />;
+
+  // Special case: Login/Register/Auth pages need backend
+  const authRoutes = ['/login', '/register', '/forgot-password', '/auth'];
+  const isAuthRoute = authRoutes.some(r => location.pathname.startsWith(r));
+  if (isAuthRoute && isBackendUnreachable) {
+    return <MaintenancePage />;
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
@@ -100,6 +110,7 @@ export const PublicLayout = () => {
 
 export const ProtectedLayout = () => {
     const { isAuthenticated, isInitializing, checkAuth, user } = useAuthStore();
+    const { isBackendUnreachable } = useSystemStore();
     const { fetchInitialData } = useMessageStore();
     const { fetchSettings, preferences } = useSettingsStore();
     const [showWelcome, setShowWelcome] = useState(false);
@@ -141,6 +152,10 @@ export const ProtectedLayout = () => {
     };
 
     if (isInitializing) return <FullPageLoader />;
+
+    if (isBackendUnreachable) {
+        return <MaintenancePage />;
+    }
     
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;

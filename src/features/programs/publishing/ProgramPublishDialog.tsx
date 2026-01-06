@@ -16,6 +16,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import { parseResolution } from '@/lib/resolution';
 import type { Device, Tag } from '@/types/device';
+import { resolveDeviceStatus } from '@/types/device';
 import { getDevices } from '@/services/deviceApi';
 
 import { deleteProgramDraft, publishProgram } from '@/services/programApi';
@@ -165,7 +166,8 @@ export function ProgramPublishDialog({
   const filteredDevices = useMemo(() => {
     const q = deviceQuery.trim().toLowerCase();
     return devices.filter((device) => {
-      if (onlineOnly && device.status !== 'online') return false;
+      const status = resolveDeviceStatus(device);
+      if (onlineOnly && status !== 'online') return false;
       
       const res = parseResolution(device.resolution, { width: 0, height: 0 });
       if (resolutionOnly === 'match' && (res.width !== program.width || res.height !== program.height)) return false;
@@ -218,12 +220,14 @@ export function ProgramPublishDialog({
         else action = 'rollback';
       }
 
+      const status = device ? resolveDeviceStatus(device) : 'offline';
+
       return { 
         deviceId, 
         current, 
         target: targetVersion, 
         action,
-        isOffline: device?.status !== 'online' 
+        isOffline: status !== 'online' 
       };
     });
 
@@ -698,8 +702,8 @@ function DeviceSelectStep({
                         <div className="flex items-center gap-4">
                            <div className="text-right min-w-[80px]">
                               <div className="flex items-center gap-2 justify-end">
-                                 <div className={cn("w-1.5 h-1.5 rounded-full transition-all", d.status === 'online' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" : "bg-zinc-300")} />
-                                 <span className="text-[10px] font-bold tracking-tighter text-muted-foreground group-hover:text-foreground">{d.status}</span>
+                                 <div className={cn("w-1.5 h-1.5 rounded-full transition-all", resolveDeviceStatus(d) === 'online' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" : "bg-zinc-300")} />
+                                 <span className="text-[10px] font-bold tracking-tighter text-muted-foreground group-hover:text-foreground">{resolveDeviceStatus(d)}</span>
                               </div>
                            </div>
                         </div>

@@ -28,6 +28,9 @@ import FeaturesPage from "@/pages/content/FeaturesPage";
 import APIPage from "@/pages/content/APIPage";
 import PricingPage from "@/pages/content/PricingPage";
 import BlogPage from "@/pages/content/BlogPage";
+import MaintenancePage from "@/pages/MaintenancePage";
+import { useSystemStore } from "@/store/systemStore";
+import { useEffect } from "react";
 
 const queryClient = new QueryClient({
   defaultOptions: {

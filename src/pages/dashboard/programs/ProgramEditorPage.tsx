@@ -282,9 +282,9 @@ export default function ProgramEditorPage() {
   const captureCoverStage = useCallback(async (stage: HTMLElement): Promise<string> => {
     const captureOptions = {
       pixelRatio: 1,
-      cacheBust: true, // Force re-fetch to avoid stale cache issues
+      // Avoid cacheBust as it adds query params that can invalidate S3 presigned signatures
       // Avoid mutating URLs (e.g. presigned S3 URLs); use fetch cache controls instead.
-      fetchRequestInit: { cache: 'no-store' as const, credentials: 'include' as const },
+      fetchRequestInit: { cache: 'no-store' as const, credentials: 'omit' as const },
     };
 
     // Wait for existing images in stage to load first

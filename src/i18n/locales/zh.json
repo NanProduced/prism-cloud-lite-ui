@@ -2994,7 +2994,7 @@
           "cancel": "取消",
           "back": "上一步",
           "continue": "继续下一步",
-          "dispatch": "立即下发 Payload",
+          "dispatch": "立即下发",
           "exit": "退出控制台"
         },
         "execution": {

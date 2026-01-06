@@ -40,6 +40,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { getDevices } from '@/services/deviceApi';
+import { resolveDeviceStatus } from '@/types/device';
 import { ProgramPublishDialog } from '@/features/programs/publishing/ProgramPublishDialog';
 import { useTranslation } from 'react-i18next';
 
@@ -268,7 +269,7 @@ export default function ProgramDetailsPage() {
                           <div className="divide-y divide-foreground/[0.03]">
                              {filteredDeployments.map(d => {
                                 const device = deviceMap.get(d.deviceId);
-                                const status = device?.status || 'offline';
+                                const status = device ? resolveDeviceStatus(device) : 'offline';
                                 const isOnline = status === 'online';
 
                                 return (

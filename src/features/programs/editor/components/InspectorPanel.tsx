@@ -1014,9 +1014,9 @@ function clampFloat(value: number, min: number, max: number): number {
 }
 
 function getItemTypeLabel(type: string, showDevFields: boolean, t: any): string {
-  if (type === '2') return t('programEditor.items.image');
-  if (type === '3') return t('programEditor.items.video');
-  if (type === '4' || type === '5') return t('programEditor.items.text');
-  if (type === '6') return t('programEditor.items.gif');
-  return showDevFields ? `Item type ${type}` : t('programEditor.items.unsupported');
+  if (type === '2') return t('programEditor.panels.items.image');
+  if (type === '3') return t('programEditor.panels.items.video');
+  if (type === '4' || type === '5') return t('programEditor.panels.items.text');
+  if (type === '6') return t('programEditor.panels.items.gif');
+  return showDevFields ? `Item type ${type}` : t('programEditor.panels.items.unsupported');
 }
