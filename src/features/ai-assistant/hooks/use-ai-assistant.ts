@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { toast } from "@/store/notificationStore";
 import { useAuthStore } from "@/store/authStore";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -13,11 +13,10 @@ export function useAIAssistant() {
   const queryClient = useQueryClient();
   const { clearAuth } = useAuthStore();
 
-  // Fetch AI configurations
   const { data: configsRes, isLoading: isConfigsLoading } = useQuery({
     queryKey: ['ai-assistant', 'configs'],
     queryFn: getAIModelConfigs,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
   });
 
   const configs = (configsRes as any)?.data || [];
@@ -34,14 +33,12 @@ export function useAIAssistant() {
     }
   });
 
-  // Manual input state
   const [input, setInput] = useState('');
   
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
   }, []);
 
-  // Initial greeting message
   const initialMessages: any[] = [
     {
       id: "init-1",
@@ -54,38 +51,40 @@ export function useAIAssistant() {
     messages,
     status,
     stop,
-    sendMessage: sdkSendMessage,
+    sendMessage,
     setMessages,
     addToolResult,
   } = useChat({
     transport: new DefaultChatTransport({
       api: joinUrl(gatewayOrigin, '/api/chat'),
+      credentials: 'include',
     }),
+    // 关键修复：3.0.14 使用 messages 作为配置项
     messages: initialMessages,
     onToolCall: async ({ toolCall }) => {
+      console.log("[AI SDK Debug] Tool Call:", toolCall);
       if (toolCall.toolName === 'navigateToPage') {
         const args = (toolCall as any).args as { path?: string; label?: string } | undefined;
         const path = args?.path;
-        const label = args?.label;
         if (path) {
           navigate(path);
-          toast.success(`已为你跳转到 ${label || path}`);
+          toast.success(`已为你跳转到 ${args?.label || path}`);
           
           addToolResult({
             toolCallId: toolCall.toolCallId,
             tool: toolCall.toolName,
-            output: { success: true, path }
+            state: 'output-available',
+            output: { success: true }
           });
         }
       }
     },
     onError: (err: any) => {
-      console.error("Chat error:", err);
+      console.error("[AI SDK Debug] Error:", err);
       if (err.status === 401 || err.status === 403) {
-        console.warn('[AI Assistant] Auth failed');
         clearAuth();
       } else {
-        toast.error("呼叫助手失败，请稍后再试");
+        toast.error("对话发生错误，详情请查看控制台");
       }
     }
   });
@@ -93,9 +92,11 @@ export function useAIAssistant() {
   const handleSubmit = useCallback((e?: React.FormEvent) => {
     e?.preventDefault();
     if (!input.trim()) return;
-    sdkSendMessage({ text: input });
+    console.log("[AI SDK Debug] Sending message:", input);
+    // 使用 sendMessage 发送消息
+    sendMessage({ text: input });
     setInput('');
-  }, [input, sdkSendMessage]);
+  }, [input, sendMessage]);
 
   const reload = useCallback(() => {
     setMessages(initialMessages);
@@ -111,7 +112,7 @@ export function useAIAssistant() {
     isLoading,
     reload,
     stop,
-    sendMessage: sdkSendMessage,
+    sendMessage,
     addToolResult,
     status,
     configs,
