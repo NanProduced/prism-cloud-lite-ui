@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useMemo, useState, useCallback } from "react";
 import { toast } from "@/store/notificationStore";
+import { useAuthStore } from "@/store/authStore";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAIModelConfigs, setDefaultAIProvider } from "@/services/aiAssistantApi";
 import { gatewayOrigin, joinUrl } from "@/config/runtime";
@@ -10,6 +11,7 @@ import { DefaultChatTransport } from "ai";
 export function useAIAssistant() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { clearAuth } = useAuthStore();
 
   // Fetch AI configurations
   const { data: configsRes, isLoading: isConfigsLoading } = useQuery({
@@ -65,6 +67,13 @@ export function useAIAssistant() {
           ...options,
           credentials: 'include',
         });
+
+        if (response.status === 401 || response.status === 403) {
+          console.warn('[AI Assistant] Auth failed, clearing auth');
+          clearAuth();
+          return response;
+        }
+
         if (!response.ok) return response;
 
         const reader = response.body?.getReader();

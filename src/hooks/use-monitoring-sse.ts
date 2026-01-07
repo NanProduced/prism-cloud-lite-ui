@@ -3,6 +3,7 @@ import type { TelemetryItem, RealtimeMetric, SSEState } from '@/pages/dashboard/
 import { resolveSensorInfo } from '@/lib/telemetry';
 import { getSensorSeries, getReceiveCardSamples } from '@/services/telemetryApi';
 import { gatewayOrigin, joinUrl } from '@/config/runtime';
+import { useAuthStore } from '@/store/authStore';
 
 const LRU_LIMIT = 500;
 const REFRESH_INTERVAL = 1000;
@@ -24,6 +25,7 @@ export function useMonitoringSSE(
     diagnostics: [],
   });
 
+  const { isAuthenticated, clearAuth } = useAuthStore();
   const traceIdBuffer = useRef<Set<string>>(new Set());
   const pendingUpdates = useRef<Record<string, RealtimeMetric>>({});
 
@@ -32,7 +34,7 @@ export function useMonitoringSSE(
 
   useEffect(() => {
     // 单设备模式：必须选择设备才订阅
-    if (selectedDeviceId === null) {
+    if (selectedDeviceId === null || !isAuthenticated) {
       setSseState({
         metrics: {},
         lastUpdate: 0,
@@ -43,6 +45,7 @@ export function useMonitoringSSE(
     }
 
     let isMounted = true;
+    const abortController = new AbortController();
 
     // --- 1. Fetch Seed Data (Initial History) ---
     const seedInitialData = async () => {
@@ -166,144 +169,191 @@ export function useMonitoringSSE(
 
     seedInitialData();
 
-    // --- 2. Setup SSE Connection ---
-    const url = joinUrl(gatewayOrigin, `/api/sse/monitoring/stream?deviceIds=${selectedDeviceId}`);
-    const eventSource = new EventSource(url, { withCredentials: true });
-
-    setSseState((prev) => ({ ...prev, status: 'connected' }));
-
-    eventSource.addEventListener('prism', (event: any) => {
+    // --- 2. Setup SSE Connection via Fetch ---
+    const connectSSE = async () => {
+      const url = joinUrl(gatewayOrigin, `/api/sse/monitoring/stream?deviceIds=${selectedDeviceId}`);
+      
       try {
-        const envelope = JSON.parse(event.data);
-        // 契约：msg.type === 'telemetry.sensor.reported'
-        if (envelope.type === 'telemetry.sensor.reported') {
-          // De-duplication
-          if (envelope.traceId && traceIdBuffer.current.has(envelope.traceId)) return;
-          if (envelope.traceId) {
-            traceIdBuffer.current.add(envelope.traceId);
-            if (traceIdBuffer.current.size > LRU_LIMIT) {
-              const iterator = traceIdBuffer.current.values();
-              const first = iterator.next().value;
-              if (first !== undefined) {
-                traceIdBuffer.current.delete(first);
-              }
-            }
-          }
+        const response = await fetch(url, {
+          signal: abortController.signal,
+          credentials: 'include',
+          headers: {
+            'Accept': 'text/event-stream',
+          },
+        });
 
-          // 契约：设备归属从 msg.scope.deviceId 获取（不是 envelope.deviceId）
-          const scopeDeviceId = envelope.scope?.deviceId;
-          if (!scopeDeviceId) {
-            console.warn('[SSE Monitoring] Missing scope.deviceId in envelope', envelope);
-            return;
-          }
+        if (response.status === 401 || response.status === 403) {
+          console.warn('[SSE Monitoring] Auth failed (401/403), clearing auth');
+          clearAuth();
+          return;
+        }
 
-          const items = (envelope.data?.items || []) as TelemetryItem[];
+        if (!response.ok) {
+          throw new Error(`SSE request failed with status ${response.status}`);
+        }
 
-          items.forEach((item) => {
-            // 使用 scope.deviceId 作为设备归属
-            const deviceId = String(scopeDeviceId);
-            const sensorType = item.sensorType;
-            const sensorId = item.sensorId;
+        setSseState((prev) => ({ ...prev, status: 'connected' }));
 
-            // 特殊处理1: 接收卡（bitErrorRate）- 嵌套数组结构
-            if (sensorType === 'bitErrorRate') {
-              const metricKey = `RECEIVE_CARD:bitErrorRate:${deviceId}`;
-              // 保存完整的嵌套结构，不展平
-              pendingUpdates.current[metricKey] = {
-                value: item.sensorValue, // 保持原始数组结构
-                at: envelope.occurredAt,
-                sourceType: 'RECEIVE_CARD' as any, // 独立数据源
-                reportType: 'bitErrorRate',
-                metricKey,
-                deviceId,
-                history: [], // 接收卡不维护 history（结构复杂，用 HTTP 查历史）
-                traceId: envelope.traceId,
-              };
-              return;
-            }
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('No reader available');
 
-            // 特殊处理2: 亮度（bright）- 多指标字段
-            if (sensorType === 'bright') {
-              const { sourceType } = resolveSensorInfo(sensorType, sensorId);
-              const brightMetrics = {
-                masterBrightValue: item.masterBrightValue,
-                screenBrightValue: item.screenBrightValue,
-                sensorBrightValue: item.sensorBrightValue,
-              };
+        const decoder = new TextDecoder();
+        let buffer = '';
 
-              // 为每个有效指标创建独立的 metric entry
-              Object.entries(brightMetrics).forEach(([key, val]) => {
-                if (val !== undefined && val !== null) {
-                  const metricKey = `${sourceType}:bright:${key}:${deviceId}`;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine || !trimmedLine.startsWith('data:')) continue;
+            
+            const data = trimmedLine.substring(trimmedLine.indexOf(':') + 1).trim();
+            
+            try {
+              const envelope = JSON.parse(data);
+              // 契约：msg.type === 'telemetry.sensor.reported'
+              if (envelope.type === 'telemetry.sensor.reported') {
+                // De-duplication
+                if (envelope.traceId && traceIdBuffer.current.has(envelope.traceId)) continue;
+                if (envelope.traceId) {
+                  traceIdBuffer.current.add(envelope.traceId);
+                  if (traceIdBuffer.current.size > LRU_LIMIT) {
+                    const iterator = traceIdBuffer.current.values();
+                    const first = iterator.next().value;
+                    if (first !== undefined) {
+                      traceIdBuffer.current.delete(first);
+                    }
+                  }
+                }
+
+                // 契约：设备归属从 msg.scope.deviceId 获取（不是 envelope.deviceId）
+                const scopeDeviceId = envelope.scope?.deviceId;
+                if (!scopeDeviceId) {
+                  console.warn('[SSE Monitoring] Missing scope.deviceId in envelope', envelope);
+                  continue;
+                }
+
+                const items = (envelope.data?.items || []) as TelemetryItem[];
+
+                items.forEach((item) => {
+                  // 使用 scope.deviceId 作为设备归属
+                  const deviceId = String(scopeDeviceId);
+                  const sensorType = item.sensorType;
+                  const sensorId = item.sensorId;
+
+                  // 特殊处理1: 接收卡（bitErrorRate）- 嵌套数组结构
+                  if (sensorType === 'bitErrorRate') {
+                    const metricKey = `RECEIVE_CARD:bitErrorRate:${deviceId}`;
+                    // 保存完整的嵌套结构，不展平
+                    pendingUpdates.current[metricKey] = {
+                      value: item.sensorValue, // 保持原始数组结构
+                      at: envelope.occurredAt,
+                      sourceType: 'RECEIVE_CARD' as any, // 独立数据源
+                      reportType: 'bitErrorRate',
+                      metricKey,
+                      deviceId,
+                      history: [], // 接收卡不维护 history（结构复杂，用 HTTP 查历史）
+                      traceId: envelope.traceId,
+                    };
+                    return;
+                  }
+
+                  // 特殊处理2: 亮度（bright）- 多指标字段
+                  if (sensorType === 'bright') {
+                    const { sourceType } = resolveSensorInfo(sensorType, sensorId);
+                    const brightMetrics = {
+                      masterBrightValue: item.masterBrightValue,
+                      screenBrightValue: item.screenBrightValue,
+                      sensorBrightValue: item.sensorBrightValue,
+                    };
+
+                    // 为每个有效指标创建独立的 metric entry
+                    Object.entries(brightMetrics).forEach(([key, val]) => {
+                      if (val !== undefined && val !== null) {
+                        const metricKey = `${sourceType}:bright:${key}:${deviceId}`;
+                        const existing = pendingUpdates.current[metricKey] || sseState.metrics[metricKey];
+                        const history = existing?.history || [];
+                        const newHistory = [...history, { at: envelope.occurredAt, val: val as number }].slice(-30);
+
+                        pendingUpdates.current[metricKey] = {
+                          value: val,
+                          at: envelope.occurredAt,
+                          sourceType,
+                          reportType: 'bright',
+                          metricKey,
+                          deviceId,
+                          history: newHistory,
+                          traceId: envelope.traceId,
+                        };
+                      }
+                    });
+                    return;
+                  }
+
+                  // 通用传感器处理：单值 sensorValue
+                  const { sourceType, reportType } = resolveSensorInfo(sensorType, sensorId);
+                  const metricKey = `${sourceType}:${reportType}:${deviceId}`;
+                  const val = item.sensorValue;
+
+                  // 只有数值类型才写入 history
+                  const numVal = typeof val === 'number' ? val : null;
+
                   const existing = pendingUpdates.current[metricKey] || sseState.metrics[metricKey];
                   const history = existing?.history || [];
-                  const newHistory = [...history, { at: envelope.occurredAt, val: val as number }].slice(-30);
+                  const newHistory = numVal !== null
+                    ? [...history, { at: envelope.occurredAt, val: numVal }].slice(-30)
+                    : history;
 
                   pendingUpdates.current[metricKey] = {
                     value: val,
                     at: envelope.occurredAt,
                     sourceType,
-                    reportType: 'bright',
+                    reportType,
                     metricKey,
                     deviceId,
                     history: newHistory,
                     traceId: envelope.traceId,
                   };
+                });
+
+                // Diagnostics
+                if (envelope.traceId) {
+                  setSseState((prev) => ({
+                    ...prev,
+                    diagnostics: [
+                      { traceId: envelope.traceId, occurredAt: envelope.occurredAt },
+                      ...prev.diagnostics,
+                    ].slice(0, 20),
+                  }));
                 }
-              });
-              return;
+              }
+            } catch (e) {
+              console.error('[SSE Monitoring] Failed to parse message:', e);
             }
-
-            // 通用传感器处理：单值 sensorValue
-            const { sourceType, reportType } = resolveSensorInfo(sensorType, sensorId);
-            const metricKey = `${sourceType}:${reportType}:${deviceId}`;
-            const val = item.sensorValue;
-
-            // 只有数值类型才写入 history
-            const numVal = typeof val === 'number' ? val : null;
-
-            const existing = pendingUpdates.current[metricKey] || sseState.metrics[metricKey];
-            const history = existing?.history || [];
-            const newHistory = numVal !== null
-              ? [...history, { at: envelope.occurredAt, val: numVal }].slice(-30)
-              : history;
-
-            pendingUpdates.current[metricKey] = {
-              value: val,
-              at: envelope.occurredAt,
-              sourceType,
-              reportType,
-              metricKey,
-              deviceId,
-              history: newHistory,
-              traceId: envelope.traceId,
-            };
-          });
-
-          // Diagnostics
-          if (envelope.traceId) {
-            setSseState((prev) => ({
-              ...prev,
-              diagnostics: [
-                { traceId: envelope.traceId, occurredAt: envelope.occurredAt },
-                ...prev.diagnostics,
-              ].slice(0, 20),
-            }));
           }
         }
-      } catch (e) {
-        console.error('[SSE Monitoring] Error', e);
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          console.log('[SSE Monitoring] Connection aborted');
+        } else {
+          console.error('[SSE Monitoring] Connection error:', err);
+          if (isMounted) setSseState((prev) => ({ ...prev, status: 'error' }));
+        }
       }
-    });
-
-    eventSource.onerror = () => {
-      setSseState((prev) => ({ ...prev, status: 'error' }));
     };
+
+    connectSSE();
 
     return () => {
-      eventSource.close();
+      isMounted = false;
+      abortController.abort();
     };
-  }, [selectedDeviceId, historyFrom, historyTo]);
+  }, [selectedDeviceId, historyFrom, historyTo, isAuthenticated]);
 
   // Throttled UI Update
   useEffect(() => {

@@ -1,20 +1,32 @@
 import { useMessageStore } from '@/store/messageStore';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useSettingsStore } from '@/store/settingsStore';
+import { useAuthStore } from '@/store/authStore';
 import { renderMessage } from '@/lib/message-renderer';
 import type { MessageListItem, SSEEventEnvelope } from '@/types/message';
 import { defaultNotificationSettings } from '@/types/notificationSettings';
 import { gatewayOrigin, joinUrl } from '@/config/runtime';
+
+const MAX_RECONNECT_ATTEMPTS = 20;
+const INITIAL_RECONNECT_DELAY = 1000;
+const MAX_RECONNECT_DELAY = 30000;
 
 class SSEManager {
   private abortController: AbortController | null = null;
   private reconnectTimeout: number | null = null;
   private userId: string | null = null;
   private lastToastAt: Map<string, number> = new Map();
+  private reconnectAttempts = 0;
 
   async connect(userId: string) {
     if (this.abortController && this.userId === userId) return;
     
+    // If not authenticated, don't even try
+    if (!useAuthStore.getState().isAuthenticated) {
+      console.warn('[SSE] Attempted to connect without authentication');
+      return;
+    }
+
     this.userId = userId;
     this.disconnect();
 
@@ -33,10 +45,19 @@ class SSEManager {
         },
       });
 
+      if (response.status === 401 || response.status === 403) {
+        console.warn('[SSE] Authentication failed (401/403), stopping and clearing auth');
+        this.disconnect();
+        useAuthStore.getState().clearAuth();
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(`SSE request failed with status ${response.status}`);
       }
 
+      // Reset reconnect attempts on successful connection
+      this.reconnectAttempts = 0;
       useMessageStore.getState().setSseConnected(true);
       console.log('[SSE] Connection opened');
 
@@ -185,11 +206,27 @@ class SSEManager {
 
   private scheduleReconnect() {
     if (this.reconnectTimeout) return;
-    console.log('[SSE] Scheduling reconnect in 5s...');
+    
+    // Stop retrying if auth is gone
+    if (!useAuthStore.getState().isAuthenticated) return;
+
+    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      console.error(`[SSE] Max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}) reached. Stopping.`);
+      return;
+    }
+
+    const delay = Math.min(
+      INITIAL_RECONNECT_DELAY * Math.pow(2, this.reconnectAttempts),
+      MAX_RECONNECT_DELAY
+    );
+
+    console.log(`[SSE] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})...`);
+    
     this.reconnectTimeout = window.setTimeout(() => {
       this.reconnectTimeout = null;
+      this.reconnectAttempts++;
       if (this.userId) this.connect(this.userId);
-    }, 5000);
+    }, delay);
   }
 
   disconnect() {
@@ -197,6 +234,12 @@ class SSEManager {
       this.abortController.abort();
       this.abortController = null;
     }
+    if (this.reconnectTimeout) {
+      window.clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    this.userId = null;
+    this.reconnectAttempts = 0;
     useMessageStore.getState().setSseConnected(false);
   }
 }
