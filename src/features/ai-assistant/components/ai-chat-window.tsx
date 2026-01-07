@@ -82,10 +82,11 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
     return [];
   };
 
-  // Extract sources from message parts (AI SDK 5.0+ format)
+  // Extract sources from message parts and data (AI SDK 5.0+ format)
   const sources = useMemo(() => {
     const allSources: AISource[] = [];
     messages.forEach((m: any) => {
+      // Check parts (standard for some AI SDK versions)
       if (m.parts && Array.isArray(m.parts)) {
         m.parts.forEach((part: any) => {
           if (part.type === 'source' && part.source) {
@@ -93,6 +94,18 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
               sourceId: part.source.id || part.source.sourceId || '',
               url: part.source.url || '',
               title: part.source.title || ''
+            });
+          }
+        });
+      }
+      // Check data (standard for AI SDK Data Stream Protocol type '2')
+      if (m.data && Array.isArray(m.data)) {
+        m.data.forEach((item: any) => {
+          if (item.type === 'source' && item.source) {
+            allSources.push({
+              sourceId: item.source.id || item.source.sourceId || '',
+              url: item.source.url || '',
+              title: item.source.title || ''
             });
           }
         });

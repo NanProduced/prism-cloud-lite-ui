@@ -7,13 +7,13 @@ import { defaultNotificationSettings } from '@/types/notificationSettings';
 import { gatewayOrigin, joinUrl } from '@/config/runtime';
 
 class SSEManager {
-  private eventSource: EventSource | null = null;
+  private abortController: AbortController | null = null;
   private reconnectTimeout: number | null = null;
   private userId: string | null = null;
   private lastToastAt: Map<string, number> = new Map();
 
-  connect(userId: string) {
-    if (this.eventSource && this.userId === userId) return;
+  async connect(userId: string) {
+    if (this.abortController && this.userId === userId) return;
     
     this.userId = userId;
     this.disconnect();
@@ -21,32 +21,62 @@ class SSEManager {
     const url = joinUrl(gatewayOrigin, '/api/sse/stream');
     console.log('[SSE] Connecting to:', url);
 
-    this.eventSource = new EventSource(url, { withCredentials: true });
+    this.abortController = new AbortController();
 
-    this.eventSource.onopen = () => {
-      console.log('[SSE] Connection opened');
+    try {
+      const response = await fetch(url, {
+        signal: this.abortController.signal,
+        credentials: 'include',
+        headers: {
+          'Accept': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`SSE request failed with status ${response.status}`);
+      }
+
       useMessageStore.getState().setSseConnected(true);
-      if (this.reconnectTimeout) {
-        clearTimeout(this.reconnectTimeout);
-        this.reconnectTimeout = null;
-      }
-    };
+      console.log('[SSE] Connection opened');
 
-    this.eventSource.onerror = (error) => {
-      console.error('[SSE] Connection error:', error);
-      useMessageStore.getState().setSseConnected(false);
-      this.disconnect();
-      this.scheduleReconnect();
-    };
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No reader available');
 
-    this.eventSource.addEventListener('prism', (event: MessageEvent) => {
-      try {
-        const payload = JSON.parse(event.data) as SSEEventEnvelope;
-        this.handleEvent(payload);
-      } catch (e) {
-        console.error('[SSE] Failed to parse message:', e);
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmedLine = line.trim();
+          if (!trimmedLine || !trimmedLine.startsWith('data:')) continue;
+          
+          const data = trimmedLine.substring(trimmedLine.indexOf(':') + 1).trim();
+          
+          try {
+            const payload = JSON.parse(data) as SSEEventEnvelope;
+            this.handleEvent(payload);
+          } catch (e) {
+            console.error('[SSE] Failed to parse message:', data, e);
+          }
+        }
       }
-    });
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('[SSE] Connection aborted');
+      } else {
+        console.error('[SSE] Connection error:', error);
+        useMessageStore.getState().setSseConnected(false);
+        this.scheduleReconnect();
+      }
+    }
   }
 
   private handleEvent(envelope: SSEEventEnvelope) {
@@ -163,9 +193,9 @@ class SSEManager {
   }
 
   disconnect() {
-    if (this.eventSource) {
-      this.eventSource.close();
-      this.eventSource = null;
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
     }
     useMessageStore.getState().setSseConnected(false);
   }
