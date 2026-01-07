@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAIModelConfigs, setDefaultAIProvider } from "@/services/aiAssistantApi";
 import { gatewayOrigin, joinUrl } from "@/config/runtime";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
+import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls, type UIMessage } from "ai";
 
 export function useAIAssistant() {
   const navigate = useNavigate();
@@ -49,7 +49,7 @@ export function useAIAssistant() {
     else if (hour < 18) greeting = "下午好";
     else greeting = "晚上好";
 
-    const userName = user?.displayName || user?.username || "";
+    const userName = user?.displayName || user?.publicId || "";
     const welcomePrefix = `${greeting}${userName ? `, ${userName}` : ""}！我是 Prism Cloud AI 助手。`;
     
     let contextTip = "我可以帮你快速导航、查看状态或解答疑问。";
@@ -96,18 +96,19 @@ export function useAIAssistant() {
 
     const fullText = `${welcomePrefix}${contextTip}`;
 
+    const initialMsgs: UIMessage[] = [
+      {
+        id: "init-1",
+        role: "assistant",
+        parts: [{ type: 'text', text: fullText }]
+      },
+    ];
+
     return {
-      initialMessages: [
-        {
-          id: "init-1",
-          role: "assistant",
-          content: fullText,
-          parts: [{ type: 'text', text: fullText }]
-        },
-      ],
+      initialMessages: initialMsgs,
       suggestions: chips
     };
-  }, [user?.displayName, user?.username, location.pathname]);
+  }, [user?.displayName, user?.publicId, location.pathname]);
 
   const transport = useMemo(() => new DefaultChatTransport({
     api: joinUrl(gatewayOrigin, '/api/chat'),
