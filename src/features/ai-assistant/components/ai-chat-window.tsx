@@ -42,29 +42,33 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
     handleSubmit,
     isLoading,
     reload,
-    stop,
-    addToolResult,
+    append,
+    addToolOutput,
     configs,
     currentProvider,
-    switchProvider
+    switchProvider,
+    suggestions
   } = useAIAssistant();
 
-  // Helper to extract text content from message (AI SDK 5.0+ compatible)
+  // Helper to extract text content (Enhanced for AI SDK 6 Protocol)
   const getMessageContent = (message: any): string => {
-    if (typeof message.content === 'string') {
+    if (typeof message.content === 'string' && message.content.length > 0) {
       return message.content;
     }
-    // Handle message parts if present
+    // Handle message parts (v3 Specification)
     if (Array.isArray(message.parts)) {
       return message.parts
         .filter((part: any) => part.type === 'text')
         .map((part: any) => part.text)
         .join('');
     }
+    // Fallback for some legacy/internal stream states
+    if (typeof message.text === 'string') return message.text;
+    
     return '';
   };
 
-  // Extract sources from message data (AI SDK Data Stream Protocol type '2')
+  // Extract sources from message data
   const sources = useMemo(() => {
     const allSources: AISource[] = [];
     messages.forEach((m: any) => {
@@ -111,7 +115,6 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                   <Badge variant="secondary" className="text-[10px] px-1.5 h-4 bg-primary/10 text-primary border-none font-medium">Beta</Badge>
                 </CardTitle>
                 
-                {/* Model Selector Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors outline-none group">
@@ -138,11 +141,6 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                         {config.isDefault && <Check className="h-3.5 w-3.5 text-primary" />}
                       </DropdownMenuItem>
                     ))}
-                    {configs.length === 0 && (
-                      <DropdownMenuItem className="text-[10px] text-muted-foreground italic py-4 justify-center">
-                        未配置自定义模型
-                      </DropdownMenuItem>
-                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -206,20 +204,22 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                     {(() => {
                       const content = getMessageContent(m);
                       const toolInvocations = m.toolInvocations || [];
+                      // Reasoning data may be in m.reasoning or in parts
                       const reasoning = m.reasoning || (m.parts?.find((p: any) => p.type === 'reasoning')?.reasoning);
                       
                       const hasContent = content.length > 0;
                       const hasToolInvocations = toolInvocations.length > 0;
+                      const hasReasoning = !!reasoning;
                       const isLastMessage = index === messages.length - 1;
 
-                      // Show thinking state for assistant messages that are still loading and have no content/tools yet
-                      if (m.role === 'assistant' && !hasContent && !hasToolInvocations && isLoading && isLastMessage) {
+                      // Only show Thinking if truly nothing has arrived yet
+                      if (m.role === 'assistant' && !hasContent && !hasToolInvocations && !hasReasoning && isLoading && isLastMessage) {
                         return <Thinking />;
                       }
 
                       return (
                         <>
-                          {reasoning && (
+                          {hasReasoning && (
                             <div className="mb-3 p-2 bg-primary/5 rounded border border-primary/10 border-dashed">
                                <details open>
                                   <summary className="cursor-pointer select-none text-[10px] font-bold text-primary/60 uppercase tracking-widest flex items-center gap-1">
@@ -243,24 +243,43 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                             </div>
                           )}
 
-                          {/* Render tool calls */}
                           {hasToolInvocations && (
                             <div className="mt-2 space-y-1">
                               {toolInvocations.map((toolInvocation: any) => (
                                 <AIToolInvocation
                                   key={toolInvocation.toolCallId}
                                   toolInvocation={toolInvocation}
-                                  addToolResult={addToolResult}
-                                  // Disable if it's not the last message OR if newer messages exist
+                                  addToolOutput={addToolOutput}
                                   disabled={!isLastMessage}
                                 />
                               ))}
                             </div>
                           )}
 
-                          {/* Render sources for the last assistant message */}
+                          {/* Debug View for developers if empty */}
+                          {!hasContent && !hasReasoning && !hasToolInvocations && m.role === 'assistant' && !isLoading && (
+                            <div className="text-[10px] text-red-500/50 italic p-2 border border-dashed rounded bg-red-50/10">
+                              [Debug] 收到空消息体，请检查日志
+                            </div>
+                          )}
+
                           {m.role === 'assistant' && isLastMessage && sources.length > 0 && (
                             <AISourceList sources={sources} />
+                          )}
+
+                          {/* Suggestion Chips - Only show for the very first welcome message if no user messages yet */}
+                          {m.id === 'init-1' && messages.length === 1 && suggestions.length > 0 && (
+                            <div className="mt-4 flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-300">
+                              {suggestions.map((item: any) => (
+                                <button
+                                  key={item.label}
+                                  onClick={() => append(item.prompt)}
+                                  className="text-[11px] px-3 py-1.5 rounded-full bg-primary/5 hover:bg-primary/10 border border-primary/10 hover:border-primary/30 text-primary transition-all active:scale-95"
+                                >
+                                  {item.label}
+                                </button>
+                              ))}
+                            </div>
                           )}
                         </>
                       );
@@ -271,7 +290,6 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
             </div>
           </ScrollArea>
 
-
           <CardFooter className="p-4 border-t bg-muted/5">
             <AIPromptInput 
               value={input}
@@ -280,12 +298,6 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
               isLoading={isLoading}
             />
           </CardFooter>
-          <div className="px-4 pb-3 text-center">
-            <p className="text-[10px] text-muted-foreground/60 flex items-center justify-center gap-1.5">
-              <Sparkles className="h-2.5 w-2.5 text-primary/40" />
-              AI 助手可能会生成不准确的信息，请核实重要细节。
-            </p>
-          </div>
         </Card>
       </motion.div>
     </AnimatePresence>

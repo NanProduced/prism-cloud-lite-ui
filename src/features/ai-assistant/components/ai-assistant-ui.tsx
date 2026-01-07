@@ -86,22 +86,22 @@ export function Thinking() {
   );
 }
 
-// Types for AI SDK tool invocations (AI SDK 5.0 / v4+ standardized)
+// Types for AI SDK tool invocations (AI SDK 6 standardized)
 export interface ToolInvocation {
   toolCallId: string;
   toolName: string;
-  args: any;
+  input: any; 
   result?: any;
   state: 'call' | 'result';
 }
 
 export function AIToolInvocation({ 
   toolInvocation,
-  addToolResult,
+  addToolOutput,
   disabled = false
 }: { 
   toolInvocation: ToolInvocation;
-  addToolResult?: (options: any) => void;
+  addToolOutput?: (options: any) => void;
   disabled?: boolean;
 }) {
   const isCompleted = toolInvocation.state === 'result' || toolInvocation.result !== undefined;
@@ -132,8 +132,8 @@ export function AIToolInvocation({
 
   // Helper to submit result
   const handleResult = (result: any) => {
-    if (addToolResult && !disabled) {
-      addToolResult({ 
+    if (addToolOutput && !disabled) {
+      addToolOutput({ 
         toolCallId, 
         tool: toolName,
         output: result 
@@ -144,7 +144,7 @@ export function AIToolInvocation({
   // Specialized UI for pickDevice
   if (toolInvocation.toolName === 'pickDevice') {
     if (!isCompleted) {
-      const { title, hint, items, includeFleetOption } = toolInvocation.args;
+      const { title, hint, items, includeFleetOption } = toolInvocation.input;
       return (
         <div className={cn(
           "my-3 space-y-3 bg-primary/5 p-4 rounded-xl border border-primary/10 transition-opacity",
@@ -218,7 +218,7 @@ export function AIToolInvocation({
   // Specialized UI for pickCommandLog
   if (toolInvocation.toolName === 'pickCommandLog') {
     if (!isCompleted) {
-      const { title, hint, items } = toolInvocation.args;
+      const { title, hint, items } = toolInvocation.input;
       return (
         <div className={cn(
           "my-3 space-y-3 bg-amber-500/5 p-4 rounded-xl border border-amber-500/10 transition-opacity",
