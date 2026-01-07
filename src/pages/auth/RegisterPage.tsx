@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { toast } from "@/store/notificationStore";
 import { PrismWordmark, PrismIcon, GoogleLogo, AppleLogo, WechatLogo } from "../../components/shared/logo";
 import { LanguageSwitcher } from "../../components/shared/LanguageSwitcher";
 import { registerRequestOtp, registerVerifyOtp, registerComplete, getErrorMessage, getErrorCode } from "../../services/authApi";
 import { AuthErrorCode } from "../../types/auth";
-import { TermsModal } from "./TermsModal";
 
 // Logo Component
 function Logo() {
@@ -520,13 +520,11 @@ export default function RegisterPage({ onNavigate }: { onNavigate: (page: "login
                 </div>
                 <div className="text-[#cdcecf] text-[16px] font-medium leading-[24px]" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                   {t('auth.register.agreeToTermsPrefix')}{" "}
-                  <span onClick={(e) => e.stopPropagation()}>
-                    <TermsModal>
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#82DBF7] to-[#B6F09C] font-semibold cursor-pointer hover:opacity-80">
-                        {t('auth.register.termsAndConditions')}
-                      </span>
-                    </TermsModal>
-                  </span>
+                  <Link to="/terms" target="_blank" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#82DBF7] to-[#B6F09C] font-semibold cursor-pointer hover:opacity-80">
+                      {t('auth.register.termsAndConditions')}
+                    </span>
+                  </Link>
                 </div>
               </div>
 
@@ -621,7 +619,9 @@ export default function RegisterPage({ onNavigate }: { onNavigate: (page: "login
         step === 4 ? "right-[48px]" : "w-full max-w-[804px]"
       }`} style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
         <p>{t('auth.common.copyright')}</p>
-        <p>{t('auth.common.privacyPolicy')}</p>
+        <Link to="/privacy" target="_blank" className="hover:text-white transition-colors">
+          {t('auth.common.privacyPolicy')}
+        </Link>
       </div>
     </div>
   );

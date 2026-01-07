@@ -28,6 +28,8 @@ import FeaturesPage from "@/pages/content/FeaturesPage";
 import APIPage from "@/pages/content/APIPage";
 import PricingPage from "@/pages/content/PricingPage";
 import BlogPage from "@/pages/content/BlogPage";
+import PrivacyPolicyPage from "@/pages/content/PrivacyPolicyPage";
+import TermsOfServicePage from "@/pages/content/TermsOfServicePage";
 import MaintenancePage from "@/pages/MaintenancePage";
 import { useSystemStore } from "@/store/systemStore";
 import { useEffect } from "react";
@@ -52,6 +54,8 @@ const router = createBrowserRouter([
       { path: "login", element: <AuthPage page="login" /> },
       { path: "register", element: <AuthPage page="register" /> },
       { path: "forgot-password", element: <AuthPage page="forgot-password" /> },
+      { path: "privacy", element: <PrivacyPolicyPage /> },
+      { path: "terms", element: <TermsOfServicePage /> },
       { path: "help/*", element: <HelpCenterPage /> },
       { path: "roadmap", element: <RoadmapPage /> },
       { path: "about", element: <AboutUsPage /> },

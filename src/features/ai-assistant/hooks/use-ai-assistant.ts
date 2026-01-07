@@ -101,42 +101,48 @@ export function useAIAssistant() {
                 if (data === '[DONE]') continue;
 
                 try {
-                  const json = JSON.parse(data);
-                  
-                  // Transform custom protocol to AI SDK Data Stream Protocol
-                  // 0: text, b: tool-call, c: tool-result, d: finish, e: error
-                  switch (json.type) {
-                    case 'text-delta':
-                      controller.enqueue(encoder.encode(`0:${JSON.stringify(json.delta)}\n`));
-                      break;
-                    case 'tool-input-available':
-                      controller.enqueue(encoder.encode(`b:${JSON.stringify({
-                        toolCallId: json.toolCallId,
-                        toolName: json.toolName,
-                        args: json.input
-                      })}\n`));
-                      break;
-                    case 'tool-output-available':
-                      controller.enqueue(encoder.encode(`c:${JSON.stringify({
-                        toolCallId: json.toolCallId,
-                        result: json.output
-                      })}\n`));
-                      break;
-                    case 'source-url':
-                      // Map source to a data part (type 2)
-                      controller.enqueue(encoder.encode(`2:${JSON.stringify([{
-                        type: 'source',
-                        source: { id: json.sourceId, url: json.url, title: json.title }
-                      }])}\n`));
-                      break;
-                    case 'error':
-                      controller.enqueue(encoder.encode(`3:${JSON.stringify(json.errorText)}\n`));
-                      break;
-                    case 'finish':
-                      controller.enqueue(encoder.encode(`d:{"finishReason":"${json.finishReason || 'stop'}"}\n`));
-                      break;
-                  }
-                } catch (e) {
+                                  const json = JSON.parse(data);
+                                  
+                                  // Transform custom protocol to AI SDK Data Stream Protocol
+                                  // 0: text, b: tool-call, c: tool-result, 2: data (sources), 3: error, d: finish
+                                  switch (json.type) {
+                                    case 'text-delta':
+                                      controller.enqueue(encoder.encode(`0:${JSON.stringify(json.delta)}\n`));
+                                      break;
+                                    case 'tool-input-available':
+                                      controller.enqueue(encoder.encode(`b:${JSON.stringify({
+                                        toolCallId: json.toolCallId,
+                                        toolName: json.toolName,
+                                        args: json.input
+                                      })}\n`));
+                                      break;
+                                    case 'tool-output-available':
+                                      controller.enqueue(encoder.encode(`c:${JSON.stringify({
+                                        toolCallId: json.toolCallId,
+                                        result: json.output
+                                      })}\n`));
+                                      break;
+                                    case 'tool-output-error':
+                                      controller.enqueue(encoder.encode(`3:${JSON.stringify(json.error || 'Tool execution failed')}\n`));
+                                      break;
+                                    case 'source-url':
+                                      // Map source to a data part (type 2)
+                                      controller.enqueue(encoder.encode(`2:${JSON.stringify([{
+                                        type: 'source',
+                                        source: { 
+                                          id: json.sourceId, 
+                                          url: json.url, 
+                                          title: json.title || '参考资料' 
+                                        }
+                                      }])}\n`));
+                                      break;
+                                    case 'error':
+                                      controller.enqueue(encoder.encode(`3:${JSON.stringify(json.errorText)}\n`));
+                                      break;
+                                    case 'finish':
+                                      controller.enqueue(encoder.encode(`d:{"finishReason":"${json.finishReason || 'stop'}"}\n`));
+                                      break;
+                                  }                } catch (e) {
                   console.error('Failed to parse SSE data:', data, e);
                 }
               }

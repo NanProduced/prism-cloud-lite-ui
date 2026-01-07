@@ -76,9 +76,9 @@ export const Footer = () => {
           </p>
 
           <div className="flex items-center gap-4 text-[#8a8a8a] text-sm">
-            <a href="#" className="hover:text-white transition-colors">{t("footer.privacyPolicy")}</a>
+            <Link to="/privacy" className="hover:text-white transition-colors">{t("footer.privacyPolicy")}</Link>
             <span className="w-1 h-1 bg-[#666] rounded-full"></span>
-            <a href="#" className="hover:text-white transition-colors">{t("footer.termsOfService")}</a>
+            <Link to="/terms" className="hover:text-white transition-colors">{t("footer.termsOfService")}</Link>
           </div>
         </div>
       </div>

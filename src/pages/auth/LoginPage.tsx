@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { toast } from "@/store/notificationStore";
 import { PrismWordmark, PrismIcon, GoogleLogo, AppleLogo, WechatLogo } from "../../components/shared/logo";
 import { LanguageSwitcher } from "../../components/shared/LanguageSwitcher";
@@ -482,6 +482,18 @@ export default function LoginPage({ onNavigate }: { onNavigate: (page: "login" |
         </div>
       </div>
       <Illustration />
+      
+      <div className="absolute bottom-[48px] left-[48px] flex items-center justify-between text-[#686b6e] text-[14px] z-10 hidden lg:flex w-full max-w-[540px]" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+        <p>{t('auth.common.copyright')}</p>
+        <div className="flex gap-6">
+          <Link to="/privacy" target="_blank" className="hover:text-white transition-colors">
+            {t('auth.common.privacyPolicy')}
+          </Link>
+          <Link to="/terms" target="_blank" className="hover:text-white transition-colors">
+            {t('auth.register.termsAndConditions')}
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
