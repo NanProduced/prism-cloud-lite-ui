@@ -249,11 +249,10 @@ export function ReceiveCardDetailDrawer({
                         tickFormatter={(val) => val.toExponential(1)}
                         domain={['auto', 'auto']}
                       />
-                      <Tooltip
-                        labelFormatter={(val) => formatDateTime(val)}
-                        formatter={(value: number) => [value.toFixed(6), 'BER']}
-                        contentStyle={{
-                          borderRadius: '8px',
+                                              <Tooltip
+                                                labelFormatter={(val) => formatDateTime(val)}
+                                                formatter={(value: any) => [Number(value).toFixed(6), 'BER']}
+                                                contentStyle={{                          borderRadius: '8px',
                           border: 'none',
                           boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                           fontSize: '10px',

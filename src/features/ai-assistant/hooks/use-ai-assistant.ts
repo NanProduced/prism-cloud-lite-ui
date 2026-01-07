@@ -5,7 +5,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAIModelConfigs, setDefaultAIProvider } from "@/services/aiAssistantApi";
 import { gatewayOrigin, joinUrl } from "@/config/runtime";
-import { useChat, type UIMessage } from "@ai-sdk/react";
+import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 
 export function useAIAssistant() {
@@ -34,18 +34,19 @@ export function useAIAssistant() {
     }
   });
 
-  // AI SDK 5.0+: Input state managed manually
+  // Manual input state
   const [input, setInput] = useState('');
+  
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+  }, []);
 
-  // Initial greeting message in UIMessage format (AI SDK 5.0+)
-  const initialMessages: UIMessage[] = [
+  // Initial greeting message
+  const initialMessages: any[] = [
     {
       id: "init-1",
       role: "assistant",
-      parts: [{
-        type: 'text',
-        text: "你好！我是 Prism Cloud AI 助手。我可以帮你快速导航、查看状态或解答疑问。试着对我说：'带我去设备列表' 或 '帮我分析离线设备'"
-      }],
+      content: "你好！我是 Prism Cloud AI 助手。我可以帮你快速导航、查看状态或解答疑问。试着对我说：'带我去设备列表' 或 '帮我分析离线设备'"
     },
   ];
 
@@ -53,216 +54,54 @@ export function useAIAssistant() {
     messages,
     status,
     stop,
-    sendMessage,
+    sendMessage: sdkSendMessage,
     setMessages,
+    addToolResult,
   } = useChat({
     transport: new DefaultChatTransport({
       api: joinUrl(gatewayOrigin, '/api/chat'),
-      headers: {
-        'Accept': 'text/event-stream',
-      },
-      // Custom fetch to handle the project's specific SSE protocol
-      fetch: async (url: string | URL | Request, options?: RequestInit) => {
-        const response = await fetch(url, {
-          ...options,
-          credentials: 'include',
-        });
-
-        if (response.status === 401 || response.status === 403) {
-          console.warn('[AI Assistant] Auth failed, clearing auth');
-          clearAuth();
-          return response;
-        }
-
-        if (!response.ok) return response;
-
-        const reader = response.body?.getReader();
-        if (!reader) return response;
-
-        const decoder = new TextDecoder();
-        const encoder = new TextEncoder();
-
-        const stream = new ReadableStream({
-          async start(controller) {
-            let buffer = '';
-            const toolCallMetaById = new Map<string, { toolName?: string; args?: unknown; providerExecuted?: boolean }>();
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-
-              buffer += decoder.decode(value, { stream: true });
-              const lines = buffer.split('\n');
-              buffer = lines.pop() || '';
-
-              for (const line of lines) {
-                const trimmedLine = line.trim();
-                if (!trimmedLine || !trimmedLine.startsWith('data:')) continue;
-                
-                const data = trimmedLine.substring(trimmedLine.indexOf(':') + 1).trim();
-                if (data === '[DONE]') continue;
-
-                try {
-                                  const json = JSON.parse(data);
-                                  
-                                  // Transform custom protocol to AI SDK Data Stream Protocol
-                                  // 0: text, b: tool-call, c: tool-result, 2: data (sources), 3: error, d: finish
-                                  switch (json.type) {
-                                    case 'start':
-                                      // Ensure an assistant message exists even if the backend emits only tool chunks.
-                                      controller.enqueue(encoder.encode(`0:${JSON.stringify('')}\n`));
-                                      break;
-                                    case 'text-delta':
-                                      controller.enqueue(encoder.encode(`0:${JSON.stringify(json.delta)}\n`));
-                                      break;
-                                    case 'tool-input-available':
-                                      toolCallMetaById.set(json.toolCallId, {
-                                        toolName: json.toolName,
-                                        args: json.input,
-                                        providerExecuted: json.providerExecuted,
-                                      });
-
-                                      // Always surface tool calls to the UI (e.g. pickDevice/pickCommandLog)
-                                      controller.enqueue(encoder.encode(`2:${JSON.stringify([{
-                                        type: 'tool-invocation',
-                                        toolInvocation: {
-                                          toolCallId: json.toolCallId,
-                                          toolName: json.toolName,
-                                          args: json.input,
-                                          state: 'call',
-                                          providerExecuted: json.providerExecuted,
-                                        }
-                                      }])}\n`));
-
-                                      // Only forward as an AI SDK "tool-call" when the server expects tool execution.
-                                      // For frontend-only tools (providerExecuted=false), UI renders buttons and sends a follow-up message instead.
-                                      if (json.providerExecuted !== false) {
-                                        controller.enqueue(encoder.encode(`b:${JSON.stringify({
-                                          toolCallId: json.toolCallId,
-                                          toolName: json.toolName,
-                                          args: json.input
-                                        })}\n`));
-                                      }
-                                      break;
-                                    case 'tool-output-available':
-                                      {
-                                        const meta = toolCallMetaById.get(json.toolCallId) || {};
-                                        const toolName = json.toolName ?? meta.toolName;
-                                        const args = json.input ?? meta.args;
-                                        const providerExecuted = json.providerExecuted ?? meta.providerExecuted;
-
-                                      controller.enqueue(encoder.encode(`2:${JSON.stringify([{
-                                        type: 'tool-invocation',
-                                        toolInvocation: {
-                                          toolCallId: json.toolCallId,
-                                          toolName,
-                                          args,
-                                          result: json.output,
-                                          state: 'result',
-                                          providerExecuted,
-                                        }
-                                      }])}\n`));
-
-                                      if (providerExecuted !== false) {
-                                        controller.enqueue(encoder.encode(`c:${JSON.stringify({
-                                          toolCallId: json.toolCallId,
-                                          result: json.output
-                                        })}\n`));
-                                      }
-                                      }
-                                      break;
-                                    case 'tool-output-error':
-                                      {
-                                        const meta = toolCallMetaById.get(json.toolCallId) || {};
-                                        const toolName = json.toolName ?? meta.toolName;
-                                        const args = json.input ?? meta.args;
-                                        const providerExecuted = json.providerExecuted ?? meta.providerExecuted;
-                                        const errorText = json.errorText || 'Tool execution failed';
-
-                                      controller.enqueue(encoder.encode(`2:${JSON.stringify([{
-                                        type: 'tool-invocation',
-                                        toolInvocation: {
-                                          toolCallId: json.toolCallId,
-                                          toolName,
-                                          args,
-                                          result: { error: errorText },
-                                          state: 'result',
-                                          providerExecuted,
-                                        }
-                                      }])}\n`));
-                                      controller.enqueue(encoder.encode(`3:${JSON.stringify(errorText)}\n`));
-                                      }
-                                      break;
-                                    case 'source-url':
-                                      // Map source to a data part (type 2)
-                                      controller.enqueue(encoder.encode(`2:${JSON.stringify([{
-                                        type: 'source',
-                                        source: { 
-                                          id: json.sourceId, 
-                                          url: json.url, 
-                                          title: json.title || '参考资料' 
-                                        }
-                                      }])}\n`));
-                                      break;
-                                    case 'error':
-                                      controller.enqueue(encoder.encode(`3:${JSON.stringify(json.errorText)}\n`));
-                                      break;
-                                    case 'finish':
-                                      controller.enqueue(encoder.encode(`d:{"finishReason":"${json.finishReason || 'stop'}"}\n`));
-                                      break;
-                                  }                } catch (e) {
-                  console.error('Failed to parse SSE data:', data, e);
-                }
-              }
-            }
-            controller.close();
-          },
-        });
-
-        return new Response(stream, {
-          headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-        });
-      },
     }),
     messages: initialMessages,
-    onToolCall: async ({ toolCall }: { toolCall: { toolName: string; toolCallId: string; args?: unknown } }) => {
+    onToolCall: async ({ toolCall }) => {
       if (toolCall.toolName === 'navigateToPage') {
-        const args = toolCall.args as { path?: string; label?: string } | undefined;
+        const args = (toolCall as any).args as { path?: string; label?: string } | undefined;
         const path = args?.path;
         const label = args?.label;
         if (path) {
           navigate(path);
           toast.success(`已为你跳转到 ${label || path}`);
+          
+          addToolResult({
+            toolCallId: toolCall.toolCallId,
+            tool: toolCall.toolName,
+            output: { success: true, path }
+          });
         }
       }
     },
-    onError: (err) => {
+    onError: (err: any) => {
       console.error("Chat error:", err);
-      toast.error("呼叫助手失败，请稍后再试");
+      if (err.status === 401 || err.status === 403) {
+        console.warn('[AI Assistant] Auth failed');
+        clearAuth();
+      } else {
+        toast.error("呼叫助手失败，请稍后再试");
+      }
     }
   });
 
-  // AI SDK 5.0+: Manual input change handler
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
-  }, []);
-
-  // AI SDK 5.0+: Manual submit handler
   const handleSubmit = useCallback((e?: React.FormEvent) => {
     e?.preventDefault();
     if (!input.trim()) return;
-    sendMessage({ text: input });
+    sdkSendMessage({ text: input });
     setInput('');
-  }, [input, sendMessage]);
+  }, [input, sdkSendMessage]);
 
-  // AI SDK 5.0+: Reload functionality - clear and resend
   const reload = useCallback(() => {
     setMessages(initialMessages);
-  }, [setMessages]);
+  }, [setMessages, initialMessages]);
 
-  // AI SDK 5.0+: isLoading derived from status
   const isLoading = status === 'submitted' || status === 'streaming';
-
-
 
   return {
     messages,
@@ -272,7 +111,8 @@ export function useAIAssistant() {
     isLoading,
     reload,
     stop,
-    sendMessage,
+    sendMessage: sdkSendMessage,
+    addToolResult,
     status,
     configs,
     currentProvider,

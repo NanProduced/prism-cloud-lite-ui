@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { User, RotateCcw, Maximize2, Minimize2, Sparkles, ChevronDown, Cpu } from 'lucide-react';
+import { User, RotateCcw, Maximize2, Minimize2, Sparkles, ChevronDown, Cpu, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -42,24 +42,20 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
     handleSubmit,
     isLoading,
     reload,
-    sendMessage,
+    stop,
+    addToolResult,
     configs,
     currentProvider,
     switchProvider
   } = useAIAssistant();
 
-  // Handle action from tool buttons (sending tokens) - AI SDK 5.0+ uses sendMessage
-  const handleToolAction = (text: string) => {
-    sendMessage({ text });
-  };
-
-  // Helper to extract text content from message parts (AI SDK 5.0+ format)
+  // Helper to extract text content from message (AI SDK 5.0+ compatible)
   const getMessageContent = (message: any): string => {
-    // Support both old format (content) and new format (parts)
-    if (message.content) {
+    if (typeof message.content === 'string') {
       return message.content;
     }
-    if (message.parts && Array.isArray(message.parts)) {
+    // Handle message parts if present
+    if (Array.isArray(message.parts)) {
       return message.parts
         .filter((part: any) => part.type === 'text')
         .map((part: any) => part.text)
@@ -68,70 +64,10 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
     return '';
   };
 
-  // Helper to extract tool invocations from message parts
-  const getToolInvocations = (message: any): any[] => {
-    const byId = new Map<string, any>();
-
-    const upsert = (invocation: any) => {
-      const toolCallId = invocation?.toolCallId;
-      if (!toolCallId) return;
-
-      const existing = byId.get(toolCallId);
-      if (!existing) {
-        byId.set(toolCallId, invocation);
-        return;
-      }
-
-      // Prefer "result" over "call", and prefer invocation with a non-empty result.
-      const existingIsResult = existing?.state === 'result' || existing?.result != null;
-      const incomingIsResult = invocation?.state === 'result' || invocation?.result != null;
-      if (!existingIsResult && incomingIsResult) {
-        byId.set(toolCallId, invocation);
-        return;
-      }
-
-      // Keep the existing one otherwise.
-    };
-
-    // Old format (AI SDK toolInvocations)
-    if (message.toolInvocations && Array.isArray(message.toolInvocations)) {
-      message.toolInvocations.forEach(upsert);
-    }
-
-    // New format (parts with tool-invocation type)
-    if (message.parts && Array.isArray(message.parts)) {
-      message.parts
-        .filter((part: any) => part.type === 'tool-invocation' && part.toolInvocation)
-        .forEach((part: any) => upsert(part.toolInvocation));
-    }
-
-    // Custom data parts (stream protocol type '2')
-    if (message.data && Array.isArray(message.data)) {
-      message.data
-        .filter((item: any) => item?.type === 'tool-invocation' && item?.toolInvocation)
-        .forEach((item: any) => upsert(item.toolInvocation));
-    }
-
-    return Array.from(byId.values());
-  };
-
-  // Extract sources from message parts and data (AI SDK 5.0+ format)
+  // Extract sources from message data (AI SDK Data Stream Protocol type '2')
   const sources = useMemo(() => {
     const allSources: AISource[] = [];
     messages.forEach((m: any) => {
-      // Check parts (standard for some AI SDK versions)
-      if (m.parts && Array.isArray(m.parts)) {
-        m.parts.forEach((part: any) => {
-          if (part.type === 'source' && part.source) {
-            allSources.push({
-              sourceId: part.source.id || part.source.sourceId || '',
-              url: part.source.url || '',
-              title: part.source.title || ''
-            });
-          }
-        });
-      }
-      // Check data (standard for AI SDK Data Stream Protocol type '2')
       if (m.data && Array.isArray(m.data)) {
         m.data.forEach((item: any) => {
           if (item.type === 'source' && item.source) {
@@ -199,7 +135,7 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                           </span>
                           <span className="text-[9px] text-muted-foreground line-clamp-1">{config.model}</span>
                         </div>
-                        {config.isDefault && <CheckIcon className="h-3.5 w-3.5 text-primary" />}
+                        {config.isDefault && <Check className="h-3.5 w-3.5 text-primary" />}
                       </DropdownMenuItem>
                     ))}
                     {configs.length === 0 && (
@@ -269,25 +205,28 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                   )}>
                     {(() => {
                       const content = getMessageContent(m);
-                      const toolInvocations = getToolInvocations(m);
+                      const toolInvocations = m.toolInvocations || [];
+                      const reasoning = m.reasoning || (m.parts?.find((p: any) => p.type === 'reasoning')?.reasoning);
+                      
                       const hasContent = content.length > 0;
                       const hasToolInvocations = toolInvocations.length > 0;
+                      const isLastMessage = index === messages.length - 1;
 
-                      // Show thinking state for assistant messages that are still loading
-                      if (m.role === 'assistant' && !hasContent && !hasToolInvocations && isLoading) {
+                      // Show thinking state for assistant messages that are still loading and have no content/tools yet
+                      if (m.role === 'assistant' && !hasContent && !hasToolInvocations && isLoading && isLastMessage) {
                         return <Thinking />;
                       }
 
                       return (
                         <>
-                          {(m as any).reasoning && (
+                          {reasoning && (
                             <div className="mb-3 p-2 bg-primary/5 rounded border border-primary/10 border-dashed">
                                <details open>
                                   <summary className="cursor-pointer select-none text-[10px] font-bold text-primary/60 uppercase tracking-widest flex items-center gap-1">
                                     <Sparkles className="h-3 w-3" /> 深度思考过程
                                   </summary>
                                   <div className="mt-2 text-xs text-muted-foreground/80 italic whitespace-pre-wrap leading-relaxed border-l-2 border-primary/20 pl-3">
-                                    {(m as any).reasoning}
+                                    {reasoning}
                                   </div>
                                </details>
                             </div>
@@ -298,7 +237,7 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                 {content}
                               </ReactMarkdown>
-                              {isLoading && index === messages.length - 1 && (
+                              {isLoading && isLastMessage && !hasToolInvocations && (
                                 <span className="inline-block w-1.5 h-4 ml-1 bg-primary/50 animate-pulse align-middle" />
                               )}
                             </div>
@@ -311,14 +250,16 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                                 <AIToolInvocation
                                   key={toolInvocation.toolCallId}
                                   toolInvocation={toolInvocation}
-                                  onAction={handleToolAction}
+                                  addToolResult={addToolResult}
+                                  // Disable if it's not the last message OR if newer messages exist
+                                  disabled={!isLastMessage}
                                 />
                               ))}
                             </div>
                           )}
 
                           {/* Render sources for the last assistant message */}
-                          {m.role === 'assistant' && index === messages.length - 1 && sources.length > 0 && (
+                          {m.role === 'assistant' && isLastMessage && sources.length > 0 && (
                             <AISourceList sources={sources} />
                           )}
                         </>
@@ -348,24 +289,5 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
         </Card>
       </motion.div>
     </AnimatePresence>
-  );
-}
-
-function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
   );
 }
