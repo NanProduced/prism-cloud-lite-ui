@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { User, RotateCcw, Maximize2, Minimize2, Sparkles, ChevronDown, Cpu, Check, MessageSquare, Info } from 'lucide-react';
+import { User, RotateCcw, Maximize2, Minimize2, Sparkles, ChevronDown, Cpu, Check, MessageSquare, Info, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -48,7 +48,8 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
     configs,
     currentProvider,
     switchProvider,
-    suggestions
+    suggestions,
+    error
   } = useAIAssistant();
 
   // 动态生成的欢迎语文本 (非消息)
@@ -237,7 +238,7 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                     </div>
 
                     <div className={cn(
-                      "max-w-[75%] rounded-2xl p-4 text-sm shadow-sm leading-relaxed",
+                      "max-w-[70%] rounded-2xl p-4 text-sm shadow-sm leading-relaxed",
                       m.role === 'user' 
                         ? "bg-primary text-primary-foreground rounded-tr-none" 
                         : "bg-muted/50 border text-foreground rounded-tl-none"
@@ -265,7 +266,7 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                           } else if (part.type === 'reasoning') {
                             return (
                               <div key={partIndex} className="mb-4">
-                                <details className="group bg-primary/5 rounded-xl border border-primary/10 overflow-hidden" open={!isLastMessage ? false : undefined}>
+                                <details className="group bg-primary/5 rounded-xl border border-primary/10 overflow-hidden">
                                   <summary className="list-none cursor-pointer p-2.5 flex items-center justify-between text-[11px] font-bold text-primary/70 uppercase tracking-widest">
                                     <div className="flex items-center gap-2">
                                       <Sparkles className="h-3.5 w-3.5 animate-pulse" />
@@ -302,6 +303,31 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                   </div>
                 );
               })}
+
+              {error && (
+                <div className="flex items-start gap-3 mt-4 animate-in slide-in-from-bottom-2">
+                  <div className="w-8 flex-shrink-0">
+                    <Avatar className="h-8 w-8 border bg-red-50/50 shadow-sm">
+                       <AvatarFallback className="bg-red-100 text-red-600 text-[10px]"><AlertCircle className="h-4 w-4" /></AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <div className="max-w-[70%] bg-red-50/50 border border-red-200/60 text-red-800 rounded-2xl rounded-tl-none p-4 text-sm shadow-sm leading-relaxed">
+                     <div className="flex items-center gap-2 font-bold mb-2 text-red-700">
+                       <AlertCircle className="h-4 w-4" />
+                       <span>遇到了一点问题</span>
+                     </div>
+                     <p className="text-xs opacity-90 mb-3 font-mono bg-red-100/50 p-2 rounded">{error.message || "未知错误"}</p>
+                     <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => reload()} 
+                        className="bg-white hover:bg-red-50 text-red-700 border-red-200 h-8 text-xs font-bold"
+                     >
+                       <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> 重试
+                     </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </ScrollArea>
 

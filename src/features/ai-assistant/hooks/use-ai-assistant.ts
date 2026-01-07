@@ -92,6 +92,7 @@ export function useAIAssistant() {
     sendMessage,
     setMessages,
     addToolOutput,
+    error,
   } = useChat({
     transport,
     messages: initialMsgs,
@@ -163,6 +164,7 @@ export function useAIAssistant() {
     stop,
     addToolOutput,
     status,
+    error,
     configs,
     currentProvider,
     isConfigsLoading,
