@@ -70,16 +70,49 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
 
   // Helper to extract tool invocations from message parts
   const getToolInvocations = (message: any): any[] => {
-    // Support both old format (toolInvocations) and new format (parts with tool-invocation type)
+    const byId = new Map<string, any>();
+
+    const upsert = (invocation: any) => {
+      const toolCallId = invocation?.toolCallId;
+      if (!toolCallId) return;
+
+      const existing = byId.get(toolCallId);
+      if (!existing) {
+        byId.set(toolCallId, invocation);
+        return;
+      }
+
+      // Prefer "result" over "call", and prefer invocation with a non-empty result.
+      const existingIsResult = existing?.state === 'result' || existing?.result != null;
+      const incomingIsResult = invocation?.state === 'result' || invocation?.result != null;
+      if (!existingIsResult && incomingIsResult) {
+        byId.set(toolCallId, invocation);
+        return;
+      }
+
+      // Keep the existing one otherwise.
+    };
+
+    // Old format (AI SDK toolInvocations)
     if (message.toolInvocations && Array.isArray(message.toolInvocations)) {
-      return message.toolInvocations;
+      message.toolInvocations.forEach(upsert);
     }
+
+    // New format (parts with tool-invocation type)
     if (message.parts && Array.isArray(message.parts)) {
-      return message.parts
-        .filter((part: any) => part.type === 'tool-invocation')
-        .map((part: any) => part.toolInvocation);
+      message.parts
+        .filter((part: any) => part.type === 'tool-invocation' && part.toolInvocation)
+        .forEach((part: any) => upsert(part.toolInvocation));
     }
-    return [];
+
+    // Custom data parts (stream protocol type '2')
+    if (message.data && Array.isArray(message.data)) {
+      message.data
+        .filter((item: any) => item?.type === 'tool-invocation' && item?.toolInvocation)
+        .forEach((item: any) => upsert(item.toolInvocation));
+    }
+
+    return Array.from(byId.values());
   };
 
   // Extract sources from message parts and data (AI SDK 5.0+ format)

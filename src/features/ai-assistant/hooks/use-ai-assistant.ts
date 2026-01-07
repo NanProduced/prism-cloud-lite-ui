@@ -85,6 +85,7 @@ export function useAIAssistant() {
         const stream = new ReadableStream({
           async start(controller) {
             let buffer = '';
+            const toolCallMetaById = new Map<string, { toolName?: string; args?: unknown; providerExecuted?: boolean }>();
             while (true) {
               const { done, value } = await reader.read();
               if (done) break;
@@ -106,24 +107,90 @@ export function useAIAssistant() {
                                   // Transform custom protocol to AI SDK Data Stream Protocol
                                   // 0: text, b: tool-call, c: tool-result, 2: data (sources), 3: error, d: finish
                                   switch (json.type) {
+                                    case 'start':
+                                      // Ensure an assistant message exists even if the backend emits only tool chunks.
+                                      controller.enqueue(encoder.encode(`0:${JSON.stringify('')}\n`));
+                                      break;
                                     case 'text-delta':
                                       controller.enqueue(encoder.encode(`0:${JSON.stringify(json.delta)}\n`));
                                       break;
                                     case 'tool-input-available':
-                                      controller.enqueue(encoder.encode(`b:${JSON.stringify({
-                                        toolCallId: json.toolCallId,
+                                      toolCallMetaById.set(json.toolCallId, {
                                         toolName: json.toolName,
-                                        args: json.input
-                                      })}\n`));
+                                        args: json.input,
+                                        providerExecuted: json.providerExecuted,
+                                      });
+
+                                      // Always surface tool calls to the UI (e.g. pickDevice/pickCommandLog)
+                                      controller.enqueue(encoder.encode(`2:${JSON.stringify([{
+                                        type: 'tool-invocation',
+                                        toolInvocation: {
+                                          toolCallId: json.toolCallId,
+                                          toolName: json.toolName,
+                                          args: json.input,
+                                          state: 'call',
+                                          providerExecuted: json.providerExecuted,
+                                        }
+                                      }])}\n`));
+
+                                      // Only forward as an AI SDK "tool-call" when the server expects tool execution.
+                                      // For frontend-only tools (providerExecuted=false), UI renders buttons and sends a follow-up message instead.
+                                      if (json.providerExecuted !== false) {
+                                        controller.enqueue(encoder.encode(`b:${JSON.stringify({
+                                          toolCallId: json.toolCallId,
+                                          toolName: json.toolName,
+                                          args: json.input
+                                        })}\n`));
+                                      }
                                       break;
                                     case 'tool-output-available':
-                                      controller.enqueue(encoder.encode(`c:${JSON.stringify({
-                                        toolCallId: json.toolCallId,
-                                        result: json.output
-                                      })}\n`));
+                                      {
+                                        const meta = toolCallMetaById.get(json.toolCallId) || {};
+                                        const toolName = json.toolName ?? meta.toolName;
+                                        const args = json.input ?? meta.args;
+                                        const providerExecuted = json.providerExecuted ?? meta.providerExecuted;
+
+                                      controller.enqueue(encoder.encode(`2:${JSON.stringify([{
+                                        type: 'tool-invocation',
+                                        toolInvocation: {
+                                          toolCallId: json.toolCallId,
+                                          toolName,
+                                          args,
+                                          result: json.output,
+                                          state: 'result',
+                                          providerExecuted,
+                                        }
+                                      }])}\n`));
+
+                                      if (providerExecuted !== false) {
+                                        controller.enqueue(encoder.encode(`c:${JSON.stringify({
+                                          toolCallId: json.toolCallId,
+                                          result: json.output
+                                        })}\n`));
+                                      }
+                                      }
                                       break;
                                     case 'tool-output-error':
-                                      controller.enqueue(encoder.encode(`3:${JSON.stringify(json.error || 'Tool execution failed')}\n`));
+                                      {
+                                        const meta = toolCallMetaById.get(json.toolCallId) || {};
+                                        const toolName = json.toolName ?? meta.toolName;
+                                        const args = json.input ?? meta.args;
+                                        const providerExecuted = json.providerExecuted ?? meta.providerExecuted;
+                                        const errorText = json.errorText || 'Tool execution failed';
+
+                                      controller.enqueue(encoder.encode(`2:${JSON.stringify([{
+                                        type: 'tool-invocation',
+                                        toolInvocation: {
+                                          toolCallId: json.toolCallId,
+                                          toolName,
+                                          args,
+                                          result: { error: errorText },
+                                          state: 'result',
+                                          providerExecuted,
+                                        }
+                                      }])}\n`));
+                                      controller.enqueue(encoder.encode(`3:${JSON.stringify(errorText)}\n`));
+                                      }
                                       break;
                                     case 'source-url':
                                       // Map source to a data part (type 2)
@@ -214,4 +281,3 @@ export function useAIAssistant() {
     isSwitchingProvider: switchProviderMutation.isPending
   };
 }
-

@@ -17,8 +17,9 @@ import { Footer } from '@/components/landing/Footer';
 
 export default function LandingPage() {
   const [showSplash, setShowSplash] = useState(() => {
-    // Only show splash if it hasn't been shown in this session
-    return !window.sessionStorage.getItem('landing_splash_shown');
+    // Hidden by request: Only show splash if it hasn't been shown in this session
+    // return !window.sessionStorage.getItem('landing_splash_shown');
+    return false;
   });
 
   const handleSplashComplete = () => {
