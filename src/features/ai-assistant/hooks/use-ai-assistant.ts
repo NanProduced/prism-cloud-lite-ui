@@ -39,21 +39,11 @@ export function useAIAssistant() {
     setInput(e.target.value);
   }, []);
 
-  // 动态生成欢迎语和建议词 (基于后端 SDK 6 确定性触发列表)
-  const { initialMessages, suggestions } = useMemo(() => {
-    const hour = new Date().getHours();
-    let greeting = "你好";
-    if (hour < 9) greeting = "早上好";
-    else if (hour < 12) greeting = "上午好";
-    else if (hour < 14) greeting = "中午好";
-    else if (hour < 18) greeting = "下午好";
-    else greeting = "晚上好";
+  // 1. 初始历史记录为空 (欢迎语改为独立的 Welcome Card 渲染，不污染消息流)
+  const initialMsgs = useMemo<UIMessage[]>(() => [], []);
 
-    const userName = user?.displayName || user?.publicId || "";
-    const welcomePrefix = `${greeting}${userName ? `, ${userName}` : ""}！我是 Prism Cloud AI 助手。`;
-    
-    let contextTip = "我可以帮你快速导航、查看状态或解答疑问。";
-    
+  // 2. 动态建议词 (保持不变)
+  const suggestions = useMemo(() => {
     // 全局通用按钮
     const globalChips = [
       { label: "带我去设备列表 ✅", prompt: "带我去设备列表" },
@@ -61,54 +51,34 @@ export function useAIAssistant() {
       { label: "离线设备概览 ✅", prompt: "[[fleet:true]] 帮我分析离线设备" }
     ];
     
-    let chips = [...globalChips];
-    
-    // 根据当前路径给出定制建议
     if (location.pathname.includes('/devices')) {
-      contextTip = "发现你正在查看设备列表，需要我帮你分析特定设备的离线原因吗？";
-      chips = [
+      return [
         { label: "分析设备离线原因 ✅", prompt: "分析设备离线原因" },
         { label: "离线设备概览 ✅", prompt: "[[fleet:true]] 帮我分析离线设备" },
         { label: "带我去节目 ✅", prompt: "带我去节目" }
       ];
     } else if (location.pathname.includes('/logs')) {
-      contextTip = "我可以帮你排查特定的指令执行记录，或分析失败原因。";
-      chips = [
+      return [
         { label: "排查指令未生效 ✅", prompt: "排查指令为什么没生效" },
         { label: "指令失败概览 ◇", prompt: "查询最近24小时失败的指令并总结Top原因" },
         { label: "打开帮助中心 ✅", prompt: "打开帮助中心" }
       ];
     } else if (location.pathname.includes('/studio') || location.pathname.includes('/programs')) {
-      contextTip = "需要我解释如何创建节目，或者检查排期吗？";
-      chips = [
+      return [
         { label: "怎么创建节目？ ◇", prompt: "怎么创建节目？" },
         { label: "打开监控 ✅", prompt: "打开监控" },
         { label: "带我去设备列表 ✅", prompt: "带我去设备列表" }
       ];
     } else if (location.pathname.includes('/dashboard')) {
-      contextTip = "需要我为您分析全量设备的离线情况或运行概览吗？";
-      chips = [
+      return [
         { label: "离线设备概览 ✅", prompt: "[[fleet:true]] 帮我分析离线设备" },
         { label: "打开监控 ✅", prompt: "打开监控" },
         { label: "带我去节目 ✅", prompt: "带我去节目" }
       ];
     }
-
-    const fullText = `${welcomePrefix}${contextTip}`;
-
-    const initialMsgs: UIMessage[] = [
-      {
-        id: "init-1",
-        role: "assistant",
-        parts: [{ type: 'text', text: fullText }]
-      },
-    ];
-
-    return {
-      initialMessages: initialMsgs,
-      suggestions: chips
-    };
-  }, [user?.displayName, user?.publicId, location.pathname]);
+    
+    return globalChips;
+  }, [location.pathname]);
 
   const transport = useMemo(() => new DefaultChatTransport({
     api: joinUrl(gatewayOrigin, '/api/chat'),
@@ -124,14 +94,18 @@ export function useAIAssistant() {
     addToolOutput,
   } = useChat({
     transport,
-    messages: initialMessages,
+    messages: initialMsgs,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onToolCall: async ({ toolCall }) => {
       if (toolCall.toolName === 'navigateToPage') {
         const input = (toolCall as any).input as { path?: string; label?: string };
         if (input?.path) {
-          navigate(input.path);
-          toast.success(`已跳转到 ${input.label || input.path}`);
+          // 只有路径不一致时才触发跳转
+          if (location.pathname !== input.path) {
+            navigate(input.path);
+            toast.success(`已跳转到 ${input.label || input.path}`);
+          }
+          
           addToolOutput({
             toolCallId: toolCall.toolCallId,
             tool: toolCall.toolName as any,
@@ -185,7 +159,7 @@ export function useAIAssistant() {
     handleSubmit,
     append: (text: string) => sendMessage({ text }),
     isLoading,
-    reload: () => setMessages(initialMessages),
+    reload: () => setMessages(initialMsgs),
     stop,
     addToolOutput,
     status,

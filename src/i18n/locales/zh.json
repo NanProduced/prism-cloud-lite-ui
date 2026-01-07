@@ -2375,6 +2375,20 @@
       "statuses": "消息状态",
       "messageTypes": "消息类型",
       "allowAllHint": "未选择任何类型则表示允许所有类型。",
+      "typeLabels": {
+        "device.command.finished": "设备指令结果",
+        "device.command.batch.finished": "批量指令结果",
+        "program.publish.online.finished": "节目在线发布完成",
+        "program.publish.finished": "节目发布全部完成",
+        "media.transcode": "素材转码状态"
+      },
+      "typeDescs": {
+        "device.command.finished": "单台设备的指令执行完成（成功/失败/超时）。",
+        "device.command.batch.finished": "批量指令任务执行结束，包含成功/失败/过期的统计。",
+        "program.publish.online.finished": "当前在线的设备已完成节目下载更新（部分离线设备可能尚未更新）。",
+        "program.publish.finished": "所有目标设备（包括延迟上线的设备）均已完成节目下载更新。",
+        "media.transcode": "素材转码任务的进度或结果更新。"
+      },
       "quietHours": "免打扰时段",
       "enableQuietHours": "开启免打扰",
       "quietHoursDesc": "在此时段内将不再弹出提示（消息仍会存入收件箱）。",

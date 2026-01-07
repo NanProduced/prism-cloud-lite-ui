@@ -105,27 +105,26 @@ export function AIToolInvocation({
   disabled?: boolean;
 }) {
   const isCompleted = toolInvocation.state === 'result' || toolInvocation.result !== undefined;
-  const hasError = isCompleted && toolInvocation.result?.error;
+  const hasError = isCompleted && (toolInvocation.result?.error || toolInvocation.state === 'result' && !toolInvocation.result && toolInvocation.toolName !== 'navigateToPage');
   const { toolCallId, toolName } = toolInvocation;
   
-  const renderToolBadge = (label: string) => (
+  const renderToolBadge = (label: string, icon?: React.ReactNode) => (
     <Badge 
       variant="outline" 
       className={cn(
-        "flex items-center gap-2 py-1.5 px-3 font-medium transition-all shadow-sm",
+        "flex items-center gap-2 py-1.5 px-3 font-medium transition-all shadow-sm rounded-lg border-dashed",
         isCompleted ? "bg-emerald-500/5 text-emerald-600 border-emerald-200/50" : "bg-blue-500/5 text-blue-600 border-blue-200/50 animate-pulse",
-        hasError && "bg-red-500/5 text-red-600 border-red-200/50",
-        disabled && !isCompleted && "opacity-50 grayscale"
+        hasError && "bg-red-500/5 text-red-600 border-red-200/50"
       )}
     >
       {isCompleted ? (
-        hasError ? <AlertCircle className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />
+        hasError ? <AlertCircle className="h-3.5 w-3.5" /> : (icon || <CheckCircle2 className="h-3.5 w-3.5" />)
       ) : (
         <CircleDashed className="h-3.5 w-3.5 animate-spin" />
       )}
-      <span className="text-xs">
+      <span className="text-[10px] uppercase tracking-wider font-bold">
         {label} 
-        {isCompleted ? (hasError ? ' 失败' : ' 已完成') : ' 正在处理...'}
+        {isCompleted ? (hasError ? ' 失败' : ' 已就绪') : ' 处理中'}
       </span>
     </Badge>
   );
@@ -136,26 +135,40 @@ export function AIToolInvocation({
       addToolOutput({ 
         toolCallId, 
         tool: toolName,
+        state: 'output-available',
         output: result 
       });
     }
   };
 
+  // 渲染错误状态
+  if (hasError) {
+    return (
+      <div className="my-2 p-3 bg-red-500/5 border border-red-500/20 rounded-xl flex items-center gap-3">
+        <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[11px] font-bold text-red-600 uppercase">工具执行异常</span>
+          <span className="text-[10px] text-red-500/80 italic">{toolInvocation.result?.error || '服务器响应格式错误'}</span>
+        </div>
+      </div>
+    );
+  }
+
   // Specialized UI for pickDevice
   if (toolInvocation.toolName === 'pickDevice') {
     if (!isCompleted) {
-      const { title, hint, items, includeFleetOption } = toolInvocation.input;
+      const { title, hint, items, includeFleetOption } = toolInvocation.input || {};
       return (
         <div className={cn(
-          "my-3 space-y-3 bg-primary/5 p-4 rounded-xl border border-primary/10 transition-opacity",
+          "my-4 space-y-4 bg-primary/5 p-4 rounded-2xl border border-primary/10 transition-all shadow-inner",
           disabled && "opacity-60 grayscale-[0.5] pointer-events-none"
         )}>
           <div className="space-y-1">
-            <p className="text-xs font-bold flex items-center gap-2 text-primary">
+            <p className="text-[11px] font-black flex items-center gap-2 text-primary uppercase tracking-tighter">
               <Monitor className="h-3.5 w-3.5" />
-              {title || '选择设备'}
+              {title || '选择目标设备'}
             </p>
-            {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
+            {hint && <p className="text-[10px] text-muted-foreground italic">{hint}</p>}
           </div>
           <div className="flex flex-col gap-2">
             {items?.map((item: any) => (
@@ -163,22 +176,22 @@ export function AIToolInvocation({
                 key={item.deviceId}
                 variant="outline"
                 size="sm"
-                className="justify-between h-auto py-2.5 px-3 bg-background hover:bg-primary/5 hover:border-primary/30 transition-all text-left"
+                className="justify-between h-auto py-3 px-4 bg-background hover:bg-primary/5 hover:border-primary/40 transition-all text-left rounded-xl group"
                 onClick={() => handleResult({ deviceId: String(item.deviceId) })}
                 disabled={disabled}
               >
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-semibold">{item.label}</span>
+                  <span className="text-xs font-bold group-hover:text-primary transition-colors">{item.label}</span>
                   {item.lastReportTime && (
-                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      <Clock className="h-2.5 w-2.5" /> {item.lastReportTime}
+                    <span className="text-[9px] text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-2.5 w-2.5" /> 最后上报: {item.lastReportTime}
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className={cn("h-1.5 w-1.5 rounded-full", item.online ? "bg-green-500" : "bg-gray-400")} />
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground/70">
-                    {item.online ? '在线' : '离线'}
+                <div className="flex items-center gap-2">
+                  <span className={cn("h-1.5 w-1.5 rounded-full ring-2 ring-offset-1 ring-offset-background", item.online ? "bg-green-500 ring-green-500/20" : "bg-gray-400 ring-gray-400/20")} />
+                  <span className="text-[9px] uppercase font-black text-muted-foreground/50">
+                    {item.online ? 'Online' : 'Offline'}
                   </span>
                 </div>
               </Button>
@@ -187,29 +200,24 @@ export function AIToolInvocation({
               <Button
                 variant="secondary"
                 size="sm"
-                className="h-9 font-bold bg-primary/10 hover:bg-primary/20 text-primary border-none shadow-none"
+                className="h-10 font-black bg-primary/10 hover:bg-primary/20 text-primary border-none shadow-none rounded-xl uppercase text-[10px] tracking-widest"
                 onClick={() => handleResult({ fleet: true })}
                 disabled={disabled}
               >
                 <Activity className="h-3.5 w-3.5 mr-2" />
-                查看整体概览
+                查看全量统计 (Fleet Overall)
               </Button>
             )}
           </div>
         </div>
       );
     } else {
-      // Display result summary
       const result = toolInvocation.result;
-      const deviceId = result?.deviceId;
-      const isFleet = result?.fleet;
-      
+      const label = result?.fleet ? '全量概览' : `设备 ID: ${result?.deviceId}`;
       return (
-        <div className="my-2 flex items-center gap-2">
-          {renderToolBadge('设备选择')}
-          <span className="text-[10px] text-muted-foreground font-medium italic">
-            已选择: {isFleet ? '整体概览' : `设备 ID ${deviceId}`}
-          </span>
+        <div className="my-3 flex items-center gap-2">
+          {renderToolBadge('设备选择', <Monitor className="h-3.5 w-3.5" />)}
+          <Badge variant="secondary" className="text-[10px] font-mono bg-muted/50 border-none px-2 py-0.5 text-muted-foreground">{label}</Badge>
         </div>
       );
     }
@@ -218,18 +226,18 @@ export function AIToolInvocation({
   // Specialized UI for pickCommandLog
   if (toolInvocation.toolName === 'pickCommandLog') {
     if (!isCompleted) {
-      const { title, hint, items } = toolInvocation.input;
+      const { title, hint, items } = toolInvocation.input || {};
       return (
         <div className={cn(
-          "my-3 space-y-3 bg-amber-500/5 p-4 rounded-xl border border-amber-500/10 transition-opacity",
+          "my-4 space-y-4 bg-amber-500/5 p-4 rounded-2xl border border-amber-500/10 transition-all shadow-inner",
           disabled && "opacity-60 grayscale-[0.5] pointer-events-none"
         )}>
           <div className="space-y-1">
-            <p className="text-xs font-bold flex items-center gap-2 text-amber-600">
+            <p className="text-[11px] font-black flex items-center gap-2 text-amber-600 uppercase tracking-tighter">
               <Activity className="h-3.5 w-3.5" />
-              {title || '选择指令日志'}
+              {title || '选择指令记录'}
             </p>
-            {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
+            {hint && <p className="text-[10px] text-muted-foreground italic">{hint}</p>}
           </div>
           <div className="flex flex-col gap-2">
             {items?.map((item: any) => (
@@ -237,18 +245,18 @@ export function AIToolInvocation({
                 key={item.commandLogId}
                 variant="outline"
                 size="sm"
-                className="flex-col items-start h-auto py-2.5 px-3 bg-background hover:bg-amber-500/5 hover:border-amber-500/30 transition-all text-left"
+                className="flex-col items-start h-auto py-3 px-4 bg-background hover:bg-amber-500/5 hover:border-amber-500/40 transition-all text-left rounded-xl group"
                 onClick={() => handleResult({ commandLogId: String(item.commandLogId) })}
                 disabled={disabled}
               >
-                <div className="w-full flex justify-between items-center mb-1">
-                  <span className="text-xs font-bold">{item.deviceName}</span>
-                  <Badge variant="outline" className="text-[9px] h-4 px-1 uppercase tracking-tighter">
+                <div className="w-full flex justify-between items-center mb-1.5">
+                  <span className="text-xs font-bold group-hover:text-amber-600 transition-colors">{item.deviceName}</span>
+                  <Badge variant="outline" className="text-[8px] h-4 px-1.5 font-black uppercase tracking-tighter bg-background">
                     {item.status}
                   </Badge>
                 </div>
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                  <span className="bg-muted px-1 rounded font-mono text-primary/70">{item.actionType}</span>
+                <div className="flex items-center gap-3 text-[9px] text-muted-foreground font-medium">
+                  <span className="bg-muted px-1.5 py-0.5 rounded text-amber-600 font-bold">{item.actionType}</span>
                   <span className="flex items-center gap-1"><Clock className="h-2.5 w-2.5" /> {item.createdAt}</span>
                 </div>
               </Button>
@@ -259,11 +267,9 @@ export function AIToolInvocation({
     } else {
       const logId = toolInvocation.result?.commandLogId;
       return (
-        <div className="my-2 flex items-center gap-2">
-          {renderToolBadge('记录选择')}
-          <span className="text-[10px] text-muted-foreground font-medium italic">
-            已选择日志 ID: {logId}
-          </span>
+        <div className="my-3 flex items-center gap-2">
+          {renderToolBadge('记录选择', <Activity className="h-3.5 w-3.5" />)}
+          <Badge variant="secondary" className="text-[10px] font-mono bg-muted/50 border-none px-2 py-0.5 text-muted-foreground">Log ID: {logId}</Badge>
         </div>
       );
     }
@@ -274,23 +280,26 @@ export function AIToolInvocation({
     const items = toolInvocation.result?.items;
     if (items && items.length > 0) {
       return (
-        <div className="my-3 space-y-2">
-          {renderToolBadge('搜索指令日志')}
-          <div className="flex flex-col gap-2 pl-4 border-l-2 border-primary/20 mt-2">
-            <p className="text-[10px] font-bold text-muted-foreground flex items-center gap-1.5 mb-1">
-              <Search className="h-3 w-3" />
-              搜索结果候选：
+        <div className="my-4 space-y-3 bg-muted/20 p-4 rounded-2xl border border-muted-foreground/10">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-black text-muted-foreground flex items-center gap-2 uppercase">
+              <Search className="h-3.5 w-3.5" /> 搜索结果候选
             </p>
+            <Badge variant="secondary" className="text-[9px] h-4 px-1.5">{items.length} 条记录</Badge>
+          </div>
+          <div className="flex flex-col gap-2">
             {items.map((item: any) => (
               <div
                 key={item.commandLogId}
-                className="flex items-center justify-between py-2 px-3 bg-muted/30 rounded-lg border border-transparent"
+                className="flex items-center justify-between py-2.5 px-3 bg-background/50 rounded-xl border border-muted-foreground/5 hover:border-primary/20 transition-colors"
               >
                 <div className="flex flex-col overflow-hidden">
-                  <span className="text-xs font-medium truncate">{item.deviceName} - {item.actionType}</span>
-                  <span className="text-[9px] text-muted-foreground">{item.createdAt}</span>
+                  <span className="text-[11px] font-bold truncate">{item.deviceName}</span>
+                  <span className="text-[9px] text-muted-foreground flex items-center gap-1 font-mono">
+                    {item.actionType} 路 {item.createdAt}
+                  </span>
                 </div>
-                <Badge variant="outline" className="text-[8px] h-3.5 px-1 opacity-70">{item.status}</Badge>
+                <Badge variant="outline" className="text-[8px] h-3.5 px-1 opacity-70 font-bold uppercase">{item.status}</Badge>
               </div>
             ))}
           </div>
@@ -299,11 +308,20 @@ export function AIToolInvocation({
     }
   }
 
+  // Specialized UI for navigateToPage (Action type, usually completed immediately)
+  if (toolInvocation.toolName === 'navigateToPage' && isCompleted) {
+    return (
+      <div className="my-2">
+        {renderToolBadge('自动跳转成功', <ExternalLink className="h-3.5 w-3.5" />)}
+      </div>
+    );
+  }
+
   // Default Fallback
   let label = toolInvocation.toolName;
   if (label === 'navigateToPage') label = '页面跳转';
-  if (label === 'pickDevice') label = '选择设备';
-  if (label === 'pickCommandLog') label = '选择记录';
+  if (label === 'pickDevice') label = '设备选择';
+  if (label === 'pickCommandLog') label = '记录选择';
   if (label === 'searchCommandLogs') label = '搜索日志';
 
   return (

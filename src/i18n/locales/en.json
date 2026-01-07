@@ -1187,6 +1187,20 @@
       "statuses": "Statuses",
       "messageTypes": "Message types",
       "allowAllHint": "If you select no types, it means allow all.",
+      "typeLabels": {
+        "device.command.finished": "Device command result",
+        "device.command.batch.finished": "Batch device command result",
+        "program.publish.online.finished": "Program publish (online devices finished)",
+        "program.publish.finished": "Program publish finished",
+        "media.transcode": "Media transcode"
+      },
+      "typeDescs": {
+        "device.command.finished": "A device command finished (success/failure/timeout).",
+        "device.command.batch.finished": "A batch command completed with success/failed/expired counts.",
+        "program.publish.online.finished": "Online devices finished downloading (some targets may still be offline).",
+        "program.publish.finished": "All target devices finished downloading the published program.",
+        "media.transcode": "Media transcode task progress/result updates."
+      },
       "quietHours": "Quiet Hours",
       "enableQuietHours": "Enable Quiet Hours",
       "quietHoursDesc": "Suppress toasts during these hours (messages are still stored in the Inbox).",

@@ -268,9 +268,12 @@ export default function SettingsNotifications({
                         }
                       />
                       <span className="leading-tight">
-                        <span className="block font-medium">{opt.label}</span>
+                        <span className="block font-medium">
+                          {t(`settings.notifications.typeLabels.${opt.type}`, { defaultValue: opt.label })}
+                        </span>
                         <span className="block text-xs text-muted-foreground">
-                          {opt.description} <span className="font-mono">({opt.type})</span>
+                          {t(`settings.notifications.typeDescs.${opt.type}`, { defaultValue: opt.description })}
+                          <span className="font-mono ml-1">({opt.type})</span>
                         </span>
                       </span>
                     </label>
