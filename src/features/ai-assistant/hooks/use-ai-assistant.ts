@@ -56,6 +56,7 @@ export function useAIAssistant() {
   } = useChat({
     transport: new DefaultChatTransport({
       api: joinUrl(gatewayOrigin, '/api/chat'),
+      credentials: 'include', // Send cookies with cross-origin requests
     }),
     messages: initialMessages,
     onToolCall: async ({ toolCall }: { toolCall: { toolName: string; toolCallId: string; args?: unknown } }) => {
