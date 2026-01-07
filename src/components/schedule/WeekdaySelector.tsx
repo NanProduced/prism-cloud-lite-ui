@@ -49,23 +49,23 @@ export function WeekdaySelector({ value, onChange, disabled }: WeekdaySelectorPr
                   : "border-input bg-background hover:bg-accent hover:text-accent-foreground"
               )}
             >
-              {t(`schedules.weekdaySelector.short.${dayValue}`)}
+              {t(`schedules.details.weekdaySelector.short.${dayValue}`)}
             </button>
           )
         })}
       </div>
       <div className="flex flex-wrap gap-2 text-xs">
         <Button variant="outline" size="sm" onClick={selectAll} disabled={disabled} className="h-7">
-          {t('schedules.weekdaySelector.all')}
+          {t('schedules.details.weekdaySelector.all')}
         </Button>
         <Button variant="outline" size="sm" onClick={selectWorkdays} disabled={disabled} className="h-7">
-          {t('schedules.weekdaySelector.workdays')}
+          {t('schedules.details.weekdaySelector.workdays')}
         </Button>
         <Button variant="outline" size="sm" onClick={selectWeekend} disabled={disabled} className="h-7">
-          {t('schedules.weekdaySelector.weekend')}
+          {t('schedules.details.weekdaySelector.weekend')}
         </Button>
         <Button variant="ghost" size="sm" onClick={clear} disabled={disabled} className="h-7">
-          {t('schedules.weekdaySelector.clear')}
+          {t('schedules.details.weekdaySelector.clear')}
         </Button>
       </div>
     </div>

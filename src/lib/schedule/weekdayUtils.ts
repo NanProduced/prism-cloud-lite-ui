@@ -55,24 +55,24 @@ export function isDateAllowedByWeekday(date: Date, limitWeekday: boolean[] | nul
  */
 export function formatWeekdaySelection(selectedIndices: number[], t?: any): string {
   if (selectedIndices.length === 0) return '—';
-  if (selectedIndices.length === 7) return t ? t('schedules.weekdaySelector.everyDay') : 'Every day';
+  if (selectedIndices.length === 7) return t ? t('schedules.details.weekdaySelector.everyDay') : 'Every day';
 
   // 检查是否是工作日 (Mon-Fri = 0,1,2,3,4)
   const workdays = [0, 1, 2, 3, 4];
   if (selectedIndices.length === 5 && workdays.every((d) => selectedIndices.includes(d))) {
-    return t ? t('schedules.weekdaySelector.monFri') : 'Mon - Fri';
+    return t ? t('schedules.details.weekdaySelector.monFri') : 'Mon - Fri';
   }
 
   // 检查是否是周末 (Sat-Sun = 5,6)
   const weekend = [5, 6];
   if (selectedIndices.length === 2 && weekend.every((d) => selectedIndices.includes(d))) {
-    return t ? t('schedules.weekdaySelector.satSun') : 'Sat - Sun';
+    return t ? t('schedules.details.weekdaySelector.satSun') : 'Sat - Sun';
   }
 
   // 排序后显示
   const sorted = [...selectedIndices].sort((a, b) => a - b);
   if (t) {
-    return sorted.map((i) => t(`schedules.weekdaySelector.labels.${i}`)).join(', ');
+    return sorted.map((i) => t(`schedules.details.weekdaySelector.labels.${i}`)).join(', ');
   }
   return sorted.map((i) => BACKEND_WEEKDAY_LABELS[i]).join(', ');
 }

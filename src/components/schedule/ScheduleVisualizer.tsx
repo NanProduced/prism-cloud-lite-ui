@@ -477,7 +477,7 @@ export function ScheduleVisualizer({ rules, commandRules = [], programsMap = {},
                                 ))}
                                 {r.rule.ifLimitWeekday && r.rule.limitWeekday && (
                                   <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                                    <Calendar className="h-3 w-3 opacity-60" /> {formatWeekdaySelection(weekdayBooleanToIndices(r.rule.limitWeekday))}
+                                    <Calendar className="h-3 w-3 opacity-60" /> {formatWeekdaySelection(weekdayBooleanToIndices(r.rule.limitWeekday), t)}
                                   </span>
                                 )}
                                 {r.rule.ifLimitDate && r.rule.limitDate && (

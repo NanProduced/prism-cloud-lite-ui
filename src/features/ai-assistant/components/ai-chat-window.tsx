@@ -35,39 +35,71 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
     return getAvatarById(user.avatarId)?.url;
   }, [user?.avatarId]);
   
-  const { 
-    messages, 
-    input, 
-    handleInputChange, 
-    handleSubmit, 
-    isLoading, 
-    reload, 
-    append,
-    data,
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    isLoading,
+    reload,
+    sendMessage,
     configs,
     currentProvider,
     switchProvider
   } = useAIAssistant();
 
-  // Handle action from tool buttons (sending tokens)
+  // Handle action from tool buttons (sending tokens) - AI SDK 5.0+ uses sendMessage
   const handleToolAction = (text: string) => {
-    append({
-      role: 'user',
-      content: text,
-    });
+    sendMessage({ text });
   };
 
-  // Extract sources from custom data chunks
+  // Helper to extract text content from message parts (AI SDK 5.0+ format)
+  const getMessageContent = (message: any): string => {
+    // Support both old format (content) and new format (parts)
+    if (message.content) {
+      return message.content;
+    }
+    if (message.parts && Array.isArray(message.parts)) {
+      return message.parts
+        .filter((part: any) => part.type === 'text')
+        .map((part: any) => part.text)
+        .join('');
+    }
+    return '';
+  };
+
+  // Helper to extract tool invocations from message parts
+  const getToolInvocations = (message: any): any[] => {
+    // Support both old format (toolInvocations) and new format (parts with tool-invocation type)
+    if (message.toolInvocations && Array.isArray(message.toolInvocations)) {
+      return message.toolInvocations;
+    }
+    if (message.parts && Array.isArray(message.parts)) {
+      return message.parts
+        .filter((part: any) => part.type === 'tool-invocation')
+        .map((part: any) => part.toolInvocation);
+    }
+    return [];
+  };
+
+  // Extract sources from message parts (AI SDK 5.0+ format)
   const sources = useMemo(() => {
-    if (!data || !Array.isArray(data)) return [] as AISource[];
-    return data
-      .filter((chunk: any) => chunk && chunk.type === 'source-url')
-      .map((chunk: any) => ({
-        sourceId: chunk.sourceId,
-        url: chunk.url,
-        title: chunk.title
-      })) as AISource[];
-  }, [data]);
+    const allSources: AISource[] = [];
+    messages.forEach((m: any) => {
+      if (m.parts && Array.isArray(m.parts)) {
+        m.parts.forEach((part: any) => {
+          if (part.type === 'source' && part.source) {
+            allSources.push({
+              sourceId: part.source.id || part.source.sourceId || '',
+              url: part.source.url || '',
+              title: part.source.title || ''
+            });
+          }
+        });
+      }
+    });
+    return allSources;
+  }, [messages]);
 
   if (!isOpen) return null;
 
@@ -189,53 +221,63 @@ export function AIChatWindow({ isOpen }: AIChatWindowProps) {
                       ? "bg-primary text-primary-foreground rounded-tr-none" 
                       : "bg-muted/50 border text-foreground rounded-tl-none"
                   )}>
-                    {m.role === 'assistant' && !m.content && (!m.toolInvocations || m.toolInvocations.length === 0) && isLoading ? (
-                      <Thinking />
-                    ) : (
-                      <>
-                        {(m as any).reasoning && (
-                          <div className="mb-3 p-2 bg-primary/5 rounded border border-primary/10 border-dashed">
-                             <details open>
-                                <summary className="cursor-pointer select-none text-[10px] font-bold text-primary/60 uppercase tracking-widest flex items-center gap-1">
-                                  <Sparkles className="h-3 w-3" /> 深度思考过程
-                                </summary>
-                                <div className="mt-2 text-xs text-muted-foreground/80 italic whitespace-pre-wrap leading-relaxed border-l-2 border-primary/20 pl-3">
-                                  {(m as any).reasoning}
-                                </div>
-                             </details>
-                          </div>
-                        )}
+                    {(() => {
+                      const content = getMessageContent(m);
+                      const toolInvocations = getToolInvocations(m);
+                      const hasContent = content.length > 0;
+                      const hasToolInvocations = toolInvocations.length > 0;
 
-                        {m.content && (
-                          <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {m.content}
-                            </ReactMarkdown>
-                            {isLoading && index === messages.length - 1 && (
-                              <span className="inline-block w-1.5 h-4 ml-1 bg-primary/50 animate-pulse align-middle" />
-                            )}
-                          </div>
-                        )}
+                      // Show thinking state for assistant messages that are still loading
+                      if (m.role === 'assistant' && !hasContent && !hasToolInvocations && isLoading) {
+                        return <Thinking />;
+                      }
 
-                        {/* Render tool calls */}
-                        {m.toolInvocations && m.toolInvocations.length > 0 && (
-                          <div className="mt-2 space-y-1">
-                            {m.toolInvocations.map((toolInvocation: any) => (
-                              <AIToolInvocation 
-                                key={toolInvocation.toolCallId} 
-                                toolInvocation={toolInvocation}
-                                onAction={handleToolAction}
-                              />
-                            ))}
-                          </div>
-                        )}
+                      return (
+                        <>
+                          {(m as any).reasoning && (
+                            <div className="mb-3 p-2 bg-primary/5 rounded border border-primary/10 border-dashed">
+                               <details open>
+                                  <summary className="cursor-pointer select-none text-[10px] font-bold text-primary/60 uppercase tracking-widest flex items-center gap-1">
+                                    <Sparkles className="h-3 w-3" /> 深度思考过程
+                                  </summary>
+                                  <div className="mt-2 text-xs text-muted-foreground/80 italic whitespace-pre-wrap leading-relaxed border-l-2 border-primary/20 pl-3">
+                                    {(m as any).reasoning}
+                                  </div>
+                               </details>
+                            </div>
+                          )}
 
-                        {/* Render sources for the last assistant message */}
-                        {m.role === 'assistant' && index === messages.length - 1 && sources.length > 0 && (
-                          <AISourceList sources={sources} />
-                        )}
-                      </>
-                    )}
+                          {hasContent && (
+                            <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {content}
+                              </ReactMarkdown>
+                              {isLoading && index === messages.length - 1 && (
+                                <span className="inline-block w-1.5 h-4 ml-1 bg-primary/50 animate-pulse align-middle" />
+                              )}
+                            </div>
+                          )}
+
+                          {/* Render tool calls */}
+                          {hasToolInvocations && (
+                            <div className="mt-2 space-y-1">
+                              {toolInvocations.map((toolInvocation: any) => (
+                                <AIToolInvocation
+                                  key={toolInvocation.toolCallId}
+                                  toolInvocation={toolInvocation}
+                                  onAction={handleToolAction}
+                                />
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Render sources for the last assistant message */}
+                          {m.role === 'assistant' && index === messages.length - 1 && sources.length > 0 && (
+                            <AISourceList sources={sources} />
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
