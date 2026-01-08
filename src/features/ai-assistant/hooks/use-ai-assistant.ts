@@ -1,12 +1,27 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { toast } from "@/store/notificationStore";
 import { useAuthStore } from "@/store/authStore";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAIModelConfigs, setDefaultAIProvider } from "@/services/aiAssistantApi";
 import { gatewayOrigin, joinUrl } from "@/config/runtime";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls, type UIMessage } from "ai";
+import { DefaultChatTransport, type UIMessage } from "ai";
+
+function getToolNameFromPart(part: any): string | null {
+  if (!part || typeof part !== 'object') return null;
+  if (part.type === 'dynamic-tool') return String(part.toolName || '');
+  if (typeof part.type === 'string' && part.type.startsWith('tool-')) return part.type.slice('tool-'.length);
+  return null;
+}
+
+function isToolPart(part: any): boolean {
+  return !!getToolNameFromPart(part);
+}
+
+function isCompletedToolPart(part: any): boolean {
+  return part?.state === 'output-available' || part?.state === 'output-error';
+}
 
 export function useAIAssistant() {
   const navigate = useNavigate();
@@ -85,33 +100,100 @@ export function useAIAssistant() {
     credentials: 'include',
   }), []);
 
+  /**
+   * Guard against infinite resend loops when the backend emits tool parts without:
+   * - `providerExecuted: true` for server-executed tools, and/or
+   * - `step-start` boundaries (so AI SDK can't isolate the "last step").
+   *
+   * We only auto-resubmit after *client-side* tools that require a second roundtrip.
+   */
+  const autoResendSignatureRef = useRef<string>('');
+  const sendAutomaticallyWhen = useCallback(({ messages }: { messages: UIMessage[] }) => {
+    const lastMessage = messages[messages.length - 1] as any;
+    if (!lastMessage || lastMessage.role !== 'assistant') return false;
+
+    const parts: any[] = Array.isArray(lastMessage.parts) ? lastMessage.parts : [];
+    if (parts.length === 0) return false;
+
+    const clientToolsNeedingResubmit = new Set([
+      'pickDevice',
+      'pickCommandLog',
+    ]);
+
+    const relevantToolParts = parts
+      .map((part, index) => ({ part, index, toolName: getToolNameFromPart(part) }))
+      .filter(({ toolName }) => !!toolName && clientToolsNeedingResubmit.has(toolName))
+      .filter(({ part }) => !part?.providerExecuted);
+
+    if (relevantToolParts.length === 0) return false;
+    if (!relevantToolParts.every(({ part }) => isCompletedToolPart(part))) return false;
+
+    const lastToolIndex = Math.max(...relevantToolParts.map(({ index }) => index));
+    const hasAssistantTextAfterTools = parts
+      .slice(lastToolIndex + 1)
+      .some((p) => p?.type === 'text' && typeof p.text === 'string' && p.text.trim().length > 0);
+
+    if (hasAssistantTextAfterTools) return false;
+
+    const signature = [
+      lastMessage.id,
+      relevantToolParts
+        .map(({ part, toolName }) => `${toolName}:${part.toolCallId ?? ''}:${part.state ?? ''}`)
+        .sort()
+        .join('|'),
+    ].join('::');
+
+    if (autoResendSignatureRef.current === signature) return false;
+    autoResendSignatureRef.current = signature;
+    return true;
+  }, []);
+
   const {
     messages,
     status,
     stop,
     sendMessage,
+    regenerate,
     setMessages,
     addToolOutput,
     error,
   } = useChat({
     transport,
     messages: initialMsgs,
-    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+    sendAutomaticallyWhen,
     onToolCall: async ({ toolCall }) => {
       if (toolCall.toolName === 'navigateToPage') {
-        const input = (toolCall as any).input as { path?: string; label?: string };
-        if (input?.path) {
+        const input = (toolCall as any).input as { path?: string; label?: string } | undefined;
+
+        if (!input?.path) {
+          addToolOutput({
+            toolCallId: toolCall.toolCallId,
+            tool: toolCall.toolName as any,
+            state: 'output-error',
+            errorText: 'navigateToPage 缺少 path',
+          });
+          return;
+        }
+
+        try {
           // 只有路径不一致时才触发跳转
           if (location.pathname !== input.path) {
             navigate(input.path);
             toast.success(`已跳转到 ${input.label || input.path}`);
           }
-          
+
           addToolOutput({
             toolCallId: toolCall.toolCallId,
             tool: toolCall.toolName as any,
             state: 'output-available',
-            output: { ok: true }
+            output: { ok: true },
+          });
+        } catch (e: any) {
+          addToolOutput({
+            toolCallId: toolCall.toolCallId,
+            tool: toolCall.toolName as any,
+            state: 'output-error',
+            errorText: e?.message || '页面跳转失败',
           });
         }
       }
@@ -128,15 +210,29 @@ export function useAIAssistant() {
 
   // 手动监控流，防止 SDK 静默丢弃消息
   useEffect(() => {
+    if (!import.meta.env.DEV) return;
     if (messages.length > 1) {
       const last = messages[messages.length - 1];
       const content = last.parts?.filter(p => p.type === 'text').map((p: any) => p.text).join('') || '';
       const reasoning = last.parts?.find(p => p.type === 'reasoning') as any;
+      const toolParts = (last.parts || []).filter(isToolPart);
       
       console.log("[AI SDK State] 最新消息角色:", last.role);
       console.log("[AI SDK State] 最新消息内容长度:", content.length);
       if (reasoning?.text) {
         console.log("[AI SDK State] 收到思考过程:", reasoning.text.length, "字符");
+      }
+      if (toolParts.length > 0) {
+        console.log(
+          "[AI SDK State] 工具 parts:",
+          toolParts.map((p: any) => ({
+            type: p.type,
+            toolName: getToolNameFromPart(p),
+            toolCallId: p.toolCallId,
+            state: p.state,
+            providerExecuted: p.providerExecuted,
+          }))
+        );
       }
     }
   }, [messages]);
@@ -160,7 +256,8 @@ export function useAIAssistant() {
     handleSubmit,
     append: (text: string) => sendMessage({ text }),
     isLoading,
-    reload: () => setMessages(initialMsgs),
+    clearConversation: () => setMessages(initialMsgs),
+    regenerateLast: () => regenerate(),
     stop,
     addToolOutput,
     status,
